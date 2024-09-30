@@ -1,0 +1,19 @@
+services:
+  cdm-db:
+    build:
+      context: ./database
+      dockerfile: Dockerfile
+    volumes:
+      - ./database/postgres-data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_PASSWORD=${DB_PASSWORD?error}
+      - POSTGRES_USER=${DB_USER:-postgres}
+      - POSTGRES_DB=${DB_NAME:-postgres}
+    networks:
+      - db-network
+    ports:
+      - "${DB_PORT:-5432}:5432"
+
+networks:
+  db-network:
+    driver: bridge
