@@ -245,26 +245,19 @@ def process_response_field(
         )
 
 
-DATABASE_USER = os.environ.get("DB_USER", "postgres")
-DATABASE_PASSWORD = os.environ.get("DB_PASSWORD")
-DATABASE_HOST = os.environ.get("DB_HOST", "localhost")
-DATABASE_PORT = os.environ.get("DB_PORT", "5432")
-DATABASE_NAME = os.environ.get("DB_NAME", "postgres")
-if (DATABASE_PASSWORD is None) or (DATABASE_PASSWORD == ""):
-    print("DB_PASSWORD environment variable must be set")
-    sys.exit(1)
-assert (
-    DATABASE_USER != ""
-    and DATABASE_HOST != ""
-    and DATABASE_PORT != ""
-    and DATABASE_NAME != ""
-)
-DATABASE_URL = f"postgresql+psycopg2://{DATABASE_USER}:{DATABASE_PASSWORD}@{DATABASE_HOST}:{DATABASE_PORT}/{DATABASE_NAME}"
-
-
 def main(xml_file):
     try:
-        engine = create_engine(DATABASE_URL)
+        db_user = os.environ.get("DB_USER", "postgres")
+        db_password = os.environ.get("DB_PASSWORD")
+        db_host = os.environ.get("DB_HOST", "localhost")
+        db_port = os.environ.get("DB_PORT", "5432")
+        db_name = os.environ.get("DB_NAME", "postgres")
+        if (db_password is None) or (db_password == ""):
+            print("DB_PASSWORD environment variable must be set")
+            sys.exit(1)
+        assert db_user != "" and db_host != "" and db_port != "" and db_name != ""
+        db_url = f"postgresql+psycopg2://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
+        engine = create_engine(db_url)
         Session = sessionmaker(bind=engine)
         session = Session()
     except Exception as e:

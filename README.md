@@ -9,4 +9,4 @@ To reset the database, run `docker compose down -v` to remove the db volume befo
 
 ## Importing SDC forms
 
-`db-utils/import_sdc_form.py [file]` imports an XML SDC form into the database
+`python db-utils/import_sdc_form.py [file]` imports an XML SDC form into the database
