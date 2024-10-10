@@ -4,7 +4,7 @@ services:
       context: ./database
       dockerfile: Dockerfile
     volumes:
-      - ./database/postgres-data:/var/lib/postgresql/data
+      - db-data:/var/lib/postgresql/data
     environment:
       - POSTGRES_PASSWORD=${DB_PASSWORD?error}
       - POSTGRES_USER=${DB_USER:-postgres}
@@ -17,3 +17,6 @@ services:
 networks:
   db-network:
     driver: bridge
+
+volumes:
+  db-data:
