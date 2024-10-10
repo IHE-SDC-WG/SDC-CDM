@@ -1,3 +1,5 @@
+-- Based on the mapping at "../SDC CDM Requirements.xlsx"
+
 CREATE TABLE public.sdcobsclass (
     pk serial NOT NULL PRIMARY KEY,
     templateinstanceclassfk serial NOT NULL,
