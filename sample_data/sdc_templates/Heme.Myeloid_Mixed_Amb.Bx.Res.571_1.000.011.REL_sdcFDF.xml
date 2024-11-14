@@ -1,0 +1,1097 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml-stylesheet type="text/xsl" href="sdctemplate.xslt"?>
+<FormDesign xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ID="Heme.Myeloid_Mixed_Amb.Bx.Res.571_1.000.011.REL_sdcFDF" baseURI="www.cap.org/eCC" fullURI="_baseURI=www.cap.org/eCC&amp;_lineage=Heme.Myeloid_Mixed_Amb.Bx.Res.571&amp;_version=1.000.011.REL&amp;_docType=sdcFDF" formTitle="MYELOID AND MIXED / AMBIGUOUS LINEAGE NEOPLASMS" lineage="Heme.Myeloid_Mixed_Amb.Bx.Res.571" filename="Heme.Myeloid_Mixed_Amb.Bx.Res.571_1.000.011.REL_sdcFDF.xml" version="1.000.011.REL" xmlns="urn:ihe:qrph:sdc:2016">
+ <Property name="Copyright" type="CAPeCC_static_text" styleClass="copyright" order="1" propName="Copyright" val="(c) 2023 College of American Pathologists.  All rights reserved.  License required for use." />
+ <Property name="GenericHeaderText" type="CAPeCC_static_text" order="2" propName="GenericHeaderText" val="Surgical Pathology Cancer Case Summary" />
+ <Property name="Category" type="CAPeCC_meta" order="3" propName="Category" val="Hematologic" />
+ <Property name="OfficialName" type="CAPeCC_meta" order="4" propName="OfficialName" val="MYELOID AND MIXED / AMBIGUOUS LINEAGE NEOPLASMS" />
+ <Property name="CAP_ProtocolName" type="CAPeCC_meta" order="5" propName="CAP_ProtocolName" val="Myeloid and Mixed / Ambiguous Lineage Neoplasms" />
+ <Property name="CAP_ProtocolShortName" type="CAPeCC_meta" order="6" propName="CAP_ProtocolShortName" val="Heme.Myeloid_Mixed_Amb.Bx.Res" />
+ <Property name="CAP_ProtocolVersion" type="CAPeCC_meta" order="7" propName="CAP_ProtocolVersion" val="1.0.0.0" />
+ <Property name="TemplateID" type="CAPeCC_meta" order="8" propName="TemplateID" val="571.100004300" />
+ <Property name="Restrictions" type="CAPeCC_meta" order="9" propName="Restrictions" />
+ <Property name="CAP_Required" type="CAPeCC_meta" order="10" propName="CAP_Required" val="false" />
+ <Property name="WebPostingDate" type="CAPeCC_meta dt.dateTime" order="11" propName="WebPostingDate" val="12/13/2023" />
+ <Property name="ApprovalStatus" type="CAPeCC_meta" order="12" propName="ReleaseStatus" val="REL" />
+ <Body name="Body" order="13" ID="Heme.Myeloid_Mixed_Amb.Bx.Res.571_1.000.011.REL_sdcFDF_Body">
+  <ChildItems name="ch_Body" order="14">
+   <Section name="S_866138" order="15" ID="866138.100004300" title="TUMOR (Note A)">
+    <Property name="p_rptTxt_866138_1" order="16" propName="reportText" val="TUMOR" />
+    <ChildItems name="ch_866138_2" order="17">
+     <Question name="Q_866930" order="18" ID="866930.100004300" title="Site of Tumor Involvement in Sample (select most involved site)">
+      <Property name="p_rptTxt_866930_1" order="19" propName="reportText" val="Site of Tumor Involvement in Sample" />
+      <ListField name="lf_866930_2" order="20">
+       <List name="lst_866930_3" order="21">
+        <ListItem name="LI_866931" order="22" ID="866931.100004300" title="Bone marrow">
+         <ChildItems name="ch_866931_1" order="23">
+          <Question name="Q_866938" order="24" ID="866938.100004300" title="Specify Percent Blasts / Blast Equivalents">
+           <Property name="p_rptTxt_866938_1" order="25" propName="reportText" val="Percent Blasts / Blast Equivalents" />
+           <ResponseField name="rf_866938_2" order="26">
+            <Response name="rsp_866938_3" order="27">
+             <int name="int_866938_4" order="28" minInclusive="1" maxInclusive="100" />
+            </Response>
+            <TextAfterResponse name="rtt_866938_5" order="29" val="%" />
+            <ResponseUnits name="un_866938_6" order="30" val="%" />
+           </ResponseField>
+          </Question>
+          <Question name="Q_866939" order="31" ID="866939.100004300" title="Specify Percent Marrow Cellularity">
+           <Property name="p_rptTxt_866939_1" order="32" propName="reportText" val="Percent Marrow Cellularity" />
+           <ResponseField name="rf_866939_2" order="33">
+            <Response name="rsp_866939_3" order="34">
+             <int name="int_866939_4" order="35" minInclusive="1" maxInclusive="100" />
+            </Response>
+            <TextAfterResponse name="rtt_866939_5" order="36" val="%" />
+            <ResponseUnits name="un_866939_6" order="37" val="%" />
+           </ResponseField>
+          </Question>
+         </ChildItems>
+        </ListItem>
+        <ListItem name="LI_866932" order="38" ID="866932.100004300" title="Blood">
+         <ChildItems name="ch_866932_1" order="39">
+          <Question name="Q_867100" order="40" ID="867100.100004300" title="Specify Percent Blasts / Blast Equivalents">
+           <Property name="p_rptTxt_867100_1" order="41" propName="reportText" val="Percent Blasts / Blast Equivalents" />
+           <ResponseField name="rf_867100_2" order="42">
+            <Response name="rsp_867100_3" order="43">
+             <decimal name="dec_867100_4" order="44" minInclusive="1" maxInclusive="100" />
+            </Response>
+            <TextAfterResponse name="rtt_867100_5" order="45" val="%" />
+            <ResponseUnits name="un_867100_6" order="46" val="%" />
+           </ResponseField>
+          </Question>
+         </ChildItems>
+        </ListItem>
+        <ListItem name="LI_866933" order="47" ID="866933.100004300" title="Anterior mediastinum" />
+        <ListItem name="LI_866934" order="48" ID="866934.100004300" title="Lymph node" />
+        <ListItem name="LI_866935" order="49" ID="866935.100004300" title="Cutaneous" />
+        <ListItem name="LI_866936" order="50" ID="866936.100004300" title="Extranodal / mucosal site" />
+        <ListItem name="LI_866937" order="51" ID="866937.100004300" title="Other (specify)">
+         <Property name="p_rptTxt_866937_1" order="52" propName="reportText" val="{no text}" />
+         <ListItemResponseField name="lirf_866937_2" order="53" responseRequired="true">
+          <Response name="rsp_866937_3" order="54">
+           <string name="str_866937_4" order="55" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+       </List>
+      </ListField>
+     </Question>
+     <Question name="Q_866940" order="56" ID="866940.100004300" title="Final Integrated Diagnosis (Note B)">
+      <Property name="p_rptTxt_866940_1" order="57" propName="reportText" val="Final Integrated Diagnosis" />
+      <ListField name="lf_866940_2" order="58">
+       <List name="lst_866940_3" order="59">
+        <DisplayedItem name="DI_891739" order="60" ID="891739.100004300" title="# The Myeloid and Mixed / Ambiguous Lineage Neoplasms Cancer Case Summary is not required to be completed for Myeloid precursor lesions.">
+         <Property name="p_rptTxt_891739_1" order="61" propName="reportText" val="{no text}" />
+        </DisplayedItem>
+        <ListItem name="LI_866941" order="62" ID="866941.100004300" title="Myeloid precursor lesions#" mustImplement="false">
+         <Property name="p_rptTxt_866941_1" order="63" propName="reportText" val="{no text}" />
+         <ChildItems name="ch_866941_2" order="64">
+          <Question name="Q_866950" order="65" ID="866950.100004300">
+           <Property name="p_altTxt_866950_1" order="66" propName="altText" val="Myeloid Precursor Lesion" />
+           <ListField name="lf_866950_2" order="67">
+            <List name="lst_866950_3" order="68">
+             <ListItem name="LI_866951" order="69" ID="866951.100004300" title="Clonal hematopoiesis of indeterminate potential (CHIP)" />
+             <ListItem name="LI_866952" order="70" ID="866952.100004300" title="Clonal cytopenias of undetermined significance (CCUS)" />
+             <ListItem name="LI_866953" order="71" ID="866953.100004300" title="Other myeloid precursor lesion (specify)">
+              <Property name="p_rptTxt_866953_1" order="72" propName="reportText" val="{no text}" />
+              <ListItemResponseField name="lirf_866953_2" order="73" responseRequired="true">
+               <Response name="rsp_866953_3" order="74">
+                <string name="str_866953_4" order="75" maxLength="4000" />
+               </Response>
+              </ListItemResponseField>
+             </ListItem>
+            </List>
+           </ListField>
+          </Question>
+         </ChildItems>
+        </ListItem>
+        <ListItem name="LI_866942" order="76" ID="866942.100004300" title="Myeloproliferative neoplasms">
+         <Property name="p_rptTxt_866942_1" order="77" propName="reportText" val="{no text}" />
+         <ChildItems name="ch_866942_2" order="78">
+          <Question name="Q_866954" order="79" ID="866954.100004300">
+           <Property name="p_altTxt_866954_1" order="80" propName="altText" val="Myeloproliferative Neoplasm" />
+           <ListField name="lf_866954_2" order="81">
+            <List name="lst_866954_3" order="82">
+             <ListItem name="LI_866955" order="83" ID="866955.100004300" title="Chronic myeloid leukemia, chronic phase" />
+             <ListItem name="LI_866956" order="84" ID="866956.100004300" title="Chronic myeloid leukemia, blast phase" />
+             <ListItem name="LI_866957" order="85" ID="866957.100004300" title="Chronic neutrophilic leukemia" />
+             <ListItem name="LI_866958" order="86" ID="866958.100004300" title="Chronic eosinophilic leukemia" />
+             <ListItem name="LI_866959" order="87" ID="866959.100004300" title="Polycythemia vera" />
+             <ListItem name="LI_866960" order="88" ID="866960.100004300" title="Essential thrombocythemia" />
+             <ListItem name="LI_866961" order="89" ID="866961.100004300" title="Primary myelofibrosis, pre-fibrotic" />
+             <ListItem name="LI_866962" order="90" ID="866962.100004300" title="Primary myelofibrosis, fibrotic" />
+             <ListItem name="LI_866963" order="91" ID="866963.100004300" title="Juvenile myelomonocytic leukemia" />
+             <ListItem name="LI_866964" order="92" ID="866964.100004300" title="Myeloproliferative neoplasm, NOS" />
+             <ListItem name="LI_866965" order="93" ID="866965.100004300" title="Other myeloproliferative neoplasm (specify)">
+              <Property name="p_rptTxt_866965_1" order="94" propName="reportText" val="{no text}" />
+              <ListItemResponseField name="lirf_866965_2" order="95" responseRequired="true">
+               <Response name="rsp_866965_3" order="96">
+                <string name="str_866965_4" order="97" maxLength="4000" />
+               </Response>
+              </ListItemResponseField>
+             </ListItem>
+            </List>
+           </ListField>
+          </Question>
+         </ChildItems>
+        </ListItem>
+        <ListItem name="LI_866943" order="98" ID="866943.100004300" title="Mastocytosis">
+         <Property name="p_rptTxt_866943_1" order="99" propName="reportText" val="{no text}" />
+         <ChildItems name="ch_866943_2" order="100">
+          <Question name="Q_866966" order="101" ID="866966.100004300">
+           <Property name="p_altTxt_866966_1" order="102" propName="altText" val="Mastocytosis" />
+           <ListField name="lf_866966_2" order="103">
+            <List name="lst_866966_3" order="104">
+             <ListItem name="LI_866967" order="105" ID="866967.100004300" title="Bone marrow mastocytosis" />
+             <ListItem name="LI_866968" order="106" ID="866968.100004300" title="Indolent systemic mastocytosis" />
+             <ListItem name="LI_866969" order="107" ID="866969.100004300" title="Smoldering systemic mastocytosis" />
+             <ListItem name="LI_866970" order="108" ID="866970.100004300" title="Aggressive systemic mastocytosis" />
+             <ListItem name="LI_866971" order="109" ID="866971.100004300" title="Systemic mastocytosis with an associated hematologic neoplasm" />
+             <ListItem name="LI_866972" order="110" ID="866972.100004300" title="Mast cell leukemia" />
+             <ListItem name="LI_866973" order="111" ID="866973.100004300" title="Mast cell sarcoma" />
+             <ListItem name="LI_866974" order="112" ID="866974.100004300" title="Other mastocytosis (specify)">
+              <Property name="p_rptTxt_866974_1" order="113" propName="reportText" val="{no text}" />
+              <ListItemResponseField name="lirf_866974_2" order="114" responseRequired="true">
+               <Response name="rsp_866974_3" order="115">
+                <string name="str_866974_4" order="116" maxLength="4000" />
+               </Response>
+              </ListItemResponseField>
+             </ListItem>
+            </List>
+           </ListField>
+          </Question>
+         </ChildItems>
+        </ListItem>
+        <ListItem name="LI_866944" order="117" ID="866944.100004300" title="Myelodysplastic neoplasms">
+         <Property name="p_rptTxt_866944_1" order="118" propName="reportText" val="{no text}" />
+         <ChildItems name="ch_866944_2" order="119">
+          <Question name="Q_866975" order="120" ID="866975.100004300">
+           <Property name="p_altTxt_866975_1" order="121" propName="altText" val="Myelodysplastic Neoplasm" />
+           <ListField name="lf_866975_2" order="122">
+            <List name="lst_866975_3" order="123">
+             <DisplayedItem name="DI_866976" order="124" ID="866976.100004300" title="Myelodysplastic neoplasms with defining genetic abnormalities">
+              <Property name="p_rptTxt_866976_1" order="125" propName="reportText" val="{no text}" />
+             </DisplayedItem>
+             <ListItem name="LI_866977" order="126" ID="866977.100004300" title="Myelodysplastic neoplasm with low blasts and 5q deletion" />
+             <ListItem name="LI_866978" order="127" ID="866978.100004300" title="Myelodysplastic neoplasm with low blasts and SF3B1 mutation" />
+             <ListItem name="LI_866979" order="128" ID="866979.100004300" title="Myelodysplastic neoplasm with biallelic TP53 inactivation" />
+             <DisplayedItem name="DI_866980" order="129" ID="866980.100004300" title="Myelodysplastic neoplasms, morphologically defined">
+              <Property name="p_rptTxt_866980_1" order="130" propName="reportText" val="{no text}" />
+             </DisplayedItem>
+             <ListItem name="LI_866981" order="131" ID="866981.100004300" title="Myelodysplastic neoplasm with low blasts" />
+             <ListItem name="LI_866982" order="132" ID="866982.100004300" title="Myelodysplastic neoplasm, hypoplastic" />
+             <ListItem name="LI_866983" order="133" ID="866983.100004300" title="Myelodysplastic neoplasm with increased blasts-1 (MDS-IB1)" />
+             <ListItem name="LI_866984" order="134" ID="866984.100004300" title="Myelodysplastic neoplasm with increased blasts-2 (MDS-IB2)" />
+             <ListItem name="LI_866985" order="135" ID="866985.100004300" title="Myelodysplastic neoplasm with increased blasts and fibrosis (MDS-F)" />
+             <ListItem name="LI_891376" order="136" ID="891376.100004300" title="Other myelodysplastic neoplasm (specify)">
+              <Property name="p_rptTxt_891376_1" order="137" propName="reportText" val="Other myelodysplastic neoplasm" />
+              <ListItemResponseField name="lirf_891376_2" order="138" responseRequired="true">
+               <Response name="rsp_891376_3" order="139">
+                <string name="str_891376_4" order="140" maxLength="4000" />
+               </Response>
+              </ListItemResponseField>
+             </ListItem>
+             <DisplayedItem name="DI_866986" order="141" ID="866986.100004300" title="Myelodysplastic neoplasms of childhood">
+              <Property name="p_rptTxt_866986_1" order="142" propName="reportText" val="{no text}" />
+             </DisplayedItem>
+             <ListItem name="LI_866987" order="143" ID="866987.100004300" title="Childhood myelodysplastic neoplasm with low blasts" />
+             <ListItem name="LI_866988" order="144" ID="866988.100004300" title="Childhood myelodysplastic neoplasm with increased blasts" />
+             <ListItem name="LI_866989" order="145" ID="866989.100004300" title="Other myelodysplastic neoplasm of childhood (specify)">
+              <Property name="p_rptTxt_866989_1" order="146" propName="reportText" val="{no text}" />
+              <ListItemResponseField name="lirf_866989_2" order="147" responseRequired="true">
+               <Response name="rsp_866989_3" order="148">
+                <string name="str_866989_4" order="149" maxLength="4000" />
+               </Response>
+              </ListItemResponseField>
+             </ListItem>
+             <DisplayedItem name="DI_866990" order="150" ID="866990.100004300" title="Myelodysplastic / myeloproliferative neoplasms">
+              <Property name="p_rptTxt_866990_1" order="151" propName="reportText" val="{no text}" />
+             </DisplayedItem>
+             <ListItem name="LI_866991" order="152" ID="866991.100004300" title="Myelodysplastic chronic myelomonocytic leukemia (MD-CMML), CMML-1" />
+             <ListItem name="LI_866992" order="153" ID="866992.100004300" title="Myelodysplastic chronic myelomonocytic leukemia (MD-CMML), CMML-2" />
+             <ListItem name="LI_866993" order="154" ID="866993.100004300" title="Myeloproliferative chronic myelomonocytic leukemia (MP-CMML), CMML-1" />
+             <ListItem name="LI_866994" order="155" ID="866994.100004300" title="Myeloproliferative chronic myelomonocytic leukemia (MP-CMML), CMML-2" />
+             <ListItem name="LI_866995" order="156" ID="866995.100004300" title="Myelodysplastic neoplasm with neutrophilia" />
+             <ListItem name="LI_866996" order="157" ID="866996.100004300" title="Myelodysplastic neoplasm with SF3B1 mutation and thrombocytosis" />
+             <ListItem name="LI_866997" order="158" ID="866997.100004300" title="Myelodysplastic neoplasm, NOS" />
+             <ListItem name="LI_866998" order="159" ID="866998.100004300" title="Other myelodysplastic / myeloproliferative neoplasm (specify)">
+              <Property name="p_rptTxt_866998_1" order="160" propName="reportText" val="{no text}" />
+              <ListItemResponseField name="lirf_866998_2" order="161" responseRequired="true">
+               <Response name="rsp_866998_3" order="162">
+                <string name="str_866998_4" order="163" maxLength="4000" />
+               </Response>
+              </ListItemResponseField>
+             </ListItem>
+            </List>
+           </ListField>
+          </Question>
+         </ChildItems>
+        </ListItem>
+        <ListItem name="LI_866945" order="164" ID="866945.100004300" title="Acute myeloid leukemias">
+         <Property name="p_rptTxt_866945_1" order="165" propName="reportText" val="{no text}" />
+         <ChildItems name="ch_866945_2" order="166">
+          <Question name="Q_866999" order="167" ID="866999.100004300">
+           <Property name="p_altTxt_866999_1" order="168" propName="altText" val="Acute Myeloid Leukemia" />
+           <ListField name="lf_866999_2" order="169">
+            <List name="lst_866999_3" order="170">
+             <DisplayedItem name="DI_867000" order="171" ID="867000.100004300" title="Acute myeloid leukemias with defining genetic abnormalities">
+              <Property name="p_rptTxt_867000_1" order="172" propName="reportText" val="{no text}" />
+             </DisplayedItem>
+             <ListItem name="LI_867001" order="173" ID="867001.100004300" title="Acute promyelocytic leukemia with PML::RARA fusion" />
+             <ListItem name="LI_867002" order="174" ID="867002.100004300" title="Acute myeloid leukemia with RUNX1::RUNX1T1 fusion" />
+             <ListItem name="LI_867003" order="175" ID="867003.100004300" title="Acute myeloid leukemia with CBFB::MYH11 fusion" />
+             <ListItem name="LI_867004" order="176" ID="867004.100004300" title="Acute myeloid leukemia with DEK::NUP214 fusion" />
+             <ListItem name="LI_867005" order="177" ID="867005.100004300" title="Acute myeloid leukemia with RBM15::MRTFA fusion" />
+             <ListItem name="LI_867006" order="178" ID="867006.100004300" title="Acute myeloid leukemia with BCR::ABL1 fusion" />
+             <ListItem name="LI_867007" order="179" ID="867007.100004300" title="Acute myeloid leukemia with KMT2A rearrangement" />
+             <ListItem name="LI_867008" order="180" ID="867008.100004300" title="Acute myeloid leukemia with MECOM rearrangement" />
+             <ListItem name="LI_867009" order="181" ID="867009.100004300" title="Acute myeloid leukemia with NUP98 rearrangement" />
+             <ListItem name="LI_867010" order="182" ID="867010.100004300" title="Acute myeloid leukemia with NPM1 mutation" />
+             <ListItem name="LI_867011" order="183" ID="867011.100004300" title="Acute myeloid leukemia with CEBPA mutation" />
+             <ListItem name="LI_867012" order="184" ID="867012.100004300" title="Acute myeloid leukemia, myelodysplasia-related" />
+             <ListItem name="LI_867013" order="185" ID="867013.100004300" title="Acute myeloid leukemia with other defined genetic alterations (specify, if possible)">
+              <Property name="p_rptTxt_867013_1" order="186" propName="reportText" val="Acute myeloid leukemia with other defined genetic alterations" />
+              <ListItemResponseField name="lirf_867013_2" order="187">
+               <Response name="rsp_867013_3" order="188">
+                <string name="str_867013_4" order="189" maxLength="4000" />
+               </Response>
+              </ListItemResponseField>
+             </ListItem>
+             <DisplayedItem name="DI_867014" order="190" ID="867014.100004300" title="Acute myeloid leukemias, defined by differentiation">
+              <Property name="p_rptTxt_867014_1" order="191" propName="reportText" val="{no text}" />
+             </DisplayedItem>
+             <ListItem name="LI_867015" order="192" ID="867015.100004300" title="Acute myeloid leukemia with minimal differentiation" />
+             <ListItem name="LI_867016" order="193" ID="867016.100004300" title="Acute myeloid leukemia without maturation" />
+             <ListItem name="LI_867017" order="194" ID="867017.100004300" title="Acute myeloid leukemia with maturation" />
+             <ListItem name="LI_867018" order="195" ID="867018.100004300" title="Acute basophilic leukemia" />
+             <ListItem name="LI_867019" order="196" ID="867019.100004300" title="Acute myelomonocytic leukemia" />
+             <ListItem name="LI_867020" order="197" ID="867020.100004300" title="Acute monocytic leukemia" />
+             <ListItem name="LI_867021" order="198" ID="867021.100004300" title="Pure erythroid leukemia" />
+             <ListItem name="LI_867022" order="199" ID="867022.100004300" title="Acute megakaryoblastic leukemia" />
+             <ListItem name="LI_867023" order="200" ID="867023.100004300" title="Other acute myeloid leukemia (specify)">
+              <Property name="p_rptTxt_867023_1" order="201" propName="reportText" val="{no text}" />
+              <ListItemResponseField name="lirf_867023_2" order="202" responseRequired="true">
+               <Response name="rsp_867023_3" order="203">
+                <string name="str_867023_4" order="204" maxLength="4000" />
+               </Response>
+              </ListItemResponseField>
+             </ListItem>
+             <DisplayedItem name="DI_867024" order="205" ID="867024.100004300" title="Myeloid sarcoma">
+              <Property name="p_rptTxt_867024_1" order="206" propName="reportText" val="{no text}" />
+             </DisplayedItem>
+             <ListItem name="LI_867025" order="207" ID="867025.100004300" title="Myeloid sarcoma (specify myeloid neoplasm)">
+              <Property name="p_rptTxt_867025_1" order="208" propName="reportText" val="Myeloid sarcoma" />
+              <ListItemResponseField name="lirf_867025_2" order="209" responseRequired="true">
+               <Response name="rsp_867025_3" order="210">
+                <string name="str_867025_4" order="211" maxLength="4000" />
+               </Response>
+              </ListItemResponseField>
+             </ListItem>
+            </List>
+           </ListField>
+          </Question>
+         </ChildItems>
+        </ListItem>
+        <ListItem name="LI_866946" order="212" ID="866946.100004300" title="Myeloid neoplasms and proliferations associated with antecedent or predisposing conditions">
+         <Property name="p_rptTxt_866946_1" order="213" propName="reportText" val="{no text}" />
+         <ChildItems name="ch_866946_2" order="214">
+          <Question name="Q_867026" order="215" ID="867026.100004300">
+           <Property name="p_altTxt_867026_1" order="216" propName="altText" val="Myeloid Neoplasm and Proliferation Associated with Antecedent or Predisposing Conditions" />
+           <ListField name="lf_867026_2" order="217">
+            <List name="lst_867026_3" order="218">
+             <ListItem name="LI_867027" order="219" ID="867027.100004300" title="Myeloid neoplasm post cytotoxic therapy (specify neoplasm and cytotoxic therapy, if possible)">
+              <Property name="p_rptTxt_867027_1" order="220" propName="reportText" val="Myeloid neoplasm post cytotoxic therapy" />
+              <ListItemResponseField name="lirf_867027_2" order="221">
+               <Response name="rsp_867027_3" order="222">
+                <string name="str_867027_4" order="223" maxLength="4000" />
+               </Response>
+              </ListItemResponseField>
+             </ListItem>
+             <ListItem name="LI_867028" order="224" ID="867028.100004300" title="Myeloid neoplasm associated with germline predisposition (specify neoplasm and germline predisposition, if possible)">
+              <Property name="p_rptTxt_867028_1" order="225" propName="reportText" val="Myeloid neoplasm associated with germline predisposition" />
+              <ListItemResponseField name="lirf_867028_2" order="226">
+               <Response name="rsp_867028_3" order="227">
+                <string name="str_867028_4" order="228" maxLength="4000" />
+               </Response>
+              </ListItemResponseField>
+             </ListItem>
+             <ListItem name="LI_867029" order="229" ID="867029.100004300" title="Transient abnormal myelopoiesis associated with Down syndrome" />
+             <ListItem name="LI_867030" order="230" ID="867030.100004300" title="Myeloid leukemia associated with Down syndrome" />
+             <ListItem name="LI_891575" order="231" ID="891575.100004300" title="Other myeloid neoplasm and / or proliferation associated with antecedent or predisposing condition (specify)">
+              <Property name="p_rptTxt_891575_1" order="232" propName="reportText" val="{no text}" />
+              <ListItemResponseField name="lirf_891575_2" order="233" responseRequired="true">
+               <Response name="rsp_891575_3" order="234">
+                <string name="str_891575_4" order="235" maxLength="4000" />
+               </Response>
+              </ListItemResponseField>
+             </ListItem>
+            </List>
+           </ListField>
+          </Question>
+         </ChildItems>
+        </ListItem>
+        <ListItem name="LI_866947" order="236" ID="866947.100004300" title="Myeloid / lymphoid neoplasms">
+         <Property name="p_rptTxt_866947_1" order="237" propName="reportText" val="{no text}" />
+         <ChildItems name="ch_866947_2" order="238">
+          <Question name="Q_867031" order="239" ID="867031.100004300">
+           <Property name="p_altTxt_867031_1" order="240" propName="altText" val="Myeloid / Lymphoid Neoplasm" />
+           <ListField name="lf_867031_2" order="241">
+            <List name="lst_867031_3" order="242">
+             <DisplayedItem name="DI_867032" order="243" ID="867032.100004300" title="Myeloid / lymphoid neoplasms with eosinophilia and defining gene rearrangement">
+              <Property name="p_rptTxt_867032_1" order="244" propName="reportText" val="{no text}" />
+             </DisplayedItem>
+             <ListItem name="LI_867033" order="245" ID="867033.100004300" title="Myeloid / lymphoid neoplasm with PDGFRA rearrangement" />
+             <ListItem name="LI_867034" order="246" ID="867034.100004300" title="Myeloid / lymphoid neoplasm with PDGFRB rearrangement" />
+             <ListItem name="LI_867035" order="247" ID="867035.100004300" title="Myeloid / lymphoid neoplasm with FGFR1 rearrangement" />
+             <ListItem name="LI_867036" order="248" ID="867036.100004300" title="Myeloid / lymphoid neoplasm with JAK2 rearrangement" />
+             <ListItem name="LI_867037" order="249" ID="867037.100004300" title="Myeloid / lymphoid neoplasm with FLT3 rearrangement" />
+             <ListItem name="LI_867038" order="250" ID="867038.100004300" title="Myeloid / lymphoid neoplasm with ETV6::ABL1 fusion" />
+             <ListItem name="LI_867039" order="251" ID="867039.100004300" title="Myeloid / lymphoid neoplasms with other tyrosine kinase fusion genes" />
+             <ListItem name="LI_891576" order="252" ID="891576.100004300" title="Other myeloid / lymphoid neoplasm (specify)">
+              <Property name="p_rptTxt_891576_1" order="253" propName="reportText" val="{no text}" />
+              <ListItemResponseField name="lirf_891576_2" order="254" responseRequired="true">
+               <Response name="rsp_891576_3" order="255">
+                <string name="str_891576_4" order="256" maxLength="4000" />
+               </Response>
+              </ListItemResponseField>
+             </ListItem>
+            </List>
+           </ListField>
+          </Question>
+         </ChildItems>
+        </ListItem>
+        <ListItem name="LI_866948" order="257" ID="866948.100004300" title="Acute leukemias of mixed or ambiguous lineage">
+         <Property name="p_rptTxt_866948_1" order="258" propName="reportText" val="{no text}" />
+         <ChildItems name="ch_866948_2" order="259">
+          <Question name="Q_867040" order="260" ID="867040.100004300">
+           <Property name="p_altTxt_867040_1" order="261" propName="altText" val="Acute Leukemia of Mixed or Ambiguous Lineage" />
+           <ListField name="lf_867040_2" order="262">
+            <List name="lst_867040_3" order="263">
+             <ListItem name="LI_867041" order="264" ID="867041.100004300" title="Mixed-phenotype acute leukemia with BCR::ABL1 fusion" />
+             <ListItem name="LI_867042" order="265" ID="867042.100004300" title="Mixed-phenotype acute leukemia with KMT2A rearrangement" />
+             <ListItem name="LI_867043" order="266" ID="867043.100004300" title="Acute leukemia of ambiguous lineage with other defined genetic alterations" />
+             <ListItem name="LI_867044" order="267" ID="867044.100004300" title="Mixed-phenotype acute leukemia, B / myeloid" />
+             <ListItem name="LI_867045" order="268" ID="867045.100004300" title="Mixed-phenotype acute leukemia, T / myeloid" />
+             <ListItem name="LI_867046" order="269" ID="867046.100004300" title="Mixed-phenotype acute leukemia, rare types" />
+             <ListItem name="LI_867047" order="270" ID="867047.100004300" title="Acute leukemia of ambiguous lineage, NOS" />
+             <ListItem name="LI_867048" order="271" ID="867048.100004300" title="Acute undifferentiated leukemia" />
+             <ListItem name="LI_891577" order="272" ID="891577.100004300" title="Other acute leukemia of mixed or ambiguous lineage (specify)">
+              <Property name="p_rptTxt_891577_1" order="273" propName="reportText" val="{no text}" />
+              <ListItemResponseField name="lirf_891577_2" order="274" responseRequired="true">
+               <Response name="rsp_891577_3" order="275">
+                <string name="str_891577_4" order="276" maxLength="4000" />
+               </Response>
+              </ListItemResponseField>
+             </ListItem>
+            </List>
+           </ListField>
+          </Question>
+         </ChildItems>
+        </ListItem>
+        <ListItem name="LI_866949" order="277" ID="866949.100004300" title="Plasmacytoid dendritic cell neoplasms">
+         <Property name="p_rptTxt_866949_1" order="278" propName="reportText" val="{no text}" />
+         <ChildItems name="ch_866949_2" order="279">
+          <Question name="Q_867049" order="280" ID="867049.100004300">
+           <Property name="p_altTxt_867049_1" order="281" propName="altText" val="Plasmacytoid Dendritic Cell Neoplasm" />
+           <ListField name="lf_867049_2" order="282">
+            <List name="lst_867049_3" order="283">
+             <ListItem name="LI_867050" order="284" ID="867050.100004300" title="Blastic plasmacytoid dendritic cell neoplasm (BPDCN)" />
+             <ListItem name="LI_867051" order="285" ID="867051.100004300" title="Other plasmacytoid dendritic cell neoplasm (specify)">
+              <Property name="p_rptTxt_867051_1" order="286" propName="reportText" val="{no text}" />
+              <ListItemResponseField name="lirf_867051_2" order="287" responseRequired="true">
+               <Response name="rsp_867051_3" order="288">
+                <string name="str_867051_4" order="289" maxLength="4000" />
+               </Response>
+              </ListItemResponseField>
+             </ListItem>
+            </List>
+           </ListField>
+          </Question>
+         </ChildItems>
+        </ListItem>
+       </List>
+      </ListField>
+     </Question>
+     <Question name="Q_867052" order="290" ID="867052.100004300" title="?Dysplasia#">
+      <Property name="p_rptTxt_867052_1" order="291" propName="reportText" val="Dysplasia" />
+      <ListField name="lf_867052_2" order="292" maxSelections="0">
+       <List name="lst_867052_3" order="293">
+        <DisplayedItem name="DI_867053" order="294" ID="867053.100004300" title="# Applicable only for myeloid malignancies">
+         <Property name="p_rptTxt_867053_1" order="295" propName="reportText" val="{no text}" />
+        </DisplayedItem>
+        <ListItem name="LI_867054" order="296" ID="867054.100004300" title="?Not applicable" selectionDeselectsSiblings="true" omitWhenSelected="true">
+         <Property name="p_rptTxt_867054_1" order="297" propName="reportText" val="Not applicable" />
+        </ListItem>
+        <ListItem name="LI_867055" order="298" ID="867055.100004300" title="Absent" selectionDeselectsSiblings="true" />
+        <ListItem name="LI_867056" order="299" ID="867056.100004300" title="Erythroid" />
+        <ListItem name="LI_867057" order="300" ID="867057.100004300" title="Granulocytic" />
+        <ListItem name="LI_867058" order="301" ID="867058.100004300" title="Megakaryocytic" />
+        <ListItem name="LI_867059" order="302" ID="867059.100004300" title="Cannot be determined (explain)" selectionDeselectsSiblings="true">
+         <Property name="p_rptTxt_867059_1" order="303" propName="reportText" val="Cannot be determined" />
+         <ListItemResponseField name="lirf_867059_2" order="304" responseRequired="true">
+          <Response name="rsp_867059_3" order="305">
+           <string name="str_867059_4" order="306" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+       </List>
+      </ListField>
+     </Question>
+    </ChildItems>
+   </Section>
+   <Section name="S_867060" order="307" ID="867060.100004300" title="SPECIAL STUDIES (Note C)">
+    <Property name="p_rptTxt_867060_1" order="308" propName="reportText" val="SPECIAL STUDIES" />
+    <ChildItems name="ch_867060_2" order="309">
+     <Question name="Q_867061" order="310" ID="867061.100004300" title="Ring Sideroblasts / Iron Stain">
+      <ListField name="lf_867061_1" order="311">
+       <List name="lst_867061_2" order="312">
+        <ListItem name="LI_867062" order="313" ID="867062.100004300" title="Not applicable / not performed" />
+        <ListItem name="LI_867066" order="314" ID="867066.100004300" title="Not evaluable" />
+        <ListItem name="LI_867063" order="315" ID="867063.100004300" title="No ring sideroblasts seen on iron stain" />
+        <ListItem name="LI_867064" order="316" ID="867064.100004300" title="Positive for ring sideroblasts on iron stain (less than 15%)" />
+        <ListItem name="LI_867065" order="317" ID="867065.100004300" title="Positive for ring sideroblasts on iron stain (greater than or equal to 15%)" />
+       </List>
+      </ListField>
+     </Question>
+     <Question name="Q_867067" order="318" ID="867067.100004300" title="Bone Marrow Fibrosis Grade">
+      <ListField name="lf_867067_1" order="319">
+       <List name="lst_867067_2" order="320">
+        <ListItem name="LI_867068" order="321" ID="867068.100004300" title="Not applicable / not performed" />
+        <ListItem name="LI_867069" order="322" ID="867069.100004300" title="MF-0" />
+        <ListItem name="LI_867070" order="323" ID="867070.100004300" title="MF-1" />
+        <ListItem name="LI_867071" order="324" ID="867071.100004300" title="MF-2" />
+        <ListItem name="LI_867072" order="325" ID="867072.100004300" title="MF-3" />
+       </List>
+      </ListField>
+     </Question>
+     <Question name="Q_867078" order="326" ID="867078.100004300" title="Flow Cytometry">
+      <ListField name="lf_867078_1" order="327">
+       <List name="lst_867078_2" order="328">
+        <ListItem name="LI_867079" order="329" ID="867079.100004300" title="Not performed" />
+        <ListItem name="LI_867080" order="330" ID="867080.100004300" title="No aberrancy detected at level of sensitivity of assay" />
+        <ListItem name="LI_867081" order="331" ID="867081.100004300" title="Abnormal population (specify immunophenotype, if possible)">
+         <Property name="p_rptTxt_867081_1" order="332" propName="reportText" val="Abnormal population" />
+         <ListItemResponseField name="lirf_867081_2" order="333">
+          <Response name="rsp_867081_3" order="334">
+           <string name="str_867081_4" order="335" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867087" order="336" ID="867087.100004300" title="Pending" />
+       </List>
+      </ListField>
+     </Question>
+     <Question name="Q_867088" order="337" ID="867088.100004300" title="Conventional Cytogenetics">
+      <ListField name="lf_867088_1" order="338">
+       <List name="lst_867088_2" order="339">
+        <ListItem name="LI_867089" order="340" ID="867089.100004300" title="Not performed" />
+        <ListItem name="LI_867090" order="341" ID="867090.100004300" title="Normal diploid karyotype" />
+        <ListItem name="LI_867091" order="342" ID="867091.100004300" title="Abnormal karyotype (specify, if possible)">
+         <Property name="p_rptTxt_867091_1" order="343" propName="reportText" val="Abnormal karyotype" />
+         <ListItemResponseField name="lirf_867091_2" order="344">
+          <Response name="rsp_867091_3" order="345">
+           <string name="str_867091_4" order="346" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867092" order="347" ID="867092.100004300" title="Pending" />
+       </List>
+      </ListField>
+     </Question>
+     <Question name="Q_867093" order="348" ID="867093.100004300" title="Fluorescence in situ Hybridization">
+      <ListField name="lf_867093_1" order="349" maxSelections="0">
+       <List name="lst_867093_2" order="350">
+        <ListItem name="LI_867094" order="351" ID="867094.100004300" title="Not performed" selectionDeselectsSiblings="true" />
+        <ListItem name="LI_867095" order="352" ID="867095.100004300" title="Normal probes (specify loci tested)">
+         <Property name="p_rptTxt_867095_1" order="353" propName="reportText" val="Normal probes (loci tested)" />
+         <ListItemResponseField name="lirf_867095_2" order="354" responseRequired="true">
+          <Response name="rsp_867095_3" order="355">
+           <string name="str_867095_4" order="356" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867096" order="357" ID="867096.100004300" title="Abnormal probes (specify loci tested)">
+         <Property name="p_rptTxt_867096_1" order="358" propName="reportText" val="Abnormal probes (loci tested)" />
+         <ListItemResponseField name="lirf_867096_2" order="359" responseRequired="true">
+          <Response name="rsp_867096_3" order="360">
+           <string name="str_867096_4" order="361" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867097" order="362" ID="867097.100004300" title="Pending" />
+       </List>
+      </ListField>
+     </Question>
+     <Question name="Q_867101" order="363" ID="867101.100004300" title="Molecular Alterations Detected#">
+      <Property name="p_rptTxt_867101_1" order="364" propName="reportText" val="Molecular Alterations Detected" />
+      <ListField name="lf_867101_2" order="365" maxSelections="0">
+       <List name="lst_867101_3" order="366">
+        <DisplayedItem name="DI_867102" order="367" ID="867102.100004300" title="# Select all those with significant mutations">
+         <Property name="p_rptTxt_867102_1" order="368" propName="reportText" val="{no text}" />
+        </DisplayedItem>
+        <ListItem name="LI_867103" order="369" ID="867103.100004300" title="ASXL1 mutation (specify)">
+         <Property name="p_rptTxt_867103_1" order="370" propName="reportText" val="ASXL1 mutation" />
+         <ListItemResponseField name="lirf_867103_2" order="371" responseRequired="true">
+          <Response name="rsp_867103_3" order="372">
+           <string name="str_867103_4" order="373" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867104" order="374" ID="867104.100004300" title="BCOR mutation (specify)">
+         <Property name="p_rptTxt_867104_1" order="375" propName="reportText" val="BCOR mutation" />
+         <ListItemResponseField name="lirf_867104_2" order="376" responseRequired="true">
+          <Response name="rsp_867104_3" order="377">
+           <string name="str_867104_4" order="378" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867105" order="379" ID="867105.100004300" title="BCORL1 mutation (specify)">
+         <Property name="p_rptTxt_867105_1" order="380" propName="reportText" val="BCORL1 mutation" />
+         <ListItemResponseField name="lirf_867105_2" order="381" responseRequired="true">
+          <Response name="rsp_867105_3" order="382">
+           <string name="str_867105_4" order="383" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867106" order="384" ID="867106.100004300" title="BCR::ABL1 p190 fusion transcript (specify)">
+         <Property name="p_rptTxt_867106_1" order="385" propName="reportText" val="BCR::ABL1 p190 fusion transcript" />
+         <ListItemResponseField name="lirf_867106_2" order="386" responseRequired="true">
+          <Response name="rsp_867106_3" order="387">
+           <string name="str_867106_4" order="388" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867107" order="389" ID="867107.100004300" title="BCR::ABL1 p210 fusion transcript (specify)">
+         <Property name="p_rptTxt_867107_1" order="390" propName="reportText" val="BCR::ABL1 p210 fusion transcript" />
+         <ListItemResponseField name="lirf_867107_2" order="391" responseRequired="true">
+          <Response name="rsp_867107_3" order="392">
+           <string name="str_867107_4" order="393" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867108" order="394" ID="867108.100004300" title="BCR::ABL1, unspecified transcript (specify)">
+         <Property name="p_rptTxt_867108_1" order="395" propName="reportText" val="BCR::ABL1, unspecified transcript" />
+         <ListItemResponseField name="lirf_867108_2" order="396" responseRequired="true">
+          <Response name="rsp_867108_3" order="397">
+           <string name="str_867108_4" order="398" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867109" order="399" ID="867109.100004300" title="BRAF mutation (specify)">
+         <Property name="p_rptTxt_867109_1" order="400" propName="reportText" val="BRAF mutation" />
+         <ListItemResponseField name="lirf_867109_2" order="401" responseRequired="true">
+          <Response name="rsp_867109_3" order="402">
+           <string name="str_867109_4" order="403" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867110" order="404" ID="867110.100004300" title="CALR mutation (specify)">
+         <Property name="p_rptTxt_867110_1" order="405" propName="reportText" val="CALR mutation" />
+         <ListItemResponseField name="lirf_867110_2" order="406" responseRequired="true">
+          <Response name="rsp_867110_3" order="407">
+           <string name="str_867110_4" order="408" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867111" order="409" ID="867111.100004300" title="CBFB::MYH11 fusion (specify)">
+         <Property name="p_rptTxt_867111_1" order="410" propName="reportText" val="CBFB::MYH11 fusion" />
+         <ListItemResponseField name="lirf_867111_2" order="411" responseRequired="true">
+          <Response name="rsp_867111_3" order="412">
+           <string name="str_867111_4" order="413" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867112" order="414" ID="867112.100004300" title="CEBPA (mono-allelic) mutation (specify)">
+         <Property name="p_rptTxt_867112_1" order="415" propName="reportText" val="CEBPA (mono-allelic) mutation" />
+         <ListItemResponseField name="lirf_867112_2" order="416" responseRequired="true">
+          <Response name="rsp_867112_3" order="417">
+           <string name="str_867112_4" order="418" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867113" order="419" ID="867113.100004300" title="CBL mutation (specify)">
+         <Property name="p_rptTxt_867113_1" order="420" propName="reportText" val="CBL mutation" />
+         <ListItemResponseField name="lirf_867113_2" order="421" responseRequired="true">
+          <Response name="rsp_867113_3" order="422">
+           <string name="str_867113_4" order="423" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867114" order="424" ID="867114.100004300" title="CTCF mutation (specify)">
+         <Property name="p_rptTxt_867114_1" order="425" propName="reportText" val="CTCF mutation" />
+         <ListItemResponseField name="lirf_867114_2" order="426" responseRequired="true">
+          <Response name="rsp_867114_3" order="427">
+           <string name="str_867114_4" order="428" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867115" order="429" ID="867115.100004300" title="CSF3R mutation (specify)">
+         <Property name="p_rptTxt_867115_1" order="430" propName="reportText" val="CSF3R mutation" />
+         <ListItemResponseField name="lirf_867115_2" order="431" responseRequired="true">
+          <Response name="rsp_867115_3" order="432">
+           <string name="str_867115_4" order="433" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867116" order="434" ID="867116.100004300" title="DEK::NUP214 fusion (specify)">
+         <Property name="p_rptTxt_867116_1" order="435" propName="reportText" val="DEK::NUP214 fusion" />
+         <ListItemResponseField name="lirf_867116_2" order="436" responseRequired="true">
+          <Response name="rsp_867116_3" order="437">
+           <string name="str_867116_4" order="438" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867118" order="439" ID="867118.100004300" title="DNMT3A mutation (specify)">
+         <Property name="p_rptTxt_867118_1" order="440" propName="reportText" val="DNMT3A mutation" />
+         <ListItemResponseField name="lirf_867118_2" order="441" responseRequired="true">
+          <Response name="rsp_867118_3" order="442">
+           <string name="str_867118_4" order="443" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867119" order="444" ID="867119.100004300" title="ETV6 mutation (specify)">
+         <Property name="p_rptTxt_867119_1" order="445" propName="reportText" val="ETV6 mutation" />
+         <ListItemResponseField name="lirf_867119_2" order="446" responseRequired="true">
+          <Response name="rsp_867119_3" order="447">
+           <string name="str_867119_4" order="448" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867120" order="449" ID="867120.100004300" title="ETV6::RUNX1 fusion (specify)">
+         <Property name="p_rptTxt_867120_1" order="450" propName="reportText" val="ETV6::RUNX1 fusion" />
+         <ListItemResponseField name="lirf_867120_2" order="451" responseRequired="true">
+          <Response name="rsp_867120_3" order="452">
+           <string name="str_867120_4" order="453" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867121" order="454" ID="867121.100004300" title="EZH2 mutation (specify)">
+         <Property name="p_rptTxt_867121_1" order="455" propName="reportText" val="EZH2 mutation" />
+         <ListItemResponseField name="lirf_867121_2" order="456" responseRequired="true">
+          <Response name="rsp_867121_3" order="457">
+           <string name="str_867121_4" order="458" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867122" order="459" ID="867122.100004300" title="FGFR1 rearrangement (specify)">
+         <Property name="p_rptTxt_867122_1" order="460" propName="reportText" val="FGFR1 rearrangement" />
+         <ListItemResponseField name="lirf_867122_2" order="461" responseRequired="true">
+          <Response name="rsp_867122_3" order="462">
+           <string name="str_867122_4" order="463" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867123" order="464" ID="867123.100004300" title="FLT3 interim tandem duplication (ITD) (specify)">
+         <Property name="p_rptTxt_867123_1" order="465" propName="reportText" val="FLT3 interim tandem duplication (ITD)" />
+         <ListItemResponseField name="lirf_867123_2" order="466" responseRequired="true">
+          <Response name="rsp_867123_3" order="467">
+           <string name="str_867123_4" order="468" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867124" order="469" ID="867124.100004300" title="FLT3 p.D865 tyrosine kinase domain (specify)">
+         <Property name="p_rptTxt_867124_1" order="470" propName="reportText" val="FLT3 p.D865 tyrosine kinase domain" />
+         <ListItemResponseField name="lirf_867124_2" order="471" responseRequired="true">
+          <Response name="rsp_867124_3" order="472">
+           <string name="str_867124_4" order="473" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867125" order="474" ID="867125.100004300" title="GATA2 mutation (specify)">
+         <Property name="p_rptTxt_867125_1" order="475" propName="reportText" val="GATA2 mutation" />
+         <ListItemResponseField name="lirf_867125_2" order="476" responseRequired="true">
+          <Response name="rsp_867125_3" order="477">
+           <string name="str_867125_4" order="478" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867126" order="479" ID="867126.100004300" title="GNAS mutation (specify)">
+         <Property name="p_rptTxt_867126_1" order="480" propName="reportText" val="GNAS mutation" />
+         <ListItemResponseField name="lirf_867126_2" order="481" responseRequired="true">
+          <Response name="rsp_867126_3" order="482">
+           <string name="str_867126_4" order="483" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867127" order="484" ID="867127.100004300" title="HRAS mutation (specify)">
+         <Property name="p_rptTxt_867127_1" order="485" propName="reportText" val="HRAS mutation" />
+         <ListItemResponseField name="lirf_867127_2" order="486" responseRequired="true">
+          <Response name="rsp_867127_3" order="487">
+           <string name="str_867127_4" order="488" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867128" order="489" ID="867128.100004300" title="IDH1 mutation (specify)">
+         <Property name="p_rptTxt_867128_1" order="490" propName="reportText" val="IDH1 mutation" />
+         <ListItemResponseField name="lirf_867128_2" order="491" responseRequired="true">
+          <Response name="rsp_867128_3" order="492">
+           <string name="str_867128_4" order="493" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867129" order="494" ID="867129.100004300" title="IDH2 mutation (specify)">
+         <Property name="p_rptTxt_867129_1" order="495" propName="reportText" val="IDH2 mutation" />
+         <ListItemResponseField name="lirf_867129_2" order="496" responseRequired="true">
+          <Response name="rsp_867129_3" order="497">
+           <string name="str_867129_4" order="498" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867130" order="499" ID="867130.100004300" title="IGH::IL3 rearrangement (specify)">
+         <Property name="p_rptTxt_867130_1" order="500" propName="reportText" val="IGH::IL3 rearrangement" />
+         <ListItemResponseField name="lirf_867130_2" order="501" responseRequired="true">
+          <Response name="rsp_867130_3" order="502">
+           <string name="str_867130_4" order="503" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867131" order="504" ID="867131.100004300" title="IKZF1 mutation (specify)">
+         <Property name="p_rptTxt_867131_1" order="505" propName="reportText" val="IKZF1 mutation" />
+         <ListItemResponseField name="lirf_867131_2" order="506" responseRequired="true">
+          <Response name="rsp_867131_3" order="507">
+           <string name="str_867131_4" order="508" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867132" order="509" ID="867132.100004300" title="JAK2 mutation (specify)">
+         <Property name="p_rptTxt_867132_1" order="510" propName="reportText" val="JAK2 mutation" />
+         <ListItemResponseField name="lirf_867132_2" order="511" responseRequired="true">
+          <Response name="rsp_867132_3" order="512">
+           <string name="str_867132_4" order="513" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867133" order="514" ID="867133.100004300" title="JAK3 mutation (specify)">
+         <Property name="p_rptTxt_867133_1" order="515" propName="reportText" val="JAK3 mutation" />
+         <ListItemResponseField name="lirf_867133_2" order="516" responseRequired="true">
+          <Response name="rsp_867133_3" order="517">
+           <string name="str_867133_4" order="518" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867134" order="519" ID="867134.100004300" title="KIT mutation (specify)">
+         <Property name="p_rptTxt_867134_1" order="520" propName="reportText" val="KIT mutation" />
+         <ListItemResponseField name="lirf_867134_2" order="521" responseRequired="true">
+          <Response name="rsp_867134_3" order="522">
+           <string name="str_867134_4" order="523" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867135" order="524" ID="867135.100004300" title="KMT2A rearrangement (specify)">
+         <Property name="p_rptTxt_867135_1" order="525" propName="reportText" val="KMT2A rearrangement" />
+         <ListItemResponseField name="lirf_867135_2" order="526" responseRequired="true">
+          <Response name="rsp_867135_3" order="527">
+           <string name="str_867135_4" order="528" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867136" order="529" ID="867136.100004300" title="KRAS mutation (specify)">
+         <Property name="p_rptTxt_867136_1" order="530" propName="reportText" val="KRAS mutation" />
+         <ListItemResponseField name="lirf_867136_2" order="531" responseRequired="true">
+          <Response name="rsp_867136_3" order="532">
+           <string name="str_867136_4" order="533" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867137" order="534" ID="867137.100004300" title="MECOM rearrangement (specify)">
+         <Property name="p_rptTxt_867137_1" order="535" propName="reportText" val="MECOM rearrangement" />
+         <ListItemResponseField name="lirf_867137_2" order="536" responseRequired="true">
+          <Response name="rsp_867137_3" order="537">
+           <string name="str_867137_4" order="538" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867138" order="539" ID="867138.100004300" title="MPL mutation (specify)">
+         <Property name="p_rptTxt_867138_1" order="540" propName="reportText" val="MPL mutation" />
+         <ListItemResponseField name="lirf_867138_2" order="541" responseRequired="true">
+          <Response name="rsp_867138_3" order="542">
+           <string name="str_867138_4" order="543" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867139" order="544" ID="867139.100004300" title="MYD88 mutation (specify)">
+         <Property name="p_rptTxt_867139_1" order="545" propName="reportText" val="MYD88 mutation" />
+         <ListItemResponseField name="lirf_867139_2" order="546" responseRequired="true">
+          <Response name="rsp_867139_3" order="547">
+           <string name="str_867139_4" order="548" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867140" order="549" ID="867140.100004300" title="NF1 mutation (specify)">
+         <Property name="p_rptTxt_867140_1" order="550" propName="reportText" val="NF1 mutation" />
+         <ListItemResponseField name="lirf_867140_2" order="551" responseRequired="true">
+          <Response name="rsp_867140_3" order="552">
+           <string name="str_867140_4" order="553" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867141" order="554" ID="867141.100004300" title="NOTCH1 mutation (specify)">
+         <Property name="p_rptTxt_867141_1" order="555" propName="reportText" val="NOTCH1 mutation" />
+         <ListItemResponseField name="lirf_867141_2" order="556" responseRequired="true">
+          <Response name="rsp_867141_3" order="557">
+           <string name="str_867141_4" order="558" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867142" order="559" ID="867142.100004300" title="NPM1 mutation (specify)">
+         <Property name="p_rptTxt_867142_1" order="560" propName="reportText" val="NPM1 mutation" />
+         <ListItemResponseField name="lirf_867142_2" order="561" responseRequired="true">
+          <Response name="rsp_867142_3" order="562">
+           <string name="str_867142_4" order="563" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867143" order="564" ID="867143.100004300" title="NRAS mutation (specify)">
+         <Property name="p_rptTxt_867143_1" order="565" propName="reportText" val="NRAS mutation" />
+         <ListItemResponseField name="lirf_867143_2" order="566" responseRequired="true">
+          <Response name="rsp_867143_3" order="567">
+           <string name="str_867143_4" order="568" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867144" order="569" ID="867144.100004300" title="NUP98 rearrangement (specify)">
+         <Property name="p_rptTxt_867144_1" order="570" propName="reportText" val="NUP98 rearrangement" />
+         <ListItemResponseField name="lirf_867144_2" order="571" responseRequired="true">
+          <Response name="rsp_867144_3" order="572">
+           <string name="str_867144_4" order="573" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867145" order="574" ID="867145.100004300" title="PDGFRA rearrangement (specify)">
+         <Property name="p_rptTxt_867145_1" order="575" propName="reportText" val="PDGFRA rearrangement" />
+         <ListItemResponseField name="lirf_867145_2" order="576" responseRequired="true">
+          <Response name="rsp_867145_3" order="577">
+           <string name="str_867145_4" order="578" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867146" order="579" ID="867146.100004300" title="PDGFRB rearrangement (specify)">
+         <Property name="p_rptTxt_867146_1" order="580" propName="reportText" val="PDGFRB rearrangement" />
+         <ListItemResponseField name="lirf_867146_2" order="581" responseRequired="true">
+          <Response name="rsp_867146_3" order="582">
+           <string name="str_867146_4" order="583" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867147" order="584" ID="867147.100004300" title="PCM1::JAK2 fusion (specify)">
+         <Property name="p_rptTxt_867147_1" order="585" propName="reportText" val="PCM1::JAK2 fusion" />
+         <ListItemResponseField name="lirf_867147_2" order="586" responseRequired="true">
+          <Response name="rsp_867147_3" order="587">
+           <string name="str_867147_4" order="588" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867148" order="589" ID="867148.100004300" title="PHF6 mutation (specify)">
+         <Property name="p_rptTxt_867148_1" order="590" propName="reportText" val="PHF6 mutation" />
+         <ListItemResponseField name="lirf_867148_2" order="591" responseRequired="true">
+          <Response name="rsp_867148_3" order="592">
+           <string name="str_867148_4" order="593" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867149" order="594" ID="867149.100004300" title="PML::RARA fusion (specify)">
+         <Property name="p_rptTxt_867149_1" order="595" propName="reportText" val="PML::RARA fusion" />
+         <ListItemResponseField name="lirf_867149_2" order="596" responseRequired="true">
+          <Response name="rsp_867149_3" order="597">
+           <string name="str_867149_4" order="598" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867150" order="599" ID="867150.100004300" title="PTEN mutation (specify)">
+         <Property name="p_rptTxt_867150_1" order="600" propName="reportText" val="PTEN mutation" />
+         <ListItemResponseField name="lirf_867150_2" order="601" responseRequired="true">
+          <Response name="rsp_867150_3" order="602">
+           <string name="str_867150_4" order="603" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867151" order="604" ID="867151.100004300" title="PTPN11 mutation (specify)">
+         <Property name="p_rptTxt_867151_1" order="605" propName="reportText" val="PTPN11 mutation" />
+         <ListItemResponseField name="lirf_867151_2" order="606" responseRequired="true">
+          <Response name="rsp_867151_3" order="607">
+           <string name="str_867151_4" order="608" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867152" order="609" ID="867152.100004300" title="PRPF8 mutation (specify)">
+         <Property name="p_rptTxt_867152_1" order="610" propName="reportText" val="PRPF8 mutation" />
+         <ListItemResponseField name="lirf_867152_2" order="611" responseRequired="true">
+          <Response name="rsp_867152_3" order="612">
+           <string name="str_867152_4" order="613" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867153" order="614" ID="867153.100004300" title="RB1 mutation (specify)">
+         <Property name="p_rptTxt_867153_1" order="615" propName="reportText" val="RB1 mutation" />
+         <ListItemResponseField name="lirf_867153_2" order="616" responseRequired="true">
+          <Response name="rsp_867153_3" order="617">
+           <string name="str_867153_4" order="618" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867154" order="619" ID="867154.100004300" title="RBM15::MKL1 fusion (specify)">
+         <Property name="p_rptTxt_867154_1" order="620" propName="reportText" val="RBM15::MKL1 fusion" />
+         <ListItemResponseField name="lirf_867154_2" order="621" responseRequired="true">
+          <Response name="rsp_867154_3" order="622">
+           <string name="str_867154_4" order="623" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867155" order="624" ID="867155.100004300" title="RUNX1 mutation (specify)">
+         <Property name="p_rptTxt_867155_1" order="625" propName="reportText" val="RUNX1 mutation" />
+         <ListItemResponseField name="lirf_867155_2" order="626" responseRequired="true">
+          <Response name="rsp_867155_3" order="627">
+           <string name="str_867155_4" order="628" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867156" order="629" ID="867156.100004300" title="RUNX1::RUNX1T1 fusion (specify)">
+         <Property name="p_rptTxt_867156_1" order="630" propName="reportText" val="RUNX1::RUNX1T1 fusion" />
+         <ListItemResponseField name="lirf_867156_2" order="631" responseRequired="true">
+          <Response name="rsp_867156_3" order="632">
+           <string name="str_867156_4" order="633" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867157" order="634" ID="867157.100004300" title="SETBP1 mutation (specify)">
+         <Property name="p_rptTxt_867157_1" order="635" propName="reportText" val="SETBP1 mutation" />
+         <ListItemResponseField name="lirf_867157_2" order="636" responseRequired="true">
+          <Response name="rsp_867157_3" order="637">
+           <string name="str_867157_4" order="638" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867158" order="639" ID="867158.100004300" title="SH2B3 mutation (specify)">
+         <Property name="p_rptTxt_867158_1" order="640" propName="reportText" val="SH2B3 mutation" />
+         <ListItemResponseField name="lirf_867158_2" order="641" responseRequired="true">
+          <Response name="rsp_867158_3" order="642">
+           <string name="str_867158_4" order="643" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867159" order="644" ID="867159.100004300" title="SF3B1 mutation (specify)">
+         <Property name="p_rptTxt_867159_1" order="645" propName="reportText" val="SF3B1 mutation" />
+         <ListItemResponseField name="lirf_867159_2" order="646" responseRequired="true">
+          <Response name="rsp_867159_3" order="647">
+           <string name="str_867159_4" order="648" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867160" order="649" ID="867160.100004300" title="SRSF2 mutation (specify)">
+         <Property name="p_rptTxt_867160_1" order="650" propName="reportText" val="SRSF2 mutation" />
+         <ListItemResponseField name="lirf_867160_2" order="651" responseRequired="true">
+          <Response name="rsp_867160_3" order="652">
+           <string name="str_867160_4" order="653" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867161" order="654" ID="867161.100004300" title="STAG2 mutation (specify)">
+         <Property name="p_rptTxt_867161_1" order="655" propName="reportText" val="STAG2 mutation" />
+         <ListItemResponseField name="lirf_867161_2" order="656" responseRequired="true">
+          <Response name="rsp_867161_3" order="657">
+           <string name="str_867161_4" order="658" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867162" order="659" ID="867162.100004300" title="TET2 mutation (specify)">
+         <Property name="p_rptTxt_867162_1" order="660" propName="reportText" val="TET2 mutation" />
+         <ListItemResponseField name="lirf_867162_2" order="661" responseRequired="true">
+          <Response name="rsp_867162_3" order="662">
+           <string name="str_867162_4" order="663" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867163" order="664" ID="867163.100004300" title="TCF3::PBX1 rearrangement (specify)">
+         <Property name="p_rptTxt_867163_1" order="665" propName="reportText" val="TCF3::PBX1 rearrangement" />
+         <ListItemResponseField name="lirf_867163_2" order="666" responseRequired="true">
+          <Response name="rsp_867163_3" order="667">
+           <string name="str_867163_4" order="668" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867164" order="669" ID="867164.100004300" title="TCF3::HLF fusion rearrangement (specify)">
+         <Property name="p_rptTxt_867164_1" order="670" propName="reportText" val="TCF3::HLF fusion rearrangement" />
+         <ListItemResponseField name="lirf_867164_2" order="671" responseRequired="true">
+          <Response name="rsp_867164_3" order="672">
+           <string name="str_867164_4" order="673" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867165" order="674" ID="867165.100004300" title="TP53 mutation (specify)">
+         <Property name="p_rptTxt_867165_1" order="675" propName="reportText" val="TP53 mutation" />
+         <ListItemResponseField name="lirf_867165_2" order="676" responseRequired="true">
+          <Response name="rsp_867165_3" order="677">
+           <string name="str_867165_4" order="678" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867166" order="679" ID="867166.100004300" title="U2AF1 mutation (specify)">
+         <Property name="p_rptTxt_867166_1" order="680" propName="reportText" val="U2AF1 mutation" />
+         <ListItemResponseField name="lirf_867166_2" order="681" responseRequired="true">
+          <Response name="rsp_867166_3" order="682">
+           <string name="str_867166_4" order="683" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867167" order="684" ID="867167.100004300" title="WT1 mutation (specify)">
+         <Property name="p_rptTxt_867167_1" order="685" propName="reportText" val="WT1 mutation" />
+         <ListItemResponseField name="lirf_867167_2" order="686" responseRequired="true">
+          <Response name="rsp_867167_3" order="687">
+           <string name="str_867167_4" order="688" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867168" order="689" ID="867168.100004300" title="ZRSR2 mutation (specify)">
+         <Property name="p_rptTxt_867168_1" order="690" propName="reportText" val="ZRSR2 mutation" />
+         <ListItemResponseField name="lirf_867168_2" order="691" responseRequired="true">
+          <Response name="rsp_867168_3" order="692">
+           <string name="str_867168_4" order="693" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867169" order="694" ID="867169.100004300" title="Other alterations detected (specify)">
+         <Property name="p_rptTxt_867169_1" order="695" propName="reportText" val="{no text}" />
+         <ListItemResponseField name="lirf_867169_2" order="696" responseRequired="true">
+          <Response name="rsp_867169_3" order="697">
+           <string name="str_867169_4" order="698" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867170" order="699" ID="867170.100004300" title="Pending">
+         <ListItemResponseField name="lirf_867170_1" order="700">
+          <Response name="rsp_867170_2" order="701">
+           <string name="str_867170_3" order="702" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+       </List>
+      </ListField>
+     </Question>
+     <Question name="Q_867171" order="703" ID="867171.100004300" title="Specify Molecular Alterations Assayed" mustImplement="false" minCard="0">
+      <Property name="p_rptTxt_867171_1" order="704" propName="reportText" val="Molecular Alterations Assayed" />
+      <ResponseField name="rf_867171_2" order="705">
+       <Response name="rsp_867171_3" order="706">
+        <string name="str_867171_4" order="707" maxLength="4000" />
+       </Response>
+      </ResponseField>
+     </Question>
+    </ChildItems>
+   </Section>
+   <Section name="S_867099" order="708" ID="867099.100004300" title="COMMENTS">
+    <Property name="p_rptTxt_867099_1" order="709" propName="reportText" val="{no text}" />
+    <ChildItems name="ch_867099_2" order="710">
+     <Question name="Q_867098" order="711" ID="867098.100004300" title="?Comment(s)" minCard="0">
+      <Property name="p_rptTxt_867098_1" order="712" propName="reportText" val="Comment(s)" />
+      <ResponseField name="rf_867098_2" order="713">
+       <Response name="rsp_867098_3" order="714">
+        <string name="str_867098_4" order="715" maxLength="4000" />
+       </Response>
+      </ResponseField>
+     </Question>
+    </ChildItems>
+   </Section>
+  </ChildItems>
+ </Body>
+ <Footer name="footer" order="716" ID="Footer.Heme.Myeloid_Mixed_Amb.Bx.Res.571_1.000.011.REL_sdcFDF">
+  <Property type="meta" styleClass="copyright" order="717" propName="CopyrightFooter" val="(c) 2023 College of American Pathologists.  All rights reserved.  License required for use." />
+ </Footer>
+</FormDesign>

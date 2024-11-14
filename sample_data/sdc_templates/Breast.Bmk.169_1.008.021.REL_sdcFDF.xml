@@ -1,0 +1,1019 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml-stylesheet type="text/xsl" href="sdctemplate.xslt"?>
+<FormDesign xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ID="Breast.Bmk.169_1.008.021.REL_sdcFDF" baseURI="www.cap.org/eCC" fullURI="_baseURI=www.cap.org/eCC&amp;_lineage=Breast.Bmk.169&amp;_version=1.008.021.REL&amp;_docType=sdcFDF" formTitle="Breast Biomarker Reporting Template" lineage="Breast.Bmk.169" filename="Breast.Bmk.169_1.008.021.REL_sdcFDF.xml" version="1.008.021.REL" xmlns="urn:ihe:qrph:sdc:2016">
+ <Property name="Copyright" type="CAPeCC_static_text" styleClass="copyright" order="1" propName="Copyright" val="(c) 2023 College of American Pathologists.  All rights reserved.  License required for use." />
+ <Property name="GenericHeaderText" type="CAPeCC_static_text" order="2" propName="GenericHeaderText" val="Cancer Biomarker Reporting Template" />
+ <Property name="Category" type="CAPeCC_meta" order="3" propName="Category" val="Breast" />
+ <Property name="OfficialName" type="CAPeCC_meta" order="4" propName="OfficialName" val="Breast Biomarker Reporting Template" />
+ <Property name="CAP_ProtocolName" type="CAPeCC_meta" order="5" propName="CAP_ProtocolName" val="Breast Biomarker Reporting" />
+ <Property name="CAP_ProtocolShortName" type="CAPeCC_meta" order="6" propName="CAP_ProtocolShortName" val="Breast.Bmk" />
+ <Property name="CAP_ProtocolVersion" type="CAPeCC_meta" order="7" propName="CAP_ProtocolVersion" val="1.5.0.1" />
+ <Property name="TemplateID" type="CAPeCC_meta" order="8" propName="TemplateID" val="169.100004300" />
+ <Property name="Restrictions" type="CAPeCC_meta" order="9" propName="Restrictions" val="This biomarker template is not required for accreditation purposes but may be used to facilitate compliance with CAP Accreditation Program checklist requirements." />
+ <Property name="CAP_Required" type="CAPeCC_meta" order="10" propName="CAP_Required" val="false" />
+ <Property name="WebPostingDate" type="CAPeCC_meta dt.dateTime" order="11" propName="WebPostingDate" val="12/13/2023" />
+ <Property name="ApprovalStatus" type="CAPeCC_meta" order="12" propName="ReleaseStatus" val="REL" />
+ <Body name="Body" order="13" ID="Breast.Bmk.169_1.008.021.REL_sdcFDF_Body">
+  <ChildItems name="ch_Body" order="14">
+   <DisplayedItem name="DI_46254" order="15" ID="46254.100004300" title="Includes interpretative content from the CAP/ASCO HER2 Guidelines (2018)">
+    <Property name="p_rptTxt_46254_1" order="16" propName="reportText" val="{no text}" />
+   </DisplayedItem>
+   <DisplayedItem name="DI_25893" order="17" ID="25893.100004300" title="Completion of the template is the responsibility of the laboratory performing the biomarker testing and / or providing the interpretation. When both testing and interpretation are performed elsewhere (e.g., a reference laboratory), synoptic reporting of the results by the laboratory submitting the tissue for testing is also encouraged to ensure that all information is included in the patient's medical record and thus readily available to the treating clinical team.">
+    <Property name="p_rptTxt_25893_1" order="18" propName="reportText" val="{no text}" />
+   </DisplayedItem>
+   <DisplayedItem name="DI_25894" order="19" ID="25894.100004300" title="Core data elements in this template comply with the CAP Accreditation requirements for HER2 and hormone receptor testing. Core data elements should be reported only for tests performed. If some studies were performed on different specimen(s), the specimen number(s) should be provided.">
+    <Property name="p_rptTxt_25894_1" order="20" propName="reportText" val="{no text}" />
+   </DisplayedItem>
+   <Section name="S_25891" order="21" ID="25891.100004300" title="TEST(S) PERFORMED">
+    <Property name="p_rptTxt_25891_1" order="22" propName="reportText" val="{no text}" />
+    <ChildItems name="ch_25891_2" order="23">
+     <Question name="Q_758212" order="24" ID="758212.100004300" title="Test(s) Performed (Note A)">
+      <Property name="p_rptTxt_758212_1" order="25" propName="reportText" val="Test(s) Performed" />
+      <ListField name="lf_758212_2" order="26" maxSelections="0">
+       <List name="lst_758212_3" order="27">
+        <ListItem name="LI_31160" order="28" ID="31160.100004300" title="Estrogen Receptor (ER) Status (Note B)">
+         <Property name="p_rptTxt_31160_1" order="29" propName="reportText" val="{no text}" />
+         <ChildItems name="ch_31160_2" order="30">
+          <Question name="Q_49025" order="31" ID="49025.100004300" title="Estrogen Receptor (ER) Status">
+           <ListField name="lf_49025_1" order="32">
+            <List name="lst_49025_2" order="33">
+             <ListItem name="LI_48890" order="34" ID="48890.100004300" title="Positive (greater than 10% of cells demonstrate nuclear positivity)#">
+              <Property name="p_rptTxt_48890_1" order="35" propName="reportText" val="Positive (greater than 10% of cells demonstrate nuclear positivity)" />
+              <ChildItems name="ch_48890_2" order="36">
+               <Question name="Q_48899" order="37" ID="48899.100004300" title="Percentage of Cells with Nuclear Positivity#">
+                <Property name="p_rptTxt_48899_1" order="38" propName="reportText" val="Percentage of Cells with Nuclear Positivity" />
+                <ListField name="lf_48899_2" order="39">
+                 <List name="lst_48899_3" order="40">
+                  <ListItem name="LI_29748" order="41" ID="29748.100004300" title="Specify %">
+                   <Property name="p_rptTxt_29748_1" order="42" propName="reportText" val="{no text}" />
+                   <ListItemResponseField name="lirf_29748_2" order="43" responseRequired="true">
+                    <Response name="rsp_29748_3" order="44">
+                     <decimal name="dec_29748_4" order="45" minInclusive="11" maxInclusive="100" fractionDigits="2" />
+                    </Response>
+                    <TextAfterResponse name="rtt_29748_5" order="46" val="%" />
+                    <ResponseUnits name="un_29748_6" order="47" val="%" />
+                   </ListItemResponseField>
+                  </ListItem>
+                  <DisplayedItem name="DI_32074" order="48" ID="32074.100004300" title="--OR--">
+                   <Property name="p_rptTxt_32074_1" order="49" propName="reportText" val="{no text}" />
+                  </DisplayedItem>
+                  <DisplayedItem name="DI_32084" order="50" ID="32084.100004300" title="Select range below:">
+                   <Property name="p_rptTxt_32084_1" order="51" propName="reportText" val="{no text}" />
+                  </DisplayedItem>
+                  <ListItem name="LI_32075" order="52" ID="32075.100004300" title="11-20%" />
+                  <ListItem name="LI_32076" order="53" ID="32076.100004300" title="21-30%" />
+                  <ListItem name="LI_32079" order="54" ID="32079.100004300" title="31-40%" />
+                  <ListItem name="LI_32080" order="55" ID="32080.100004300" title="41-50%" />
+                  <ListItem name="LI_32081" order="56" ID="32081.100004300" title="51-60%" />
+                  <ListItem name="LI_32082" order="57" ID="32082.100004300" title="61-70%" />
+                  <ListItem name="LI_32083" order="58" ID="32083.100004300" title="71-80%" />
+                  <ListItem name="LI_32077" order="59" ID="32077.100004300" title="81-90%" />
+                  <ListItem name="LI_32078" order="60" ID="32078.100004300" title="91-100%" />
+                 </List>
+                </ListField>
+               </Question>
+               <Question name="Q_29749" order="61" ID="29749.100004300" title="Average Intensity of Staining">
+                <ListField name="lf_29749_1" order="62">
+                 <List name="lst_29749_2" order="63">
+                  <ListItem name="LI_29811" order="64" ID="29811.100004300" title="Weak" />
+                  <ListItem name="LI_29812" order="65" ID="29812.100004300" title="Moderate" />
+                  <ListItem name="LI_29914" order="66" ID="29914.100004300" title="Strong" />
+                 </List>
+                </ListField>
+               </Question>
+              </ChildItems>
+             </ListItem>
+             <ListItem name="LI_48919" order="67" ID="48919.100004300" title="Low Positive (1-10% of cells with nuclear positivity)##">
+              <Property name="p_rptTxt_48919_1" order="68" propName="reportText" val="Low Positive (1-10% of cells with nuclear positivity)" />
+              <ChildItems name="ch_48919_2" order="69">
+               <Question name="Q_48936" order="70" ID="48936.100004300" title="Specify Percentage of Cells with Nuclear Positivity" mustImplement="false" minCard="0">
+                <Property name="p_rptTxt_48936_1" order="71" propName="reportText" val="Percentage of Cells with Nuclear Positivity" />
+                <ResponseField name="rf_48936_2" order="72">
+                 <Response name="rsp_48936_3" order="73">
+                  <decimal name="dec_48936_4" order="74" minInclusive="1" maxInclusive="10" fractionDigits="2" />
+                 </Response>
+                 <TextAfterResponse name="rtt_48936_5" order="75" val="%" />
+                 <ResponseUnits name="un_48936_6" order="76" val="%" />
+                </ResponseField>
+               </Question>
+               <Question name="Q_49033" order="77" ID="49033.100004300" title="Average Intensity of Staining">
+                <ListField name="lf_49033_1" order="78">
+                 <List name="lst_49033_2" order="79">
+                  <ListItem name="LI_48907" order="80" ID="48907.100004300" title="Weak" />
+                  <ListItem name="LI_48916" order="81" ID="48916.100004300" title="Moderate" />
+                  <ListItem name="LI_48922" order="82" ID="48922.100004300" title="Strong" />
+                 </List>
+                </ListField>
+               </Question>
+               <Question name="Q_48924" order="83" ID="48924.100004300" title="Status of Internal Controls">
+                <ListField name="lf_48924_1" order="84">
+                 <List name="lst_48924_2" order="85">
+                  <ListItem name="LI_48925" order="86" ID="48925.100004300" title="Internal control cells present and stain as expected" />
+                  <ListItem name="LI_49045" order="87" ID="49045.100004300" title="Internal control cells absent###">
+                   <Property name="p_rptTxt_49045_1" order="88" propName="reportText" val="Internal control cells absent" />
+                  </ListItem>
+                  <ListItem name="LI_49062" order="89" ID="49062.100004300" title="Other (specify)">
+                   <Property name="p_rptTxt_49062_1" order="90" propName="reportText" val="{no text}" />
+                   <ListItemResponseField name="lirf_49062_2" order="91" responseRequired="true">
+                    <Response name="rsp_49062_3" order="92">
+                     <string name="str_49062_4" order="93" maxLength="4000" />
+                    </Response>
+                   </ListItemResponseField>
+                  </ListItem>
+                 </List>
+                </ListField>
+               </Question>
+              </ChildItems>
+             </ListItem>
+             <ListItem name="LI_29915" order="94" ID="29915.100004300" title="Negative (less than 1%)">
+              <ChildItems name="ch_29915_1" order="95">
+               <Question name="Q_25895" order="96" ID="25895.100004300">
+                <Property name="p_altTxt_25895_1" order="97" propName="altText" val="ER Test Control Status" />
+                <ListField name="lf_25895_2" order="98">
+                 <List name="lst_25895_3" order="99">
+                  <ListItem name="LI_25896" order="100" ID="25896.100004300" title="Internal control cells present and stain as expected" />
+                  <ListItem name="LI_25898" order="101" ID="25898.100004300" title="Internal control cells absent###">
+                   <Property name="p_rptTxt_25898_1" order="102" propName="reportText" val="Internal control cells absent" />
+                  </ListItem>
+                  <ListItem name="LI_32087" order="103" ID="32087.100004300" title="Other (specify)">
+                   <Property name="p_rptTxt_32087_1" order="104" propName="reportText" val="{no text}" />
+                   <ListItemResponseField name="lirf_32087_2" order="105" responseRequired="true">
+                    <Response name="rsp_32087_3" order="106">
+                     <string name="str_32087_4" order="107" maxLength="4000" />
+                    </Response>
+                   </ListItemResponseField>
+                  </ListItem>
+                 </List>
+                </ListField>
+               </Question>
+              </ChildItems>
+             </ListItem>
+             <ListItem name="LI_31072" order="108" ID="31072.100004300" title="Cannot be determined (indeterminate)####">
+              <Property name="p_rptTxt_31072_1" order="109" propName="reportText" val="Cannot be determined (indeterminate)" />
+              <ChildItems name="ch_31072_2" order="110">
+               <Question name="Q_32088" order="111" ID="32088.100004300">
+                <Property name="p_altTxt_32088_1" order="112" propName="altText" val="Reason Test Result Cannot be Determined" />
+                <ListField name="lf_32088_2" order="113" maxSelections="0">
+                 <List name="lst_32088_3" order="114">
+                  <ListItem name="LI_32089" order="115" ID="32089.100004300" title="Internal control cells present; no immunoreactivity of either tumor cells or internal controls" />
+                  <ListItem name="LI_32090" order="116" ID="32090.100004300" title="Other (specify)">
+                   <Property name="p_rptTxt_32090_1" order="117" propName="reportText" val="{no text}" />
+                   <ListItemResponseField name="lirf_32090_2" order="118" responseRequired="true">
+                    <Response name="rsp_32090_3" order="119">
+                     <string name="str_32090_4" order="120" maxLength="4000" />
+                    </Response>
+                   </ListItemResponseField>
+                  </ListItem>
+                 </List>
+                </ListField>
+               </Question>
+              </ChildItems>
+             </ListItem>
+             <DisplayedItem name="DI_32091" order="121" ID="32091.100004300" title="# Percentage of cells with nuclear positivity for ER may be reported as a specific number or a range if more than 10%.">
+              <Property name="p_rptTxt_32091_1" order="122" propName="reportText" val="{no text}" />
+             </DisplayedItem>
+             <DisplayedItem name="DI_49068" order="123" ID="49068.100004300" title="## Invasive carcinoma cases with 1 to 10% of cells staining for ER (not PgR) are reported as “Low Positive” and the following report comment is recommended: “The cancer in this sample has a low level (1-10%) of ER expression by IHC. There are limited data on the overall benefit of endocrine therapies for patients with low level (1-10%) ER expression but they currently suggest possible benefit, so patients are considered eligible for endocrine treatment. There are data that suggest invasive cancers with these results are heterogeneous in both behavior and biology and often have gene expression profiles more similar to ER negative cancers.” The Low Positive designation applies only to invasive carcinoma, and is not used for Progesterone receptor or DCIS.">
+              <Property name="p_rptTxt_49068_1" order="124" propName="reportText" val="{no text}" />
+             </DisplayedItem>
+             <DisplayedItem name="DI_32092" order="125" ID="32092.100004300" title="### For cases in which no internal controls are present and the ER result is either negative or Low Positive, the following report comment is recommended: “No internal controls are present, but external controls are appropriately positive. If needed, testing another specimen that contains internal controls may be warranted for confirmation of ER status.” When a tumor is negative but no internal control cells are present, the pathologist must exercise judgment as to whether the assay can be interpreted as a true negative. This should include consideration of histologic type and grade, cold ischemia and fixation times, and the status of external controls. If the pathologist decides that hormone receptor status cannot be determined, the test should be reported as such and repeated on another block or specimen.">
+              <Property name="p_rptTxt_32092_1" order="126" propName="reportText" val="{no text}" />
+             </DisplayedItem>
+             <DisplayedItem name="DI_32093" order="127" ID="32093.100004300" title="#### Technical issues prevent the test from being reported as positive, negative, or equivocal. This may occur if specimen handling was inadequate, if artifacts (crush or edge artifacts) make interpretation difficult, or if the analytic testing failed.">
+              <Property name="p_rptTxt_32093_1" order="128" propName="reportText" val="{no text}" />
+             </DisplayedItem>
+            </List>
+           </ListField>
+          </Question>
+          <Question name="Q_31089" order="129" ID="31089.100004300" title="Test Type">
+           <ListField name="lf_31089_1" order="130">
+            <List name="lst_31089_2" order="131">
+             <ListItem name="LI_31090" order="132" ID="31090.100004300" title="Food and Drug Administration (FDA) cleared (specify test / vendor)">
+              <Property name="p_rptTxt_31090_1" order="133" propName="reportText" val="Food and Drug Administration (FDA) cleared (test / vendor)" />
+              <ListItemResponseField name="lirf_31090_2" order="134" responseRequired="true">
+               <Response name="rsp_31090_3" order="135">
+                <string name="str_31090_4" order="136" maxLength="4000" />
+               </Response>
+              </ListItemResponseField>
+             </ListItem>
+             <ListItem name="LI_31091" order="137" ID="31091.100004300" title="Laboratory-developed test" />
+             <ListItem name="LI_32779" order="138" ID="32779.100004300" title="Non-U.S.-based health systems" mustImplement="false">
+              <ChildItems name="ch_32779_1" order="139">
+               <Question name="Q_32780" order="140" ID="32780.100004300" mustImplement="false" minCard="0">
+                <Property name="p_altTxt_32780_1" order="141" propName="altText" val="Test Type for Non-U.S.-Based Health Systems" />
+                <ListField name="lf_32780_2" order="142">
+                 <List name="lst_32780_3" order="143">
+                  <ListItem name="LI_32781" order="144" ID="32781.100004300" title="Health Canada Approved (specify test / vendor)" mustImplement="false">
+                   <Property name="p_rptTxt_32781_1" order="145" propName="reportText" val="Health Canada Approved (test / vendor)" />
+                   <ListItemResponseField name="lirf_32781_2" order="146" responseRequired="true">
+                    <Response name="rsp_32781_3" order="147">
+                     <string name="str_32781_4" order="148" maxLength="4000" />
+                    </Response>
+                   </ListItemResponseField>
+                  </ListItem>
+                  <ListItem name="LI_32782" order="149" ID="32782.100004300" title="Other (specify)" mustImplement="false">
+                   <Property name="p_rptTxt_32782_1" order="150" propName="reportText" val="{no text}" />
+                   <ListItemResponseField name="lirf_32782_2" order="151" responseRequired="true">
+                    <Response name="rsp_32782_3" order="152">
+                     <string name="str_32782_4" order="153" maxLength="4000" />
+                    </Response>
+                   </ListItemResponseField>
+                  </ListItem>
+                 </List>
+                </ListField>
+               </Question>
+              </ChildItems>
+             </ListItem>
+            </List>
+           </ListField>
+          </Question>
+          <Question name="Q_31092" order="154" ID="31092.100004300" title="Primary Antibody">
+           <ListField name="lf_31092_1" order="155">
+            <List name="lst_31092_2" order="156">
+             <ListItem name="LI_31093" order="157" ID="31093.100004300" title="SP1" />
+             <ListItem name="LI_31094" order="158" ID="31094.100004300" title="6F11" />
+             <ListItem name="LI_31095" order="159" ID="31095.100004300" title="1D5" />
+             <ListItem name="LI_31096" order="160" ID="31096.100004300" title="Other (specify)">
+              <Property name="p_rptTxt_31096_1" order="161" propName="reportText" val="{no text}" />
+              <ListItemResponseField name="lirf_31096_2" order="162" responseRequired="true">
+               <Response name="rsp_31096_3" order="163">
+                <string name="str_31096_4" order="164" maxLength="4000" />
+               </Response>
+              </ListItemResponseField>
+             </ListItem>
+            </List>
+           </ListField>
+          </Question>
+          <Question name="Q_31107" order="165" ID="31107.100004300" title="Scoring System" mustImplement="false" minCard="0">
+           <ListField name="lf_31107_1" order="166">
+            <List name="lst_31107_2" order="167">
+             <ListItem name="LI_31326" order="168" ID="31326.100004300" title="No separate scoring system used" />
+             <ListItem name="LI_31108" order="169" ID="31108.100004300" title="Allred">
+              <ChildItems name="ch_31108_1" order="170">
+               <Question name="Q_31054" order="171" ID="31054.100004300" title="Proportion Score" mustImplement="false" minCard="0">
+                <ResponseField name="rf_31054_1" order="172">
+                 <Response name="rsp_31054_2" order="173">
+                  <int name="int_31054_3" order="174" minInclusive="0" maxInclusive="5" />
+                 </Response>
+                </ResponseField>
+               </Question>
+               <Question name="Q_31055" order="175" ID="31055.100004300" title="Intensity Score" mustImplement="false" minCard="0">
+                <ResponseField name="rf_31055_1" order="176">
+                 <Response name="rsp_31055_2" order="177">
+                  <int name="int_31055_3" order="178" minInclusive="0" maxInclusive="3" />
+                 </Response>
+                </ResponseField>
+               </Question>
+               <Question name="Q_31056" order="179" ID="31056.100004300" title="Total Allred Score" mustImplement="false" minCard="0">
+                <ResponseField name="rf_31056_1" order="180">
+                 <Response name="rsp_31056_2" order="181">
+                  <int name="int_31056_3" order="182" minInclusive="0" maxInclusive="8" />
+                 </Response>
+                </ResponseField>
+               </Question>
+              </ChildItems>
+             </ListItem>
+             <ListItem name="LI_31109" order="183" ID="31109.100004300" title="Other scoring system">
+              <ChildItems name="ch_31109_1" order="184">
+               <Question name="Q_31057" order="185" ID="31057.100004300" title="Specify System" mustImplement="false" minCard="0">
+                <Property name="p_rptTxt_31057_1" order="186" propName="reportText" val="System" />
+                <ResponseField name="rf_31057_2" order="187">
+                 <Response name="rsp_31057_3" order="188">
+                  <string name="str_31057_4" order="189" maxLength="4000" />
+                 </Response>
+                </ResponseField>
+               </Question>
+               <Question name="Q_31058" order="190" ID="31058.100004300" title="Specify Score Result" mustImplement="false" minCard="0">
+                <Property name="p_rptTxt_31058_1" order="191" propName="reportText" val="Score Result" />
+                <ResponseField name="rf_31058_2" order="192">
+                 <Response name="rsp_31058_3" order="193">
+                  <int name="int_31058_4" order="194" minInclusive="0" maxInclusive="100" />
+                 </Response>
+                </ResponseField>
+               </Question>
+              </ChildItems>
+             </ListItem>
+            </List>
+           </ListField>
+          </Question>
+         </ChildItems>
+        </ListItem>
+        <ListItem name="LI_31161" order="195" ID="31161.100004300" title="Progesterone Receptor (PgR) Status (Note B)">
+         <Property name="p_rptTxt_31161_1" order="196" propName="reportText" val="{no text}" />
+         <ChildItems name="ch_31161_2" order="197">
+          <Question name="Q_30524" order="198" ID="30524.100004300" title="Progesterone Receptor (PgR) Status">
+           <ListField name="lf_30524_1" order="199">
+            <List name="lst_30524_2" order="200">
+             <ListItem name="LI_30533" order="201" ID="30533.100004300" title="Positive#">
+              <Property name="p_rptTxt_30533_1" order="202" propName="reportText" val="Positive" />
+              <ChildItems name="ch_30533_2" order="203">
+               <Question name="Q_32094" order="204" ID="32094.100004300" title="Percentage of Cells with Nuclear Positivity">
+                <ListField name="lf_32094_1" order="205">
+                 <List name="lst_32094_2" order="206">
+                  <ListItem name="LI_30534" order="207" ID="30534.100004300" title="Specify %">
+                   <Property name="p_rptTxt_30534_1" order="208" propName="reportText" val="{no text}" />
+                   <ListItemResponseField name="lirf_30534_2" order="209" responseRequired="true">
+                    <Response name="rsp_30534_3" order="210">
+                     <decimal name="dec_30534_4" order="211" minInclusive="1" maxInclusive="100" fractionDigits="2" />
+                    </Response>
+                    <TextAfterResponse name="rtt_30534_5" order="212" val="%" />
+                    <ResponseUnits name="un_30534_6" order="213" val="%" />
+                   </ListItemResponseField>
+                  </ListItem>
+                  <DisplayedItem name="DI_32095" order="214" ID="32095.100004300" title="--OR--">
+                   <Property name="p_rptTxt_32095_1" order="215" propName="reportText" val="{no text}" />
+                  </DisplayedItem>
+                  <DisplayedItem name="DI_32096" order="216" ID="32096.100004300" title="Select range below:">
+                   <Property name="p_rptTxt_32096_1" order="217" propName="reportText" val="{no text}" />
+                  </DisplayedItem>
+                  <ListItem name="LI_32097" order="218" ID="32097.100004300" title="1-10% (specify)#">
+                   <Property name="p_rptTxt_32097_1" order="219" propName="reportText" val="{no text}" />
+                   <ListItemResponseField name="lirf_32097_2" order="220" responseRequired="true">
+                    <Response name="rsp_32097_3" order="221">
+                     <decimal name="dec_32097_4" order="222" minInclusive="1" maxInclusive="10" fractionDigits="2" />
+                    </Response>
+                    <TextAfterResponse name="rtt_32097_5" order="223" val="%" />
+                    <ResponseUnits name="un_32097_6" order="224" val="%" />
+                   </ListItemResponseField>
+                  </ListItem>
+                  <ListItem name="LI_32098" order="225" ID="32098.100004300" title="11-20%" />
+                  <ListItem name="LI_32099" order="226" ID="32099.100004300" title="21-30%" />
+                  <ListItem name="LI_32100" order="227" ID="32100.100004300" title="31-40%" />
+                  <ListItem name="LI_32101" order="228" ID="32101.100004300" title="41-50%" />
+                  <ListItem name="LI_32102" order="229" ID="32102.100004300" title="51-60%" />
+                  <ListItem name="LI_32103" order="230" ID="32103.100004300" title="61-70%" />
+                  <ListItem name="LI_32104" order="231" ID="32104.100004300" title="71-80%" />
+                  <ListItem name="LI_32105" order="232" ID="32105.100004300" title="81-90%" />
+                  <ListItem name="LI_32106" order="233" ID="32106.100004300" title="91-100%" />
+                 </List>
+                </ListField>
+               </Question>
+               <Question name="Q_30564" order="234" ID="30564.100004300" title="Average Intensity of Staining">
+                <ListField name="lf_30564_1" order="235">
+                 <List name="lst_30564_2" order="236">
+                  <ListItem name="LI_30565" order="237" ID="30565.100004300" title="Weak" />
+                  <ListItem name="LI_30999" order="238" ID="30999.100004300" title="Moderate" />
+                  <ListItem name="LI_31000" order="239" ID="31000.100004300" title="Strong" />
+                 </List>
+                </ListField>
+               </Question>
+              </ChildItems>
+             </ListItem>
+             <ListItem name="LI_31001" order="240" ID="31001.100004300" title="Negative (less than 1%)">
+              <ChildItems name="ch_31001_1" order="241">
+               <Question name="Q_25899" order="242" ID="25899.100004300">
+                <Property name="p_altTxt_25899_1" order="243" propName="altText" val="PgR Test Control Status" />
+                <ListField name="lf_25899_2" order="244">
+                 <List name="lst_25899_3" order="245">
+                  <ListItem name="LI_25900" order="246" ID="25900.100004300" title="Internal control cells present and stain as expected" />
+                  <ListItem name="LI_25902" order="247" ID="25902.100004300" title="Internal control cells absent##">
+                   <Property name="p_rptTxt_25902_1" order="248" propName="reportText" val="Internal control cells absent" />
+                  </ListItem>
+                  <ListItem name="LI_32107" order="249" ID="32107.100004300" title="Other (specify)">
+                   <Property name="p_rptTxt_32107_1" order="250" propName="reportText" val="{no text}" />
+                   <ListItemResponseField name="lirf_32107_2" order="251" responseRequired="true">
+                    <Response name="rsp_32107_3" order="252">
+                     <string name="str_32107_4" order="253" maxLength="4000" />
+                    </Response>
+                   </ListItemResponseField>
+                  </ListItem>
+                 </List>
+                </ListField>
+               </Question>
+              </ChildItems>
+             </ListItem>
+             <ListItem name="LI_25882" order="254" ID="25882.100004300" title="Cannot be determined (indeterminate)###">
+              <Property name="p_rptTxt_25882_1" order="255" propName="reportText" val="Cannot be determined (indeterminate)" />
+              <ChildItems name="ch_25882_2" order="256">
+               <Question name="Q_32108" order="257" ID="32108.100004300">
+                <Property name="p_altTxt_32108_1" order="258" propName="altText" val="Reason Test Result Cannot be Determined" />
+                <ListField name="lf_32108_2" order="259" maxSelections="0">
+                 <List name="lst_32108_3" order="260">
+                  <ListItem name="LI_32109" order="261" ID="32109.100004300" title="Internal control cells present; no immunoreactivity of either tumor cells or internal controls" />
+                  <ListItem name="LI_32110" order="262" ID="32110.100004300" title="Other (specify)">
+                   <Property name="p_rptTxt_32110_1" order="263" propName="reportText" val="{no text}" />
+                   <ListItemResponseField name="lirf_32110_2" order="264" responseRequired="true">
+                    <Response name="rsp_32110_3" order="265">
+                     <string name="str_32110_4" order="266" maxLength="4000" />
+                    </Response>
+                   </ListItemResponseField>
+                  </ListItem>
+                 </List>
+                </ListField>
+               </Question>
+              </ChildItems>
+             </ListItem>
+             <DisplayedItem name="DI_32111" order="267" ID="32111.100004300" title="# Percentage of cells with nuclear positivity may be reported as a specific number or a range if more than 10%.">
+              <Property name="p_rptTxt_32111_1" order="268" propName="reportText" val="{no text}" />
+             </DisplayedItem>
+             <DisplayedItem name="DI_32112" order="269" ID="32112.100004300" title="## When a tumor is negative but no internal control cells are present, the pathologist must exercise judgment as to whether the assay can be interpreted as a true negative. This should include consideration of histologic type and grade, cold ischemia and fixation times, and the status of external controls. If the pathologist decides that hormone receptor status cannot be determined, the test should be reported as such and repeated on another block or specimen.">
+              <Property name="p_rptTxt_32112_1" order="270" propName="reportText" val="{no text}" />
+             </DisplayedItem>
+             <DisplayedItem name="DI_32113" order="271" ID="32113.100004300" title="### Technical issues prevent the test from being reported as positive, negative, or equivocal. This may occur if specimen handling was inadequate, if artifacts (crush or edge artifacts) make interpretation difficult, or if the analytic testing failed.">
+              <Property name="p_rptTxt_32113_1" order="272" propName="reportText" val="{no text}" />
+             </DisplayedItem>
+            </List>
+           </ListField>
+          </Question>
+          <Question name="Q_31099" order="273" ID="31099.100004300" title="Test Type">
+           <ListField name="lf_31099_1" order="274">
+            <List name="lst_31099_2" order="275">
+             <ListItem name="LI_31100" order="276" ID="31100.100004300" title="Food and Drug Administration (FDA) cleared (specify test / vendor)">
+              <Property name="p_rptTxt_31100_1" order="277" propName="reportText" val="Food and Drug Administration (FDA) cleared (test / vendor)" />
+              <ListItemResponseField name="lirf_31100_2" order="278" responseRequired="true">
+               <Response name="rsp_31100_3" order="279">
+                <string name="str_31100_4" order="280" maxLength="4000" />
+               </Response>
+              </ListItemResponseField>
+             </ListItem>
+             <ListItem name="LI_31101" order="281" ID="31101.100004300" title="Laboratory-developed test" />
+             <ListItem name="LI_32783" order="282" ID="32783.100004300" title="Non-U.S.-based health systems" mustImplement="false">
+              <ChildItems name="ch_32783_1" order="283">
+               <Question name="Q_32784" order="284" ID="32784.100004300" mustImplement="false" minCard="0">
+                <Property name="p_altTxt_32784_1" order="285" propName="altText" val="Test Type for Non-U.S.-Based Health Systems" />
+                <ListField name="lf_32784_2" order="286">
+                 <List name="lst_32784_3" order="287">
+                  <ListItem name="LI_32785" order="288" ID="32785.100004300" title="Health Canada Approved (specify test / vendor)" mustImplement="false">
+                   <Property name="p_rptTxt_32785_1" order="289" propName="reportText" val="Health Canada Approved (test / vendor)" />
+                   <ListItemResponseField name="lirf_32785_2" order="290" responseRequired="true">
+                    <Response name="rsp_32785_3" order="291">
+                     <string name="str_32785_4" order="292" maxLength="4000" />
+                    </Response>
+                   </ListItemResponseField>
+                  </ListItem>
+                  <ListItem name="LI_32786" order="293" ID="32786.100004300" title="Other (specify)" mustImplement="false">
+                   <Property name="p_rptTxt_32786_1" order="294" propName="reportText" val="{no text}" />
+                   <ListItemResponseField name="lirf_32786_2" order="295" responseRequired="true">
+                    <Response name="rsp_32786_3" order="296">
+                     <string name="str_32786_4" order="297" maxLength="4000" />
+                    </Response>
+                   </ListItemResponseField>
+                  </ListItem>
+                 </List>
+                </ListField>
+               </Question>
+              </ChildItems>
+             </ListItem>
+            </List>
+           </ListField>
+          </Question>
+          <Question name="Q_31102" order="298" ID="31102.100004300" title="Primary Antibody">
+           <ListField name="lf_31102_1" order="299">
+            <List name="lst_31102_2" order="300">
+             <ListItem name="LI_31103" order="301" ID="31103.100004300" title="1E2" />
+             <ListItem name="LI_31104" order="302" ID="31104.100004300" title="636" />
+             <ListItem name="LI_31105" order="303" ID="31105.100004300" title="16" />
+             <ListItem name="LI_31097" order="304" ID="31097.100004300" title="SP2" />
+             <ListItem name="LI_31098" order="305" ID="31098.100004300" title="1A6" />
+             <ListItem name="LI_32115" order="306" ID="32115.100004300" title="1294" />
+             <ListItem name="LI_32116" order="307" ID="32116.100004300" title="312" />
+             <ListItem name="LI_31106" order="308" ID="31106.100004300" title="Other (specify)">
+              <Property name="p_rptTxt_31106_1" order="309" propName="reportText" val="{no text}" />
+              <ListItemResponseField name="lirf_31106_2" order="310" responseRequired="true">
+               <Response name="rsp_31106_3" order="311">
+                <string name="str_31106_4" order="312" maxLength="4000" />
+               </Response>
+              </ListItemResponseField>
+             </ListItem>
+            </List>
+           </ListField>
+          </Question>
+          <Question name="Q_25903" order="313" ID="25903.100004300" title="Scoring System" mustImplement="false" minCard="0">
+           <ListField name="lf_25903_1" order="314">
+            <List name="lst_25903_2" order="315">
+             <ListItem name="LI_31320" order="316" ID="31320.100004300" title="No separate scoring system used" />
+             <ListItem name="LI_26291" order="317" ID="26291.100004300" title="Allred">
+              <ChildItems name="ch_26291_1" order="318">
+               <Question name="Q_31059" order="319" ID="31059.100004300" title="Proportion Score" mustImplement="false" minCard="0">
+                <ResponseField name="rf_31059_1" order="320">
+                 <Response name="rsp_31059_2" order="321">
+                  <int name="int_31059_3" order="322" minInclusive="0" maxInclusive="5" />
+                 </Response>
+                </ResponseField>
+               </Question>
+               <Question name="Q_31060" order="323" ID="31060.100004300" title="Intensity Score" mustImplement="false" minCard="0">
+                <ResponseField name="rf_31060_1" order="324">
+                 <Response name="rsp_31060_2" order="325">
+                  <int name="int_31060_3" order="326" minInclusive="0" maxInclusive="3" />
+                 </Response>
+                </ResponseField>
+               </Question>
+               <Question name="Q_31061" order="327" ID="31061.100004300" title="Total Allred Score" mustImplement="false" minCard="0">
+                <ResponseField name="rf_31061_1" order="328">
+                 <Response name="rsp_31061_2" order="329">
+                  <int name="int_31061_3" order="330" minInclusive="0" maxInclusive="8" />
+                 </Response>
+                </ResponseField>
+               </Question>
+              </ChildItems>
+             </ListItem>
+             <ListItem name="LI_31062" order="331" ID="31062.100004300" title="Other scoring system">
+              <ChildItems name="ch_31062_1" order="332">
+               <Question name="Q_31063" order="333" ID="31063.100004300" title="Specify System" mustImplement="false" minCard="0">
+                <Property name="p_rptTxt_31063_1" order="334" propName="reportText" val="System" />
+                <ResponseField name="rf_31063_2" order="335">
+                 <Response name="rsp_31063_3" order="336">
+                  <string name="str_31063_4" order="337" maxLength="4000" />
+                 </Response>
+                </ResponseField>
+               </Question>
+               <Question name="Q_31064" order="338" ID="31064.100004300" title="Specify Score Result" mustImplement="false" minCard="0">
+                <Property name="p_rptTxt_31064_1" order="339" propName="reportText" val="Score Result" />
+                <ResponseField name="rf_31064_2" order="340">
+                 <Response name="rsp_31064_3" order="341">
+                  <int name="int_31064_4" order="342" minInclusive="0" maxInclusive="100" />
+                 </Response>
+                </ResponseField>
+               </Question>
+              </ChildItems>
+             </ListItem>
+            </List>
+           </ListField>
+          </Question>
+         </ChildItems>
+        </ListItem>
+        <ListItem name="LI_31163" order="343" ID="31163.100004300" title="HER2 by Immunohistochemistry (Note C)">
+         <Property name="p_rptTxt_31163_1" order="344" propName="reportText" val="{no text}" />
+         <ChildItems name="ch_31163_2" order="345">
+          <Question name="Q_31012" order="346" ID="31012.100004300" title="HER2 by Immunohistochemistry">
+           <ListField name="lf_31012_1" order="347">
+            <List name="lst_31012_2" order="348">
+             <ListItem name="LI_31015" order="349" ID="31015.100004300" title="Negative (Score 0)" />
+             <DisplayedItem name="DI_847255" order="350" ID="847255.100004300" title="# Breast cancers with HER2 IHC score 1+ or HER2 IHC score 2+ and a negative ISH result are eligible for clinically appropriate HER2-targeted therapy and may be reported as “HER2 Low”.">
+              <Property name="p_rptTxt_847255_1" order="351" propName="reportText" val="{no text}" />
+             </DisplayedItem>
+             <ListItem name="LI_31016" order="352" ID="31016.100004300" title="Negative (Score 1+)#">
+              <Property name="p_rptTxt_31016_1" order="353" propName="reportText" val="Negative (Score 1+)" />
+             </ListItem>
+             <ListItem name="LI_31017" order="354" ID="31017.100004300" title="Equivocal (Score 2+)#">
+              <Property name="p_rptTxt_31017_1" order="355" propName="reportText" val="Equivocal (Score 2+)" />
+              <ChildItems name="ch_31017_2" order="356">
+               <Question name="Q_379824" order="357" ID="379824.100004300" title="Percentage of Cells with Uniform Intense Complete Membrane Staining" mustImplement="false" minCard="0">
+                <ListField name="lf_379824_1" order="358">
+                 <List name="lst_379824_2" order="359">
+                  <ListItem name="LI_379825" order="360" ID="379825.100004300" title="Specify percentage">
+                   <Property name="p_rptTxt_379825_1" order="361" propName="reportText" val="{no text}" />
+                   <ListItemResponseField name="lirf_379825_2" order="362" responseRequired="true">
+                    <Response name="rsp_379825_3" order="363">
+                     <int name="int_379825_4" order="364" minInclusive="0" maxInclusive="10" />
+                    </Response>
+                    <TextAfterResponse name="rtt_379825_5" order="365" val="%" />
+                    <ResponseUnits name="un_379825_6" order="366" val="%" />
+                   </ListItemResponseField>
+                  </ListItem>
+                  <ListItem name="LI_379826" order="367" ID="379826.100004300" title="Other (specify)">
+                   <Property name="p_rptTxt_379826_1" order="368" propName="reportText" val="{no text}" />
+                   <ListItemResponseField name="lirf_379826_2" order="369" responseRequired="true">
+                    <Response name="rsp_379826_3" order="370">
+                     <string name="str_379826_4" order="371" maxLength="4000" />
+                    </Response>
+                   </ListItemResponseField>
+                  </ListItem>
+                  <ListItem name="LI_379827" order="372" ID="379827.100004300" title="Cannot be determined" />
+                 </List>
+                </ListField>
+               </Question>
+              </ChildItems>
+             </ListItem>
+             <ListItem name="LI_31018" order="373" ID="31018.100004300" title="Positive (Score 3+)">
+              <ChildItems name="ch_31018_1" order="374">
+               <Question name="Q_379830" order="375" ID="379830.100004300" title="Percentage of Cells with Uniform Intense Complete Membrane Staining">
+                <ListField name="lf_379830_1" order="376">
+                 <List name="lst_379830_2" order="377">
+                  <ListItem name="LI_379831" order="378" ID="379831.100004300" title="Specify percentage">
+                   <Property name="p_rptTxt_379831_1" order="379" propName="reportText" val="{no text}" />
+                   <ListItemResponseField name="lirf_379831_2" order="380" responseRequired="true">
+                    <Response name="rsp_379831_3" order="381">
+                     <int name="int_379831_4" order="382" minInclusive="11" maxInclusive="100" />
+                    </Response>
+                    <TextAfterResponse name="rtt_379831_5" order="383" val="%" />
+                    <ResponseUnits name="un_379831_6" order="384" val="%" />
+                   </ListItemResponseField>
+                  </ListItem>
+                  <ListItem name="LI_379832" order="385" ID="379832.100004300" title="Other (specify)">
+                   <Property name="p_rptTxt_379832_1" order="386" propName="reportText" val="{no text}" />
+                   <ListItemResponseField name="lirf_379832_2" order="387" responseRequired="true">
+                    <Response name="rsp_379832_3" order="388">
+                     <string name="str_379832_4" order="389" maxLength="4000" />
+                    </Response>
+                   </ListItemResponseField>
+                  </ListItem>
+                  <ListItem name="LI_379833" order="390" ID="379833.100004300" title="Cannot be determined" />
+                 </List>
+                </ListField>
+               </Question>
+              </ChildItems>
+             </ListItem>
+             <ListItem name="LI_25883" order="391" ID="25883.100004300" title="Cannot be determined (indeterminate) (explain)">
+              <Property name="p_rptTxt_25883_1" order="392" propName="reportText" val="Cannot be determined (indeterminate)" />
+              <ListItemResponseField name="lirf_25883_2" order="393" responseRequired="true">
+               <Response name="rsp_25883_3" order="394">
+                <string name="str_25883_4" order="395" maxLength="4000" />
+               </Response>
+              </ListItemResponseField>
+             </ListItem>
+            </List>
+           </ListField>
+          </Question>
+          <Question name="Q_31110" order="396" ID="31110.100004300" title="Test Type">
+           <ListField name="lf_31110_1" order="397">
+            <List name="lst_31110_2" order="398">
+             <ListItem name="LI_31111" order="399" ID="31111.100004300" title="Food and Drug Administration (FDA) cleared (specify test / vendor)">
+              <Property name="p_rptTxt_31111_1" order="400" propName="reportText" val="Food and Drug Administration (FDA) cleared (test / vendor)" />
+              <ListItemResponseField name="lirf_31111_2" order="401" responseRequired="true">
+               <Response name="rsp_31111_3" order="402">
+                <string name="str_31111_4" order="403" maxLength="4000" />
+               </Response>
+              </ListItemResponseField>
+             </ListItem>
+             <ListItem name="LI_31112" order="404" ID="31112.100004300" title="Laboratory-developed test" />
+             <ListItem name="LI_32787" order="405" ID="32787.100004300" title="Non-U.S.-based health systems" mustImplement="false">
+              <ChildItems name="ch_32787_1" order="406">
+               <Question name="Q_32788" order="407" ID="32788.100004300" mustImplement="false" minCard="0">
+                <Property name="p_altTxt_32788_1" order="408" propName="altText" val="Test Type for Non-U.S.-Based Health Systems" />
+                <ListField name="lf_32788_2" order="409">
+                 <List name="lst_32788_3" order="410">
+                  <ListItem name="LI_32789" order="411" ID="32789.100004300" title="Health Canada Approved (specify test / vendor)" mustImplement="false">
+                   <Property name="p_rptTxt_32789_1" order="412" propName="reportText" val="Health Canada Approved (test / vendor)" />
+                   <ListItemResponseField name="lirf_32789_2" order="413" responseRequired="true">
+                    <Response name="rsp_32789_3" order="414">
+                     <string name="str_32789_4" order="415" maxLength="4000" />
+                    </Response>
+                   </ListItemResponseField>
+                  </ListItem>
+                  <ListItem name="LI_32790" order="416" ID="32790.100004300" title="Other (specify)" mustImplement="false">
+                   <Property name="p_rptTxt_32790_1" order="417" propName="reportText" val="{no text}" />
+                   <ListItemResponseField name="lirf_32790_2" order="418" responseRequired="true">
+                    <Response name="rsp_32790_3" order="419">
+                     <string name="str_32790_4" order="420" maxLength="4000" />
+                    </Response>
+                   </ListItemResponseField>
+                  </ListItem>
+                 </List>
+                </ListField>
+               </Question>
+              </ChildItems>
+             </ListItem>
+            </List>
+           </ListField>
+          </Question>
+          <Question name="Q_31116" order="421" ID="31116.100004300" title="Primary Antibody">
+           <ListField name="lf_31116_1" order="422">
+            <List name="lst_31116_2" order="423">
+             <ListItem name="LI_31117" order="424" ID="31117.100004300" title="4B5" />
+             <ListItem name="LI_31118" order="425" ID="31118.100004300" title="HercepTest" />
+             <ListItem name="LI_31119" order="426" ID="31119.100004300" title="A0485" />
+             <ListItem name="LI_31120" order="427" ID="31120.100004300" title="SP3" />
+             <ListItem name="LI_31121" order="428" ID="31121.100004300" title="CB11" />
+             <ListItem name="LI_31122" order="429" ID="31122.100004300" title="Other (specify)">
+              <Property name="p_rptTxt_31122_1" order="430" propName="reportText" val="{no text}" />
+              <ListItemResponseField name="lirf_31122_2" order="431" responseRequired="true">
+               <Response name="rsp_31122_3" order="432">
+                <string name="str_31122_4" order="433" maxLength="4000" />
+               </Response>
+              </ListItemResponseField>
+             </ListItem>
+            </List>
+           </ListField>
+          </Question>
+         </ChildItems>
+        </ListItem>
+        <ListItem name="LI_31166" order="434" ID="31166.100004300" title="HER2 by in situ Hybridization (Note C)">
+         <Property name="p_rptTxt_31166_1" order="435" propName="reportText" val="{no text}" />
+         <ChildItems name="ch_31166_2" order="436">
+          <Question name="Q_49055" order="437" ID="49055.100004300" title="HER2 by in situ Hybridization">
+           <ListField name="lf_49055_1" order="438">
+            <List name="lst_49055_2" order="439">
+             <DisplayedItem name="DI_41902" order="440" ID="41902.100004300" title="&quot;Number of Observers&quot; and &quot;Number of Invasive Tumor Cells Counted&quot; are required only when Negative or Positive is selected.">
+              <Property name="p_rptTxt_41902_1" order="441" propName="reportText" val="{no text}" />
+             </DisplayedItem>
+             <ListItem name="LI_25904" order="442" ID="25904.100004300" title="Negative (not amplified)" />
+             <ListItem name="LI_25906" order="443" ID="25906.100004300" title="Positive (amplified)" />
+             <ListItem name="LI_25907" order="444" ID="25907.100004300" title="Cannot be determined (indeterminate) (explain)">
+              <Property name="p_rptTxt_25907_1" order="445" propName="reportText" val="Cannot be determined (indeterminate)" />
+              <ListItemResponseField name="lirf_25907_2" order="446" responseRequired="true">
+               <Response name="rsp_25907_3" order="447">
+                <string name="str_25907_4" order="448" maxLength="4000" />
+               </Response>
+              </ListItemResponseField>
+             </ListItem>
+             <ListItem name="LI_51471" order="449" ID="51471.100004300" title="Not performed" />
+             <ListItem name="LI_53635" order="450" ID="53635.100004300" title="Pending" />
+            </List>
+           </ListField>
+          </Question>
+          <Question name="Q_25908" order="451" ID="25908.100004300" title="?Number of Observers (required only if applicable)" minCard="0">
+           <Property name="p_rptTxt_25908_1" order="452" propName="reportText" val="Number of Observers" />
+           <ResponseField name="rf_25908_2" order="453">
+            <Response name="rsp_25908_3" order="454">
+             <int name="int_25908_4" order="455" minInclusive="1" maxInclusive="999" />
+            </Response>
+           </ResponseField>
+          </Question>
+          <Question name="Q_31037" order="456" ID="31037.100004300" title="?Number of Invasive Tumor Cells Counted (required only if applicable)" minCard="0">
+           <Property name="p_rptTxt_31037_1" order="457" propName="reportText" val="Number of Invasive Tumor Cells Counted" />
+           <ResponseField name="rf_31037_2" order="458">
+            <Response name="rsp_31037_3" order="459">
+             <int name="int_31037_4" order="460" minInclusive="0" maxInclusive="999" />
+            </Response>
+            <TextAfterResponse name="rtt_31037_5" order="461" val="cells" />
+            <ResponseUnits name="un_31037_6" order="462" val="cells" />
+           </ResponseField>
+          </Question>
+          <Question name="Q_31038" order="463" ID="31038.100004300" title="?Method (required only if applicable)">
+           <Property name="p_rptTxt_31038_1" order="464" propName="reportText" val="Method" />
+           <ListField name="lf_31038_2" order="465" maxSelections="0">
+            <List name="lst_31038_3" order="466">
+             <ListItem name="LI_758211" order="467" ID="758211.100004300" title="?Not applicable (not performed)" selectionDeselectsSiblings="true" omitWhenSelected="true">
+              <Property name="p_rptTxt_758211_1" order="468" propName="reportText" val="Not applicable " />
+             </ListItem>
+             <ListItem name="LI_25909" order="469" ID="25909.100004300" title="Dual probe assay">
+              <ChildItems name="ch_25909_1" order="470">
+               <Question name="Q_25910" order="471" ID="25910.100004300" title="Average Number of HER2 Signals per Cell">
+                <ResponseField name="rf_25910_1" order="472">
+                 <Response name="rsp_25910_2" order="473">
+                  <decimal name="dec_25910_3" order="474" minInclusive="0.1" maxInclusive="1000" fractionDigits="2" />
+                 </Response>
+                </ResponseField>
+               </Question>
+               <Question name="Q_25911" order="475" ID="25911.100004300" title="Average Number of CEP17 Signals per Cell">
+                <ResponseField name="rf_25911_1" order="476">
+                 <Response name="rsp_25911_2" order="477">
+                  <decimal name="dec_25911_3" order="478" minInclusive="0.1" maxInclusive="1000" fractionDigits="2" />
+                 </Response>
+                </ResponseField>
+               </Question>
+               <Question name="Q_25912" order="479" ID="25912.100004300" title="HER2 / CEP17 Ratio">
+                <ResponseField name="rf_25912_1" order="480">
+                 <Response name="rsp_25912_2" order="481">
+                  <decimal name="dec_25912_3" order="482" minInclusive="0.1" maxInclusive="100" fractionDigits="2" />
+                 </Response>
+                </ResponseField>
+               </Question>
+              </ChildItems>
+             </ListItem>
+             <ListItem name="LI_31046" order="483" ID="31046.100004300" title="Single probe assay">
+              <ChildItems name="ch_31046_1" order="484">
+               <Question name="Q_25913" order="485" ID="25913.100004300" title="Average Number of HER2 Signals per Cell">
+                <ResponseField name="rf_25913_1" order="486">
+                 <Response name="rsp_25913_2" order="487">
+                  <decimal name="dec_25913_3" order="488" minInclusive="0" maxInclusive="99" fractionDigits="2" />
+                 </Response>
+                </ResponseField>
+               </Question>
+              </ChildItems>
+             </ListItem>
+            </List>
+           </ListField>
+          </Question>
+          <Question name="Q_30478" order="489" ID="30478.100004300" title="Aneusomy (as defined by vendor kit used)" mustImplement="false" minCard="0">
+           <Property name="p_rptTxt_30478_1" order="490" propName="reportText" val="Aneusomy" />
+           <ListField name="lf_30478_2" order="491">
+            <List name="lst_30478_3" order="492">
+             <ListItem name="LI_30479" order="493" ID="30479.100004300" title="Not identified" />
+             <ListItem name="LI_30481" order="494" ID="30481.100004300" title="Present (explain)">
+              <Property name="p_rptTxt_30481_1" order="495" propName="reportText" val="Present" />
+              <ListItemResponseField name="lirf_30481_2" order="496" responseRequired="true">
+               <Response name="rsp_30481_3" order="497">
+                <string name="str_30481_4" order="498" maxLength="4000" />
+               </Response>
+              </ListItemResponseField>
+             </ListItem>
+            </List>
+           </ListField>
+          </Question>
+          <Question name="Q_30482" order="499" ID="30482.100004300" title="Heterogeneous Signals" mustImplement="false" minCard="0">
+           <ListField name="lf_30482_1" order="500">
+            <List name="lst_30482_2" order="501">
+             <ListItem name="LI_30483" order="502" ID="30483.100004300" title="Not identified" />
+             <ListItem name="LI_30484" order="503" ID="30484.100004300" title="Present">
+              <ChildItems name="ch_30484_1" order="504">
+               <Question name="Q_379835" order="505" ID="379835.100004300" title="Percentage of Cells with Amplified HER2 Signals" mustImplement="false" minCard="0">
+                <ListField name="lf_379835_1" order="506">
+                 <List name="lst_379835_2" order="507">
+                  <ListItem name="LI_379836" order="508" ID="379836.100004300" title="Specify percentage">
+                   <Property name="p_rptTxt_379836_1" order="509" propName="reportText" val="{no text}" />
+                   <ListItemResponseField name="lirf_379836_2" order="510" responseRequired="true">
+                    <Response name="rsp_379836_3" order="511">
+                     <decimal name="dec_379836_4" order="512" minInclusive="1" maxInclusive="100" fractionDigits="2" />
+                    </Response>
+                    <TextAfterResponse name="rtt_379836_5" order="513" val="%" />
+                    <ResponseUnits name="un_379836_6" order="514" val="%" />
+                   </ListItemResponseField>
+                  </ListItem>
+                  <ListItem name="LI_379837" order="515" ID="379837.100004300" title="Other (specify)">
+                   <Property name="p_rptTxt_379837_1" order="516" propName="reportText" val="{no text}" />
+                   <ListItemResponseField name="lirf_379837_2" order="517" responseRequired="true">
+                    <Response name="rsp_379837_3" order="518">
+                     <string name="str_379837_4" order="519" maxLength="4000" />
+                    </Response>
+                   </ListItemResponseField>
+                  </ListItem>
+                  <ListItem name="LI_379839" order="520" ID="379839.100004300" title="Cannot be determined" />
+                 </List>
+                </ListField>
+               </Question>
+              </ChildItems>
+             </ListItem>
+            </List>
+           </ListField>
+          </Question>
+          <Question name="Q_31113" order="521" ID="31113.100004300" title="Test Type">
+           <ListField name="lf_31113_1" order="522">
+            <List name="lst_31113_2" order="523">
+             <ListItem name="LI_31114" order="524" ID="31114.100004300" title="Food and Drug Administration (FDA) cleared (specify test / vendor)">
+              <Property name="p_rptTxt_31114_1" order="525" propName="reportText" val="Food and Drug Administration (FDA) cleared (test / vendor)" />
+              <ListItemResponseField name="lirf_31114_2" order="526" responseRequired="true">
+               <Response name="rsp_31114_3" order="527">
+                <string name="str_31114_4" order="528" maxLength="4000" />
+               </Response>
+              </ListItemResponseField>
+             </ListItem>
+             <ListItem name="LI_31115" order="529" ID="31115.100004300" title="Laboratory-developed test" />
+             <ListItem name="LI_32791" order="530" ID="32791.100004300" title="Non-U.S.-based health systems" mustImplement="false">
+              <ChildItems name="ch_32791_1" order="531">
+               <Question name="Q_32792" order="532" ID="32792.100004300" mustImplement="false" minCard="0">
+                <Property name="p_altTxt_32792_1" order="533" propName="altText" val="Test Type for Non-U.S.-Based Health Systems" />
+                <ListField name="lf_32792_2" order="534">
+                 <List name="lst_32792_3" order="535">
+                  <ListItem name="LI_32793" order="536" ID="32793.100004300" title="Health Canada Approved (specify test / vendor)" mustImplement="false">
+                   <Property name="p_rptTxt_32793_1" order="537" propName="reportText" val="Health Canada Approved (test / vendor)" />
+                   <ListItemResponseField name="lirf_32793_2" order="538" responseRequired="true">
+                    <Response name="rsp_32793_3" order="539">
+                     <string name="str_32793_4" order="540" maxLength="4000" />
+                    </Response>
+                   </ListItemResponseField>
+                  </ListItem>
+                  <ListItem name="LI_32794" order="541" ID="32794.100004300" title="Other (specify)" mustImplement="false">
+                   <Property name="p_rptTxt_32794_1" order="542" propName="reportText" val="{no text}" />
+                   <ListItemResponseField name="lirf_32794_2" order="543" responseRequired="true">
+                    <Response name="rsp_32794_3" order="544">
+                     <string name="str_32794_4" order="545" maxLength="4000" />
+                    </Response>
+                   </ListItemResponseField>
+                  </ListItem>
+                 </List>
+                </ListField>
+               </Question>
+              </ChildItems>
+             </ListItem>
+            </List>
+           </ListField>
+          </Question>
+         </ChildItems>
+        </ListItem>
+        <ListItem name="LI_31165" order="546" ID="31165.100004300" title="Ki-67 (Note D)">
+         <Property name="p_rptTxt_31165_1" order="547" propName="reportText" val="Ki-67" />
+         <ChildItems name="ch_31165_2" order="548">
+          <Question name="Q_31075" order="549" ID="31075.100004300" title="Ki-67 Percentage of Positive Nuclei">
+           <ResponseField name="rf_31075_1" order="550">
+            <Response name="rsp_31075_2" order="551">
+             <decimal name="dec_31075_3" order="552" minInclusive="0" maxInclusive="100" fractionDigits="2" />
+            </Response>
+            <TextAfterResponse name="rtt_31075_4" order="553" val="%" />
+            <ResponseUnits name="un_31075_5" order="554" val="%" />
+           </ResponseField>
+          </Question>
+          <Question name="Q_31124" order="555" ID="31124.100004300" title="Primary Antibody" mustImplement="false" minCard="0">
+           <ListField name="lf_31124_1" order="556">
+            <List name="lst_31124_2" order="557">
+             <ListItem name="LI_31125" order="558" ID="31125.100004300" title="MIB1" />
+             <ListItem name="LI_31126" order="559" ID="31126.100004300" title="SP6" />
+             <ListItem name="LI_32169" order="560" ID="32169.100004300" title="MM1" />
+             <ListItem name="LI_32160" order="561" ID="32160.100004300" title="30-9" />
+             <ListItem name="LI_32168" order="562" ID="32168.100004300" title="IR / IS626" />
+             <ListItem name="LI_31127" order="563" ID="31127.100004300" title="Other (specify)">
+              <Property name="p_rptTxt_31127_1" order="564" propName="reportText" val="{no text}" />
+              <ListItemResponseField name="lirf_31127_2" order="565" responseRequired="true">
+               <Response name="rsp_31127_3" order="566">
+                <string name="str_31127_4" order="567" maxLength="4000" />
+               </Response>
+              </ListItemResponseField>
+             </ListItem>
+            </List>
+           </ListField>
+          </Question>
+         </ChildItems>
+        </ListItem>
+       </List>
+      </ListField>
+     </Question>
+     <Question name="Q_52536" order="568" ID="52536.100004300" title="Cold Ischemia and Fixation Times">
+      <ListField name="lf_52536_1" order="569">
+       <List name="lst_52536_2" order="570">
+        <ListItem name="LI_46287" order="571" ID="46287.100004300" title="Meet requirements specified in latest version of the ASCO / CAP Guidelines" />
+        <ListItem name="LI_58421" order="572" ID="58421.100004300" title="Do not meet requirements specified in latest version of the ASCO / CAP Guidelines" />
+        <ListItem name="LI_32114" order="573" ID="32114.100004300" title="Cannot be determined (explain)">
+         <Property name="p_rptTxt_32114_1" order="574" propName="reportText" val="Cannot be determined" />
+         <ListItemResponseField name="lirf_32114_2" order="575" responseRequired="true">
+          <Response name="rsp_32114_3" order="576">
+           <string name="str_32114_4" order="577" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+       </List>
+      </ListField>
+     </Question>
+     <Question name="Q_32777" order="578" ID="32777.100004300" title="Cold Ischemia Time (minutes)" mustImplement="false" minCard="0">
+      <ResponseField name="rf_32777_1" order="579">
+       <Response name="rsp_32777_2" order="580">
+        <int name="int_32777_3" order="581" minInclusive="0" maxInclusive="6000" />
+       </Response>
+       <TextAfterResponse name="rtt_32777_4" order="582" val="min" />
+       <ResponseUnits name="un_32777_5" order="583" val="min" />
+      </ResponseField>
+     </Question>
+     <Question name="Q_21465" order="584" ID="21465.100004300" title="Fixation Time (hours)" mustImplement="false" minCard="0">
+      <ResponseField name="rf_21465_1" order="585">
+       <Response name="rsp_21465_2" order="586">
+        <decimal name="dec_21465_3" order="587" minInclusive="0" maxInclusive="999" fractionDigits="2" />
+       </Response>
+       <TextAfterResponse name="rtt_21465_4" order="588" val="hours" />
+       <ResponseUnits name="un_21465_5" order="589" val="hours" />
+      </ResponseField>
+     </Question>
+     <Question name="Q_32778" order="590" ID="32778.100004300" title="Testing Performed on Block Number(s) (specify)" mustImplement="false" minCard="0">
+      <Property name="p_rptTxt_32778_1" order="591" propName="reportText" val="Testing Performed on Block Number(s)" />
+      <ResponseField name="rf_32778_2" order="592">
+       <Response name="rsp_32778_3" order="593">
+        <string name="str_32778_4" order="594" maxLength="80" />
+       </Response>
+      </ResponseField>
+     </Question>
+    </ChildItems>
+   </Section>
+   <Section name="S_25892" order="595" ID="25892.100004300" title="METHODS" mustImplement="false" minCard="0">
+    <ChildItems name="ch_25892_1" order="596">
+     <Question name="Q_31086" order="597" ID="31086.100004300" title="Fixative" mustImplement="false" minCard="0">
+      <ListField name="lf_31086_1" order="598">
+       <List name="lst_31086_2" order="599">
+        <ListItem name="LI_31087" order="600" ID="31087.100004300" title="Formalin" />
+        <ListItem name="LI_31088" order="601" ID="31088.100004300" title="Other (specify)">
+         <Property name="p_rptTxt_31088_1" order="602" propName="reportText" val="{no text}" />
+         <ListItemResponseField name="lirf_31088_2" order="603" responseRequired="true">
+          <Response name="rsp_31088_3" order="604">
+           <string name="str_31088_4" order="605" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+       </List>
+      </ListField>
+     </Question>
+     <Question name="Q_31128" order="606" ID="31128.100004300" title="Image Analysis" mustImplement="false" minCard="0">
+      <ListField name="lf_31128_1" order="607">
+       <List name="lst_31128_2" order="608">
+        <ListItem name="LI_31129" order="609" ID="31129.100004300" title="Not performed" />
+        <ListItem name="LI_31130" order="610" ID="31130.100004300" title="Performed">
+         <ChildItems name="ch_31130_1" order="611">
+          <Question name="Q_26436" order="612" ID="26436.100004300" title="Specify Method" mustImplement="false" minCard="0">
+           <Property name="p_rptTxt_26436_1" order="613" propName="reportText" val="Method" />
+           <ResponseField name="rf_26436_2" order="614">
+            <Response name="rsp_26436_3" order="615">
+             <string name="str_26436_4" order="616" maxLength="4000" />
+            </Response>
+           </ResponseField>
+          </Question>
+          <Question name="Q_31131" order="617" ID="31131.100004300" title="Biomarkers Scored by Image Analysis" mustImplement="false" minCard="0">
+           <ListField name="lf_31131_1" order="618" maxSelections="0">
+            <List name="lst_31131_2" order="619">
+             <ListItem name="LI_31132" order="620" ID="31132.100004300" title="ER" />
+             <ListItem name="LI_31133" order="621" ID="31133.100004300" title="PgR" />
+             <ListItem name="LI_31134" order="622" ID="31134.100004300" title="HER2 by IHC" />
+             <ListItem name="LI_25885" order="623" ID="25885.100004300" title="HER2 by ISH" />
+             <ListItem name="LI_31135" order="624" ID="31135.100004300" title="Ki-67" />
+             <ListItem name="LI_31136" order="625" ID="31136.100004300" title="Other (specify)">
+              <Property name="p_rptTxt_31136_1" order="626" propName="reportText" val="{no text}" />
+              <ListItemResponseField name="lirf_31136_2" order="627" responseRequired="true">
+               <Response name="rsp_31136_3" order="628">
+                <string name="str_31136_4" order="629" maxLength="4000" />
+               </Response>
+              </ListItemResponseField>
+             </ListItem>
+            </List>
+           </ListField>
+          </Question>
+         </ChildItems>
+        </ListItem>
+       </List>
+      </ListField>
+     </Question>
+    </ChildItems>
+   </Section>
+   <Section name="S_381057" order="630" ID="381057.100004300" title="COMMENTS">
+    <Property name="p_rptTxt_381057_1" order="631" propName="reportText" val="{no text}" />
+    <ChildItems name="ch_381057_2" order="632">
+     <Question name="Q_31137" order="633" ID="31137.100004300" title="?Comment(s)" minCard="0">
+      <Property name="p_rptTxt_31137_1" order="634" propName="reportText" val="Comment(s)" />
+      <ResponseField name="rf_31137_2" order="635">
+       <Response name="rsp_31137_3" order="636">
+        <string name="str_31137_4" order="637" maxLength="4000" />
+       </Response>
+      </ResponseField>
+     </Question>
+    </ChildItems>
+   </Section>
+  </ChildItems>
+ </Body>
+ <Footer name="footer" order="638" ID="Footer.Breast.Bmk.169_1.008.021.REL_sdcFDF">
+  <Property type="meta" styleClass="copyright" order="639" propName="CopyrightFooter" val="(c) 2023 College of American Pathologists.  All rights reserved.  License required for use." />
+ </Footer>
+</FormDesign>

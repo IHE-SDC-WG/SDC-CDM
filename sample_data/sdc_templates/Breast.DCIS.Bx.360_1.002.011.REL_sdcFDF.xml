@@ -1,0 +1,256 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml-stylesheet type="text/xsl" href="sdctemplate.xslt"?>
+<FormDesign xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ID="Breast.DCIS.Bx.360_1.002.011.REL_sdcFDF" baseURI="www.cap.org/eCC" fullURI="_baseURI=www.cap.org/eCC&amp;_lineage=Breast.DCIS.Bx.360&amp;_version=1.002.011.REL&amp;_docType=sdcFDF" formTitle="DCIS OF THE BREAST: Biopsy" lineage="Breast.DCIS.Bx.360" filename="Breast.DCIS.Bx.360_1.002.011.REL_sdcFDF.xml" version="1.002.011.REL" xmlns="urn:ihe:qrph:sdc:2016">
+ <Property name="Copyright" type="CAPeCC_static_text" styleClass="copyright" order="1" propName="Copyright" val="(c) 2023 College of American Pathologists.  All rights reserved.  License required for use." />
+ <Property name="GenericHeaderText" type="CAPeCC_static_text" order="2" propName="GenericHeaderText" val="Surgical Pathology Cancer Case Summary" />
+ <Property name="Category" type="CAPeCC_meta" order="3" propName="Category" val="Breast" />
+ <Property name="OfficialName" type="CAPeCC_meta" order="4" propName="OfficialName" val="DCIS OF THE BREAST: Biopsy" />
+ <Property name="CAP_ProtocolName" type="CAPeCC_meta" order="5" propName="CAP_ProtocolName" val="Breast DCIS Biopsy" />
+ <Property name="CAP_ProtocolShortName" type="CAPeCC_meta" order="6" propName="CAP_ProtocolShortName" val="Breast.DCIS.Bx" />
+ <Property name="CAP_ProtocolVersion" type="CAPeCC_meta" order="7" propName="CAP_ProtocolVersion" val="1.0.1.0" />
+ <Property name="TemplateID" type="CAPeCC_meta" order="8" propName="TemplateID" val="360.100004300" />
+ <Property name="Restrictions" type="CAPeCC_meta" order="9" propName="Restrictions" val="The use of this template is recommended for clinical care purposes, but is not required for accreditation purposes." />
+ <Property name="CAP_Required" type="CAPeCC_meta" order="10" propName="CAP_Required" val="false" />
+ <Property name="WebPostingDate" type="CAPeCC_meta dt.dateTime" order="11" propName="WebPostingDate" val="9/20/2023" />
+ <Property name="ApprovalStatus" type="CAPeCC_meta" order="12" propName="ReleaseStatus" val="REL" />
+ <Body name="Body" order="13" ID="Breast.DCIS.Bx.360_1.002.011.REL_sdcFDF_Body">
+  <ChildItems name="ch_Body" order="14">
+   <DisplayedItem name="DI_53624" order="15" ID="53624.100004300" title="This template is recommended for reporting biopsy specimens, but is not required for accreditation purposes.">
+    <Property name="p_rptTxt_53624_1" order="16" propName="reportText" val="{no text}" />
+   </DisplayedItem>
+   <Section name="S_50962" order="17" ID="50962.100004300" title="SPECIMEN">
+    <ChildItems name="ch_50962_1" order="18">
+     <Question name="Q_45529" order="19" ID="45529.100004300" title="Procedure">
+      <ListField name="lf_45529_1" order="20">
+       <List name="lst_45529_2" order="21">
+        <ListItem name="LI_54952" order="22" ID="54952.100004300" title="Needle biopsy" />
+        <ListItem name="LI_56180" order="23" ID="56180.100004300" title="Fine needle aspiration" />
+        <ListItem name="LI_45775" order="24" ID="45775.100004300" title="Other (specify)">
+         <Property name="p_rptTxt_45775_1" order="25" propName="reportText" val="{no text}" />
+         <ListItemResponseField name="lirf_45775_2" order="26" responseRequired="true">
+          <Response name="rsp_45775_3" order="27">
+           <string name="str_45775_4" order="28" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_44902" order="29" ID="44902.100004300" title="Not specified" />
+       </List>
+      </ListField>
+     </Question>
+     <Question name="Q_52267" order="30" ID="52267.100004300" title="Specimen Laterality">
+      <ListField name="lf_52267_1" order="31">
+       <List name="lst_52267_2" order="32">
+        <ListItem name="LI_54188" order="33" ID="54188.100004300" title="Right" />
+        <ListItem name="LI_51643" order="34" ID="51643.100004300" title="Left" />
+        <ListItem name="LI_44301" order="35" ID="44301.100004300" title="Not specified" />
+       </List>
+      </ListField>
+     </Question>
+    </ChildItems>
+   </Section>
+   <Section name="S_54079" order="36" ID="54079.100004300" title="TUMOR">
+    <ChildItems name="ch_54079_1" order="37">
+     <Question name="Q_42501" order="38" ID="42501.100004300" title="Tumor Site" mustImplement="false" minCard="0">
+      <ListField name="lf_42501_1" order="39" maxSelections="0">
+       <List name="lst_42501_2" order="40">
+        <ListItem name="LI_36933" order="41" ID="36933.100004300" title="Upper outer quadrant" />
+        <ListItem name="LI_49648" order="42" ID="49648.100004300" title="Lower outer quadrant" />
+        <ListItem name="LI_42312" order="43" ID="42312.100004300" title="Upper inner quadrant" />
+        <ListItem name="LI_56421" order="44" ID="56421.100004300" title="Lower inner quadrant" />
+        <ListItem name="LI_55024" order="45" ID="55024.100004300" title="Central" />
+        <ListItem name="LI_58304" order="46" ID="58304.100004300" title="Nipple" />
+        <ListItem name="LI_51658" order="47" ID="51658.100004300" title="Clock position">
+         <ChildItems name="ch_51658_1" order="48">
+          <Question name="Q_44049" order="49" ID="44049.100004300" title="Specify Clock Position">
+           <Property name="p_rptTxt_44049_1" order="50" propName="reportText" val="{no text}" />
+           <ListField name="lf_44049_2" order="51" maxSelections="0">
+            <List name="lst_44049_3" order="52">
+             <ListItem name="LI_43906" order="53" ID="43906.100004300" title="1 o'clock" />
+             <ListItem name="LI_45014" order="54" ID="45014.100004300" title="2 o'clock" />
+             <ListItem name="LI_52562" order="55" ID="52562.100004300" title="3 o'clock" />
+             <ListItem name="LI_54726" order="56" ID="54726.100004300" title="4 o'clock" />
+             <ListItem name="LI_41868" order="57" ID="41868.100004300" title="5 o'clock" />
+             <ListItem name="LI_56252" order="58" ID="56252.100004300" title="6 o'clock" />
+             <ListItem name="LI_40500" order="59" ID="40500.100004300" title="7 o'clock" />
+             <ListItem name="LI_57480" order="60" ID="57480.100004300" title="8 o'clock" />
+             <ListItem name="LI_53627" order="61" ID="53627.100004300" title="9 o'clock" />
+             <ListItem name="LI_50524" order="62" ID="50524.100004300" title="10 o'clock" />
+             <ListItem name="LI_58064" order="63" ID="58064.100004300" title="11 o'clock" />
+             <ListItem name="LI_52688" order="64" ID="52688.100004300" title="12 o'clock" />
+            </List>
+           </ListField>
+          </Question>
+         </ChildItems>
+        </ListItem>
+        <ListItem name="LI_42493" order="65" ID="42493.100004300" title="Specify distance from nipple in Centimeters (cm)">
+         <Property name="p_rptTxt_42493_1" order="66" propName="reportText" val="Distance from nipple (Centimeters)" />
+         <ListItemResponseField name="lirf_42493_2" order="67" responseRequired="true">
+          <Response name="rsp_42493_3" order="68">
+           <decimal name="dec_42493_4" order="69" minInclusive="0.001" maxInclusive="100" fractionDigits="3" />
+          </Response>
+          <TextAfterResponse name="rtt_42493_5" order="70" val="cm" />
+          <ResponseUnits name="un_42493_6" order="71" val="cm" />
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_36034" order="72" ID="36034.100004300" title="Other (specify)">
+         <Property name="p_rptTxt_36034_1" order="73" propName="reportText" val="{no text}" />
+         <ListItemResponseField name="lirf_36034_2" order="74" responseRequired="true">
+          <Response name="rsp_36034_3" order="75">
+           <string name="str_36034_4" order="76" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_51686" order="77" ID="51686.100004300" title="Not specified" selectionDeselectsSiblings="true" />
+       </List>
+      </ListField>
+     </Question>
+     <Question name="Q_57637" order="78" ID="57637.100004300" title="Histologic Type (Note A)">
+      <Property name="p_rptTxt_57637_1" order="79" propName="reportText" val="Histologic Type" />
+      <ListField name="lf_57637_2" order="80">
+       <List name="lst_57637_3" order="81">
+        <ListItem name="LI_59744" order="82" ID="59744.100004300" title="Ductal carcinoma in situ (DCIS)" />
+        <ListItem name="LI_40594" order="83" ID="40594.100004300" title="Paget disease" />
+        <ListItem name="LI_44736" order="84" ID="44736.100004300" title="Encapsulated papillary carcinoma without invasive carcinoma" />
+        <ListItem name="LI_36008" order="85" ID="36008.100004300" title="Solid papillary carcinoma without invasive carcinoma" />
+       </List>
+      </ListField>
+     </Question>
+     <Question name="Q_42550" order="86" ID="42550.100004300" title="Architectural Patterns (Note B)" mustImplement="false" minCard="0">
+      <Property name="p_rptTxt_42550_1" order="87" propName="reportText" val="Architectural Patterns" />
+      <ListField name="lf_42550_2" order="88" maxSelections="0">
+       <List name="lst_42550_3" order="89">
+        <ListItem name="LI_42679" order="90" ID="42679.100004300" title="Comedo" />
+        <ListItem name="LI_42553" order="91" ID="42553.100004300" title="Paget disease (DCIS involving nipple skin)" />
+        <ListItem name="LI_51232" order="92" ID="51232.100004300" title="Cribriform" />
+        <ListItem name="LI_42684" order="93" ID="42684.100004300" title="Micropapillary" />
+        <ListItem name="LI_51240" order="94" ID="51240.100004300" title="Papillary" />
+        <ListItem name="LI_42567" order="95" ID="42567.100004300" title="Solid" />
+        <ListItem name="LI_42570" order="96" ID="42570.100004300" title="Other (specify)">
+         <Property name="p_rptTxt_42570_1" order="97" propName="reportText" val="{no text}" />
+         <ListItemResponseField name="lirf_42570_2" order="98" responseRequired="true">
+          <Response name="rsp_42570_3" order="99">
+           <string name="str_42570_4" order="100" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+       </List>
+      </ListField>
+     </Question>
+     <Question name="Q_42658" order="101" ID="42658.100004300" title="Nuclear Grade (Note C)">
+      <Property name="p_rptTxt_42658_1" order="102" propName="reportText" val="Nuclear Grade" />
+      <ListField name="lf_42658_2" order="103">
+       <List name="lst_42658_3" order="104">
+        <ListItem name="LI_43130" order="105" ID="43130.100004300" title="Grade I (low)" />
+        <ListItem name="LI_46986" order="106" ID="46986.100004300" title="Grade II (intermediate)" />
+        <ListItem name="LI_56721" order="107" ID="56721.100004300" title="Grade III (high)" />
+        <ListItem name="LI_352241" order="108" ID="352241.100004300" title="Other (specify)">
+         <Property name="p_rptTxt_352241_1" order="109" propName="reportText" val="{no text}" />
+         <ListItemResponseField name="lirf_352241_2" order="110" responseRequired="true">
+          <Response name="rsp_352241_3" order="111">
+           <string name="str_352241_4" order="112" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_352242" order="113" ID="352242.100004300" title="Cannot be determined">
+         <ListItemResponseField name="lirf_352242_1" order="114">
+          <Response name="rsp_352242_2" order="115">
+           <string name="str_352242_3" order="116" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+       </List>
+      </ListField>
+     </Question>
+     <Question name="Q_57136" order="117" ID="57136.100004300" title="Necrosis (Note D)">
+      <Property name="p_rptTxt_57136_1" order="118" propName="reportText" val="Necrosis" />
+      <ListField name="lf_57136_2" order="119">
+       <List name="lst_57136_3" order="120">
+        <ListItem name="LI_53495" order="121" ID="53495.100004300" title="Not identified" />
+        <ListItem name="LI_43428" order="122" ID="43428.100004300" title="Present, focal (small foci or single cell necrosis)" />
+        <ListItem name="LI_40388" order="123" ID="40388.100004300" title="Present, central (expansive &quot;comedo&quot; necrosis)" />
+        <ListItem name="LI_352244" order="124" ID="352244.100004300" title="Other (specify)">
+         <Property name="p_rptTxt_352244_1" order="125" propName="reportText" val="{no text}" />
+         <ListItemResponseField name="lirf_352244_2" order="126" responseRequired="true">
+          <Response name="rsp_352244_3" order="127">
+           <string name="str_352244_4" order="128" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_352245" order="129" ID="352245.100004300" title="Cannot be determined">
+         <ListItemResponseField name="lirf_352245_1" order="130">
+          <Response name="rsp_352245_2" order="131">
+           <string name="str_352245_3" order="132" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+       </List>
+      </ListField>
+     </Question>
+     <Question name="Q_54019" order="133" ID="54019.100004300" title="Microcalcifications (Note E)" mustImplement="false" minCard="0">
+      <Property name="p_rptTxt_54019_1" order="134" propName="reportText" val="Microcalcifications" />
+      <ListField name="lf_54019_2" order="135" maxSelections="0">
+       <List name="lst_54019_3" order="136">
+        <ListItem name="LI_40016" order="137" ID="40016.100004300" title="Not identified" selectionDeselectsSiblings="true" />
+        <ListItem name="LI_41244" order="138" ID="41244.100004300" title="Present in DCIS" />
+        <ListItem name="LI_57368" order="139" ID="57368.100004300" title="Present in non-neoplastic tissue" />
+        <ListItem name="LI_41785" order="140" ID="41785.100004300" title="Other (specify)">
+         <Property name="p_rptTxt_41785_1" order="141" propName="reportText" val="{no text}" />
+         <ListItemResponseField name="lirf_41785_2" order="142" responseRequired="true">
+          <Response name="rsp_41785_3" order="143">
+           <string name="str_41785_4" order="144" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+       </List>
+      </ListField>
+     </Question>
+    </ChildItems>
+   </Section>
+   <Section name="S_43113" order="145" ID="43113.100004300" title="ADDITIONAL FINDINGS (Note F)" mustImplement="false" minCard="0">
+    <Property name="p_rptTxt_43113_1" order="146" propName="reportText" val="ADDITIONAL FINDINGS" />
+    <ChildItems name="ch_43113_2" order="147">
+     <Question name="Q_45128" order="148" ID="45128.100004300" title="Additional Findings (specify)" mustImplement="false" minCard="0">
+      <Property name="p_rptTxt_45128_1" order="149" propName="reportText" val="Additional Findings" />
+      <ResponseField name="rf_45128_2" order="150">
+       <Response name="rsp_45128_3" order="151">
+        <string name="str_45128_4" order="152" maxLength="4000" />
+       </Response>
+      </ResponseField>
+     </Question>
+    </ChildItems>
+   </Section>
+   <Section name="S_49751" order="153" ID="49751.100004300" title="SPECIAL STUDIES" mustImplement="false" minCard="0">
+    <Property name="p_rptTxt_49751_1" order="154" propName="reportText" val="{no text}" />
+    <ChildItems name="ch_49751_2" order="155">
+     <DisplayedItem name="DI_51726" order="156" ID="51726.100004300" title="For hormone receptor and HER2 reporting, the CAP Breast Biomarker Template should be used. www.cap.org/cancerprotocols.">
+      <Property name="p_rptTxt_51726_1" order="157" propName="reportText" val="{no text}" />
+     </DisplayedItem>
+     <Question name="Q_380260" order="158" ID="380260.100004300" title="Breast Biomarker Studies (specify pending studies)" mustImplement="false" minCard="0">
+      <Property name="p_rptTxt_380260_1" order="159" propName="reportText" val="Breast Biomarker Studies (pending)" />
+      <ResponseField name="rf_380260_2" order="160">
+       <Response name="rsp_380260_3" order="161">
+        <string name="str_380260_4" order="162" maxLength="4000" />
+       </Response>
+      </ResponseField>
+     </Question>
+    </ChildItems>
+   </Section>
+   <Section name="S_381058" order="163" ID="381058.100004300" title="COMMENTS">
+    <Property name="p_rptTxt_381058_1" order="164" propName="reportText" val="{no text}" />
+    <ChildItems name="ch_381058_2" order="165">
+     <Question name="Q_56243" order="166" ID="56243.100004300" title="?Comment(s)" minCard="0">
+      <Property name="p_rptTxt_56243_1" order="167" propName="reportText" val="Comment(s)" />
+      <ResponseField name="rf_56243_2" order="168">
+       <Response name="rsp_56243_3" order="169">
+        <string name="str_56243_4" order="170" maxLength="4000" />
+       </Response>
+      </ResponseField>
+     </Question>
+    </ChildItems>
+   </Section>
+  </ChildItems>
+ </Body>
+ <Footer name="footer" order="171" ID="Footer.Breast.DCIS.Bx.360_1.002.011.REL_sdcFDF">
+  <Property type="meta" styleClass="copyright" order="172" propName="CopyrightFooter" val="(c) 2023 College of American Pathologists.  All rights reserved.  License required for use." />
+ </Footer>
+</FormDesign>

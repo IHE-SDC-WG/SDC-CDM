@@ -1,0 +1,1210 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml-stylesheet type="text/xsl" href="sdctemplate.xslt"?>
+<FormDesign xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ID="CentralNervousSystem.Bx.Res.551_1.000.000.REL_sdcFDF" baseURI="www.cap.org/eCC" fullURI="_baseURI=www.cap.org/eCC&amp;_lineage=CentralNervousSystem.Bx.Res.551&amp;_version=1.000.000.REL&amp;_docType=sdcFDF" formTitle="CENTRAL NERVOUS SYSTEM" lineage="CentralNervousSystem.Bx.Res.551" filename="CentralNervousSystem.Bx.Res.551_1.000.000.REL_sdcFDF.xml" version="1.000.000.REL" xmlns="urn:ihe:qrph:sdc:2016">
+ <Property name="Copyright" type="CAPeCC_static_text" styleClass="copyright" order="1" propName="Copyright" val="(c) 2022 College of American Pathologists.  All rights reserved.  License required for use." />
+ <Property name="GenericHeaderText" type="CAPeCC_static_text" order="2" propName="GenericHeaderText" val="Surgical Pathology Cancer Case Summary" />
+ <Property name="Category" type="CAPeCC_meta" order="3" propName="Category" val="Central Nervous System" />
+ <Property name="OfficialName" type="CAPeCC_meta" order="4" propName="OfficialName" val="CENTRAL NERVOUS SYSTEM" />
+ <Property name="CAP_ProtocolName" type="CAPeCC_meta" order="5" propName="CAP_ProtocolName" val="Central Nervous System" />
+ <Property name="CAP_ProtocolShortName" type="CAPeCC_meta" order="6" propName="CAP_ProtocolShortName" val="CentralNervousSystem.Bx.Res" />
+ <Property name="CAP_ProtocolVersion" type="CAPeCC_meta" order="7" propName="CAP_ProtocolVersion" val="1.0.0.0" />
+ <Property name="TemplateID" type="CAPeCC_meta" order="8" propName="TemplateID" val="551.100004300" />
+ <Property name="Restrictions" type="CAPeCC_meta" order="9" propName="Restrictions" val="The use of this template is recommended for clinical care purposes, but is not required for accreditation purposes." />
+ <Property name="CAP_Required" type="CAPeCC_meta" order="10" propName="CAP_Required" val="false" />
+ <Property name="WebPostingDate" type="CAPeCC_meta dt.dateTime" order="11" propName="WebPostingDate" val="9/21/2022" />
+ <Property name="ApprovalStatus" type="CAPeCC_meta" order="12" propName="ReleaseStatus" val="REL" />
+ <Body name="Body" order="13" ID="CentralNervousSystem.Bx.Res.551_1.000.000.REL_sdcFDF_Body">
+  <ChildItems name="ch_Body" order="14">
+   <Section name="S_804106" order="15" ID="804106.100004300" title="CLINICAL" mustImplement="false" minCard="0">
+    <ChildItems name="ch_804106_1" order="16">
+     <Question name="Q_804105" order="17" ID="804105.100004300" title="History of Prior Therapy for this Neoplasm (Note A)" mustImplement="false" minCard="0">
+      <Property name="p_rptTxt_804105_1" order="18" propName="reportText" val="History of Prior Therapy for this Neoplasm" />
+      <ListField name="lf_804105_2" order="19">
+       <List name="lst_804105_3" order="20">
+        <ListItem name="LI_804111" order="21" ID="804111.100004300" title="Not administered" />
+        <ListItem name="LI_804116" order="22" ID="804116.100004300" title="Not known">
+         <ListItemResponseField name="lirf_804116_1" order="23">
+          <Response name="rsp_804116_2" order="24">
+           <string name="str_804116_3" order="25" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_804098" order="26" ID="804098.100004300" title="Administered">
+         <ChildItems name="ch_804098_1" order="27">
+          <Question name="Q_804107" order="28" ID="804107.100004300" mustImplement="false" minCard="0">
+           <Property name="p_altTxt_804107_1" order="29" propName="altText" val="Prior Treatment" />
+           <ListField name="lf_804107_2" order="30" maxSelections="0">
+            <List name="lst_804107_3" order="31">
+             <ListItem name="LI_804112" order="32" ID="804112.100004300" title="Chemotherapy" mustImplement="false" />
+             <ListItem name="LI_804100" order="33" ID="804100.100004300" title="Radiation therapy" mustImplement="false" />
+             <ListItem name="LI_804101" order="34" ID="804101.100004300" title="Corticosteroids" mustImplement="false" />
+             <ListItem name="LI_804108" order="35" ID="804108.100004300" title="Embolization" mustImplement="false" />
+             <ListItem name="LI_804114" order="36" ID="804114.100004300" title="Therapy performed, type not specified" mustImplement="false" />
+             <ListItem name="LI_804109" order="37" ID="804109.100004300" title="Other (specify)" mustImplement="false">
+              <Property name="p_rptTxt_804109_1" order="38" propName="reportText" val="{no text}" />
+              <ListItemResponseField name="lirf_804109_2" order="39" responseRequired="true">
+               <Response name="rsp_804109_3" order="40">
+                <string name="str_804109_4" order="41" />
+               </Response>
+              </ListItemResponseField>
+             </ListItem>
+            </List>
+           </ListField>
+          </Question>
+         </ChildItems>
+        </ListItem>
+       </List>
+      </ListField>
+     </Question>
+     <Question name="Q_804110" order="42" ID="804110.100004300" title="History of Previous Tumor and / or Familial Syndrome (not the current neoplasm) (Note A)" mustImplement="false" minCard="0">
+      <Property name="p_rptTxt_804110_1" order="43" propName="reportText" val="History of Previous Tumor and / or Familial Syndrome" />
+      <ListField name="lf_804110_2" order="44">
+       <List name="lst_804110_3" order="45">
+        <ListItem name="LI_804115" order="46" ID="804115.100004300" title="Not known">
+         <ListItemResponseField name="lirf_804115_1" order="47">
+          <Response name="rsp_804115_2" order="48">
+           <string name="str_804115_3" order="49" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_804113" order="50" ID="804113.100004300" title="Known (specify)">
+         <Property name="p_rptTxt_804113_1" order="51" propName="reportText" val="Known" />
+         <ListItemResponseField name="lirf_804113_2" order="52" responseRequired="true">
+          <Response name="rsp_804113_3" order="53">
+           <string name="str_804113_4" order="54" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_804102" order="55" ID="804102.100004300" title="Not specified" />
+       </List>
+      </ListField>
+     </Question>
+     <Question name="Q_804099" order="56" ID="804099.100004300" title="Neuroimaging Findings (Note B)" mustImplement="false" minCard="0">
+      <Property name="p_rptTxt_804099_1" order="57" propName="reportText" val="Neuroimaging Findings" />
+      <ListField name="lf_804099_2" order="58">
+       <List name="lst_804099_3" order="59">
+        <ListItem name="LI_804104" order="60" ID="804104.100004300" title="Specify">
+         <Property name="p_rptTxt_804104_1" order="61" propName="reportText" val="{no text}" />
+         <ListItemResponseField name="lirf_804104_2" order="62" responseRequired="true">
+          <Response name="rsp_804104_3" order="63">
+           <string name="str_804104_4" order="64" val="&quot;&quot;" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_804103" order="65" ID="804103.100004300" title="Not available" />
+       </List>
+      </ListField>
+     </Question>
+    </ChildItems>
+   </Section>
+   <Section name="S_804124" order="66" ID="804124.100004300" title="SPECIMEN">
+    <ChildItems name="ch_804124_1" order="67">
+     <Question name="Q_804120" order="68" ID="804120.100004300" title="Procedure (Note C)">
+      <Property name="p_rptTxt_804120_1" order="69" propName="reportText" val="Procedure" />
+      <ListField name="lf_804120_2" order="70" maxSelections="0">
+       <List name="lst_804120_3" order="71">
+        <ListItem name="LI_804123" order="72" ID="804123.100004300" title="Open biopsy" />
+        <ListItem name="LI_804996" order="73" ID="804996.100004300" title="Biopsy with intraoperative consultation" />
+        <ListItem name="LI_804121" order="74" ID="804121.100004300" title="Stereotactic biopsy" />
+        <ListItem name="LI_804119" order="75" ID="804119.100004300" title="Resection" />
+        <ListItem name="LI_804122" order="76" ID="804122.100004300" title="Other (specify)">
+         <Property name="p_rptTxt_804122_1" order="77" propName="reportText" val="{no text}" />
+         <ListItemResponseField name="lirf_804122_2" order="78" responseRequired="true">
+          <Response name="rsp_804122_3" order="79">
+           <string name="str_804122_4" order="80" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_804126" order="81" ID="804126.100004300" title="Not specified" selectionDeselectsSiblings="true" />
+       </List>
+      </ListField>
+     </Question>
+     <Question name="Q_804127" order="82" ID="804127.100004300" title="Specimen Size, Gross Description (Note D)">
+      <Property name="p_rptTxt_804127_1" order="83" propName="reportText" val="Specimen Size, Gross Description" />
+      <ListField name="lf_804127_2" order="84">
+       <List name="lst_804127_3" order="85">
+        <DisplayedItem name="DI_804117" order="86" ID="804117.100004300" title="For fragmented tissue, an aggregate size may be given">
+         <Property name="p_rptTxt_804117_1" order="87" propName="reportText" val="{no text}" />
+        </DisplayedItem>
+        <ListItem name="LI_804128" order="88" ID="804128.100004300" title="Greatest dimension in Centimeters (cm)">
+         <Property name="p_rptTxt_804128_1" order="89" propName="reportText" val="Greatest Dimension (Centimeters)" />
+         <ListItemResponseField name="lirf_804128_2" order="90" responseRequired="true">
+          <Response name="rsp_804128_3" order="91">
+           <decimal name="dec_804128_4" order="92" />
+          </Response>
+          <TextAfterResponse name="rtt_804128_5" order="93" val="cm" />
+          <ResponseUnits name="un_804128_6" order="94" val="cm" />
+         </ListItemResponseField>
+         <ChildItems name="ch_804128_7" order="95">
+          <Question name="Q_804125" order="96" ID="804125.100004300" title="Additional Dimension in Centimeters (cm)" mustImplement="false" minCard="0">
+           <Property name="p_rptTxt_804125_1" order="97" propName="reportText" val="Additional Dimension (Centimeters)" />
+           <ResponseField name="rf_804125_2" order="98">
+            <Response name="rsp_804125_3" order="99">
+             <decimal name="dec_804125_4" order="100" />
+            </Response>
+            <TextAfterResponse name="rtt_804125_5" order="101" val="cm" />
+            <ResponseUnits name="un_804125_6" order="102" val="cm" />
+           </ResponseField>
+          </Question>
+          <Question name="Q_804118" order="103" ID="804118.100004300" title="Additional Dimension in Centimeters (cm)" mustImplement="false" minCard="0">
+           <Property name="p_rptTxt_804118_1" order="104" propName="reportText" val="Additional Dimension (Centimeters)" />
+           <ResponseField name="rf_804118_2" order="105">
+            <Response name="rsp_804118_3" order="106">
+             <decimal name="dec_804118_4" order="107" />
+            </Response>
+            <TextAfterResponse name="rtt_804118_5" order="108" val="cm" />
+            <ResponseUnits name="un_804118_6" order="109" val="cm" />
+           </ResponseField>
+          </Question>
+         </ChildItems>
+        </ListItem>
+        <ListItem name="LI_804129" order="110" ID="804129.100004300" title="Cannot be determined (explain)">
+         <Property name="p_rptTxt_804129_1" order="111" propName="reportText" val="Cannot be determined" />
+         <ListItemResponseField name="lirf_804129_2" order="112" responseRequired="true">
+          <Response name="rsp_804129_3" order="113">
+           <string name="str_804129_4" order="114" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+       </List>
+      </ListField>
+     </Question>
+    </ChildItems>
+   </Section>
+   <Section name="S_804229" order="115" ID="804229.100004300" title="TUMOR">
+    <ChildItems name="ch_804229_1" order="116">
+     <Question name="Q_804464" order="117" ID="804464.100004300" title="Tumor Site (Note E)">
+      <Property name="p_rptTxt_804464_1" order="118" propName="reportText" val="Tumor Site" />
+      <ListField name="lf_804464_2" order="119" maxSelections="0">
+       <List name="lst_804464_3" order="120">
+        <ListItem name="LI_804188" order="121" ID="804188.100004300" title="Skull / Bone">
+         <ChildItems name="ch_804188_1" order="122">
+          <Question name="Q_804202" order="123" ID="804202.100004300" title="Specify Precise Location, if known" mustImplement="false" minCard="0">
+           <Property name="p_rptTxt_804202_1" order="124" propName="reportText" val="Precise Location" />
+           <ListField name="lf_804202_2" order="125" maxSelections="0">
+            <List name="lst_804202_3" order="126">
+             <ListItem name="LI_804334" order="127" ID="804334.100004300" title="Frontal">
+              <ListItemResponseField name="lirf_804334_1" order="128">
+               <Response name="rsp_804334_2" order="129">
+                <string name="str_804334_3" order="130" />
+               </Response>
+              </ListItemResponseField>
+             </ListItem>
+             <ListItem name="LI_804349" order="131" ID="804349.100004300" title="Parietal">
+              <ListItemResponseField name="lirf_804349_1" order="132">
+               <Response name="rsp_804349_2" order="133">
+                <string name="str_804349_3" order="134" />
+               </Response>
+              </ListItemResponseField>
+             </ListItem>
+             <ListItem name="LI_804416" order="135" ID="804416.100004300" title="Temporal">
+              <ListItemResponseField name="lirf_804416_1" order="136">
+               <Response name="rsp_804416_2" order="137">
+                <string name="str_804416_3" order="138" />
+               </Response>
+              </ListItemResponseField>
+             </ListItem>
+             <ListItem name="LI_804446" order="139" ID="804446.100004300" title="Occipital">
+              <ListItemResponseField name="lirf_804446_1" order="140">
+               <Response name="rsp_804446_2" order="141">
+                <string name="str_804446_3" order="142" />
+               </Response>
+              </ListItemResponseField>
+             </ListItem>
+             <ListItem name="LI_804215" order="143" ID="804215.100004300" title="Other (specify)">
+              <Property name="p_rptTxt_804215_1" order="144" propName="reportText" val="{no text}" />
+              <ListItemResponseField name="lirf_804215_2" order="145" responseRequired="true">
+               <Response name="rsp_804215_3" order="146">
+                <string name="str_804215_4" order="147" />
+               </Response>
+              </ListItemResponseField>
+             </ListItem>
+            </List>
+           </ListField>
+          </Question>
+         </ChildItems>
+        </ListItem>
+        <ListItem name="LI_804463" order="148" ID="804463.100004300" title="Dura">
+         <ChildItems name="ch_804463_1" order="149">
+          <Question name="Q_804285" order="150" ID="804285.100004300" title="Specify Precise Location, if known" mustImplement="false" minCard="0">
+           <Property name="p_rptTxt_804285_1" order="151" propName="reportText" val="Precise Location" />
+           <ListField name="lf_804285_2" order="152" maxSelections="0">
+            <List name="lst_804285_3" order="153">
+             <ListItem name="LI_804387" order="154" ID="804387.100004300" title="Convexity / lobe (specify)">
+              <Property name="p_rptTxt_804387_1" order="155" propName="reportText" val="Convexity / lobe" />
+              <ListItemResponseField name="lirf_804387_2" order="156" responseRequired="true">
+               <Response name="rsp_804387_3" order="157">
+                <string name="str_804387_4" order="158" />
+               </Response>
+              </ListItemResponseField>
+             </ListItem>
+             <ListItem name="LI_804165" order="159" ID="804165.100004300" title="Falx" />
+             <ListItem name="LI_804314" order="160" ID="804314.100004300" title="Tentorium" />
+             <ListItem name="LI_804425" order="161" ID="804425.100004300" title="Posterior fossa" />
+             <ListItem name="LI_804267" order="162" ID="804267.100004300" title="Sphenoid wing" />
+             <ListItem name="LI_804399" order="163" ID="804399.100004300" title="Skull base" />
+             <ListItem name="LI_804456" order="164" ID="804456.100004300" title="Spinal" />
+             <ListItem name="LI_804243" order="165" ID="804243.100004300" title="Other (specify)">
+              <Property name="p_rptTxt_804243_1" order="166" propName="reportText" val="{no text}" />
+              <ListItemResponseField name="lirf_804243_2" order="167" responseRequired="true">
+               <Response name="rsp_804243_3" order="168">
+                <string name="str_804243_4" order="169" />
+               </Response>
+              </ListItemResponseField>
+             </ListItem>
+            </List>
+           </ListField>
+          </Question>
+         </ChildItems>
+        </ListItem>
+        <ListItem name="LI_804378" order="170" ID="804378.100004300" title="Leptomeninges">
+         <ChildItems name="ch_804378_1" order="171">
+          <Question name="Q_804166" order="172" ID="804166.100004300" title="Specify Precise Location, if known" mustImplement="false" minCard="0">
+           <Property name="p_rptTxt_804166_1" order="173" propName="reportText" val="Precise Location" />
+           <ListField name="lf_804166_2" order="174" maxSelections="0">
+            <List name="lst_804166_3" order="175">
+             <ListItem name="LI_804356" order="176" ID="804356.100004300" title="Cerebral convexity / lobe (specify)">
+              <Property name="p_rptTxt_804356_1" order="177" propName="reportText" val="Cerebral convexity / lobe" />
+              <ListItemResponseField name="lirf_804356_2" order="178" responseRequired="true">
+               <Response name="rsp_804356_3" order="179">
+                <string name="str_804356_4" order="180" />
+               </Response>
+              </ListItemResponseField>
+             </ListItem>
+             <ListItem name="LI_804206" order="181" ID="804206.100004300" title="Posterior fossa" />
+             <ListItem name="LI_804150" order="182" ID="804150.100004300" title="Spinal" />
+             <ListItem name="LI_804370" order="183" ID="804370.100004300" title="Other (specify)">
+              <Property name="p_rptTxt_804370_1" order="184" propName="reportText" val="{no text}" />
+              <ListItemResponseField name="lirf_804370_2" order="185" responseRequired="true">
+               <Response name="rsp_804370_3" order="186">
+                <string name="str_804370_4" order="187" />
+               </Response>
+              </ListItemResponseField>
+             </ListItem>
+            </List>
+           </ListField>
+          </Question>
+         </ChildItems>
+        </ListItem>
+        <ListItem name="LI_804200" order="188" ID="804200.100004300" title="Brain">
+         <ChildItems name="ch_804200_1" order="189">
+          <Question name="Q_804228" order="190" ID="804228.100004300">
+           <Property name="p_altTxt_804228_1" order="191" propName="altText" val="Brain Tumor Sites" />
+           <ListField name="lf_804228_2" order="192" maxSelections="0">
+            <List name="lst_804228_3" order="193">
+             <ListItem name="LI_804396" order="194" ID="804396.100004300" title="Cerebral lobes">
+              <ChildItems name="ch_804396_1" order="195">
+               <Question name="Q_804481" order="196" ID="804481.100004300" title="Specify Precise Location, if known" mustImplement="false" minCard="0">
+                <Property name="p_rptTxt_804481_1" order="197" propName="reportText" val="Precise Location" />
+                <ListField name="lf_804481_2" order="198" maxSelections="0">
+                 <List name="lst_804481_3" order="199">
+                  <ListItem name="LI_804409" order="200" ID="804409.100004300" title="Frontal">
+                   <ListItemResponseField name="lirf_804409_1" order="201">
+                    <Response name="rsp_804409_2" order="202">
+                     <string name="str_804409_3" order="203" />
+                    </Response>
+                   </ListItemResponseField>
+                  </ListItem>
+                  <ListItem name="LI_804183" order="204" ID="804183.100004300" title="Temporal">
+                   <ListItemResponseField name="lirf_804183_1" order="205">
+                    <Response name="rsp_804183_2" order="206">
+                     <string name="str_804183_3" order="207" />
+                    </Response>
+                   </ListItemResponseField>
+                  </ListItem>
+                  <ListItem name="LI_804486" order="208" ID="804486.100004300" title="Parietal">
+                   <ListItemResponseField name="lirf_804486_1" order="209">
+                    <Response name="rsp_804486_2" order="210">
+                     <string name="str_804486_3" order="211" />
+                    </Response>
+                   </ListItemResponseField>
+                  </ListItem>
+                  <ListItem name="LI_804245" order="212" ID="804245.100004300" title="Occipital">
+                   <ListItemResponseField name="lirf_804245_1" order="213">
+                    <Response name="rsp_804245_2" order="214">
+                     <string name="str_804245_3" order="215" />
+                    </Response>
+                   </ListItemResponseField>
+                  </ListItem>
+                  <ListItem name="LI_804187" order="216" ID="804187.100004300" title="Other (specify)">
+                   <Property name="p_rptTxt_804187_1" order="217" propName="reportText" val="{no text}" />
+                   <ListItemResponseField name="lirf_804187_2" order="218" responseRequired="true">
+                    <Response name="rsp_804187_3" order="219">
+                     <string name="str_804187_4" order="220" />
+                    </Response>
+                   </ListItemResponseField>
+                  </ListItem>
+                 </List>
+                </ListField>
+               </Question>
+              </ChildItems>
+             </ListItem>
+             <ListItem name="LI_804309" order="221" ID="804309.100004300" title="Deep grey matter">
+              <ChildItems name="ch_804309_1" order="222">
+               <Question name="Q_804408" order="223" ID="804408.100004300" title="Specify Precise Location, if known" mustImplement="false" minCard="0">
+                <Property name="p_rptTxt_804408_1" order="224" propName="reportText" val="Precise Location" />
+                <ListField name="lf_804408_2" order="225" maxSelections="0">
+                 <List name="lst_804408_3" order="226">
+                  <ListItem name="LI_804311" order="227" ID="804311.100004300" title="Basal ganglia" />
+                  <ListItem name="LI_804282" order="228" ID="804282.100004300" title="Thalamus" />
+                  <ListItem name="LI_804317" order="229" ID="804317.100004300" title="Hypothalamus" />
+                 </List>
+                </ListField>
+               </Question>
+              </ChildItems>
+             </ListItem>
+             <ListItem name="LI_804296" order="230" ID="804296.100004300" title="Ventricle">
+              <ChildItems name="ch_804296_1" order="231">
+               <Question name="Q_804248" order="232" ID="804248.100004300" title="Specify Precise Location, if known" mustImplement="false" minCard="0">
+                <Property name="p_rptTxt_804248_1" order="233" propName="reportText" val="Precise Location" />
+                <ListField name="lf_804248_2" order="234" maxSelections="0">
+                 <List name="lst_804248_3" order="235">
+                  <ListItem name="LI_804453" order="236" ID="804453.100004300" title="Lateral">
+                   <ListItemResponseField name="lirf_804453_1" order="237">
+                    <Response name="rsp_804453_2" order="238">
+                     <string name="str_804453_3" order="239" />
+                    </Response>
+                   </ListItemResponseField>
+                  </ListItem>
+                  <ListItem name="LI_804474" order="240" ID="804474.100004300" title="Third">
+                   <ListItemResponseField name="lirf_804474_1" order="241">
+                    <Response name="rsp_804474_2" order="242">
+                     <string name="str_804474_3" order="243" />
+                    </Response>
+                   </ListItemResponseField>
+                  </ListItem>
+                  <ListItem name="LI_804415" order="244" ID="804415.100004300" title="Fourth">
+                   <ListItemResponseField name="lirf_804415_1" order="245">
+                    <Response name="rsp_804415_2" order="246">
+                     <string name="str_804415_3" order="247" />
+                    </Response>
+                   </ListItemResponseField>
+                  </ListItem>
+                  <ListItem name="LI_804363" order="248" ID="804363.100004300" title="Cerebral Aqueduct">
+                   <ListItemResponseField name="lirf_804363_1" order="249">
+                    <Response name="rsp_804363_2" order="250">
+                     <string name="str_804363_3" order="251" />
+                    </Response>
+                   </ListItemResponseField>
+                  </ListItem>
+                  <ListItem name="LI_804132" order="252" ID="804132.100004300" title="Other (specify)">
+                   <Property name="p_rptTxt_804132_1" order="253" propName="reportText" val="{no text}" />
+                   <ListItemResponseField name="lirf_804132_2" order="254" responseRequired="true">
+                    <Response name="rsp_804132_3" order="255">
+                     <string name="str_804132_4" order="256" />
+                    </Response>
+                   </ListItemResponseField>
+                  </ListItem>
+                 </List>
+                </ListField>
+               </Question>
+              </ChildItems>
+             </ListItem>
+             <ListItem name="LI_804237" order="257" ID="804237.100004300" title="Cerebellum" />
+             <ListItem name="LI_804271" order="258" ID="804271.100004300" title="Brain stem">
+              <ChildItems name="ch_804271_1" order="259">
+               <Question name="Q_804130" order="260" ID="804130.100004300" title="Specify Precise Location, if known" mustImplement="false" minCard="0">
+                <Property name="p_rptTxt_804130_1" order="261" propName="reportText" val="Precise Location" />
+                <ListField name="lf_804130_2" order="262" maxSelections="0">
+                 <List name="lst_804130_3" order="263">
+                  <ListItem name="LI_804157" order="264" ID="804157.100004300" title="Midbrain">
+                   <ListItemResponseField name="lirf_804157_1" order="265">
+                    <Response name="rsp_804157_2" order="266">
+                     <string name="str_804157_3" order="267" />
+                    </Response>
+                   </ListItemResponseField>
+                  </ListItem>
+                  <ListItem name="LI_804279" order="268" ID="804279.100004300" title="Pons">
+                   <ListItemResponseField name="lirf_804279_1" order="269">
+                    <Response name="rsp_804279_2" order="270">
+                     <string name="str_804279_3" order="271" />
+                    </Response>
+                   </ListItemResponseField>
+                  </ListItem>
+                  <ListItem name="LI_804470" order="272" ID="804470.100004300" title="Medulla">
+                   <ListItemResponseField name="lirf_804470_1" order="273">
+                    <Response name="rsp_804470_2" order="274">
+                     <string name="str_804470_3" order="275" />
+                    </Response>
+                   </ListItemResponseField>
+                  </ListItem>
+                  <ListItem name="LI_804162" order="276" ID="804162.100004300" title="Other (specify)">
+                   <Property name="p_rptTxt_804162_1" order="277" propName="reportText" val="{no text}" />
+                   <ListItemResponseField name="lirf_804162_2" order="278" responseRequired="true">
+                    <Response name="rsp_804162_3" order="279">
+                     <string name="str_804162_4" order="280" />
+                    </Response>
+                   </ListItemResponseField>
+                  </ListItem>
+                 </List>
+                </ListField>
+               </Question>
+              </ChildItems>
+             </ListItem>
+             <ListItem name="LI_804180" order="281" ID="804180.100004300" title="Other (specify)">
+              <Property name="p_rptTxt_804180_1" order="282" propName="reportText" val="{no text}" />
+              <ListItemResponseField name="lirf_804180_2" order="283" responseRequired="true">
+               <Response name="rsp_804180_3" order="284">
+                <string name="str_804180_4" order="285" />
+               </Response>
+              </ListItemResponseField>
+             </ListItem>
+            </List>
+           </ListField>
+          </Question>
+         </ChildItems>
+        </ListItem>
+        <ListItem name="LI_804152" order="286" ID="804152.100004300" title="Cerebellopontine angle" />
+        <ListItem name="LI_804422" order="287" ID="804422.100004300" title="Sellar / Suprasellar / Pituitary" />
+        <ListItem name="LI_804494" order="288" ID="804494.100004300" title="Pineal" />
+        <ListItem name="LI_804224" order="289" ID="804224.100004300" title="Cranial nerve">
+         <ChildItems name="ch_804224_1" order="290">
+          <Question name="Q_804293" order="291" ID="804293.100004300" title="Specify I-XII, if known" mustImplement="false" minCard="0">
+           <Property name="p_rptTxt_804293_1" order="292" propName="reportText" val="{no text}" />
+           <ListField name="lf_804293_2" order="293" maxSelections="0">
+            <List name="lst_804293_3" order="294">
+             <ListItem name="LI_804257" order="295" ID="804257.100004300" title="I" />
+             <ListItem name="LI_804344" order="296" ID="804344.100004300" title="II" />
+             <ListItem name="LI_804392" order="297" ID="804392.100004300" title="III" />
+             <ListItem name="LI_804159" order="298" ID="804159.100004300" title="IV" />
+             <ListItem name="LI_804457" order="299" ID="804457.100004300" title="V" />
+             <ListItem name="LI_804417" order="300" ID="804417.100004300" title="VI" />
+             <ListItem name="LI_804136" order="301" ID="804136.100004300" title="VII" />
+             <ListItem name="LI_804400" order="302" ID="804400.100004300" title="VIII" />
+             <ListItem name="LI_804141" order="303" ID="804141.100004300" title="IX" />
+             <ListItem name="LI_804186" order="304" ID="804186.100004300" title="X" />
+             <ListItem name="LI_804247" order="305" ID="804247.100004300" title="XI" />
+             <ListItem name="LI_804444" order="306" ID="804444.100004300" title="XII" />
+            </List>
+           </ListField>
+          </Question>
+         </ChildItems>
+        </ListItem>
+        <ListItem name="LI_804276" order="307" ID="804276.100004300" title="Spine / Bone (vertebral column)">
+         <ChildItems name="ch_804276_1" order="308">
+          <Question name="Q_804335" order="309" ID="804335.100004300" title="Specify Precise Location, if known" mustImplement="false" minCard="0">
+           <Property name="p_rptTxt_804335_1" order="310" propName="reportText" val="Precise Location" />
+           <ListField name="lf_804335_2" order="311" maxSelections="0">
+            <List name="lst_804335_3" order="312">
+             <ListItem name="LI_804472" order="313" ID="804472.100004300" title="C1" />
+             <ListItem name="LI_804374" order="314" ID="804374.100004300" title="C2" />
+             <ListItem name="LI_804327" order="315" ID="804327.100004300" title="C3" />
+             <ListItem name="LI_804390" order="316" ID="804390.100004300" title="C4" />
+             <ListItem name="LI_804483" order="317" ID="804483.100004300" title="C5" />
+             <ListItem name="LI_804207" order="318" ID="804207.100004300" title="C6" />
+             <ListItem name="LI_804189" order="319" ID="804189.100004300" title="C7" />
+             <ListItem name="LI_804304" order="320" ID="804304.100004300" title="T1" />
+             <ListItem name="LI_804323" order="321" ID="804323.100004300" title="T2" />
+             <ListItem name="LI_804290" order="322" ID="804290.100004300" title="T3" />
+             <ListItem name="LI_804368" order="323" ID="804368.100004300" title="T4" />
+             <ListItem name="LI_804151" order="324" ID="804151.100004300" title="T5" />
+             <ListItem name="LI_804432" order="325" ID="804432.100004300" title="T6" />
+             <ListItem name="LI_804181" order="326" ID="804181.100004300" title="T7" />
+             <ListItem name="LI_804414" order="327" ID="804414.100004300" title="T8" />
+             <ListItem name="LI_804254" order="328" ID="804254.100004300" title="T9" />
+             <ListItem name="LI_804242" order="329" ID="804242.100004300" title="T10" />
+             <ListItem name="LI_804301" order="330" ID="804301.100004300" title="T11" />
+             <ListItem name="LI_804308" order="331" ID="804308.100004300" title="T12" />
+             <ListItem name="LI_804321" order="332" ID="804321.100004300" title="L1" />
+             <ListItem name="LI_804263" order="333" ID="804263.100004300" title="L2" />
+             <ListItem name="LI_804460" order="334" ID="804460.100004300" title="L3" />
+             <ListItem name="LI_804222" order="335" ID="804222.100004300" title="L4" />
+             <ListItem name="LI_804265" order="336" ID="804265.100004300" title="L5" />
+             <ListItem name="LI_804395" order="337" ID="804395.100004300" title="Sacrum" />
+             <ListItem name="LI_804449" order="338" ID="804449.100004300" title="Coccyx" />
+             <ListItem name="LI_804428" order="339" ID="804428.100004300" title="Other (specify)">
+              <Property name="p_rptTxt_804428_1" order="340" propName="reportText" val="{no text}" />
+              <ListItemResponseField name="lirf_804428_2" order="341" responseRequired="true">
+               <Response name="rsp_804428_3" order="342">
+                <string name="str_804428_4" order="343" />
+               </Response>
+              </ListItemResponseField>
+             </ListItem>
+            </List>
+           </ListField>
+          </Question>
+         </ChildItems>
+        </ListItem>
+        <ListItem name="LI_804146" order="344" ID="804146.100004300" title="Spinal cord">
+         <ChildItems name="ch_804146_1" order="345">
+          <Question name="Q_804406" order="346" ID="804406.100004300" title="Specify Precise Location, if known" mustImplement="false" minCard="0">
+           <Property name="p_rptTxt_804406_1" order="347" propName="reportText" val="Precise Location" />
+           <ListField name="lf_804406_2" order="348" maxSelections="0">
+            <List name="lst_804406_3" order="349">
+             <ListItem name="LI_804232" order="350" ID="804232.100004300" title="C1" />
+             <ListItem name="LI_804468" order="351" ID="804468.100004300" title="C2" />
+             <ListItem name="LI_804393" order="352" ID="804393.100004300" title="C3" />
+             <ListItem name="LI_804418" order="353" ID="804418.100004300" title="C4" />
+             <ListItem name="LI_804384" order="354" ID="804384.100004300" title="C5" />
+             <ListItem name="LI_804441" order="355" ID="804441.100004300" title="C6" />
+             <ListItem name="LI_804477" order="356" ID="804477.100004300" title="C7" />
+             <ListItem name="LI_804346" order="357" ID="804346.100004300" title="T1" />
+             <ListItem name="LI_804435" order="358" ID="804435.100004300" title="T2" />
+             <ListItem name="LI_804163" order="359" ID="804163.100004300" title="T3" />
+             <ListItem name="LI_804320" order="360" ID="804320.100004300" title="T4" />
+             <ListItem name="LI_804133" order="361" ID="804133.100004300" title="T5" />
+             <ListItem name="LI_804169" order="362" ID="804169.100004300" title="T6" />
+             <ListItem name="LI_804345" order="363" ID="804345.100004300" title="T7" />
+             <ListItem name="LI_804442" order="364" ID="804442.100004300" title="T8" />
+             <ListItem name="LI_804367" order="365" ID="804367.100004300" title="T9" />
+             <ListItem name="LI_804410" order="366" ID="804410.100004300" title="T10" />
+             <ListItem name="LI_804454" order="367" ID="804454.100004300" title="T11" />
+             <ListItem name="LI_804154" order="368" ID="804154.100004300" title="T12" />
+             <ListItem name="LI_804450" order="369" ID="804450.100004300" title="L1" />
+             <ListItem name="LI_804210" order="370" ID="804210.100004300" title="L2" />
+             <ListItem name="LI_804332" order="371" ID="804332.100004300" title="L3" />
+             <ListItem name="LI_804240" order="372" ID="804240.100004300" title="L4" />
+             <ListItem name="LI_804185" order="373" ID="804185.100004300" title="L5" />
+             <ListItem name="LI_804256" order="374" ID="804256.100004300" title="Sacral" />
+             <ListItem name="LI_804198" order="375" ID="804198.100004300" title="Coccygeal" />
+             <ListItem name="LI_804351" order="376" ID="804351.100004300" title="Other (specify)">
+              <Property name="p_rptTxt_804351_1" order="377" propName="reportText" val="{no text}" />
+              <ListItemResponseField name="lirf_804351_2" order="378" responseRequired="true">
+               <Response name="rsp_804351_3" order="379">
+                <string name="str_804351_4" order="380" />
+               </Response>
+              </ListItemResponseField>
+             </ListItem>
+            </List>
+           </ListField>
+          </Question>
+         </ChildItems>
+        </ListItem>
+        <ListItem name="LI_804277" order="381" ID="804277.100004300" title="Spinal nerve root(s)">
+         <ChildItems name="ch_804277_1" order="382">
+          <Question name="Q_804305" order="383" ID="804305.100004300" title="Specify Precise Location, if known" mustImplement="false" minCard="0">
+           <Property name="p_rptTxt_804305_1" order="384" propName="reportText" val="Precise Location" />
+           <ListField name="lf_804305_2" order="385" maxSelections="0">
+            <List name="lst_804305_3" order="386">
+             <ListItem name="LI_804484" order="387" ID="804484.100004300" title="C1" />
+             <ListItem name="LI_804144" order="388" ID="804144.100004300" title="C2" />
+             <ListItem name="LI_804236" order="389" ID="804236.100004300" title="C3" />
+             <ListItem name="LI_804266" order="390" ID="804266.100004300" title="C4" />
+             <ListItem name="LI_804193" order="391" ID="804193.100004300" title="C5" />
+             <ListItem name="LI_804382" order="392" ID="804382.100004300" title="C6" />
+             <ListItem name="LI_804443" order="393" ID="804443.100004300" title="C7" />
+             <ListItem name="LI_804322" order="394" ID="804322.100004300" title="T1" />
+             <ListItem name="LI_804402" order="395" ID="804402.100004300" title="T2" />
+             <ListItem name="LI_804299" order="396" ID="804299.100004300" title="T3" />
+             <ListItem name="LI_804385" order="397" ID="804385.100004300" title="T4" />
+             <ListItem name="LI_804467" order="398" ID="804467.100004300" title="T5" />
+             <ListItem name="LI_804182" order="399" ID="804182.100004300" title="T6" />
+             <ListItem name="LI_804259" order="400" ID="804259.100004300" title="T7" />
+             <ListItem name="LI_804173" order="401" ID="804173.100004300" title="T8" />
+             <ListItem name="LI_804221" order="402" ID="804221.100004300" title="T9" />
+             <ListItem name="LI_804241" order="403" ID="804241.100004300" title="T10" />
+             <ListItem name="LI_804492" order="404" ID="804492.100004300" title="T11" />
+             <ListItem name="LI_804298" order="405" ID="804298.100004300" title="T12" />
+             <ListItem name="LI_804191" order="406" ID="804191.100004300" title="L1" />
+             <ListItem name="LI_804461" order="407" ID="804461.100004300" title="L2" />
+             <ListItem name="LI_804131" order="408" ID="804131.100004300" title="L3" />
+             <ListItem name="LI_804403" order="409" ID="804403.100004300" title="L4" />
+             <ListItem name="LI_804216" order="410" ID="804216.100004300" title="L5" />
+             <ListItem name="LI_804462" order="411" ID="804462.100004300" title="Sacral" />
+             <ListItem name="LI_804205" order="412" ID="804205.100004300" title="Coccygeal" />
+             <ListItem name="LI_804281" order="413" ID="804281.100004300" title="Other (specify)">
+              <Property name="p_rptTxt_804281_1" order="414" propName="reportText" val="{no text}" />
+              <ListItemResponseField name="lirf_804281_2" order="415" responseRequired="true">
+               <Response name="rsp_804281_3" order="416">
+                <string name="str_804281_4" order="417" />
+               </Response>
+              </ListItemResponseField>
+             </ListItem>
+            </List>
+           </ListField>
+          </Question>
+         </ChildItems>
+        </ListItem>
+        <ListItem name="LI_804339" order="418" ID="804339.100004300" title="Other (specify)">
+         <Property name="p_rptTxt_804339_1" order="419" propName="reportText" val="{no text}" />
+         <ListItemResponseField name="lirf_804339_2" order="420" responseRequired="true">
+          <Response name="rsp_804339_3" order="421">
+           <string name="str_804339_4" order="422" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_804413" order="423" ID="804413.100004300" title="Not specified" selectionDeselectsSiblings="true" />
+       </List>
+      </ListField>
+     </Question>
+     <Question name="Q_804473" order="424" ID="804473.100004300" title="Tumor Laterality (Note E)">
+      <Property name="p_rptTxt_804473_1" order="425" propName="reportText" val="Tumor Laterality" />
+      <ListField name="lf_804473_2" order="426">
+       <List name="lst_804473_3" order="427">
+        <ListItem name="LI_804196" order="428" ID="804196.100004300" title="Right" />
+        <ListItem name="LI_804489" order="429" ID="804489.100004300" title="Left" />
+        <ListItem name="LI_804274" order="430" ID="804274.100004300" title="Midline" />
+        <ListItem name="LI_804134" order="431" ID="804134.100004300" title="Bilateral" />
+        <ListItem name="LI_804340" order="432" ID="804340.100004300" title="Other (specify)">
+         <Property name="p_rptTxt_804340_1" order="433" propName="reportText" val="{no text}" />
+         <ListItemResponseField name="lirf_804340_2" order="434" responseRequired="true">
+          <Response name="rsp_804340_3" order="435">
+           <string name="str_804340_4" order="436" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_804170" order="437" ID="804170.100004300" title="Not specified" />
+       </List>
+      </ListField>
+     </Question>
+     <Question name="Q_804227" order="438" ID="804227.100004300" title="Tumor Focality (Note E)" mustImplement="false" minCard="0">
+      <Property name="p_rptTxt_804227_1" order="439" propName="reportText" val="Tumor Focality" />
+      <ListField name="lf_804227_2" order="440">
+       <List name="lst_804227_3" order="441">
+        <ListItem name="LI_804343" order="442" ID="804343.100004300" title="Unifocal" />
+        <ListItem name="LI_804199" order="443" ID="804199.100004300" title="Multifocal (specify number of lesions)">
+         <Property name="p_rptTxt_804199_1" order="444" propName="reportText" val="Multifocal" />
+         <ListItemResponseField name="lirf_804199_2" order="445" responseRequired="true">
+          <Response name="rsp_804199_3" order="446">
+           <string name="str_804199_4" order="447" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_804493" order="448" ID="804493.100004300" title="Cannot be determined">
+         <ListItemResponseField name="lirf_804493_1" order="449">
+          <Response name="rsp_804493_2" order="450">
+           <string name="str_804493_3" order="451" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+       </List>
+      </ListField>
+     </Question>
+     <Question name="Q_804331" order="452" ID="804331.100004300" title="Integrated Diagnosis (CNS WHO 2021) (Notes F, G)">
+      <Property name="p_rptTxt_804331_1" order="453" propName="reportText" val="Integrated Diagnosis" />
+      <ListField name="lf_804331_2" order="454">
+       <List name="lst_804331_3" order="455">
+        <ListItem name="LI_804354" order="456" ID="804354.100004300" title="Gliomas, glioneuronal tumors, and neuronal tumors">
+         <Property name="p_rptTxt_804354_1" order="457" propName="reportText" val="{no text}" />
+         <ChildItems name="ch_804354_2" order="458">
+          <Question name="Q_804318" order="459" ID="804318.100004300">
+           <Property name="p_altTxt_804318_1" order="460" propName="altText" val="Integrated Diagnosis for Gliomas, Glioneuronal Tumors, and Neuronal Tumors" />
+           <ListField name="lf_804318_2" order="461">
+            <List name="lst_804318_3" order="462">
+             <DisplayedItem name="DI_804507" order="463" ID="804507.100004300" title="Adult-type diffuse gliomas">
+              <Property name="p_rptTxt_804507_1" order="464" propName="reportText" val="{no text}" />
+             </DisplayedItem>
+             <ListItem name="LI_804383" order="465" ID="804383.100004300" title="Astrocytoma, IDH-mutant" />
+             <ListItem name="LI_804358" order="466" ID="804358.100004300" title="Oligodendroglioma, IDH-mutant and 1p/19q-codeleted" />
+             <ListItem name="LI_804275" order="467" ID="804275.100004300" title="Glioblastoma, IDH-wildtype" />
+             <DisplayedItem name="DI_804508" order="468" ID="804508.100004300" title="Pediatric-type diffuse low-grade gliomas">
+              <Property name="p_rptTxt_804508_1" order="469" propName="reportText" val="{no text}" />
+             </DisplayedItem>
+             <ListItem name="LI_804258" order="470" ID="804258.100004300" title="Diffuse astrocytoma, MYB- or MYBL1-altered" />
+             <ListItem name="LI_804372" order="471" ID="804372.100004300" title="Angiocentric glioma" />
+             <ListItem name="LI_804429" order="472" ID="804429.100004300" title="Polymorphous low-grade neuroepithelial tumor of the young" />
+             <ListItem name="LI_804482" order="473" ID="804482.100004300" title="Diffuse low-grade glioma, MAPK pathway-altered" />
+             <DisplayedItem name="DI_804509" order="474" ID="804509.100004300" title="Pediatric-type diffuse high-grade gliomas">
+              <Property name="p_rptTxt_804509_1" order="475" propName="reportText" val="{no text}" />
+             </DisplayedItem>
+             <ListItem name="LI_804386" order="476" ID="804386.100004300" title="Diffuse midline glioma, H3 K27-altered" />
+             <ListItem name="LI_804381" order="477" ID="804381.100004300" title="Diffuse hemispheric glioma, H3 G34-mutant" />
+             <ListItem name="LI_804466" order="478" ID="804466.100004300" title="Diffuse pediatric-type high-grade glioma, H3-wildtype and IDH-wildtype" />
+             <ListItem name="LI_804300" order="479" ID="804300.100004300" title="Infant-type hemispheric glioma" />
+             <DisplayedItem name="DI_804510" order="480" ID="804510.100004300" title="Circumscribed astrocytic gliomas">
+              <Property name="p_rptTxt_804510_1" order="481" propName="reportText" val="{no text}" />
+             </DisplayedItem>
+             <ListItem name="LI_804313" order="482" ID="804313.100004300" title="Pilocytic astrocytoma" />
+             <ListItem name="LI_804142" order="483" ID="804142.100004300" title="High-grade astrocytoma with piloid features" />
+             <ListItem name="LI_804350" order="484" ID="804350.100004300" title="Pleomorphic xanthoastrocytoma" />
+             <ListItem name="LI_804160" order="485" ID="804160.100004300" title="Subependymal giant cell astrocytoma" />
+             <ListItem name="LI_804251" order="486" ID="804251.100004300" title="Chordoid glioma" />
+             <ListItem name="LI_804342" order="487" ID="804342.100004300" title="Astroblastoma, MN1-altered" />
+             <DisplayedItem name="DI_804511" order="488" ID="804511.100004300" title="Glioneuronal and neuronal tumors">
+              <Property name="p_rptTxt_804511_1" order="489" propName="reportText" val="{no text}" />
+             </DisplayedItem>
+             <ListItem name="LI_804512" order="490" ID="804512.100004300" title="Ganglioglioma" />
+             <ListItem name="LI_804513" order="491" ID="804513.100004300" title="Gangliocytoma" />
+             <ListItem name="LI_804514" order="492" ID="804514.100004300" title="Desmoplastic infantile ganglioglioma" />
+             <ListItem name="LI_804515" order="493" ID="804515.100004300" title="Desmoplastic infantile astrocytoma" />
+             <ListItem name="LI_804516" order="494" ID="804516.100004300" title="Dysembryoplastic neuroepithelial tumor" />
+             <ListItem name="LI_804517" order="495" ID="804517.100004300" title="Diffuse glioneuronal tumor with oligodendroglioma-like features and nuclear clusters" />
+             <ListItem name="LI_804518" order="496" ID="804518.100004300" title="Papillary glioneuronal tumor" />
+             <ListItem name="LI_804519" order="497" ID="804519.100004300" title="Rosette-forming glioneuronal tumor" />
+             <ListItem name="LI_804520" order="498" ID="804520.100004300" title="Myxoid glioneuronal tumor" />
+             <ListItem name="LI_804521" order="499" ID="804521.100004300" title="Diffuse leptomeningeal glioneuronal tumor" />
+             <ListItem name="LI_804522" order="500" ID="804522.100004300" title="Multinodular and vacuolating neuronal tumor" />
+             <ListItem name="LI_804523" order="501" ID="804523.100004300" title="Dysplastic cerebellar gangliocytoma (Lhermitte-Duclos disease)" />
+             <ListItem name="LI_804524" order="502" ID="804524.100004300" title="Central neurocytoma" />
+             <ListItem name="LI_804525" order="503" ID="804525.100004300" title="Extraventricular neurocytoma" />
+             <ListItem name="LI_804526" order="504" ID="804526.100004300" title="Cerebellar liponeurocytoma" />
+             <DisplayedItem name="DI_804527" order="505" ID="804527.100004300" title="Ependymal tumors">
+              <Property name="p_rptTxt_804527_1" order="506" propName="reportText" val="{no text}" />
+             </DisplayedItem>
+             <ListItem name="LI_804528" order="507" ID="804528.100004300" title="Supratentorial ependymoma" />
+             <ListItem name="LI_804529" order="508" ID="804529.100004300" title="Supratentorial ependymoma, ZFTA fusion-positive" />
+             <ListItem name="LI_804530" order="509" ID="804530.100004300" title="Supratentorial ependymoma, YAP1 fusion-positive" />
+             <ListItem name="LI_804531" order="510" ID="804531.100004300" title="Posterior fossa ependymoma" />
+             <ListItem name="LI_804532" order="511" ID="804532.100004300" title="Posterior fossa group A (PFA) ependymoma" />
+             <ListItem name="LI_804533" order="512" ID="804533.100004300" title="Posterior fossa group B (PFB) ependymoma" />
+             <ListItem name="LI_804534" order="513" ID="804534.100004300" title="Spinal ependymoma" />
+             <ListItem name="LI_804535" order="514" ID="804535.100004300" title="Spinal ependymoma, MYCN-amplified" />
+             <ListItem name="LI_804536" order="515" ID="804536.100004300" title="Myxopapillary ependymoma" />
+             <ListItem name="LI_804537" order="516" ID="804537.100004300" title="Subependymoma" />
+            </List>
+           </ListField>
+          </Question>
+         </ChildItems>
+        </ListItem>
+        <ListItem name="LI_804994" order="517" ID="804994.100004300" title="Choroid plexus tumors">
+         <Property name="p_rptTxt_804994_1" order="518" propName="reportText" val="{no text}" />
+         <ChildItems name="ch_804994_2" order="519">
+          <Question name="Q_804995" order="520" ID="804995.100004300">
+           <Property name="p_altTxt_804995_1" order="521" propName="altText" val="Integrated Diagnosis for Choroid Plexus Tumors" />
+           <ListField name="lf_804995_2" order="522">
+            <List name="lst_804995_3" order="523">
+             <ListItem name="LI_804539" order="524" ID="804539.100004300" title="Choroid plexus papilloma" />
+             <ListItem name="LI_804540" order="525" ID="804540.100004300" title="Atypical choroid plexus papilloma" />
+             <ListItem name="LI_804541" order="526" ID="804541.100004300" title="Choroid plexus carcinoma" />
+            </List>
+           </ListField>
+          </Question>
+         </ChildItems>
+        </ListItem>
+        <ListItem name="LI_804720" order="527" ID="804720.100004300" title="Medulloblastoma">
+         <Property name="p_rptTxt_804720_1" order="528" propName="reportText" val="{no text}" />
+         <ChildItems name="ch_804720_2" order="529">
+          <Question name="Q_804743" order="530" ID="804743.100004300">
+           <Property name="p_altTxt_804743_1" order="531" propName="altText" val="Integrated Diagnosis for Medulloblastoma" />
+           <ListField name="lf_804743_2" order="532" maxSelections="0">
+            <List name="lst_804743_3" order="533">
+             <DisplayedItem name="DI_805203" order="534" ID="805203.100004300" title="Must select both molecularly defined and histologically defined subtypes">
+              <Property name="p_rptTxt_805203_1" order="535" propName="reportText" val="{no text}" />
+             </DisplayedItem>
+             <DisplayedItem name="DI_805204" order="536" ID="805204.100004300" title="Molecularly Defined Medulloblastomas">
+              <Property name="p_rptTxt_805204_1" order="537" propName="reportText" val="{no text}" />
+             </DisplayedItem>
+             <ListItem name="LI_804455" order="538" ID="804455.100004300" title="Medulloblastoma, WNT-activated" />
+             <ListItem name="LI_804238" order="539" ID="804238.100004300" title="Medulloblastoma, SHH-activated and TP53-wildtype" />
+             <ListItem name="LI_804491" order="540" ID="804491.100004300" title="Medulloblastoma, SHH-activated and TP53-mutant" />
+             <ListItem name="LI_804273" order="541" ID="804273.100004300" title="Medulloblastoma, non-WNT / non-SHH" />
+             <DisplayedItem name="DI_805205" order="542" ID="805205.100004300" title="Histologically Defined Medulloblastomas">
+              <Property name="p_rptTxt_805205_1" order="543" propName="reportText" val="{no text}" />
+             </DisplayedItem>
+             <ListItem name="LI_804543" order="544" ID="804543.100004300" title="Classic medulloblastoma" />
+             <ListItem name="LI_804544" order="545" ID="804544.100004300" title="Desmoplastic / nodular medulloblastoma" />
+             <ListItem name="LI_804545" order="546" ID="804545.100004300" title="Medulloblastoma with extensive nodularity" />
+             <ListItem name="LI_804546" order="547" ID="804546.100004300" title="Large cell / anaplastic medulloblastoma" />
+            </List>
+           </ListField>
+          </Question>
+         </ChildItems>
+        </ListItem>
+        <ListItem name="LI_804721" order="548" ID="804721.100004300" title="Other CNS embryonal tumors">
+         <Property name="p_rptTxt_804721_1" order="549" propName="reportText" val="{no text}" />
+         <ChildItems name="ch_804721_2" order="550">
+          <Question name="Q_804722" order="551" ID="804722.100004300">
+           <Property name="p_altTxt_804722_1" order="552" propName="altText" val="Integrated Diagnosis for Other CNS Embryonal Tumors" />
+           <ListField name="lf_804722_2" order="553">
+            <List name="lst_804722_3" order="554">
+             <ListItem name="LI_804549" order="555" ID="804549.100004300" title="Atypical teratoid / rhabdoid tumor" />
+             <ListItem name="LI_804550" order="556" ID="804550.100004300" title="Cribriform neuroepithelial tumor" />
+             <ListItem name="LI_804551" order="557" ID="804551.100004300" title="Embryonal tumor with multilayered rosettes" />
+             <ListItem name="LI_804552" order="558" ID="804552.100004300" title="CNS neuroblastoma, FOXR2-activated" />
+             <ListItem name="LI_804553" order="559" ID="804553.100004300" title="CNS tumor with BCOR internal tandem duplication" />
+             <ListItem name="LI_804554" order="560" ID="804554.100004300" title="CNS embryonal tumor, NEC / NOS" />
+            </List>
+           </ListField>
+          </Question>
+         </ChildItems>
+        </ListItem>
+        <ListItem name="LI_804379" order="561" ID="804379.100004300" title="Pineal tumors">
+         <Property name="p_rptTxt_804379_1" order="562" propName="reportText" val="{no text}" />
+         <ChildItems name="ch_804379_2" order="563">
+          <Question name="Q_804223" order="564" ID="804223.100004300">
+           <Property name="p_altTxt_804223_1" order="565" propName="altText" val="Integrated Diagnosis for Pineal Tumors" />
+           <ListField name="lf_804223_2" order="566">
+            <List name="lst_804223_3" order="567">
+             <ListItem name="LI_804336" order="568" ID="804336.100004300" title="Pineocytoma" />
+             <ListItem name="LI_804412" order="569" ID="804412.100004300" title="Pineal parenchymal tumor of intermediate differentiation" />
+             <ListItem name="LI_804436" order="570" ID="804436.100004300" title="Pineoblastoma" />
+             <ListItem name="LI_804380" order="571" ID="804380.100004300" title="Papillary tumor of the pineal region" />
+             <ListItem name="LI_804272" order="572" ID="804272.100004300" title="Desmoplastic myxoid tumor of the pineal region, SMARCB1-mutant" />
+            </List>
+           </ListField>
+          </Question>
+         </ChildItems>
+        </ListItem>
+        <ListItem name="LI_804361" order="573" ID="804361.100004300" title="Cranial and paraspinal nerve tumors">
+         <Property name="p_rptTxt_804361_1" order="574" propName="reportText" val="{no text}" />
+         <ChildItems name="ch_804361_2" order="575">
+          <Question name="Q_804423" order="576" ID="804423.100004300">
+           <Property name="p_altTxt_804423_1" order="577" propName="altText" val="Integrated Diagnosis for Cranial and Paraspinal Nerve Tumors" />
+           <ListField name="lf_804423_2" order="578">
+            <List name="lst_804423_3" order="579">
+             <ListItem name="LI_804212" order="580" ID="804212.100004300" title="Schwannoma" />
+             <ListItem name="LI_804324" order="581" ID="804324.100004300" title="Neurofibroma" />
+             <ListItem name="LI_804337" order="582" ID="804337.100004300" title="Plexiform neurofibroma" />
+             <ListItem name="LI_804555" order="583" ID="804555.100004300" title="Perineurioma" />
+             <ListItem name="LI_804556" order="584" ID="804556.100004300" title="Hybrid nerve sheath tumor (specify subtype(s), if known)">
+              <Property name="p_rptTxt_804556_1" order="585" propName="reportText" val="Hybrid nerve sheath tumor" />
+              <ListItemResponseField name="lirf_804556_2" order="586">
+               <Response name="rsp_804556_3" order="587">
+                <string name="str_804556_4" order="588" />
+               </Response>
+              </ListItemResponseField>
+             </ListItem>
+             <ListItem name="LI_804557" order="589" ID="804557.100004300" title="Malignant melanotic nerve sheath tumor" />
+             <ListItem name="LI_804558" order="590" ID="804558.100004300" title="Malignant peripheral nerve sheath tumor" />
+             <ListItem name="LI_804559" order="591" ID="804559.100004300" title="Cauda equina neuroendocrine tumor (previously paraganglioma)">
+              <Property name="p_rptTxt_804559_1" order="592" propName="reportText" val="Cauda equina neuroendocrine tumor" />
+             </ListItem>
+            </List>
+           </ListField>
+          </Question>
+         </ChildItems>
+        </ListItem>
+        <ListItem name="LI_804359" order="593" ID="804359.100004300" title="Meningioma (specify subtype(s), if known)">
+         <Property name="p_rptTxt_804359_1" order="594" propName="reportText" val="Meningioma" />
+         <ListItemResponseField name="lirf_804359_2" order="595">
+          <Response name="rsp_804359_3" order="596">
+           <string name="str_804359_4" order="597" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_804562" order="598" ID="804562.100004300" title="Mesenchymal, non-meningothelial tumors involving the CNS">
+         <Property name="p_rptTxt_804562_1" order="599" propName="reportText" val="{no text}" />
+         <ChildItems name="ch_804562_2" order="600">
+          <Question name="Q_804725" order="601" ID="804725.100004300">
+           <Property name="p_altTxt_804725_1" order="602" propName="altText" val="Integrated Diagnosis for Mesenchymal, Non-meningothelial Tumors Involving the CNS" />
+           <ListField name="lf_804725_2" order="603">
+            <List name="lst_804725_3" order="604">
+             <DisplayedItem name="DI_804563" order="605" ID="804563.100004300" title="Fibroblastic and myofibroblastic tumors">
+              <Property name="p_rptTxt_804563_1" order="606" propName="reportText" val="{no text}" />
+             </DisplayedItem>
+             <ListItem name="LI_804565" order="607" ID="804565.100004300" title="Solitary fibrous tumor" />
+             <DisplayedItem name="DI_804307" order="608" ID="804307.100004300" title="Vascular tumors">
+              <Property name="p_rptTxt_804307_1" order="609" propName="reportText" val="{no text}" />
+             </DisplayedItem>
+             <ListItem name="LI_804726" order="610" ID="804726.100004300" title="Hemangioma" />
+             <ListItem name="LI_804145" order="611" ID="804145.100004300" title="Cavernous malformation" />
+             <ListItem name="LI_804149" order="612" ID="804149.100004300" title="Arteriovenous malformation" />
+             <ListItem name="LI_804283" order="613" ID="804283.100004300" title="Capillary telangiectasia" />
+             <ListItem name="LI_804168" order="614" ID="804168.100004300" title="Hemangioblastoma" />
+             <DisplayedItem name="DI_804727" order="615" ID="804727.100004300" title="Skeletal muscle tumors">
+              <Property name="p_rptTxt_804727_1" order="616" propName="reportText" val="{no text}" />
+             </DisplayedItem>
+             <ListItem name="LI_804728" order="617" ID="804728.100004300" title="Embryonal rhabdomyosarcoma" />
+             <ListItem name="LI_804729" order="618" ID="804729.100004300" title="Alveolar rhabdomyosarcoma" />
+             <ListItem name="LI_804730" order="619" ID="804730.100004300" title="Rhabdomyosarcoma, pleomorphic type" />
+             <ListItem name="LI_804731" order="620" ID="804731.100004300" title="Spindle cell rhabdomyosarcoma" />
+             <DisplayedItem name="DI_804732" order="621" ID="804732.100004300" title="Tumors of uncertain differentiation">
+              <Property name="p_rptTxt_804732_1" order="622" propName="reportText" val="{no text}" />
+             </DisplayedItem>
+             <ListItem name="LI_804197" order="623" ID="804197.100004300" title="Intracranial mesenchymal tumor, FET::CREB fusion-positive" />
+             <ListItem name="LI_804627" order="624" ID="804627.100004300" title="CIC-rearranged sarcoma" />
+             <ListItem name="LI_804261" order="625" ID="804261.100004300" title="Primary intracranial sarcoma, DICER1-mutant" />
+             <ListItem name="LI_804328" order="626" ID="804328.100004300" title="Ewing sarcoma" />
+             <DisplayedItem name="DI_804733" order="627" ID="804733.100004300" title="Chondrogenic tumors">
+              <Property name="p_rptTxt_804733_1" order="628" propName="reportText" val="{no text}" />
+             </DisplayedItem>
+             <ListItem name="LI_804566" order="629" ID="804566.100004300" title="Mesenchymal chondrosarcoma" />
+             <ListItem name="LI_804567" order="630" ID="804567.100004300" title="Chondrosarcoma" />
+             <ListItem name="LI_804568" order="631" ID="804568.100004300" title="Dedifferentiated chondrosarcoma" />
+             <DisplayedItem name="DI_804570" order="632" ID="804570.100004300" title="Notochordal tumors">
+              <Property name="p_rptTxt_804570_1" order="633" propName="reportText" val="{no text}" />
+             </DisplayedItem>
+             <ListItem name="LI_804571" order="634" ID="804571.100004300" title="Chordoma" />
+            </List>
+           </ListField>
+          </Question>
+         </ChildItems>
+        </ListItem>
+        <ListItem name="LI_804458" order="635" ID="804458.100004300" title="Melanocytic tumors">
+         <Property name="p_rptTxt_804458_1" order="636" propName="reportText" val="{no text}" />
+         <ChildItems name="ch_804458_2" order="637">
+          <Question name="Q_804319" order="638" ID="804319.100004300">
+           <Property name="p_altTxt_804319_1" order="639" propName="altText" val="Integrated Diagnosis for Melanocytic Tumors" />
+           <ListField name="lf_804319_2" order="640">
+            <List name="lst_804319_3" order="641">
+             <DisplayedItem name="DI_804572" order="642" ID="804572.100004300" title="Diffuse meningeal melanocytic neoplasms">
+              <Property name="p_rptTxt_804572_1" order="643" propName="reportText" val="{no text}" />
+             </DisplayedItem>
+             <ListItem name="LI_804292" order="644" ID="804292.100004300" title="Meningeal melanocytosis" />
+             <ListItem name="LI_804204" order="645" ID="804204.100004300" title="Meningeal melanomatosis" />
+             <DisplayedItem name="DI_804573" order="646" ID="804573.100004300" title="Circumscribed meningeal melanocytic neoplasms">
+              <Property name="p_rptTxt_804573_1" order="647" propName="reportText" val="{no text}" />
+             </DisplayedItem>
+             <ListItem name="LI_804270" order="648" ID="804270.100004300" title="Meningeal melanocytoma" />
+             <ListItem name="LI_804284" order="649" ID="804284.100004300" title="Meningeal melanoma" />
+            </List>
+           </ListField>
+          </Question>
+         </ChildItems>
+        </ListItem>
+        <ListItem name="LI_804407" order="650" ID="804407.100004300" title="Hematolymphoid tumors involving the CNS">
+         <Property name="p_rptTxt_804407_1" order="651" propName="reportText" val="{no text}" />
+         <ChildItems name="ch_804407_2" order="652">
+          <Question name="Q_804208" order="653" ID="804208.100004300">
+           <Property name="p_altTxt_804208_1" order="654" propName="altText" val="Integrated Diagnosis for Hematolymphoid Tumors Involving the CNS" />
+           <ListField name="lf_804208_2" order="655">
+            <List name="lst_804208_3" order="656">
+             <DisplayedItem name="DI_804574" order="657" ID="804574.100004300" title="CNS Lymphomas">
+              <Property name="p_rptTxt_804574_1" order="658" propName="reportText" val="{no text}" />
+             </DisplayedItem>
+             <ListItem name="LI_804437" order="659" ID="804437.100004300" title="Primary diffuse large B-cell lymphoma of the CNS" />
+             <ListItem name="LI_804734" order="660" ID="804734.100004300" title="Immunodeficiency-associated CNS lymphoma" />
+             <ListItem name="LI_804575" order="661" ID="804575.100004300" title="Lymphomatoid granulomatosis" />
+             <ListItem name="LI_804420" order="662" ID="804420.100004300" title="Intravascular large B-cell lymphoma" />
+             <DisplayedItem name="DI_804735" order="663" ID="804735.100004300" title="Miscellaneous rare lymphomas in the CNS">
+              <Property name="p_rptTxt_804735_1" order="664" propName="reportText" val="{no text}" />
+             </DisplayedItem>
+             <ListItem name="LI_804469" order="665" ID="804469.100004300" title="MALT lymphoma of the dura" />
+             <ListItem name="LI_804736" order="666" ID="804736.100004300" title="Other low-grade B-cell lymphomas of the CNS (specify subtype(s), if known)">
+              <Property name="p_rptTxt_804736_1" order="667" propName="reportText" val="Other low-grade B-cell lymphomas of the CNS" />
+              <ListItemResponseField name="lirf_804736_2" order="668">
+               <Response name="rsp_804736_3" order="669">
+                <string name="str_804736_4" order="670" />
+               </Response>
+              </ListItemResponseField>
+             </ListItem>
+             <ListItem name="LI_804153" order="671" ID="804153.100004300" title="Anaplastic large cell lymphoma (ALK+ / ALK-)" />
+             <ListItem name="LI_804171" order="672" ID="804171.100004300" title="T-cell lymphoma" />
+             <ListItem name="LI_804310" order="673" ID="804310.100004300" title="NK / T-cell lymphoma" />
+             <DisplayedItem name="DI_804738" order="674" ID="804738.100004300" title="Histiocytic tumors">
+              <Property name="p_rptTxt_804738_1" order="675" propName="reportText" val="{no text}" />
+             </DisplayedItem>
+             <ListItem name="LI_804579" order="676" ID="804579.100004300" title="Erdheim-Chester disease" />
+             <ListItem name="LI_804580" order="677" ID="804580.100004300" title="Rosai-Dorfman disease" />
+             <ListItem name="LI_804581" order="678" ID="804581.100004300" title="Juvenile xanthogranuloma" />
+             <ListItem name="LI_804582" order="679" ID="804582.100004300" title="Langerhans cell histiocytosis" />
+             <ListItem name="LI_804583" order="680" ID="804583.100004300" title="Histiocytic sarcoma" />
+            </List>
+           </ListField>
+          </Question>
+         </ChildItems>
+        </ListItem>
+        <ListItem name="LI_804341" order="681" ID="804341.100004300" title="Germ cell tumors">
+         <Property name="p_rptTxt_804341_1" order="682" propName="reportText" val="{no text}" />
+         <ChildItems name="ch_804341_2" order="683">
+          <Question name="Q_804376" order="684" ID="804376.100004300">
+           <Property name="p_altTxt_804376_1" order="685" propName="altText" val="Integrated Diagnosis for Germ Cell Tumors" />
+           <ListField name="lf_804376_2" order="686">
+            <List name="lst_804376_3" order="687">
+             <ListItem name="LI_804260" order="688" ID="804260.100004300" title="Mature teratoma" />
+             <ListItem name="LI_804347" order="689" ID="804347.100004300" title="Immature teratoma" />
+             <ListItem name="LI_804371" order="690" ID="804371.100004300" title="Teratoma with somatic-type malignancy" />
+             <ListItem name="LI_804433" order="691" ID="804433.100004300" title="Germinoma" />
+             <ListItem name="LI_804471" order="692" ID="804471.100004300" title="Embryonal carcinoma" />
+             <ListItem name="LI_804338" order="693" ID="804338.100004300" title="Yolk sac tumor" />
+             <ListItem name="LI_804201" order="694" ID="804201.100004300" title="Choriocarcinoma" />
+             <ListItem name="LI_804478" order="695" ID="804478.100004300" title="Mixed germ cell tumor (specify subtype(s), if known)">
+              <Property name="p_rptTxt_804478_1" order="696" propName="reportText" val="Mixed germ cell tumor" />
+              <ListItemResponseField name="lirf_804478_2" order="697">
+               <Response name="rsp_804478_3" order="698">
+                <string name="str_804478_4" order="699" />
+               </Response>
+              </ListItemResponseField>
+             </ListItem>
+            </List>
+           </ListField>
+          </Question>
+         </ChildItems>
+        </ListItem>
+        <ListItem name="LI_804588" order="700" ID="804588.100004300" title="Tumors of the sellar region">
+         <Property name="p_rptTxt_804588_1" order="701" propName="reportText" val="{no text}" />
+         <ChildItems name="ch_804588_2" order="702">
+          <Question name="Q_804585" order="703" ID="804585.100004300">
+           <Property name="p_altTxt_804585_1" order="704" propName="altText" val="Integrated Diagnosis for Tumors of the Sellar Region" />
+           <ListField name="lf_804585_2" order="705">
+            <List name="lst_804585_3" order="706">
+             <ListItem name="LI_804587" order="707" ID="804587.100004300" title="Adamantinomatous craniopharyngioma" />
+             <ListItem name="LI_804589" order="708" ID="804589.100004300" title="Papillary craniopharyngioma" />
+             <ListItem name="LI_804591" order="709" ID="804591.100004300" title="Pituicytoma" />
+             <ListItem name="LI_804586" order="710" ID="804586.100004300" title="Granular cell tumor of the sellar region" />
+             <ListItem name="LI_804590" order="711" ID="804590.100004300" title="Spindle cell oncocytoma" />
+             <ListItem name="LI_804584" order="712" ID="804584.100004300" title="Pituitary adenoma / pituitary neuroendocrine tumor (PitNET)" />
+             <ListItem name="LI_804592" order="713" ID="804592.100004300" title="Pituitary blastoma" />
+            </List>
+           </ListField>
+          </Question>
+         </ChildItems>
+        </ListItem>
+        <ListItem name="LI_804233" order="714" ID="804233.100004300" title="Other (e.g., NEC, NOS) (specify)">
+         <Property name="p_rptTxt_804233_1" order="715" propName="reportText" val="{no text}" />
+         <ListItemResponseField name="lirf_804233_2" order="716" responseRequired="true">
+          <Response name="rsp_804233_3" order="717">
+           <string name="str_804233_4" order="718" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_804218" order="719" ID="804218.100004300" title="Cannot be determined">
+         <ListItemResponseField name="lirf_804218_1" order="720">
+          <Response name="rsp_804218_2" order="721">
+           <string name="str_804218_3" order="722" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_804628" order="723" ID="804628.100004300" title="Pending">
+         <ChildItems name="ch_804628_1" order="724">
+          <Question name="Q_804654" order="725" ID="804654.100004300" title="Specify Histologic Type">
+           <Property name="p_rptTxt_804654_1" order="726" propName="reportText" val="Histologic Type" />
+           <ResponseField name="rf_804654_2" order="727">
+            <Response name="rsp_804654_3" order="728">
+             <string name="str_804654_4" order="729" />
+            </Response>
+           </ResponseField>
+          </Question>
+         </ChildItems>
+        </ListItem>
+       </List>
+      </ListField>
+      <ChildItems name="ch_804331_5" order="730">
+       <Question name="Q_804326" order="731" ID="804326.100004300" title="Histologic Type Comments" mustImplement="false" minCard="0">
+        <ResponseField name="rf_804326_1" order="732">
+         <Response name="rsp_804326_2" order="733">
+          <string name="str_804326_3" order="734" />
+         </Response>
+        </ResponseField>
+       </Question>
+      </ChildItems>
+     </Question>
+     <Question name="Q_804194" order="735" ID="804194.100004300" title="Integrated Histologic Molecular Grade (CNS WHO 2021) (Note H)">
+      <Property name="p_rptTxt_804194_1" order="736" propName="reportText" val="Integrated Histologic Molecular Grade" />
+      <ListField name="lf_804194_2" order="737">
+       <List name="lst_804194_3" order="738">
+        <ListItem name="LI_804480" order="739" ID="804480.100004300" title="CNS WHO grade 1" />
+        <ListItem name="LI_804209" order="740" ID="804209.100004300" title="CNS WHO grade 2" />
+        <ListItem name="LI_804177" order="741" ID="804177.100004300" title="CNS WHO grade 3" />
+        <ListItem name="LI_804404" order="742" ID="804404.100004300" title="CNS WHO grade 4" />
+        <ListItem name="LI_804632" order="743" ID="804632.100004300" title="Pending" />
+        <ListItem name="LI_804479" order="744" ID="804479.100004300" title="Other (specify)">
+         <Property name="p_rptTxt_804479_1" order="745" propName="reportText" val="{no text}" />
+         <ListItemResponseField name="lirf_804479_2" order="746" responseRequired="true">
+          <Response name="rsp_804479_3" order="747">
+           <string name="str_804479_4" order="748" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_804430" order="749" ID="804430.100004300" title="Not applicable">
+         <ListItemResponseField name="lirf_804430_1" order="750">
+          <Response name="rsp_804430_2" order="751">
+           <string name="str_804430_3" order="752" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_804192" order="753" ID="804192.100004300" title="Cannot be assessed">
+         <ListItemResponseField name="lirf_804192_1" order="754">
+          <Response name="rsp_804192_2" order="755">
+           <string name="str_804192_3" order="756" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+       </List>
+      </ListField>
+     </Question>
+     <Question name="Q_804397" order="757" ID="804397.100004300" title="Treatment Effect (Histological Evidence of Prior Therapy) (Note I)" mustImplement="false" minCard="0">
+      <Property name="p_rptTxt_804397_1" order="758" propName="reportText" val="Treatment Effect (Histological Evidence of Prior Therapy)" />
+      <ListField name="lf_804397_2" order="759">
+       <List name="lst_804397_3" order="760">
+        <ListItem name="LI_804269" order="761" ID="804269.100004300" title="Not identified" />
+        <ListItem name="LI_804438" order="762" ID="804438.100004300" title="Present">
+         <ListItemResponseField name="lirf_804438_1" order="763">
+          <Response name="rsp_804438_2" order="764">
+           <string name="str_804438_3" order="765" />
+          </Response>
+         </ListItemResponseField>
+         <ChildItems name="ch_804438_4" order="766">
+          <Question name="Q_804452" order="767" ID="804452.100004300" title="Specify Percentage of Tumor that is Necrotic" mustImplement="false" minCard="0">
+           <Property name="p_rptTxt_804452_1" order="768" propName="reportText" val="Percentage of Tumor that is Necrotic" />
+           <ResponseField name="rf_804452_2" order="769">
+            <Response name="rsp_804452_3" order="770">
+             <integer name="intr_804452_4" order="771" maxInclusive="100" minInclusive="0" />
+            </Response>
+            <TextAfterResponse name="rtt_804452_5" order="772" val="%" />
+            <ResponseUnits name="un_804452_6" order="773" val="%" />
+           </ResponseField>
+          </Question>
+         </ChildItems>
+        </ListItem>
+        <ListItem name="LI_804286" order="774" ID="804286.100004300" title="Cannot be determined">
+         <ListItemResponseField name="lirf_804286_1" order="775">
+          <Response name="rsp_804286_2" order="776">
+           <string name="str_804286_3" order="777" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+       </List>
+      </ListField>
+     </Question>
+    </ChildItems>
+   </Section>
+   <Section name="S_804495" order="778" ID="804495.100004300" title="ADDITIONAL FINDINGS" mustImplement="false" minCard="0">
+    <ChildItems name="ch_804495_1" order="779">
+     <Question name="Q_804496" order="780" ID="804496.100004300" title="Additional Pathologic Findings (specify)" mustImplement="false" minCard="0">
+      <Property name="p_rptTxt_804496_1" order="781" propName="reportText" val="Additional Pathologic Findings" />
+      <ResponseField name="rf_804496_2" order="782">
+       <Response name="rsp_804496_3" order="783">
+        <string name="str_804496_4" order="784" />
+       </Response>
+      </ResponseField>
+     </Question>
+    </ChildItems>
+   </Section>
+   <Section name="S_804504" order="785" ID="804504.100004300" title="SPECIAL STUDIES" mustImplement="false" minCard="0">
+    <ChildItems name="ch_804504_1" order="786">
+     <Question name="Q_804501" order="787" ID="804501.100004300" title="Molecular Information (Note J)" mustImplement="false" minCard="0">
+      <Property name="p_rptTxt_804501_1" order="788" propName="reportText" val="Molecular Information" />
+      <ListField name="lf_804501_2" order="789" maxSelections="0">
+       <List name="lst_804501_3" order="790">
+        <ListItem name="LI_804502" order="791" ID="804502.100004300" title="Specify test(s) and results">
+         <Property name="p_rptTxt_804502_1" order="792" propName="reportText" val="{no text}" />
+         <ListItemResponseField name="lirf_804502_2" order="793" responseRequired="true">
+          <Response name="rsp_804502_3" order="794">
+           <string name="str_804502_4" order="795" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_804497" order="796" ID="804497.100004300" title="Pending (specify test(s))">
+         <Property name="p_rptTxt_804497_1" order="797" propName="reportText" val="Pending" />
+         <ListItemResponseField name="lirf_804497_2" order="798" responseRequired="true">
+          <Response name="rsp_804497_3" order="799">
+           <string name="str_804497_4" order="800" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_804498" order="801" ID="804498.100004300" title="Not performed" selectionDeselectsSiblings="true">
+         <ListItemResponseField name="lirf_804498_1" order="802">
+          <Response name="rsp_804498_2" order="803">
+           <string name="str_804498_3" order="804" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_804500" order="805" ID="804500.100004300" title="Not applicable" selectionDeselectsSiblings="true">
+         <ListItemResponseField name="lirf_804500_1" order="806">
+          <Response name="rsp_804500_2" order="807">
+           <string name="str_804500_3" order="808" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+       </List>
+      </ListField>
+     </Question>
+     <Question name="Q_804503" order="809" ID="804503.100004300" title="Designate Block(s) for Future Studies" mustImplement="false" minCard="0">
+      <ResponseField name="rf_804503_1" order="810">
+       <Response name="rsp_804503_2" order="811">
+        <string name="str_804503_3" order="812" />
+       </Response>
+      </ResponseField>
+     </Question>
+    </ChildItems>
+   </Section>
+   <Section name="S_804561" order="813" ID="804561.100004300" title="COMMENTS">
+    <Property name="p_rptTxt_804561_1" order="814" propName="reportText" val="{no text}" />
+    <ChildItems name="ch_804561_2" order="815">
+     <Question name="Q_804560" order="816" ID="804560.100004300" title="?Comment(s)" minCard="0">
+      <Property name="p_rptTxt_804560_1" order="817" propName="reportText" val="Comment(s)" />
+      <ResponseField name="rf_804560_2" order="818">
+       <Response name="rsp_804560_3" order="819">
+        <string name="str_804560_4" order="820" />
+       </Response>
+      </ResponseField>
+     </Question>
+    </ChildItems>
+   </Section>
+  </ChildItems>
+ </Body>
+ <Footer name="footer" order="821" ID="Footer.CentralNervousSystem.Bx.Res.551_1.000.000.REL_sdcFDF">
+  <Property type="meta" styleClass="copyright" order="822" propName="CopyrightFooter" val="(c) 2022 College of American Pathologists.  All rights reserved.  License required for use." />
+ </Footer>
+</FormDesign>

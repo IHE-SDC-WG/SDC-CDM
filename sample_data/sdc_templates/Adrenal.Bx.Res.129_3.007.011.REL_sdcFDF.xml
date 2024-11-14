@@ -1,0 +1,2835 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml-stylesheet type="text/xsl" href="sdctemplate.xslt"?>
+<FormDesign
+        xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        ID="Adrenal.Bx.Res.129_3.007.011.REL_sdcFDF"
+        baseURI="www.cap.org/eCC"
+        fullURI="_baseURI=www.cap.org/eCC&amp;_lineage=Adrenal.Bx.Res.129&amp;_version=3.007.011.REL&amp;_docType=sdcFDF"
+        formTitle="ADRENAL GLAND"
+        lineage="Adrenal.Bx.Res.129"
+        filename="Adrenal.Bx.Res.129_3.007.011.REL_sdcFDF.xml"
+        version="3.007.011.REL"
+        xmlns="urn:ihe:qrph:sdc:2016">
+    <Property
+            name="Copyright"
+            type="CAPeCC_static_text"
+            styleClass="copyright"
+            order="1"
+            propName="Copyright"
+            val="(c) 2023 College of American Pathologists.  All rights reserved.  License required for use." />
+    <Property
+            name="GenericHeaderText"
+            type="CAPeCC_static_text"
+            order="2"
+            propName="GenericHeaderText"
+            val="Surgical Pathology Cancer Case Summary" />
+    <Property
+            name="Category"
+            type="CAPeCC_meta"
+            order="3"
+            propName="Category"
+            val="Endocrine" />
+    <Property
+            name="OfficialName"
+            type="CAPeCC_meta"
+            order="4"
+            propName="OfficialName"
+            val="ADRENAL GLAND" />
+    <Property
+            name="CAP_ProtocolName"
+            type="CAPeCC_meta"
+            order="5"
+            propName="CAP_ProtocolName"
+            val="Adrenal Gland" />
+    <Property
+            name="CAP_ProtocolShortName"
+            type="CAPeCC_meta"
+            order="6"
+            propName="CAP_ProtocolShortName"
+            val="Adrenal.Bx.Res" />
+    <Property
+            name="CAP_ProtocolVersion"
+            type="CAPeCC_meta"
+            order="7"
+            propName="CAP_ProtocolVersion"
+            val="4.3.1.0" />
+    <Property
+            name="TemplateID"
+            type="CAPeCC_meta"
+            order="8"
+            propName="TemplateID"
+            val="129.100004300" />
+    <Property
+            name="Restrictions"
+            type="CAPeCC_meta"
+            order="9"
+            propName="Restrictions"
+            val="Please refer to the cancer protocol cover page (www.cap.org/cancerprotocols) for information about which tumor types and procedures can be reported using this template." />
+    <Property
+            name="CAP_Required"
+            type="CAPeCC_meta"
+            order="10"
+            propName="CAP_Required"
+            val="true" />
+    <Property
+            name="AccreditationDate"
+            type="CAPeCC_meta dt.dateTime"
+            order="11"
+            propName="AccreditationDate"
+            val="9/1/2023" />
+    <Property
+            name="WebPostingDate"
+            type="CAPeCC_meta dt.dateTime"
+            order="12"
+            propName="WebPostingDate"
+            val="3/22/2023" />
+    <Property
+            name="ApprovalStatus"
+            type="CAPeCC_meta"
+            order="13"
+            propName="ReleaseStatus"
+            val="REL" />
+    <Property
+            name="AJCC_Version"
+            type="CAPeCC_meta"
+            order="14"
+            propName="AJCC_Version"
+            val="8th Edition" />
+    <Body
+            name="Body"
+            order="15"
+            ID="Adrenal.Bx.Res.129_3.007.011.REL_sdcFDF_Body">
+        <ChildItems
+                name="ch_Body"
+                order="16">
+            <DisplayedItem
+                    name="DI_39617"
+                    order="17"
+                    ID="39617.100004300"
+                    title="# This protocol applies to adrenal cortical carcinomas in all age groups.">
+                <Property
+                        name="p_rptTxt_39617_1"
+                        order="18"
+                        propName="reportText"
+                        val="{no text}" />
+            </DisplayedItem>
+            <Section
+                    name="S_4257"
+                    order="19"
+                    ID="4257.100004300"
+                    minCard="0">
+                <ChildItems
+                        name="ch_4257_1"
+                        order="20">
+                    <Question
+                            name="Q_2118"
+                            order="21"
+                            ID="2118.100004300"
+                            minCard="0"
+                            readOnly="true">
+                        <Property
+                                name="p_altTxt_2118_1"
+                                order="22"
+                                propName="altText"
+                                val="Tumor Site" />
+                        <ListField
+                                name="lf_2118_2"
+                                order="23">
+                            <List
+                                    name="lst_2118_3"
+                                    order="24">
+                                <ListItem
+                                        name="LI_2119"
+                                        order="25"
+                                        ID="2119.100004300"
+                                        title="Adrenal gland"
+                                        selected="true">
+                                    <Property
+                                            name="p_rptTxt_2119_1"
+                                            order="26"
+                                            propName="reportText"
+                                            val="{no text}" />
+                                </ListItem>
+                            </List>
+                        </ListField>
+                    </Question>
+                </ChildItems>
+            </Section>
+            <Section
+                    name="S_17537"
+                    order="27"
+                    ID="17537.100004300"
+                    title="CLINICAL"
+                    mustImplement="false"
+                    minCard="0">
+                <ChildItems
+                        name="ch_17537_1"
+                        order="28">
+                    <Question
+                            name="Q_50854"
+                            order="29"
+                            ID="50854.100004300"
+                            title="Patient Age Group"
+                            mustImplement="false"
+                            minCard="0">
+                        <ListField
+                                name="lf_50854_1"
+                                order="30">
+                            <List
+                                    name="lst_50854_2"
+                                    order="31">
+                                <ListItem
+                                        name="LI_50862"
+                                        order="32"
+                                        ID="50862.100004300"
+                                        title="Adult (older than 18 years)" />
+                                <ListItem
+                                        name="LI_51206"
+                                        order="33"
+                                        ID="51206.100004300"
+                                        title="Pediatric (18 years old or younger)" />
+                            </List>
+                        </ListField>
+                    </Question>
+                    <Question
+                            name="Q_4156"
+                            order="34"
+                            ID="4156.100004300"
+                            title="Clinical History (specify)"
+                            mustImplement="false"
+                            minCard="0">
+                        <Property
+                                name="p_rptTxt_4156_1"
+                                order="35"
+                                propName="reportText"
+                                val="Clinical History" />
+                        <ResponseField
+                                name="rf_4156_2"
+                                order="36">
+                            <Response
+                                    name="rsp_4156_3"
+                                    order="37">
+                                <string
+                                        name="str_4156_4"
+                                        order="38"
+                                        maxLength="4000" />
+                            </Response>
+                        </ResponseField>
+                    </Question>
+                    <Question
+                            name="Q_53772"
+                            order="39"
+                            ID="53772.100004300"
+                            title="Functional Status (Notes A, B)"
+                            mustImplement="false"
+                            minCard="0">
+                        <Property
+                                name="p_rptTxt_53772_1"
+                                order="40"
+                                propName="reportText"
+                                val="Functional Status" />
+                        <ListField
+                                name="lf_53772_2"
+                                order="41"
+                                maxSelections="0">
+                            <List
+                                    name="lst_53772_3"
+                                    order="42">
+                                <ListItem
+                                        name="LI_20900"
+                                        order="43"
+                                        ID="20900.100004300"
+                                        title="Urinary 17-ketosteroids increased (10 mg / g creatinine / 24 hours)">
+                                    <Property
+                                            name="p_rptTxt_20900_1"
+                                            order="44"
+                                            propName="reportText"
+                                            val="Urinary 17-ketosteroids increased" />
+                                </ListItem>
+                                <ListItem
+                                        name="LI_20902"
+                                        order="45"
+                                        ID="20902.100004300"
+                                        title="Cushing syndrome" />
+                                <ListItem
+                                        name="LI_20904"
+                                        order="46"
+                                        ID="20904.100004300"
+                                        title="Conn syndrome" />
+                                <ListItem
+                                        name="LI_43052"
+                                        order="47"
+                                        ID="43052.100004300"
+                                        title="Virilization" />
+                                <ListItem
+                                        name="LI_44618"
+                                        order="48"
+                                        ID="44618.100004300"
+                                        title="Feminization" />
+                                <ListItem
+                                        name="LI_20906"
+                                        order="49"
+                                        ID="20906.100004300"
+                                        title="Weight loss" />
+                                <ListItem
+                                        name="LI_20907"
+                                        order="50"
+                                        ID="20907.100004300"
+                                        title="Other (specify)">
+                                    <Property
+                                            name="p_rptTxt_20907_1"
+                                            order="51"
+                                            propName="reportText"
+                                            val="{no text}" />
+                                    <ListItemResponseField
+                                            name="lirf_20907_2"
+                                            order="52"
+                                            responseRequired="true">
+                                        <Response
+                                                name="rsp_20907_3"
+                                                order="53">
+                                            <string
+                                                    name="str_20907_4"
+                                                    order="54"
+                                                    maxLength="4000" />
+                                        </Response>
+                                    </ListItemResponseField>
+                                </ListItem>
+                            </List>
+                        </ListField>
+                    </Question>
+                </ChildItems>
+            </Section>
+            <Section
+                    name="S_17875"
+                    order="55"
+                    ID="17875.100004300"
+                    title="SPECIMEN">
+                <ChildItems
+                        name="ch_17875_1"
+                        order="56">
+                    <Question
+                            name="Q_820603"
+                            order="57"
+                            ID="820603.100004300"
+                            title="Procedure">
+                        <ListField
+                                name="lf_820603_1"
+                                order="58">
+                            <List
+                                    name="lst_820603_2"
+                                    order="59">
+                                <ListItem
+                                        name="LI_2122"
+                                        order="60"
+                                        ID="2122.100004300"
+                                        title="Adrenalectomy, total" />
+                                <ListItem
+                                        name="LI_2121"
+                                        order="61"
+                                        ID="2121.100004300"
+                                        title="Adrenalectomy, partial" />
+                                <ListItem
+                                        name="LI_2123"
+                                        order="62"
+                                        ID="2123.100004300"
+                                        title="Other (specify)">
+                                    <Property
+                                            name="p_rptTxt_2123_1"
+                                            order="63"
+                                            propName="reportText"
+                                            val="{no text}" />
+                                    <ListItemResponseField
+                                            name="lirf_2123_2"
+                                            order="64"
+                                            responseRequired="true">
+                                        <Response
+                                                name="rsp_2123_3"
+                                                order="65">
+                                            <string
+                                                    name="str_2123_4"
+                                                    order="66"
+                                                    maxLength="4000" />
+                                        </Response>
+                                    </ListItemResponseField>
+                                </ListItem>
+                                <ListItem
+                                        name="LI_2124"
+                                        order="67"
+                                        ID="2124.100004300"
+                                        title="Not specified" />
+                            </List>
+                        </ListField>
+                    </Question>
+                    <Question
+                            name="Q_52756"
+                            order="68"
+                            ID="52756.100004300"
+                            title="Specimen Laterality">
+                        <ListField
+                                name="lf_52756_1"
+                                order="69">
+                            <List
+                                    name="lst_52756_2"
+                                    order="70">
+                                <ListItem
+                                        name="LI_2126"
+                                        order="71"
+                                        ID="2126.100004300"
+                                        title="Right" />
+                                <ListItem
+                                        name="LI_2127"
+                                        order="72"
+                                        ID="2127.100004300"
+                                        title="Left" />
+                                <ListItem
+                                        name="LI_56812"
+                                        order="73"
+                                        ID="56812.100004300"
+                                        title="Bilateral" />
+                                <ListItem
+                                        name="LI_20866"
+                                        order="74"
+                                        ID="20866.100004300"
+                                        title="Other (specify)">
+                                    <Property
+                                            name="p_rptTxt_20866_1"
+                                            order="75"
+                                            propName="reportText"
+                                            val="{no text}" />
+                                    <ListItemResponseField
+                                            name="lirf_20866_2"
+                                            order="76"
+                                            responseRequired="true">
+                                        <Response
+                                                name="rsp_20866_3"
+                                                order="77">
+                                            <string
+                                                    name="str_20866_4"
+                                                    order="78"
+                                                    maxLength="4000" />
+                                        </Response>
+                                    </ListItemResponseField>
+                                </ListItem>
+                                <ListItem
+                                        name="LI_2128"
+                                        order="79"
+                                        ID="2128.100004300"
+                                        title="Not specified" />
+                            </List>
+                        </ListField>
+                    </Question>
+                </ChildItems>
+            </Section>
+            <Section
+                    name="S_17876"
+                    order="80"
+                    ID="17876.100004300"
+                    title="TUMOR">
+                <ChildItems
+                        name="ch_17876_1"
+                        order="81">
+                    <Question
+                            name="Q_59852"
+                            order="82"
+                            ID="59852.100004300"
+                            title="Histologic Subtype (Notes C, D)">
+                        <Property
+                                name="p_rptTxt_59852_1"
+                                order="83"
+                                propName="reportText"
+                                val="Histologic Subtype" />
+                        <ListField
+                                name="lf_59852_2"
+                                order="84">
+                            <List
+                                    name="lst_59852_3"
+                                    order="85">
+                                <ListItem
+                                        name="LI_2117"
+                                        order="86"
+                                        ID="2117.100004300"
+                                        title="Conventional adrenal cortical carcinoma" />
+                                <ListItem
+                                        name="LI_46925"
+                                        order="87"
+                                        ID="46925.100004300"
+                                        title="Oncocytic adrenal cortical carcinoma" />
+                                <ListItem
+                                        name="LI_44449"
+                                        order="88"
+                                        ID="44449.100004300"
+                                        title="Myxoid adrenal cortical carcinoma" />
+                                <ListItem
+                                        name="LI_59162"
+                                        order="89"
+                                        ID="59162.100004300"
+                                        title="Sarcomatoid adrenal cortical carcinoma" />
+                                <ListItem
+                                        name="LI_378171"
+                                        order="90"
+                                        ID="378171.100004300"
+                                        title="Other histologic subtype not listed (specify)">
+                                    <Property
+                                            name="p_rptTxt_378171_1"
+                                            order="91"
+                                            propName="reportText"
+                                            val="{no text}" />
+                                    <ListItemResponseField
+                                            name="lirf_378171_2"
+                                            order="92"
+                                            responseRequired="true">
+                                        <Response
+                                                name="rsp_378171_3"
+                                                order="93">
+                                            <string
+                                                    name="str_378171_4"
+                                                    order="94"
+                                                    maxLength="4000" />
+                                        </Response>
+                                    </ListItemResponseField>
+                                </ListItem>
+                                <ListItem
+                                        name="LI_378172"
+                                        order="95"
+                                        ID="378172.100004300"
+                                        title="Carcinoma, subtype cannot be determined">
+                                    <ListItemResponseField
+                                            name="lirf_378172_1"
+                                            order="96">
+                                        <Response
+                                                name="rsp_378172_2"
+                                                order="97">
+                                            <string
+                                                    name="str_378172_3"
+                                                    order="98"
+                                                    maxLength="4000" />
+                                        </Response>
+                                    </ListItemResponseField>
+                                </ListItem>
+                            </List>
+                        </ListField>
+                        <ChildItems
+                                name="ch_59852_4"
+                                order="99">
+                            <Question
+                                    name="Q_43670"
+                                    order="100"
+                                    ID="43670.100004300"
+                                    title="Histologic Subtype Comment"
+                                    mustImplement="false"
+                                    minCard="0">
+                                <ResponseField
+                                        name="rf_43670_1"
+                                        order="101">
+                                    <Response
+                                            name="rsp_43670_2"
+                                            order="102">
+                                        <string
+                                                name="str_43670_3"
+                                                order="103"
+                                                maxLength="4000" />
+                                    </Response>
+                                </ResponseField>
+                            </Question>
+                        </ChildItems>
+                    </Question>
+                    <Question
+                            name="Q_820395"
+                            order="104"
+                            ID="820395.100004300"
+                            title="?Mitotic Tumor Grade (required for adult patients only) (Notes C, D)">
+                        <Property
+                                name="p_rptTxt_820395_1"
+                                order="105"
+                                propName="reportText"
+                                val="Mitotic Tumor Grade" />
+                        <ListField
+                                name="lf_820395_2"
+                                order="106">
+                            <List
+                                    name="lst_820395_3"
+                                    order="107">
+                                <ListItem
+                                        name="LI_51017"
+                                        order="108"
+                                        ID="51017.100004300"
+                                        title="?Not applicable"
+                                        omitWhenSelected="true">
+                                    <Property
+                                            name="p_rptTxt_51017_1"
+                                            order="109"
+                                            propName="reportText"
+                                            val="Not applicable" />
+                                </ListItem>
+                                <ListItem
+                                        name="LI_820396"
+                                        order="110"
+                                        ID="820396.100004300"
+                                        title="Low grade (less than or equal to 20 mitoses per 10 mm2)">
+                                    <Property
+                                            name="p_rptTxt_820396_1"
+                                            order="111"
+                                            propName="reportText"
+                                            val="Low grade" />
+                                </ListItem>
+                                <ListItem
+                                        name="LI_820397"
+                                        order="112"
+                                        ID="820397.100004300"
+                                        title="High grade (greater than 20 mitoses per 10 mm2)">
+                                    <Property
+                                            name="p_rptTxt_820397_1"
+                                            order="113"
+                                            propName="reportText"
+                                            val="High grade" />
+                                </ListItem>
+                                <DisplayedItem
+                                        name="DI_57980"
+                                        order="114"
+                                        ID="57980.100004300"
+                                        title="# Generally due to core needle biopsy, with insufficient viable tumor to count 10 mm2.">
+                                    <Property
+                                            name="p_rptTxt_57980_1"
+                                            order="115"
+                                            propName="reportText"
+                                            val="{no text}" />
+                                </DisplayedItem>
+                                <ListItem
+                                        name="LI_54648"
+                                        order="116"
+                                        ID="54648.100004300"
+                                        title="Cannot be assessed (explain)#">
+                                    <Property
+                                            name="p_rptTxt_54648_1"
+                                            order="117"
+                                            propName="reportText"
+                                            val="Cannot be assessed" />
+                                    <ListItemResponseField
+                                            name="lirf_54648_2"
+                                            order="118"
+                                            responseRequired="true">
+                                        <Response
+                                                name="rsp_54648_3"
+                                                order="119">
+                                            <string
+                                                    name="str_54648_4"
+                                                    order="120"
+                                                    maxLength="4000" />
+                                        </Response>
+                                    </ListItemResponseField>
+                                </ListItem>
+                            </List>
+                        </ListField>
+                    </Question>
+                    <Question
+                            name="Q_2129"
+                            order="121"
+                            ID="2129.100004300"
+                            title="Tumor Size (Notes E, F)">
+                        <Property
+                                name="p_rptTxt_2129_1"
+                                order="122"
+                                propName="reportText"
+                                val="Tumor Size" />
+                        <ListField
+                                name="lf_2129_2"
+                                order="123">
+                            <List
+                                    name="lst_2129_3"
+                                    order="124">
+                                <ListItem
+                                        name="LI_2131"
+                                        order="125"
+                                        ID="2131.100004300"
+                                        title="Greatest dimension in Centimeters (cm)">
+                                    <Property
+                                            name="p_rptTxt_2131_1"
+                                            order="126"
+                                            propName="reportText"
+                                            val="Greatest Dimension (Centimeters)" />
+                                    <ListItemResponseField
+                                            name="lirf_2131_2"
+                                            order="127"
+                                            responseRequired="true">
+                                        <Response
+                                                name="rsp_2131_3"
+                                                order="128">
+                                            <decimal
+                                                    name="dec_2131_4"
+                                                    order="129"
+                                                    minInclusive="0.001"
+                                                    maxInclusive="100"
+                                                    fractionDigits="3" />
+                                        </Response>
+                                        <TextAfterResponse
+                                                name="rtt_2131_5"
+                                                order="130"
+                                                val="cm" />
+                                        <ResponseUnits
+                                                name="un_2131_6"
+                                                order="131"
+                                                val="cm" />
+                                    </ListItemResponseField>
+                                    <ChildItems
+                                            name="ch_2131_7"
+                                            order="132">
+                                        <Question
+                                                name="Q_2133"
+                                                order="133"
+                                                ID="2133.100004300"
+                                                title="Additional Dimension in Centimeters (cm)"
+                                                mustImplement="false"
+                                                minCard="0">
+                                            <Property
+                                                    name="p_rptTxt_2133_1"
+                                                    order="134"
+                                                    propName="reportText"
+                                                    val="Additional Dimension (Centimeters)" />
+                                            <ResponseField
+                                                    name="rf_2133_2"
+                                                    order="135">
+                                                <Response
+                                                        name="rsp_2133_3"
+                                                        order="136">
+                                                    <decimal
+                                                            name="dec_2133_4"
+                                                            order="137"
+                                                            minInclusive="0.001"
+                                                            maxInclusive="100"
+                                                            fractionDigits="3" />
+                                                </Response>
+                                                <TextAfterResponse
+                                                        name="rtt_2133_5"
+                                                        order="138"
+                                                        val="cm" />
+                                                <ResponseUnits
+                                                        name="un_2133_6"
+                                                        order="139"
+                                                        val="cm" />
+                                            </ResponseField>
+                                        </Question>
+                                        <Question
+                                                name="Q_2132"
+                                                order="140"
+                                                ID="2132.100004300"
+                                                title="Additional Dimension in Centimeters (cm)"
+                                                mustImplement="false"
+                                                minCard="0">
+                                            <Property
+                                                    name="p_rptTxt_2132_1"
+                                                    order="141"
+                                                    propName="reportText"
+                                                    val="Additional Dimension (Centimeters)" />
+                                            <ResponseField
+                                                    name="rf_2132_2"
+                                                    order="142">
+                                                <Response
+                                                        name="rsp_2132_3"
+                                                        order="143">
+                                                    <decimal
+                                                            name="dec_2132_4"
+                                                            order="144"
+                                                            minInclusive="0.001"
+                                                            maxInclusive="100"
+                                                            fractionDigits="3" />
+                                                </Response>
+                                                <TextAfterResponse
+                                                        name="rtt_2132_5"
+                                                        order="145"
+                                                        val="cm" />
+                                                <ResponseUnits
+                                                        name="un_2132_6"
+                                                        order="146"
+                                                        val="cm" />
+                                            </ResponseField>
+                                        </Question>
+                                    </ChildItems>
+                                </ListItem>
+                                <ListItem
+                                        name="LI_2130"
+                                        order="147"
+                                        ID="2130.100004300"
+                                        title="Cannot be determined (explain)">
+                                    <Property
+                                            name="p_rptTxt_2130_1"
+                                            order="148"
+                                            propName="reportText"
+                                            val="Cannot be determined" />
+                                    <ListItemResponseField
+                                            name="lirf_2130_2"
+                                            order="149"
+                                            responseRequired="true">
+                                        <Response
+                                                name="rsp_2130_3"
+                                                order="150">
+                                            <string
+                                                    name="str_2130_4"
+                                                    order="151"
+                                                    maxLength="4000" />
+                                        </Response>
+                                    </ListItemResponseField>
+                                </ListItem>
+                            </List>
+                        </ListField>
+                    </Question>
+                    <Question
+                            name="Q_820398"
+                            order="152"
+                            ID="820398.100004300"
+                            title="Adrenal Gland Weight (Note G)">
+                        <Property
+                                name="p_rptTxt_820398_1"
+                                order="153"
+                                propName="reportText"
+                                val="Adrenal Gland Weight" />
+                        <ListField
+                                name="lf_820398_2"
+                                order="154">
+                            <List
+                                    name="lst_820398_3"
+                                    order="155">
+                                <ListItem
+                                        name="LI_44761"
+                                        order="156"
+                                        ID="44761.100004300"
+                                        title="Specify weight (g)">
+                                    <Property
+                                            name="p_rptTxt_44761_1"
+                                            order="157"
+                                            propName="reportText"
+                                            val="{no text}" />
+                                    <ListItemResponseField
+                                            name="lirf_44761_2"
+                                            order="158"
+                                            responseRequired="true">
+                                        <Response
+                                                name="rsp_44761_3"
+                                                order="159">
+                                            <decimal
+                                                    name="dec_44761_4"
+                                                    order="160"
+                                                    minInclusive="0.01"
+                                                    maxInclusive="50000"
+                                                    fractionDigits="2" />
+                                        </Response>
+                                        <TextAfterResponse
+                                                name="rtt_44761_5"
+                                                order="161"
+                                                val="g" />
+                                        <ResponseUnits
+                                                name="un_44761_6"
+                                                order="162"
+                                                val="g" />
+                                    </ListItemResponseField>
+                                </ListItem>
+                                <ListItem
+                                        name="LI_378866"
+                                        order="163"
+                                        ID="378866.100004300"
+                                        title="Other (specify)">
+                                    <Property
+                                            name="p_rptTxt_378866_1"
+                                            order="164"
+                                            propName="reportText"
+                                            val="{no text}" />
+                                    <ListItemResponseField
+                                            name="lirf_378866_2"
+                                            order="165"
+                                            responseRequired="true">
+                                        <Response
+                                                name="rsp_378866_3"
+                                                order="166">
+                                            <string
+                                                    name="str_378866_4"
+                                                    order="167"
+                                                    maxLength="4000" />
+                                        </Response>
+                                    </ListItemResponseField>
+                                </ListItem>
+                                <ListItem
+                                        name="LI_57476"
+                                        order="168"
+                                        ID="57476.100004300"
+                                        title="Cannot be determined">
+                                    <ListItemResponseField
+                                            name="lirf_57476_1"
+                                            order="169">
+                                        <Response
+                                                name="rsp_57476_2"
+                                                order="170">
+                                            <string
+                                                    name="str_57476_3"
+                                                    order="171"
+                                                    maxLength="4000" />
+                                        </Response>
+                                    </ListItemResponseField>
+                                </ListItem>
+                            </List>
+                        </ListField>
+                    </Question>
+                    <Question
+                            name="Q_820404"
+                            order="172"
+                            ID="820404.100004300"
+                            title="Site(s) Involved by Direct Tumor Extension">
+                        <ListField
+                                name="lf_820404_1"
+                                order="173"
+                                maxSelections="0">
+                            <List
+                                    name="lst_820404_2"
+                                    order="174">
+                                <ListItem
+                                        name="LI_820406"
+                                        order="175"
+                                        ID="820406.100004300"
+                                        title="Confined to adrenal cortex without invasion into or through the adrenal capsule (if present)"
+                                        selectionDeselectsSiblings="true">
+                                    <Property
+                                            name="p_rptTxt_820406_1"
+                                            order="176"
+                                            propName="reportText"
+                                            val="Confined to adrenal cortex without invasion into or through the adrenal capsule" />
+                                </ListItem>
+                                <ListItem
+                                        name="LI_820407"
+                                        order="177"
+                                        ID="820407.100004300"
+                                        title="Invades into or through the adrenal capsule, with no peri-adrenal adipose tissue invasion"
+                                        selectionDeselectsSiblings="true" />
+                                <ListItem
+                                        name="LI_56752"
+                                        order="178"
+                                        ID="56752.100004300"
+                                        title="Kidney" />
+                                <ListItem
+                                        name="LI_57748"
+                                        order="179"
+                                        ID="57748.100004300"
+                                        title="Pancreas" />
+                                <ListItem
+                                        name="LI_41409"
+                                        order="180"
+                                        ID="41409.100004300"
+                                        title="Liver" />
+                                <ListItem
+                                        name="LI_42305"
+                                        order="181"
+                                        ID="42305.100004300"
+                                        title="Spleen" />
+                                <ListItem
+                                        name="LI_58229"
+                                        order="182"
+                                        ID="58229.100004300"
+                                        title="Diaphragm" />
+                                <ListItem
+                                        name="LI_46218"
+                                        order="183"
+                                        ID="46218.100004300"
+                                        title="Stomach" />
+                                <ListItem
+                                        name="LI_546552"
+                                        order="184"
+                                        ID="546552.100004300"
+                                        title="Peri-adrenal adipose tissue" />
+                                <ListItem
+                                        name="LI_546553"
+                                        order="185"
+                                        ID="546553.100004300"
+                                        title="Large blood vessels" />
+                                <ListItem
+                                        name="LI_45594"
+                                        order="186"
+                                        ID="45594.100004300"
+                                        title="Other adjacent organs and structures (specify)">
+                                    <Property
+                                            name="p_rptTxt_45594_1"
+                                            order="187"
+                                            propName="reportText"
+                                            val="{no text}" />
+                                    <ListItemResponseField
+                                            name="lirf_45594_2"
+                                            order="188"
+                                            responseRequired="true">
+                                        <Response
+                                                name="rsp_45594_3"
+                                                order="189">
+                                            <string
+                                                    name="str_45594_4"
+                                                    order="190"
+                                                    maxLength="4000" />
+                                        </Response>
+                                    </ListItemResponseField>
+                                </ListItem>
+                                <ListItem
+                                        name="LI_51911"
+                                        order="191"
+                                        ID="51911.100004300"
+                                        title="Cannot be determined"
+                                        selectionDeselectsSiblings="true">
+                                    <ListItemResponseField
+                                            name="lirf_51911_1"
+                                            order="192">
+                                        <Response
+                                                name="rsp_51911_2"
+                                                order="193">
+                                            <string
+                                                    name="str_51911_3"
+                                                    order="194"
+                                                    maxLength="4000" />
+                                        </Response>
+                                    </ListItemResponseField>
+                                </ListItem>
+                                <ListItem
+                                        name="LI_44186"
+                                        order="195"
+                                        ID="44186.100004300"
+                                        title="Not applicable (no evidence of primary tumor)"
+                                        selectionDeselectsSiblings="true" />
+                            </List>
+                        </ListField>
+                    </Question>
+                    <Question
+                            name="Q_39990"
+                            order="196"
+                            ID="39990.100004300"
+                            title="Lymphatic and / or Vascular Invasion (Note H)">
+                        <Property
+                                name="p_rptTxt_39990_1"
+                                order="197"
+                                propName="reportText"
+                                val="Lymphatic and / or Vascular Invasion" />
+                        <ListField
+                                name="lf_39990_2"
+                                order="198"
+                                maxSelections="0">
+                            <List
+                                    name="lst_39990_3"
+                                    order="199">
+                                <ListItem
+                                        name="LI_2159"
+                                        order="200"
+                                        ID="2159.100004300"
+                                        title="Not identified"
+                                        selectionDeselectsSiblings="true" />
+                                <ListItem
+                                        name="LI_52962"
+                                        order="201"
+                                        ID="52962.100004300"
+                                        title="Large vessel invasion, renal vein (including when identified clinically or grossly)">
+                                    <Property
+                                            name="p_rptTxt_52962_1"
+                                            order="202"
+                                            propName="reportText"
+                                            val="Large vessel invasion, renal vein" />
+                                </ListItem>
+                                <ListItem
+                                        name="LI_59454"
+                                        order="203"
+                                        ID="59454.100004300"
+                                        title="Large vessel invasion, vena cava (including when identified clinically or grossly)">
+                                    <Property
+                                            name="p_rptTxt_59454_1"
+                                            order="204"
+                                            propName="reportText"
+                                            val="Large vessel invasion, vena cava" />
+                                </ListItem>
+                                <ListItem
+                                        name="LI_43597"
+                                        order="205"
+                                        ID="43597.100004300"
+                                        title="Large vessel invasion, not otherwise specified" />
+                                <ListItem
+                                        name="LI_55828"
+                                        order="206"
+                                        ID="55828.100004300"
+                                        title="Microscopic angioinvasion" />
+                                <ListItem
+                                        name="LI_45031"
+                                        order="207"
+                                        ID="45031.100004300"
+                                        title="Lymphatic invasion" />
+                                <ListItem
+                                        name="LI_2161"
+                                        order="208"
+                                        ID="2161.100004300"
+                                        title="Cannot be determined"
+                                        selectionDeselectsSiblings="true">
+                                    <ListItemResponseField
+                                            name="lirf_2161_1"
+                                            order="209">
+                                        <Response
+                                                name="rsp_2161_2"
+                                                order="210">
+                                            <string
+                                                    name="str_2161_3"
+                                                    order="211"
+                                                    maxLength="4000" />
+                                        </Response>
+                                    </ListItemResponseField>
+                                </ListItem>
+                            </List>
+                        </ListField>
+                    </Question>
+                    <Question
+                            name="Q_48491"
+                            order="212"
+                            ID="48491.100004300"
+                            title="Tumor Description"
+                            mustImplement="false"
+                            minCard="0">
+                        <ListField
+                                name="lf_48491_1"
+                                order="213"
+                                maxSelections="0">
+                            <List
+                                    name="lst_48491_2"
+                                    order="214">
+                                <ListItem
+                                        name="LI_20863"
+                                        order="215"
+                                        ID="20863.100004300"
+                                        title="Hemorrhagic" />
+                                <ListItem
+                                        name="LI_20864"
+                                        order="216"
+                                        ID="20864.100004300"
+                                        title="Necrotic" />
+                                <ListItem
+                                        name="LI_20865"
+                                        order="217"
+                                        ID="20865.100004300"
+                                        title="Other (specify)">
+                                    <Property
+                                            name="p_rptTxt_20865_1"
+                                            order="218"
+                                            propName="reportText"
+                                            val="{no text}" />
+                                    <ListItemResponseField
+                                            name="lirf_20865_2"
+                                            order="219"
+                                            responseRequired="true">
+                                        <Response
+                                                name="rsp_20865_3"
+                                                order="220">
+                                            <string
+                                                    name="str_20865_4"
+                                                    order="221"
+                                                    maxLength="4000" />
+                                        </Response>
+                                    </ListItemResponseField>
+                                </ListItem>
+                            </List>
+                        </ListField>
+                    </Question>
+                    <Question
+                            name="Q_379219"
+                            order="222"
+                            ID="379219.100004300"
+                            title="Tumor Comment"
+                            mustImplement="false"
+                            minCard="0">
+                        <ResponseField
+                                name="rf_379219_1"
+                                order="223">
+                            <Response
+                                    name="rsp_379219_2"
+                                    order="224">
+                                <string
+                                        name="str_379219_3"
+                                        order="225"
+                                        maxLength="4000" />
+                            </Response>
+                        </ResponseField>
+                    </Question>
+                </ChildItems>
+            </Section>
+            <Section
+                    name="S_17878"
+                    order="226"
+                    ID="17878.100004300"
+                    title="MARGINS">
+                <ChildItems
+                        name="ch_17878_1"
+                        order="227">
+                    <Question
+                            name="Q_2153"
+                            order="228"
+                            ID="2153.100004300"
+                            title="Margin Status">
+                        <ListField
+                                name="lf_2153_1"
+                                order="229">
+                            <List
+                                    name="lst_2153_2"
+                                    order="230">
+                                <ListItem
+                                        name="LI_2154"
+                                        order="231"
+                                        ID="2154.100004300"
+                                        title="All margins negative for carcinoma">
+                                    <ChildItems
+                                            name="ch_2154_1"
+                                            order="232">
+                                        <Question
+                                                name="Q_354249"
+                                                order="233"
+                                                ID="354249.100004300"
+                                                title="Closest Margin(s) to Carcinoma">
+                                            <ListField
+                                                    name="lf_354249_1"
+                                                    order="234">
+                                                <List
+                                                        name="lst_354249_2"
+                                                        order="235">
+                                                    <ListItem
+                                                            name="LI_354250"
+                                                            order="236"
+                                                            ID="354250.100004300"
+                                                            title="Specify closest margin(s)">
+                                                        <Property
+                                                                name="p_rptTxt_354250_1"
+                                                                order="237"
+                                                                propName="reportText"
+                                                                val="{no text}" />
+                                                        <ListItemResponseField
+                                                                name="lirf_354250_2"
+                                                                order="238"
+                                                                responseRequired="true">
+                                                            <Response
+                                                                    name="rsp_354250_3"
+                                                                    order="239">
+                                                                <string
+                                                                        name="str_354250_4"
+                                                                        order="240"
+                                                                        maxLength="4000" />
+                                                            </Response>
+                                                        </ListItemResponseField>
+                                                    </ListItem>
+                                                    <ListItem
+                                                            name="LI_354252"
+                                                            order="241"
+                                                            ID="354252.100004300"
+                                                            title="Cannot be determined (explain)">
+                                                        <Property
+                                                                name="p_rptTxt_354252_1"
+                                                                order="242"
+                                                                propName="reportText"
+                                                                val="Cannot be determined" />
+                                                        <ListItemResponseField
+                                                                name="lirf_354252_2"
+                                                                order="243"
+                                                                responseRequired="true">
+                                                            <Response
+                                                                    name="rsp_354252_3"
+                                                                    order="244">
+                                                                <string
+                                                                        name="str_354252_4"
+                                                                        order="245"
+                                                                        maxLength="4000" />
+                                                            </Response>
+                                                        </ListItemResponseField>
+                                                    </ListItem>
+                                                </List>
+                                            </ListField>
+                                        </Question>
+                                        <Question
+                                                name="Q_354236"
+                                                order="246"
+                                                ID="354236.100004300"
+                                                title="Distance from Carcinoma to Closest Margin"
+                                                mustImplement="false"
+                                                minCard="0">
+                                            <ListField
+                                                    name="lf_354236_1"
+                                                    order="247">
+                                                <List
+                                                        name="lst_354236_2"
+                                                        order="248">
+                                                    <DisplayedItem
+                                                            name="DI_354238"
+                                                            order="249"
+                                                            ID="354238.100004300"
+                                                            title="Specify in Millimeters (mm)">
+                                                        <Property
+                                                                name="p_rptTxt_354238_1"
+                                                                order="250"
+                                                                propName="reportText"
+                                                                val="{no text}" />
+                                                    </DisplayedItem>
+                                                    <ListItem
+                                                            name="LI_26359"
+                                                            order="251"
+                                                            ID="26359.100004300"
+                                                            title="Exact distance">
+                                                        <Property
+                                                                name="p_rptTxt_26359_1"
+                                                                order="252"
+                                                                propName="reportText"
+                                                                val="{no text}" />
+                                                        <ListItemResponseField
+                                                                name="lirf_26359_2"
+                                                                order="253"
+                                                                responseRequired="true">
+                                                            <Response
+                                                                    name="rsp_26359_3"
+                                                                    order="254">
+                                                                <decimal
+                                                                        name="dec_26359_4"
+                                                                        order="255"
+                                                                        minInclusive="0.01"
+                                                                        maxInclusive="1000"
+                                                                        fractionDigits="2" />
+                                                            </Response>
+                                                            <TextAfterResponse
+                                                                    name="rtt_26359_5"
+                                                                    order="256"
+                                                                    val="mm" />
+                                                            <ResponseUnits
+                                                                    name="un_26359_6"
+                                                                    order="257"
+                                                                    val="mm" />
+                                                        </ListItemResponseField>
+                                                    </ListItem>
+                                                    <ListItem
+                                                            name="LI_354234"
+                                                            order="258"
+                                                            ID="354234.100004300"
+                                                            title="At least">
+                                                        <ListItemResponseField
+                                                                name="lirf_354234_1"
+                                                                order="259"
+                                                                responseRequired="true">
+                                                            <Response
+                                                                    name="rsp_354234_2"
+                                                                    order="260">
+                                                                <decimal
+                                                                        name="dec_354234_3"
+                                                                        order="261"
+                                                                        minInclusive="0.01"
+                                                                        maxInclusive="1000"
+                                                                        fractionDigits="2" />
+                                                            </Response>
+                                                            <TextAfterResponse
+                                                                    name="rtt_354234_4"
+                                                                    order="262"
+                                                                    val="mm" />
+                                                            <ResponseUnits
+                                                                    name="un_354234_5"
+                                                                    order="263"
+                                                                    val="mm" />
+                                                        </ListItemResponseField>
+                                                    </ListItem>
+                                                    <ListItem
+                                                            name="LI_354237"
+                                                            order="264"
+                                                            ID="354237.100004300"
+                                                            title="Less than 1 mm" />
+                                                    <ListItem
+                                                            name="LI_378868"
+                                                            order="265"
+                                                            ID="378868.100004300"
+                                                            title="Other (specify)">
+                                                        <Property
+                                                                name="p_rptTxt_378868_1"
+                                                                order="266"
+                                                                propName="reportText"
+                                                                val="{no text}" />
+                                                        <ListItemResponseField
+                                                                name="lirf_378868_2"
+                                                                order="267"
+                                                                responseRequired="true">
+                                                            <Response
+                                                                    name="rsp_378868_3"
+                                                                    order="268">
+                                                                <string
+                                                                        name="str_378868_4"
+                                                                        order="269"
+                                                                        maxLength="4000" />
+                                                            </Response>
+                                                        </ListItemResponseField>
+                                                    </ListItem>
+                                                    <ListItem
+                                                            name="LI_26361"
+                                                            order="270"
+                                                            ID="26361.100004300"
+                                                            title="Cannot be determined (explain)">
+                                                        <Property
+                                                                name="p_rptTxt_26361_1"
+                                                                order="271"
+                                                                propName="reportText"
+                                                                val="Cannot be determined" />
+                                                        <ListItemResponseField
+                                                                name="lirf_26361_2"
+                                                                order="272"
+                                                                responseRequired="true">
+                                                            <Response
+                                                                    name="rsp_26361_3"
+                                                                    order="273">
+                                                                <string
+                                                                        name="str_26361_4"
+                                                                        order="274"
+                                                                        maxLength="4000" />
+                                                            </Response>
+                                                        </ListItemResponseField>
+                                                    </ListItem>
+                                                </List>
+                                            </ListField>
+                                        </Question>
+                                    </ChildItems>
+                                </ListItem>
+                                <ListItem
+                                        name="LI_2155"
+                                        order="275"
+                                        ID="2155.100004300"
+                                        title="Carcinoma present at margin">
+                                    <ChildItems
+                                            name="ch_2155_1"
+                                            order="276">
+                                        <Question
+                                                name="Q_354227"
+                                                order="277"
+                                                ID="354227.100004300"
+                                                title="Margin(s) Involved by Carcinoma">
+                                            <ListField
+                                                    name="lf_354227_1"
+                                                    order="278">
+                                                <List
+                                                        name="lst_354227_2"
+                                                        order="279">
+                                                    <ListItem
+                                                            name="LI_354228"
+                                                            order="280"
+                                                            ID="354228.100004300"
+                                                            title="Specify involved margin(s)">
+                                                        <Property
+                                                                name="p_rptTxt_354228_1"
+                                                                order="281"
+                                                                propName="reportText"
+                                                                val="{no text}" />
+                                                        <ListItemResponseField
+                                                                name="lirf_354228_2"
+                                                                order="282"
+                                                                responseRequired="true">
+                                                            <Response
+                                                                    name="rsp_354228_3"
+                                                                    order="283">
+                                                                <string
+                                                                        name="str_354228_4"
+                                                                        order="284"
+                                                                        maxLength="4000" />
+                                                            </Response>
+                                                        </ListItemResponseField>
+                                                    </ListItem>
+                                                    <ListItem
+                                                            name="LI_354229"
+                                                            order="285"
+                                                            ID="354229.100004300"
+                                                            title="Cannot be determined (explain)">
+                                                        <Property
+                                                                name="p_rptTxt_354229_1"
+                                                                order="286"
+                                                                propName="reportText"
+                                                                val="Cannot be determined" />
+                                                        <ListItemResponseField
+                                                                name="lirf_354229_2"
+                                                                order="287"
+                                                                responseRequired="true">
+                                                            <Response
+                                                                    name="rsp_354229_3"
+                                                                    order="288">
+                                                                <string
+                                                                        name="str_354229_4"
+                                                                        order="289"
+                                                                        maxLength="4000" />
+                                                            </Response>
+                                                        </ListItemResponseField>
+                                                    </ListItem>
+                                                </List>
+                                            </ListField>
+                                        </Question>
+                                    </ChildItems>
+                                </ListItem>
+                                <ListItem
+                                        name="LI_378867"
+                                        order="290"
+                                        ID="378867.100004300"
+                                        title="Other (specify)">
+                                    <Property
+                                            name="p_rptTxt_378867_1"
+                                            order="291"
+                                            propName="reportText"
+                                            val="{no text}" />
+                                    <ListItemResponseField
+                                            name="lirf_378867_2"
+                                            order="292"
+                                            responseRequired="true">
+                                        <Response
+                                                name="rsp_378867_3"
+                                                order="293">
+                                            <string
+                                                    name="str_378867_4"
+                                                    order="294"
+                                                    maxLength="4000" />
+                                        </Response>
+                                    </ListItemResponseField>
+                                </ListItem>
+                                <ListItem
+                                        name="LI_2157"
+                                        order="295"
+                                        ID="2157.100004300"
+                                        title="Cannot be determined (explain)">
+                                    <Property
+                                            name="p_rptTxt_2157_1"
+                                            order="296"
+                                            propName="reportText"
+                                            val="Cannot be determined" />
+                                    <ListItemResponseField
+                                            name="lirf_2157_2"
+                                            order="297"
+                                            responseRequired="true">
+                                        <Response
+                                                name="rsp_2157_3"
+                                                order="298">
+                                            <string
+                                                    name="str_2157_4"
+                                                    order="299"
+                                                    maxLength="4000" />
+                                        </Response>
+                                    </ListItemResponseField>
+                                </ListItem>
+                            </List>
+                        </ListField>
+                    </Question>
+                    <Question
+                            name="Q_358407"
+                            order="300"
+                            ID="358407.100004300"
+                            title="Margin Comment"
+                            mustImplement="false"
+                            minCard="0">
+                        <ResponseField
+                                name="rf_358407_1"
+                                order="301">
+                            <Response
+                                    name="rsp_358407_2"
+                                    order="302">
+                                <string
+                                        name="str_358407_3"
+                                        order="303"
+                                        maxLength="4000" />
+                            </Response>
+                        </ResponseField>
+                    </Question>
+                </ChildItems>
+            </Section>
+            <Section
+                    name="S_17881"
+                    order="304"
+                    ID="17881.100004300"
+                    title="REGIONAL LYMPH NODES (Note I)">
+                <Property
+                        name="p_rptTxt_17881_1"
+                        order="305"
+                        propName="reportText"
+                        val="REGIONAL LYMPH NODES" />
+                <ChildItems
+                        name="ch_17881_2"
+                        order="306">
+                    <Question
+                            name="Q_372404"
+                            order="307"
+                            ID="372404.100004300"
+                            title="Regional Lymph Node Status">
+                        <ListField
+                                name="lf_372404_1"
+                                order="308">
+                            <List
+                                    name="lst_372404_2"
+                                    order="309">
+                                <ListItem
+                                        name="LI_1868"
+                                        order="310"
+                                        ID="1868.100004300"
+                                        title="Not applicable (no regional lymph nodes submitted or found)" />
+                                <ListItem
+                                        name="LI_372406"
+                                        order="311"
+                                        ID="372406.100004300"
+                                        title="Regional lymph nodes present">
+                                    <Property
+                                            name="p_rptTxt_372406_1"
+                                            order="312"
+                                            propName="reportText"
+                                            val="{no text}" />
+                                    <ChildItems
+                                            name="ch_372406_2"
+                                            order="313">
+                                        <Question
+                                                name="Q_354287"
+                                                order="314"
+                                                ID="354287.100004300">
+                                            <Property
+                                                    name="p_altTxt_354287_1"
+                                                    order="315"
+                                                    propName="altText"
+                                                    val="Regional Lymph Node Status" />
+                                            <ListField
+                                                    name="lf_354287_2"
+                                                    order="316">
+                                                <List
+                                                        name="lst_354287_3"
+                                                        order="317">
+                                                    <ListItem
+                                                            name="LI_354281"
+                                                            order="318"
+                                                            ID="354281.100004300"
+                                                            title="All regional lymph nodes negative for tumor" />
+                                                    <ListItem
+                                                            name="LI_354288"
+                                                            order="319"
+                                                            ID="354288.100004300"
+                                                            title="Tumor present in regional lymph node(s)">
+                                                        <ChildItems
+                                                                name="ch_354288_1"
+                                                                order="320">
+                                                            <Question
+                                                                    name="Q_45098"
+                                                                    order="321"
+                                                                    ID="45098.100004300"
+                                                                    title="Number of Lymph Nodes with Tumor">
+                                                                <ListField
+                                                                        name="lf_45098_1"
+                                                                        order="322">
+                                                                    <List
+                                                                            name="lst_45098_2"
+                                                                            order="323">
+                                                                        <ListItem
+                                                                                name="LI_1873"
+                                                                                order="324"
+                                                                                ID="1873.100004300"
+                                                                                title="Exact number (specify)">
+                                                                            <Property
+                                                                                    name="p_rptTxt_1873_1"
+                                                                                    order="325"
+                                                                                    propName="reportText"
+                                                                                    val="{no text}" />
+                                                                            <ListItemResponseField
+                                                                                    name="lirf_1873_2"
+                                                                                    order="326"
+                                                                                    responseRequired="true">
+                                                                                <Response
+                                                                                        name="rsp_1873_3"
+                                                                                        order="327">
+                                                                                    <int
+                                                                                            name="int_1873_4"
+                                                                                            order="328"
+                                                                                            minInclusive="1"
+                                                                                            maxInclusive="100" />
+                                                                                </Response>
+                                                                            </ListItemResponseField>
+                                                                        </ListItem>
+                                                                        <ListItem
+                                                                                name="LI_58938"
+                                                                                order="329"
+                                                                                ID="58938.100004300"
+                                                                                title="At least (specify)">
+                                                                            <Property
+                                                                                    name="p_rptTxt_58938_1"
+                                                                                    order="330"
+                                                                                    propName="reportText"
+                                                                                    val="At least" />
+                                                                            <ListItemResponseField
+                                                                                    name="lirf_58938_2"
+                                                                                    order="331"
+                                                                                    responseRequired="true">
+                                                                                <Response
+                                                                                        name="rsp_58938_3"
+                                                                                        order="332">
+                                                                                    <int
+                                                                                            name="int_58938_4"
+                                                                                            order="333"
+                                                                                            minInclusive="1"
+                                                                                            maxInclusive="100" />
+                                                                                </Response>
+                                                                            </ListItemResponseField>
+                                                                        </ListItem>
+                                                                        <ListItem
+                                                                                name="LI_354285"
+                                                                                order="334"
+                                                                                ID="354285.100004300"
+                                                                                title="Other (specify)">
+                                                                            <Property
+                                                                                    name="p_rptTxt_354285_1"
+                                                                                    order="335"
+                                                                                    propName="reportText"
+                                                                                    val="{no text}" />
+                                                                            <ListItemResponseField
+                                                                                    name="lirf_354285_2"
+                                                                                    order="336"
+                                                                                    responseRequired="true">
+                                                                                <Response
+                                                                                        name="rsp_354285_3"
+                                                                                        order="337">
+                                                                                    <string
+                                                                                            name="str_354285_4"
+                                                                                            order="338"
+                                                                                            maxLength="4000" />
+                                                                                </Response>
+                                                                            </ListItemResponseField>
+                                                                        </ListItem>
+                                                                        <ListItem
+                                                                                name="LI_1874"
+                                                                                order="339"
+                                                                                ID="1874.100004300"
+                                                                                title="Cannot be determined (explain)">
+                                                                            <Property
+                                                                                    name="p_rptTxt_1874_1"
+                                                                                    order="340"
+                                                                                    propName="reportText"
+                                                                                    val="Cannot be determined" />
+                                                                            <ListItemResponseField
+                                                                                    name="lirf_1874_2"
+                                                                                    order="341"
+                                                                                    responseRequired="true">
+                                                                                <Response
+                                                                                        name="rsp_1874_3"
+                                                                                        order="342">
+                                                                                    <string
+                                                                                            name="str_1874_4"
+                                                                                            order="343"
+                                                                                            maxLength="4000" />
+                                                                                </Response>
+                                                                            </ListItemResponseField>
+                                                                        </ListItem>
+                                                                    </List>
+                                                                </ListField>
+                                                            </Question>
+                                                            <Question
+                                                                    name="Q_39296"
+                                                                    order="344"
+                                                                    ID="39296.100004300"
+                                                                    title="Extranodal Extension"
+                                                                    mustImplement="false"
+                                                                    minCard="0">
+                                                                <ListField
+                                                                        name="lf_39296_1"
+                                                                        order="345">
+                                                                    <List
+                                                                            name="lst_39296_2"
+                                                                            order="346">
+                                                                        <ListItem
+                                                                                name="LI_20886"
+                                                                                order="347"
+                                                                                ID="20886.100004300"
+                                                                                title="Not identified" />
+                                                                        <ListItem
+                                                                                name="LI_20887"
+                                                                                order="348"
+                                                                                ID="20887.100004300"
+                                                                                title="Present" />
+                                                                        <ListItem
+                                                                                name="LI_20888"
+                                                                                order="349"
+                                                                                ID="20888.100004300"
+                                                                                title="Cannot be determined">
+                                                                            <ListItemResponseField
+                                                                                    name="lirf_20888_1"
+                                                                                    order="350">
+                                                                                <Response
+                                                                                        name="rsp_20888_2"
+                                                                                        order="351">
+                                                                                    <string
+                                                                                            name="str_20888_3"
+                                                                                            order="352"
+                                                                                            maxLength="4000" />
+                                                                                </Response>
+                                                                            </ListItemResponseField>
+                                                                        </ListItem>
+                                                                    </List>
+                                                                </ListField>
+                                                            </Question>
+                                                        </ChildItems>
+                                                    </ListItem>
+                                                    <ListItem
+                                                            name="LI_354283"
+                                                            order="353"
+                                                            ID="354283.100004300"
+                                                            title="Other (specify)">
+                                                        <Property
+                                                                name="p_rptTxt_354283_1"
+                                                                order="354"
+                                                                propName="reportText"
+                                                                val="{no text}" />
+                                                        <ListItemResponseField
+                                                                name="lirf_354283_2"
+                                                                order="355"
+                                                                responseRequired="true">
+                                                            <Response
+                                                                    name="rsp_354283_3"
+                                                                    order="356">
+                                                                <string
+                                                                        name="str_354283_4"
+                                                                        order="357"
+                                                                        maxLength="4000" />
+                                                            </Response>
+                                                        </ListItemResponseField>
+                                                    </ListItem>
+                                                    <ListItem
+                                                            name="LI_354284"
+                                                            order="358"
+                                                            ID="354284.100004300"
+                                                            title="Cannot be determined (explain)">
+                                                        <Property
+                                                                name="p_rptTxt_354284_1"
+                                                                order="359"
+                                                                propName="reportText"
+                                                                val="Cannot be determined" />
+                                                        <ListItemResponseField
+                                                                name="lirf_354284_2"
+                                                                order="360"
+                                                                responseRequired="true">
+                                                            <Response
+                                                                    name="rsp_354284_3"
+                                                                    order="361">
+                                                                <string
+                                                                        name="str_354284_4"
+                                                                        order="362"
+                                                                        maxLength="4000" />
+                                                            </Response>
+                                                        </ListItemResponseField>
+                                                    </ListItem>
+                                                </List>
+                                            </ListField>
+                                        </Question>
+                                        <Question
+                                                name="Q_42934"
+                                                order="363"
+                                                ID="42934.100004300"
+                                                title="Number of Lymph Nodes Examined">
+                                            <ListField
+                                                    name="lf_42934_1"
+                                                    order="364">
+                                                <List
+                                                        name="lst_42934_2"
+                                                        order="365">
+                                                    <ListItem
+                                                            name="LI_1870"
+                                                            order="366"
+                                                            ID="1870.100004300"
+                                                            title="Exact number (specify)">
+                                                        <Property
+                                                                name="p_rptTxt_1870_1"
+                                                                order="367"
+                                                                propName="reportText"
+                                                                val="{no text}" />
+                                                        <ListItemResponseField
+                                                                name="lirf_1870_2"
+                                                                order="368"
+                                                                responseRequired="true">
+                                                            <Response
+                                                                    name="rsp_1870_3"
+                                                                    order="369">
+                                                                <int
+                                                                        name="int_1870_4"
+                                                                        order="370"
+                                                                        minInclusive="1"
+                                                                        maxInclusive="100" />
+                                                            </Response>
+                                                        </ListItemResponseField>
+                                                    </ListItem>
+                                                    <ListItem
+                                                            name="LI_54610"
+                                                            order="371"
+                                                            ID="54610.100004300"
+                                                            title="At least (specify)">
+                                                        <Property
+                                                                name="p_rptTxt_54610_1"
+                                                                order="372"
+                                                                propName="reportText"
+                                                                val="At least" />
+                                                        <ListItemResponseField
+                                                                name="lirf_54610_2"
+                                                                order="373"
+                                                                responseRequired="true">
+                                                            <Response
+                                                                    name="rsp_54610_3"
+                                                                    order="374">
+                                                                <int
+                                                                        name="int_54610_4"
+                                                                        order="375"
+                                                                        minInclusive="1"
+                                                                        maxInclusive="100" />
+                                                            </Response>
+                                                        </ListItemResponseField>
+                                                    </ListItem>
+                                                    <ListItem
+                                                            name="LI_354289"
+                                                            order="376"
+                                                            ID="354289.100004300"
+                                                            title="Other (specify)">
+                                                        <Property
+                                                                name="p_rptTxt_354289_1"
+                                                                order="377"
+                                                                propName="reportText"
+                                                                val="{no text}" />
+                                                        <ListItemResponseField
+                                                                name="lirf_354289_2"
+                                                                order="378"
+                                                                responseRequired="true">
+                                                            <Response
+                                                                    name="rsp_354289_3"
+                                                                    order="379">
+                                                                <string
+                                                                        name="str_354289_4"
+                                                                        order="380"
+                                                                        maxLength="4000" />
+                                                            </Response>
+                                                        </ListItemResponseField>
+                                                    </ListItem>
+                                                    <ListItem
+                                                            name="LI_1871"
+                                                            order="381"
+                                                            ID="1871.100004300"
+                                                            title="Cannot be determined (explain)">
+                                                        <Property
+                                                                name="p_rptTxt_1871_1"
+                                                                order="382"
+                                                                propName="reportText"
+                                                                val="Cannot be determined" />
+                                                        <ListItemResponseField
+                                                                name="lirf_1871_2"
+                                                                order="383"
+                                                                responseRequired="true">
+                                                            <Response
+                                                                    name="rsp_1871_3"
+                                                                    order="384">
+                                                                <string
+                                                                        name="str_1871_4"
+                                                                        order="385"
+                                                                        maxLength="4000" />
+                                                            </Response>
+                                                        </ListItemResponseField>
+                                                    </ListItem>
+                                                </List>
+                                            </ListField>
+                                        </Question>
+                                    </ChildItems>
+                                </ListItem>
+                            </List>
+                        </ListField>
+                    </Question>
+                    <Question
+                            name="Q_358408"
+                            order="386"
+                            ID="358408.100004300"
+                            title="Regional Lymph Node Comment"
+                            mustImplement="false"
+                            minCard="0">
+                        <ResponseField
+                                name="rf_358408_1"
+                                order="387">
+                            <Response
+                                    name="rsp_358408_2"
+                                    order="388">
+                                <string
+                                        name="str_358408_3"
+                                        order="389"
+                                        maxLength="4000" />
+                            </Response>
+                        </ResponseField>
+                    </Question>
+                </ChildItems>
+            </Section>
+            <Section
+                    name="S_354239"
+                    order="390"
+                    ID="354239.100004300"
+                    title="DISTANT METASTASIS">
+                <ChildItems
+                        name="ch_354239_1"
+                        order="391">
+                    <Question
+                            name="Q_354240"
+                            order="392"
+                            ID="354240.100004300"
+                            title="?Distant Site(s) Involved, if applicable">
+                        <Property
+                                name="p_rptTxt_354240_1"
+                                order="393"
+                                propName="reportText"
+                                val="Distant Site(s) Involved" />
+                        <ListField
+                                name="lf_354240_2"
+                                order="394"
+                                maxSelections="0">
+                            <List
+                                    name="lst_354240_3"
+                                    order="395">
+                                <ListItem
+                                        name="LI_354245"
+                                        order="396"
+                                        ID="354245.100004300"
+                                        title="?Not applicable"
+                                        selectionDeselectsSiblings="true"
+                                        omitWhenSelected="true">
+                                    <Property
+                                            name="p_rptTxt_354245_1"
+                                            order="397"
+                                            propName="reportText"
+                                            val="Not applicable" />
+                                </ListItem>
+                                <ListItem
+                                        name="LI_354242"
+                                        order="398"
+                                        ID="354242.100004300"
+                                        title="Liver">
+                                    <ListItemResponseField
+                                            name="lirf_354242_1"
+                                            order="399">
+                                        <Response
+                                                name="rsp_354242_2"
+                                                order="400">
+                                            <string
+                                                    name="str_354242_3"
+                                                    order="401"
+                                                    maxLength="4000" />
+                                        </Response>
+                                    </ListItemResponseField>
+                                </ListItem>
+                                <ListItem
+                                        name="LI_354241"
+                                        order="402"
+                                        ID="354241.100004300"
+                                        title="Lung">
+                                    <ListItemResponseField
+                                            name="lirf_354241_1"
+                                            order="403">
+                                        <Response
+                                                name="rsp_354241_2"
+                                                order="404">
+                                            <string
+                                                    name="str_354241_3"
+                                                    order="405"
+                                                    maxLength="4000" />
+                                        </Response>
+                                    </ListItemResponseField>
+                                </ListItem>
+                                <ListItem
+                                        name="LI_354243"
+                                        order="406"
+                                        ID="354243.100004300"
+                                        title="Other (specify)">
+                                    <Property
+                                            name="p_rptTxt_354243_1"
+                                            order="407"
+                                            propName="reportText"
+                                            val="{no text}" />
+                                    <ListItemResponseField
+                                            name="lirf_354243_2"
+                                            order="408"
+                                            responseRequired="true">
+                                        <Response
+                                                name="rsp_354243_3"
+                                                order="409">
+                                            <string
+                                                    name="str_354243_4"
+                                                    order="410"
+                                                    maxLength="4000" />
+                                        </Response>
+                                    </ListItemResponseField>
+                                </ListItem>
+                                <ListItem
+                                        name="LI_354244"
+                                        order="411"
+                                        ID="354244.100004300"
+                                        title="Cannot be determined"
+                                        selectionDeselectsSiblings="true">
+                                    <ListItemResponseField
+                                            name="lirf_354244_1"
+                                            order="412">
+                                        <Response
+                                                name="rsp_354244_2"
+                                                order="413">
+                                            <string
+                                                    name="str_354244_3"
+                                                    order="414"
+                                                    maxLength="4000" />
+                                        </Response>
+                                    </ListItemResponseField>
+                                </ListItem>
+                            </List>
+                        </ListField>
+                    </Question>
+                </ChildItems>
+            </Section>
+            <Section
+                    name="S_2136"
+                    order="415"
+                    ID="2136.100004300"
+                    title="pTNM CLASSIFICATION (AJCC 8th Edition) (Note J)">
+                <Property
+                        name="p_rptTxt_2136_1"
+                        order="416"
+                        propName="reportText"
+                        val="pTNM CLASSIFICATION (AJCC 8th Edition)" />
+                <ChildItems
+                        name="ch_2136_2"
+                        order="417">
+                    <DisplayedItem
+                            name="DI_51087"
+                            order="418"
+                            ID="51087.100004300"
+                            title="Reporting of pT, pN, and (when applicable) pM categories is based on information available to the pathologist at the time the report is issued. As per the AJCC (Chapter 1, 8th Ed.) it is the managing physician’s responsibility to establish the final pathologic stage based upon all pertinent information, including but potentially not limited to this pathology report.">
+                        <Property
+                                name="p_rptTxt_51087_1"
+                                order="419"
+                                propName="reportText"
+                                val="Reporting of pT, pN, and (when applicable) pM categories is based on information available to the pathologist at the time the report is issued. As per the AJCC (Chapter 1, 8th Ed.) it is the managing physician’s responsibility to establish the final pathologic stage based upon all pertinent information, including but potentially not limited to this pathology report." />
+                    </DisplayedItem>
+                    <Question
+                            name="Q_820585"
+                            order="420"
+                            ID="820585.100004300"
+                            title="?Modified Classification (required only if applicable)">
+                        <Property
+                                name="p_rptTxt_820585_1"
+                                order="421"
+                                propName="reportText"
+                                val="Modified Classification" />
+                        <ListField
+                                name="lf_820585_2"
+                                order="422"
+                                maxSelections="0">
+                            <List
+                                    name="lst_820585_3"
+                                    order="423">
+                                <ListItem
+                                        name="LI_820589"
+                                        order="424"
+                                        ID="820589.100004300"
+                                        title="?Not applicable"
+                                        selectionDeselectsSiblings="true"
+                                        omitWhenSelected="true">
+                                    <Property
+                                            name="p_rptTxt_820589_1"
+                                            order="425"
+                                            propName="reportText"
+                                            val="Not applicable" />
+                                </ListItem>
+                                <ListItem
+                                        name="LI_20892"
+                                        order="426"
+                                        ID="20892.100004300"
+                                        title="y (post-neoadjuvant therapy)">
+                                    <Property
+                                            name="p_rptTxt_20892_1"
+                                            order="427"
+                                            propName="reportText"
+                                            val="y" />
+                                </ListItem>
+                                <ListItem
+                                        name="LI_20891"
+                                        order="428"
+                                        ID="20891.100004300"
+                                        title="r (recurrence)">
+                                    <Property
+                                            name="p_rptTxt_20891_1"
+                                            order="429"
+                                            propName="reportText"
+                                            val="r" />
+                                </ListItem>
+                            </List>
+                        </ListField>
+                    </Question>
+                    <Question
+                            name="Q_327636"
+                            order="430"
+                            ID="327636.100004300"
+                            title="pT Category">
+                        <ListField
+                                name="lf_327636_1"
+                                order="431">
+                            <List
+                                    name="lst_327636_2"
+                                    order="432">
+                                <DisplayedItem
+                                        name="DI_20894"
+                                        order="433"
+                                        ID="20894.100004300"
+                                        title="There is no category of carcinoma in situ (pTis) relative to carcinomas of the adrenal gland.">
+                                    <Property
+                                            name="p_rptTxt_20894_1"
+                                            order="434"
+                                            propName="reportText"
+                                            val="{no text}" />
+                                </DisplayedItem>
+                                <ListItem
+                                        name="LI_327637"
+                                        order="435"
+                                        ID="327637.100004300"
+                                        title="pT not assigned (cannot be determined based on available pathological information)" />
+                                <ListItem
+                                        name="LI_20889"
+                                        order="436"
+                                        ID="20889.100004300"
+                                        title="pT0: No evidence of primary tumor">
+                                    <Property
+                                            name="p_rptTxt_20889_1"
+                                            order="437"
+                                            propName="reportText"
+                                            val="pT0" />
+                                </ListItem>
+                                <ListItem
+                                        name="LI_2138"
+                                        order="438"
+                                        ID="2138.100004300"
+                                        title="pT1: Tumor less than or equal to 5 cm in greatest dimension, no extra-adrenal invasion">
+                                    <Property
+                                            name="p_rptTxt_2138_1"
+                                            order="439"
+                                            propName="reportText"
+                                            val="pT1" />
+                                </ListItem>
+                                <ListItem
+                                        name="LI_2139"
+                                        order="440"
+                                        ID="2139.100004300"
+                                        title="pT2: Tumor greater than 5 cm, no extra-adrenal invasion">
+                                    <Property
+                                            name="p_rptTxt_2139_1"
+                                            order="441"
+                                            propName="reportText"
+                                            val="pT2" />
+                                </ListItem>
+                                <ListItem
+                                        name="LI_2140"
+                                        order="442"
+                                        ID="2140.100004300"
+                                        title="pT3: Tumor of any size with local invasion, but not invading adjacent organs">
+                                    <Property
+                                            name="p_rptTxt_2140_1"
+                                            order="443"
+                                            propName="reportText"
+                                            val="pT3" />
+                                </ListItem>
+                                <ListItem
+                                        name="LI_2141"
+                                        order="444"
+                                        ID="2141.100004300"
+                                        title="pT4: Tumor of any size with invasion of adjacent organs (kidney, diaphragm, pancreas, spleen, or liver) or large blood vessels (renal vein or vena cava)">
+                                    <Property
+                                            name="p_rptTxt_2141_1"
+                                            order="445"
+                                            propName="reportText"
+                                            val="pT4" />
+                                </ListItem>
+                            </List>
+                        </ListField>
+                    </Question>
+                    <Question
+                            name="Q_820586"
+                            order="446"
+                            ID="820586.100004300"
+                            title="?T Suffix (required only if applicable)">
+                        <Property
+                                name="p_rptTxt_820586_1"
+                                order="447"
+                                propName="reportText"
+                                val="T Suffix" />
+                        <ListField
+                                name="lf_820586_2"
+                                order="448">
+                            <List
+                                    name="lst_820586_3"
+                                    order="449">
+                                <ListItem
+                                        name="LI_820587"
+                                        order="450"
+                                        ID="820587.100004300"
+                                        title="?Not applicable"
+                                        omitWhenSelected="true">
+                                    <Property
+                                            name="p_rptTxt_820587_1"
+                                            order="451"
+                                            propName="reportText"
+                                            val="Not applicable" />
+                                </ListItem>
+                                <ListItem
+                                        name="LI_820588"
+                                        order="452"
+                                        ID="820588.100004300"
+                                        title="(m) multiple primary synchronous tumors in a single organ">
+                                    <Property
+                                            name="p_rptTxt_820588_1"
+                                            order="453"
+                                            propName="reportText"
+                                            val="(m)" />
+                                </ListItem>
+                            </List>
+                        </ListField>
+                    </Question>
+                    <Question
+                            name="Q_327638"
+                            order="454"
+                            ID="327638.100004300"
+                            title="pN Category (Note I)">
+                        <Property
+                                name="p_rptTxt_327638_1"
+                                order="455"
+                                propName="reportText"
+                                val="pN Category" />
+                        <ListField
+                                name="lf_327638_2"
+                                order="456">
+                            <List
+                                    name="lst_327638_3"
+                                    order="457">
+                                <ListItem
+                                        name="LI_327639"
+                                        order="458"
+                                        ID="327639.100004300"
+                                        title="pN not assigned (no nodes submitted or found)" />
+                                <ListItem
+                                        name="LI_327640"
+                                        order="459"
+                                        ID="327640.100004300"
+                                        title="pN not assigned (cannot be determined based on available pathological information)" />
+                                <ListItem
+                                        name="LI_2145"
+                                        order="460"
+                                        ID="2145.100004300"
+                                        title="pN0: No regional lymph node metastasis">
+                                    <Property
+                                            name="p_rptTxt_2145_1"
+                                            order="461"
+                                            propName="reportText"
+                                            val="pN0" />
+                                </ListItem>
+                                <ListItem
+                                        name="LI_2146"
+                                        order="462"
+                                        ID="2146.100004300"
+                                        title="pN1: Metastasis in regional lymph node(s)">
+                                    <Property
+                                            name="p_rptTxt_2146_1"
+                                            order="463"
+                                            propName="reportText"
+                                            val="pN1" />
+                                </ListItem>
+                            </List>
+                        </ListField>
+                    </Question>
+                    <Question
+                            name="Q_2149"
+                            order="464"
+                            ID="2149.100004300"
+                            title="?pM Category (required only if confirmed pathologically) (Note K)">
+                        <Property
+                                name="p_rptTxt_2149_1"
+                                order="465"
+                                propName="reportText"
+                                val="pM Category" />
+                        <ListField
+                                name="lf_2149_2"
+                                order="466">
+                            <List
+                                    name="lst_2149_3"
+                                    order="467">
+                                <ListItem
+                                        name="LI_20895"
+                                        order="468"
+                                        ID="20895.100004300"
+                                        title="?Not applicable - pM cannot be determined from the submitted specimen(s)"
+                                        omitWhenSelected="true">
+                                    <Property
+                                            name="p_rptTxt_20895_1"
+                                            order="469"
+                                            propName="reportText"
+                                            val="Not applicable - pM cannot be determined from the submitted specimen(s)" />
+                                </ListItem>
+                                <ListItem
+                                        name="LI_2151"
+                                        order="470"
+                                        ID="2151.100004300"
+                                        title="pM1: Distant metastasis">
+                                    <Property
+                                            name="p_rptTxt_2151_1"
+                                            order="471"
+                                            propName="reportText"
+                                            val="pM1" />
+                                </ListItem>
+                            </List>
+                        </ListField>
+                    </Question>
+                </ChildItems>
+            </Section>
+            <Section
+                    name="S_17884"
+                    order="472"
+                    ID="17884.100004300"
+                    title="ADDITIONAL FINDINGS"
+                    mustImplement="false"
+                    minCard="0">
+                <ChildItems
+                        name="ch_17884_1"
+                        order="473">
+                    <Question
+                            name="Q_39188"
+                            order="474"
+                            ID="39188.100004300"
+                            title="Additional Findings"
+                            mustImplement="false"
+                            minCard="0">
+                        <ListField
+                                name="lf_39188_1"
+                                order="475"
+                                maxSelections="0">
+                            <List
+                                    name="lst_39188_2"
+                                    order="476">
+                                <ListItem
+                                        name="LI_2163"
+                                        order="477"
+                                        ID="2163.100004300"
+                                        title="None identified"
+                                        selectionDeselectsSiblings="true" />
+                                <ListItem
+                                        name="LI_20897"
+                                        order="478"
+                                        ID="20897.100004300"
+                                        title="Hemorrhage" />
+                                <ListItem
+                                        name="LI_20898"
+                                        order="479"
+                                        ID="20898.100004300"
+                                        title="Cystic change" />
+                                <ListItem
+                                        name="LI_20854"
+                                        order="480"
+                                        ID="20854.100004300"
+                                        title="Calcifications" />
+                                <ListItem
+                                        name="LI_2167"
+                                        order="481"
+                                        ID="2167.100004300"
+                                        title="Other (specify)">
+                                    <Property
+                                            name="p_rptTxt_2167_1"
+                                            order="482"
+                                            propName="reportText"
+                                            val="{no text}" />
+                                    <ListItemResponseField
+                                            name="lirf_2167_2"
+                                            order="483"
+                                            responseRequired="true">
+                                        <Response
+                                                name="rsp_2167_3"
+                                                order="484">
+                                            <string
+                                                    name="str_2167_4"
+                                                    order="485"
+                                                    maxLength="4000" />
+                                        </Response>
+                                    </ListItemResponseField>
+                                </ListItem>
+                            </List>
+                        </ListField>
+                    </Question>
+                </ChildItems>
+            </Section>
+            <Section
+                    name="S_17880"
+                    order="486"
+                    ID="17880.100004300"
+                    title="SPECIAL STUDIES (Note L)">
+                <Property
+                        name="p_rptTxt_17880_1"
+                        order="487"
+                        propName="reportText"
+                        val="SPECIAL STUDIES" />
+                <ChildItems
+                        name="ch_17880_2"
+                        order="488">
+                    <Question
+                            name="Q_378869"
+                            order="489"
+                            ID="378869.100004300"
+                            title="Ki-67 Labeling Index">
+                        <ListField
+                                name="lf_378869_1"
+                                order="490">
+                            <List
+                                    name="lst_378869_2"
+                                    order="491">
+                                <ListItem
+                                        name="LI_378872"
+                                        order="492"
+                                        ID="378872.100004300"
+                                        title="Specify percentage">
+                                    <Property
+                                            name="p_rptTxt_378872_1"
+                                            order="493"
+                                            propName="reportText"
+                                            val="{no text}" />
+                                    <ListItemResponseField
+                                            name="lirf_378872_2"
+                                            order="494"
+                                            responseRequired="true">
+                                        <Response
+                                                name="rsp_378872_3"
+                                                order="495">
+                                            <decimal
+                                                    name="dec_378872_4"
+                                                    order="496"
+                                                    minInclusive="1"
+                                                    maxInclusive="100"
+                                                    fractionDigits="2" />
+                                        </Response>
+                                        <TextAfterResponse
+                                                name="rtt_378872_5"
+                                                order="497"
+                                                val="%" />
+                                        <ResponseUnits
+                                                name="un_378872_6"
+                                                order="498"
+                                                val="%" />
+                                    </ListItemResponseField>
+                                </ListItem>
+                                <ListItem
+                                        name="LI_378873"
+                                        order="499"
+                                        ID="378873.100004300"
+                                        title="Other (specify)">
+                                    <Property
+                                            name="p_rptTxt_378873_1"
+                                            order="500"
+                                            propName="reportText"
+                                            val="{no text}" />
+                                    <ListItemResponseField
+                                            name="lirf_378873_2"
+                                            order="501"
+                                            responseRequired="true">
+                                        <Response
+                                                name="rsp_378873_3"
+                                                order="502">
+                                            <string
+                                                    name="str_378873_4"
+                                                    order="503"
+                                                    maxLength="4000" />
+                                        </Response>
+                                    </ListItemResponseField>
+                                </ListItem>
+                                <ListItem
+                                        name="LI_820527"
+                                        order="504"
+                                        ID="820527.100004300"
+                                        title="Pending" />
+                            </List>
+                        </ListField>
+                    </Question>
+                    <Question
+                            name="Q_820445"
+                            order="505"
+                            ID="820445.100004300"
+                            title="?Biomarkers Confirming Adrenal Cortical Origin (select positive biomarker(s)) (required only if applicable)#">
+                        <Property
+                                name="p_rptTxt_820445_1"
+                                order="506"
+                                propName="reportText"
+                                val="Biomarkers Confirming Adrenal Cortical Origin" />
+                        <ListField
+                                name="lf_820445_2"
+                                order="507"
+                                maxSelections="0">
+                            <List
+                                    name="lst_820445_3"
+                                    order="508">
+                                <DisplayedItem
+                                        name="DI_820446"
+                                        order="509"
+                                        ID="820446.100004300"
+                                        title="# Required for all non-functional adrenal tumors. SF1 (steroidogenic factor-1) is the most reliable biomarker. The remaining biomarkers listed are non-specific.">
+                                    <Property
+                                            name="p_rptTxt_820446_1"
+                                            order="510"
+                                            propName="reportText"
+                                            val="{no text}" />
+                                </DisplayedItem>
+                                <ListItem
+                                        name="LI_820491"
+                                        order="511"
+                                        ID="820491.100004300"
+                                        title="?Not applicable"
+                                        selectionDeselectsSiblings="true"
+                                        omitWhenSelected="true">
+                                    <Property
+                                            name="p_rptTxt_820491_1"
+                                            order="512"
+                                            propName="reportText"
+                                            val="Not applicable" />
+                                </ListItem>
+                                <ListItem
+                                        name="LI_820447"
+                                        order="513"
+                                        ID="820447.100004300"
+                                        title="SF1 (steroidogenic factor-1)" />
+                                <ListItem
+                                        name="LI_820448"
+                                        order="514"
+                                        ID="820448.100004300"
+                                        title="Melan-A" />
+                                <ListItem
+                                        name="LI_820449"
+                                        order="515"
+                                        ID="820449.100004300"
+                                        title="Calretinin" />
+                                <ListItem
+                                        name="LI_820450"
+                                        order="516"
+                                        ID="820450.100004300"
+                                        title="Alpha-inhibin" />
+                                <ListItem
+                                        name="LI_820451"
+                                        order="517"
+                                        ID="820451.100004300"
+                                        title="Synaptophysin" />
+                                <ListItem
+                                        name="LI_820452"
+                                        order="518"
+                                        ID="820452.100004300"
+                                        title="Other (specify)">
+                                    <Property
+                                            name="p_rptTxt_820452_1"
+                                            order="519"
+                                            propName="reportText"
+                                            val="{no text}" />
+                                    <ListItemResponseField
+                                            name="lirf_820452_2"
+                                            order="520"
+                                            responseRequired="true">
+                                        <Response
+                                                name="rsp_820452_3"
+                                                order="521">
+                                            <string
+                                                    name="str_820452_4"
+                                                    order="522"
+                                                    maxLength="4000" />
+                                        </Response>
+                                    </ListItemResponseField>
+                                </ListItem>
+                            </List>
+                        </ListField>
+                    </Question>
+                    <Question
+                            name="Q_820454"
+                            order="523"
+                            ID="820454.100004300"
+                            title="p53"
+                            mustImplement="false"
+                            minCard="0">
+                        <ListField
+                                name="lf_820454_1"
+                                order="524">
+                            <List
+                                    name="lst_820454_2"
+                                    order="525">
+                                <ListItem
+                                        name="LI_820456"
+                                        order="526"
+                                        ID="820456.100004300"
+                                        title="Overexpression" />
+                                <ListItem
+                                        name="LI_820457"
+                                        order="527"
+                                        ID="820457.100004300"
+                                        title="Global loss" />
+                                <ListItem
+                                        name="LI_820458"
+                                        order="528"
+                                        ID="820458.100004300"
+                                        title="Wild-type staining (variable)" />
+                                <ListItem
+                                        name="LI_820483"
+                                        order="529"
+                                        ID="820483.100004300"
+                                        title="Other (specify)">
+                                    <Property
+                                            name="p_rptTxt_820483_1"
+                                            order="530"
+                                            propName="reportText"
+                                            val="{no text}" />
+                                    <ListItemResponseField
+                                            name="lirf_820483_2"
+                                            order="531"
+                                            responseRequired="true">
+                                        <Response
+                                                name="rsp_820483_3"
+                                                order="532">
+                                            <string
+                                                    name="str_820483_4"
+                                                    order="533"
+                                                    maxLength="4000" />
+                                        </Response>
+                                    </ListItemResponseField>
+                                </ListItem>
+                            </List>
+                        </ListField>
+                    </Question>
+                    <Question
+                            name="Q_820455"
+                            order="534"
+                            ID="820455.100004300"
+                            title="Beta-catenin"
+                            mustImplement="false"
+                            minCard="0">
+                        <ListField
+                                name="lf_820455_1"
+                                order="535">
+                            <List
+                                    name="lst_820455_2"
+                                    order="536">
+                                <ListItem
+                                        name="LI_820484"
+                                        order="537"
+                                        ID="820484.100004300"
+                                        title="Nuclear and cytoplasmic reactivity" />
+                                <ListItem
+                                        name="LI_820485"
+                                        order="538"
+                                        ID="820485.100004300"
+                                        title="Membranous" />
+                                <ListItem
+                                        name="LI_820487"
+                                        order="539"
+                                        ID="820487.100004300"
+                                        title="Other (specify)">
+                                    <Property
+                                            name="p_rptTxt_820487_1"
+                                            order="540"
+                                            propName="reportText"
+                                            val="{no text}" />
+                                    <ListItemResponseField
+                                            name="lirf_820487_2"
+                                            order="541"
+                                            responseRequired="true">
+                                        <Response
+                                                name="rsp_820487_3"
+                                                order="542">
+                                            <string
+                                                    name="str_820487_4"
+                                                    order="543"
+                                                    maxLength="4000" />
+                                        </Response>
+                                    </ListItemResponseField>
+                                </ListItem>
+                            </List>
+                        </ListField>
+                    </Question>
+                    <Question
+                            name="Q_378870"
+                            order="544"
+                            ID="378870.100004300"
+                            title="Reticulin Stain Results (specify type(s) and result(s))"
+                            mustImplement="false"
+                            minCard="0">
+                        <Property
+                                name="p_rptTxt_378870_1"
+                                order="545"
+                                propName="reportText"
+                                val="Reticulin Stain Results" />
+                        <ResponseField
+                                name="rf_378870_2"
+                                order="546">
+                            <Response
+                                    name="rsp_378870_3"
+                                    order="547">
+                                <string
+                                        name="str_378870_4"
+                                        order="548"
+                                        maxLength="4000" />
+                            </Response>
+                        </ResponseField>
+                    </Question>
+                    <Question
+                            name="Q_378871"
+                            order="549"
+                            ID="378871.100004300"
+                            title="Other Ancillary Study Findings (specify type(s) and result(s))"
+                            mustImplement="false"
+                            minCard="0">
+                        <Property
+                                name="p_rptTxt_378871_1"
+                                order="550"
+                                propName="reportText"
+                                val="Other Ancillary Study Findings" />
+                        <ResponseField
+                                name="rf_378871_2"
+                                order="551">
+                            <Response
+                                    name="rsp_378871_3"
+                                    order="552">
+                                <string
+                                        name="str_378871_4"
+                                        order="553"
+                                        maxLength="4000" />
+                            </Response>
+                        </ResponseField>
+                    </Question>
+                </ChildItems>
+            </Section>
+            <Section
+                    name="S_381042"
+                    order="554"
+                    ID="381042.100004300"
+                    title="COMMENTS">
+                <Property
+                        name="p_rptTxt_381042_1"
+                        order="555"
+                        propName="reportText"
+                        val="{no text}" />
+                <ChildItems
+                        name="ch_381042_2"
+                        order="556">
+                    <Question
+                            name="Q_2168"
+                            order="557"
+                            ID="2168.100004300"
+                            title="?Comment(s)"
+                            minCard="0">
+                        <Property
+                                name="p_rptTxt_2168_1"
+                                order="558"
+                                propName="reportText"
+                                val="Comment(s)" />
+                        <ResponseField
+                                name="rf_2168_2"
+                                order="559">
+                            <Response
+                                    name="rsp_2168_3"
+                                    order="560">
+                                <string
+                                        name="str_2168_4"
+                                        order="561"
+                                        maxLength="4000" />
+                            </Response>
+                        </ResponseField>
+                    </Question>
+                </ChildItems>
+            </Section>
+        </ChildItems>
+    </Body>
+    <Footer
+            name="footer"
+            order="562"
+            ID="Footer.Adrenal.Bx.Res.129_3.007.011.REL_sdcFDF">
+        <Property
+                type="meta"
+                styleClass="copyright"
+                order="563"
+                propName="CopyrightFooter"
+                val="(c) 2023 College of American Pathologists.  All rights reserved.  License required for use." />
+    </Footer>
+</FormDesign>

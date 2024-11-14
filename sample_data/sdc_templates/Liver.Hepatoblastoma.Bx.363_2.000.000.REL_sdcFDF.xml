@@ -1,0 +1,294 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml-stylesheet type="text/xsl" href="sdctemplate.xslt"?>
+<FormDesign xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ID="Liver.Hepatoblastoma.Bx.363_2.000.000.REL_sdcFDF" baseURI="www.cap.org/eCC" fullURI="_baseURI=www.cap.org/eCC&amp;_lineage=Liver.Hepatoblastoma.Bx.363&amp;_version=2.000.000.REL&amp;_docType=sdcFDF" formTitle="HEPATOBLASTOMA: Biopsy" lineage="Liver.Hepatoblastoma.Bx.363" filename="Liver.Hepatoblastoma.Bx.363_2.000.000.REL_sdcFDF.xml" version="2.000.000.REL" xmlns="urn:ihe:qrph:sdc:2016">
+ <Property name="Copyright" type="CAPeCC_static_text" styleClass="copyright" order="1" propName="Copyright" val="(c) 2023 College of American Pathologists.  All rights reserved.  License required for use." />
+ <Property name="GenericHeaderText" type="CAPeCC_static_text" order="2" propName="GenericHeaderText" val="Surgical Pathology Cancer Case Summary" />
+ <Property name="Category" type="CAPeCC_meta" order="3" propName="Category" val="Pediatric" />
+ <Property name="OfficialName" type="CAPeCC_meta" order="4" propName="OfficialName" val="HEPATOBLASTOMA: Biopsy" />
+ <Property name="CAP_ProtocolName" type="CAPeCC_meta" order="5" propName="CAP_ProtocolName" val="Hepatoblastoma Biopsy" />
+ <Property name="CAP_ProtocolShortName" type="CAPeCC_meta" order="6" propName="CAP_ProtocolShortName" val="Liver.Hepatoblastoma.Bx" />
+ <Property name="CAP_ProtocolVersion" type="CAPeCC_meta" order="7" propName="CAP_ProtocolVersion" val="5.0.0.0" />
+ <Property name="TemplateID" type="CAPeCC_meta" order="8" propName="TemplateID" val="363.100004300" />
+ <Property name="Restrictions" type="CAPeCC_meta" order="9" propName="Restrictions" val="The use of this template is recommended for clinical care purposes but is not required for accreditation purposes." />
+ <Property name="CAP_Required" type="CAPeCC_meta" order="10" propName="CAP_Required" val="true" />
+ <Property name="AccreditationDate" type="CAPeCC_meta dt.dateTime" order="11" propName="AccreditationDate" val="6/1/2024" />
+ <Property name="WebPostingDate" type="CAPeCC_meta dt.dateTime" order="12" propName="WebPostingDate" val="9/20/2023" />
+ <Property name="ApprovalStatus" type="CAPeCC_meta" order="13" propName="ReleaseStatus" val="REL" />
+ <Body name="Body" order="14" ID="Liver.Hepatoblastoma.Bx.363_2.000.000.REL_sdcFDF_Body">
+  <ChildItems name="ch_Body" order="15">
+   <Section name="S_702224" order="16" ID="702224.100004300" title="EXPERT CONSULTATION" mustImplement="false" minCard="0">
+    <ChildItems name="ch_702224_1" order="17">
+     <Question name="Q_702225" order="18" ID="702225.100004300" title="Expert Consultation (Note A)" mustImplement="false" minCard="0">
+      <Property name="p_rptTxt_702225_1" order="19" propName="reportText" val="Expert Consultation" />
+      <ListField name="lf_702225_2" order="20">
+       <List name="lst_702225_3" order="21">
+        <ListItem name="LI_702226" order="22" ID="702226.100004300" title="Pending - Completion of this CAP Cancer Protocol is awaiting expert consultation">
+         <Property name="p_rptTxt_702226_1" order="23" propName="reportText" val="Pending" />
+        </ListItem>
+        <ListItem name="LI_702227" order="24" ID="702227.100004300" title="Completed - This CAP Cancer Protocol or some elements have been performed following expert consultation">
+         <Property name="p_rptTxt_702227_1" order="25" propName="reportText" val="Completed" />
+        </ListItem>
+        <ListItem name="LI_702228" order="26" ID="702228.100004300" title="Not applicable" />
+       </List>
+      </ListField>
+     </Question>
+    </ChildItems>
+   </Section>
+   <Section name="S_43445" order="27" ID="43445.100004300" title="SPECIMEN">
+    <ChildItems name="ch_43445_1" order="28">
+     <Question name="Q_41135" order="29" ID="41135.100004300" title="Procedure (Note B)">
+      <Property name="p_rptTxt_41135_1" order="30" propName="reportText" val="Procedure" />
+      <ListField name="lf_41135_2" order="31">
+       <List name="lst_41135_3" order="32">
+        <ListItem name="LI_58765" order="33" ID="58765.100004300" title="Core biopsy" />
+        <ListItem name="LI_41278" order="34" ID="41278.100004300" title="Incisional biopsy" />
+        <ListItem name="LI_42532" order="35" ID="42532.100004300" title="Other (specify)">
+         <Property name="p_rptTxt_42532_1" order="36" propName="reportText" val="{no text}" />
+         <ListItemResponseField name="lirf_42532_2" order="37" responseRequired="true">
+          <Response name="rsp_42532_3" order="38">
+           <string name="str_42532_4" order="39" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_44547" order="40" ID="44547.100004300" title="Not specified" />
+       </List>
+      </ListField>
+     </Question>
+    </ChildItems>
+   </Section>
+   <Section name="S_53203" order="41" ID="53203.100004300" title="TUMOR">
+    <ChildItems name="ch_53203_1" order="42">
+     <Question name="Q_58138" order="43" ID="58138.100004300" title="Tumor Focality (within liver)">
+      <ListField name="lf_58138_1" order="44">
+       <List name="lst_58138_2" order="45">
+        <ListItem name="LI_44318" order="46" ID="44318.100004300" title="Unifocal" />
+        <ListItem name="LI_43554" order="47" ID="43554.100004300" title="Multifocal" />
+        <ListItem name="LI_48646" order="48" ID="48646.100004300" title="Cannot be determined (explain)">
+         <Property name="p_rptTxt_48646_1" order="49" propName="reportText" val="Cannot be determined" />
+         <ListItemResponseField name="lirf_48646_2" order="50" responseRequired="true">
+          <Response name="rsp_48646_3" order="51">
+           <string name="str_48646_4" order="52" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+       </List>
+      </ListField>
+     </Question>
+     <Question name="Q_42426" order="53" ID="42426.100004300" title="Tumor Site">
+      <ListField name="lf_42426_1" order="54">
+       <List name="lst_42426_2" order="55">
+        <ListItem name="LI_55367" order="56" ID="55367.100004300" title="Right lobe" />
+        <ListItem name="LI_47381" order="57" ID="47381.100004300" title="Left lobe" />
+        <ListItem name="LI_38991" order="58" ID="38991.100004300" title="Right and left lobes" />
+        <ListItem name="LI_54311" order="59" ID="54311.100004300" title="Other (specify)">
+         <Property name="p_rptTxt_54311_1" order="60" propName="reportText" val="{no text}" />
+         <ListItemResponseField name="lirf_54311_2" order="61" responseRequired="true">
+          <Response name="rsp_54311_3" order="62">
+           <string name="str_54311_4" order="63" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_42927" order="64" ID="42927.100004300" title="Not specified" />
+       </List>
+      </ListField>
+     </Question>
+     <Question name="Q_804022" order="65" ID="804022.100004300" title="Histologic Type (Note C)">
+      <Property name="p_rptTxt_804022_1" order="66" propName="reportText" val="Histologic Type" />
+      <ListField name="lf_804022_2" order="67" maxSelections="0">
+       <List name="lst_804022_3" order="68">
+        <DisplayedItem name="DI_43073" order="69" ID="43073.100004300" title="Ancillary studies (immunohistochemistry, molecular) may be performed to clarify histologic type.">
+         <Property name="p_rptTxt_43073_1" order="70" propName="reportText" val="{no text}" />
+        </DisplayedItem>
+        <ListItem name="LI_42409" order="71" ID="42409.100004300" title="Hepatoblastoma, epithelial type, fetal pattern (mitotically inactive / well differentiated)" />
+        <ListItem name="LI_39870" order="72" ID="39870.100004300" title="Hepatoblastoma, epithelial type, fetal pattern (mitotically active / crowded)" />
+        <ListItem name="LI_52854" order="73" ID="52854.100004300" title="Hepatoblastoma, epithelial type, embryonal pattern" />
+        <ListItem name="LI_57182" order="74" ID="57182.100004300" title="Hepatoblastoma, epithelial type, pleomorphic pattern (poorly differentiated)" />
+        <ListItem name="LI_35934" order="75" ID="35934.100004300" title="Hepatoblastoma, epithelial type, macrotrabecular pattern" />
+        <ListItem name="LI_54328" order="76" ID="54328.100004300" title="Hepatoblastoma, epithelial type, small cell undifferentiated pattern" />
+        <ListItem name="LI_804714" order="77" ID="804714.100004300" title="Hepatoblastoma, epithelial and mesenchymal type, without teratoid features" />
+        <ListItem name="LI_804715" order="78" ID="804715.100004300" title="Hepatoblastoma, epithelial and mesenchymal type, with teratoid features" />
+        <ListItem name="LI_38745" order="79" ID="38745.100004300" title="Hepatoblastoma, other (specify, i.e., blastemal, cholangioblastic, squamoid or glandular patterns)">
+         <Property name="p_rptTxt_38745_1" order="80" propName="reportText" val="Hepatoblastoma, other" />
+         <ListItemResponseField name="lirf_38745_2" order="81" responseRequired="true">
+          <Response name="rsp_38745_3" order="82">
+           <string name="str_38745_4" order="83" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_46980" order="84" ID="46980.100004300" title="Hepatocellular neoplasm, not otherwise specified" />
+       </List>
+      </ListField>
+      <ChildItems name="ch_804022_1" order="85">
+       <Question name="Q_379156" order="86" ID="379156.100004300" title="Histologic Type Comment" mustImplement="false" minCard="0">
+        <ResponseField name="rf_379156_1" order="87">
+         <Response name="rsp_379156_2" order="88">
+          <string name="str_379156_3" order="89" maxLength="4000" />
+         </Response>
+        </ResponseField>
+       </Question>
+      </ChildItems>
+     </Question>
+    </ChildItems>
+   </Section>
+   <Section name="S_56661" order="90" ID="56661.100004300" title="ADDITIONAL FINDINGS" mustImplement="false" minCard="0">
+    <ChildItems name="ch_56661_1" order="91">
+     <Question name="Q_52210" order="92" ID="52210.100004300" title="Additional Findings (Note D)" mustImplement="false" minCard="0">
+      <Property name="p_rptTxt_52210_1" order="93" propName="reportText" val="Additional Findings" />
+      <ListField name="lf_52210_2" order="94" maxSelections="0">
+       <List name="lst_52210_3" order="95">
+        <ListItem name="LI_52190" order="96" ID="52190.100004300" title="No background liver available for evaluation (explain)" selectionDeselectsSiblings="true">
+         <Property name="p_rptTxt_52190_1" order="97" propName="reportText" val="No background liver available for evaluation" />
+         <ListItemResponseField name="lirf_52190_2" order="98" responseRequired="true">
+          <Response name="rsp_52190_3" order="99">
+           <string name="str_52190_4" order="100" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_54205" order="101" ID="54205.100004300" title="Cirrhosis / fibrosis (specify stage of fibrosis)">
+         <Property name="p_rptTxt_54205_1" order="102" propName="reportText" val="Cirrhosis / fibrosis" />
+         <ListItemResponseField name="lirf_54205_2" order="103" responseRequired="true">
+          <Response name="rsp_54205_3" order="104">
+           <string name="str_54205_4" order="105" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_47773" order="106" ID="47773.100004300" title="Iron overload" />
+        <ListItem name="LI_51191" order="107" ID="51191.100004300" title="Hepatitis (specify type)">
+         <Property name="p_rptTxt_51191_1" order="108" propName="reportText" val="Hepatitis" />
+         <ListItemResponseField name="lirf_51191_2" order="109" responseRequired="true">
+          <Response name="rsp_51191_3" order="110">
+           <string name="str_51191_4" order="111" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_53183" order="112" ID="53183.100004300" title="Other (specify)">
+         <Property name="p_rptTxt_53183_1" order="113" propName="reportText" val="{no text}" />
+         <ListItemResponseField name="lirf_53183_2" order="114" responseRequired="true">
+          <Response name="rsp_53183_3" order="115">
+           <string name="str_53183_4" order="116" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_56518" order="117" ID="56518.100004300" title="None identified" selectionDeselectsSiblings="true" />
+       </List>
+      </ListField>
+     </Question>
+    </ChildItems>
+   </Section>
+   <Section name="S_43053" order="118" ID="43053.100004300" title="SPECIAL STUDIES (Note E)">
+    <Property name="p_rptTxt_43053_1" order="119" propName="reportText" val="SPECIAL STUDIES" />
+    <ChildItems name="ch_43053_2" order="120">
+     <Question name="Q_57992" order="121" ID="57992.100004300" title="Serum Alpha-Fetoprotein (AFP) Level at Diagnosis (Note E)">
+      <Property name="p_rptTxt_57992_1" order="122" propName="reportText" val="Serum Alpha-Fetoprotein (AFP) Level at Diagnosis" />
+      <ListField name="lf_57992_2" order="123">
+       <List name="lst_57992_3" order="124">
+        <DisplayedItem name="DI_44149" order="125" ID="44149.100004300" title="Level at time of diagnosis may be prognostically important.">
+         <Property name="p_rptTxt_44149_1" order="126" propName="reportText" val="{no text}" />
+        </DisplayedItem>
+        <ListItem name="LI_58533" order="127" ID="58533.100004300" title="Less than 100 ng / mL" />
+        <ListItem name="LI_49565" order="128" ID="49565.100004300" title="100 ng / mL - 1.2 million ng / mL" />
+        <ListItem name="LI_37686" order="129" ID="37686.100004300" title="Greater than 1.2 million ng / mL" />
+        <ListItem name="LI_51709" order="130" ID="51709.100004300" title="Not known" />
+       </List>
+      </ListField>
+     </Question>
+     <Question name="Q_804653" order="131" ID="804653.100004300" title="Beta-catenin IHC">
+      <ListField name="lf_804653_1" order="132">
+       <List name="lst_804653_2" order="133">
+        <ListItem name="LI_379164" order="134" ID="379164.100004300" title="Not performed" />
+        <ListItem name="LI_379165" order="135" ID="379165.100004300" title="Pending" />
+        <ListItem name="LI_804650" order="136" ID="804650.100004300" title="Negative" />
+        <ListItem name="LI_804651" order="137" ID="804651.100004300" title="Positive (specify pattern)">
+         <Property name="p_rptTxt_804651_1" order="138" propName="reportText" val="Positive" />
+         <ListItemResponseField name="lirf_804651_2" order="139" responseRequired="true">
+          <Response name="rsp_804651_3" order="140">
+           <string name="str_804651_4" order="141" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_56993" order="142" ID="56993.100004300" title="Cannot be determined (explain)">
+         <Property name="p_rptTxt_56993_1" order="143" propName="reportText" val="Cannot be determined" />
+         <ListItemResponseField name="lirf_56993_2" order="144" responseRequired="true">
+          <Response name="rsp_56993_3" order="145">
+           <string name="str_56993_4" order="146" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+       </List>
+      </ListField>
+     </Question>
+     <Question name="Q_379166" order="147" ID="379166.100004300" title="Glypican-3 IHC" mustImplement="false" minCard="0">
+      <ListField name="lf_379166_1" order="148">
+       <List name="lst_379166_2" order="149">
+        <ListItem name="LI_379167" order="150" ID="379167.100004300" title="Not performed" />
+        <ListItem name="LI_379168" order="151" ID="379168.100004300" title="Pending" />
+        <ListItem name="LI_53057" order="152" ID="53057.100004300" title="Negative" />
+        <ListItem name="LI_51039" order="153" ID="51039.100004300" title="Positive">
+         <ChildItems name="ch_51039_1" order="154">
+          <Question name="Q_46079" order="155" ID="46079.100004300" title="Pattern of Glypican-3 IHC Staining" mustImplement="false" minCard="0">
+           <ResponseField name="rf_46079_1" order="156">
+            <Response name="rsp_46079_2" order="157">
+             <string name="str_46079_3" order="158" maxLength="4000" />
+            </Response>
+           </ResponseField>
+          </Question>
+         </ChildItems>
+        </ListItem>
+        <ListItem name="LI_57531" order="159" ID="57531.100004300" title="Cannot be determined (explain)">
+         <Property name="p_rptTxt_57531_1" order="160" propName="reportText" val="Cannot be determined" />
+         <ListItemResponseField name="lirf_57531_2" order="161" responseRequired="true">
+          <Response name="rsp_57531_3" order="162">
+           <string name="str_57531_4" order="163" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+       </List>
+      </ListField>
+     </Question>
+     <Question name="Q_379169" order="164" ID="379169.100004300" title="INI-1 IHC">
+      <ListField name="lf_379169_1" order="165">
+       <List name="lst_379169_2" order="166">
+        <ListItem name="LI_379170" order="167" ID="379170.100004300" title="Not performed" />
+        <ListItem name="LI_379171" order="168" ID="379171.100004300" title="Pending" />
+        <ListItem name="LI_47255" order="169" ID="47255.100004300" title="Expression retained" />
+        <ListItem name="LI_53100" order="170" ID="53100.100004300" title="Expression lost" />
+        <ListItem name="LI_37803" order="171" ID="37803.100004300" title="Cannot be determined (explain)">
+         <Property name="p_rptTxt_37803_1" order="172" propName="reportText" val="Cannot be determined" />
+         <ListItemResponseField name="lirf_37803_2" order="173" responseRequired="true">
+          <Response name="rsp_37803_3" order="174">
+           <string name="str_37803_4" order="175" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+       </List>
+      </ListField>
+     </Question>
+     <Question name="Q_379172" order="176" ID="379172.100004300" title="Other Ancillary Studies (specify)" mustImplement="false" minCard="0">
+      <Property name="p_rptTxt_379172_1" order="177" propName="reportText" val="Other Ancillary Studies" />
+      <ResponseField name="rf_379172_2" order="178">
+       <Response name="rsp_379172_3" order="179">
+        <string name="str_379172_4" order="180" maxLength="4000" />
+       </Response>
+      </ResponseField>
+     </Question>
+    </ChildItems>
+   </Section>
+   <Section name="S_381101" order="181" ID="381101.100004300" title="COMMENTS">
+    <Property name="p_rptTxt_381101_1" order="182" propName="reportText" val="{no text}" />
+    <ChildItems name="ch_381101_2" order="183">
+     <Question name="Q_53438" order="184" ID="53438.100004300" title="?Comment(s)" minCard="0">
+      <Property name="p_rptTxt_53438_1" order="185" propName="reportText" val="Comment(s)" />
+      <ResponseField name="rf_53438_2" order="186">
+       <Response name="rsp_53438_3" order="187">
+        <string name="str_53438_4" order="188" maxLength="4000" />
+       </Response>
+      </ResponseField>
+     </Question>
+    </ChildItems>
+   </Section>
+  </ChildItems>
+ </Body>
+ <Footer name="footer" order="189" ID="Footer.Liver.Hepatoblastoma.Bx.363_2.000.000.REL_sdcFDF">
+  <Property type="meta" styleClass="copyright" order="190" propName="CopyrightFooter" val="(c) 2023 College of American Pathologists.  All rights reserved.  License required for use." />
+ </Footer>
+</FormDesign>

@@ -1,0 +1,408 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml-stylesheet type="text/xsl" href="sdctemplate.xslt"?>
+<FormDesign xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ID="Stomach.GIST.Bmk.242_1.003.001.REL_sdcFDF" baseURI="www.cap.org/eCC" fullURI="_baseURI=www.cap.org/eCC&amp;_lineage=Stomach.GIST.Bmk.242&amp;_version=1.003.001.REL&amp;_docType=sdcFDF" formTitle="GIST Biomarker Reporting Template" lineage="Stomach.GIST.Bmk.242" filename="Stomach.GIST.Bmk.242_1.003.001.REL_sdcFDF.xml" version="1.003.001.REL" xmlns="urn:ihe:qrph:sdc:2016">
+ <Property name="Copyright" type="CAPeCC_static_text" styleClass="copyright" order="1" propName="Copyright" val="(c) 2022 College of American Pathologists.  All rights reserved.  License required for use." />
+ <Property name="GenericHeaderText" type="CAPeCC_static_text" order="2" propName="GenericHeaderText" val="Cancer Biomarker Reporting Template" />
+ <Property name="Category" type="CAPeCC_meta" order="3" propName="Category" val="Gastrointestinal" />
+ <Property name="OfficialName" type="CAPeCC_meta" order="4" propName="OfficialName" val="GIST Biomarker Reporting Template" />
+ <Property name="CAP_ProtocolName" type="CAPeCC_meta" order="5" propName="CAP_ProtocolName" val="GIST Biomarker Reporting" />
+ <Property name="CAP_ProtocolShortName" type="CAPeCC_meta" order="6" propName="CAP_ProtocolShortName" val="Stomach.GIST.Bmk" />
+ <Property name="CAP_ProtocolVersion" type="CAPeCC_meta" order="7" propName="CAP_ProtocolVersion" val="1.1.0.0" />
+ <Property name="TemplateID" type="CAPeCC_meta" order="8" propName="TemplateID" val="242.100004300" />
+ <Property name="Restrictions" type="CAPeCC_meta" order="9" propName="Restrictions" val="Use of this template is optional." />
+ <Property name="CAP_Required" type="CAPeCC_meta" order="10" propName="CAP_Required" val="false" />
+ <Property name="WebPostingDate" type="CAPeCC_meta dt.dateTime" order="11" propName="WebPostingDate" val="12/14/2022" />
+ <Property name="ApprovalStatus" type="CAPeCC_meta" order="12" propName="ReleaseStatus" val="REL" />
+ <Body name="Body" order="13" ID="Stomach.GIST.Bmk.242_1.003.001.REL_sdcFDF_Body">
+  <ChildItems name="ch_Body" order="14">
+   <DisplayedItem name="DI_31952" order="15" ID="31952.100004300" title="Completion of the template is the responsibility of the laboratory performing the biomarker testing and / or providing the interpretation. When both testing and interpretation are performed elsewhere (eg., a reference laboratory), synoptic reporting of the results by the laboratory submitting the tissue for testing is also encouraged to ensure that all information is included in the patient’s medical record and thus readily available to the treating clinical team.">
+    <Property name="p_rptTxt_31952_1" order="16" propName="reportText" val="{no text}" />
+   </DisplayedItem>
+   <DisplayedItem name="DI_31970" order="17" ID="31970.100004300" title="Fixative type, time to fixation (cold ischemia time), and time of fixation should be reported if applicable in this template or in the original pathology report.">
+    <Property name="p_rptTxt_31970_1" order="18" propName="reportText" val="{no text}" />
+   </DisplayedItem>
+   <DisplayedItem name="DI_31971" order="19" ID="31971.100004300" title="Gene names should follow recommendations of The Human Genome Organization (HUGO) Nomenclature Committee (www.genenames.org; accessed October 18, 2022). (Note A)">
+    <Property name="p_rptTxt_31971_1" order="20" propName="reportText" val="{no text}" />
+   </DisplayedItem>
+   <DisplayedItem name="DI_32030" order="21" ID="32030.100004300" title="All reported gene sequence variations should be identified following the recommendations of the Human Genome Variation Society (www.hgvs.org/mutnomen/; accessed October 18, 2022). (Note A)">
+    <Property name="p_rptTxt_32030_1" order="22" propName="reportText" val="{no text}" />
+   </DisplayedItem>
+   <Section name="S_31953" order="23" ID="31953.100004300" title="GIST BIOMARKER TESTS" mustImplement="false" minCard="0">
+    <ChildItems name="ch_31953_1" order="24">
+     <Section name="S_50353" order="25" ID="50353.100004300" title="Immunohistochemical Studies (Note B)" mustImplement="false" minCard="0">
+      <Property name="p_rptTxt_50353_1" order="26" propName="reportText" val="Immunohistochemical Studies" />
+      <ChildItems name="ch_50353_2" order="27">
+       <Question name="Q_31955" order="28" ID="31955.100004300" title="KIT (CD117)" mustImplement="false" minCard="0">
+        <ListField name="lf_31955_1" order="29">
+         <List name="lst_31955_2" order="30">
+          <ListItem name="LI_31956" order="31" ID="31956.100004300" title="Positive" />
+          <ListItem name="LI_31957" order="32" ID="31957.100004300" title="Negative" />
+         </List>
+        </ListField>
+       </Question>
+       <Question name="Q_31958" order="33" ID="31958.100004300" title="DOG1 (ANO1)" mustImplement="false" minCard="0">
+        <ListField name="lf_31958_1" order="34">
+         <List name="lst_31958_2" order="35">
+          <ListItem name="LI_31959" order="36" ID="31959.100004300" title="Positive" />
+          <ListItem name="LI_31960" order="37" ID="31960.100004300" title="Negative" />
+         </List>
+        </ListField>
+       </Question>
+       <Question name="Q_31991" order="38" ID="31991.100004300" title="SDHA" mustImplement="false" minCard="0">
+        <ListField name="lf_31991_1" order="39">
+         <List name="lst_31991_2" order="40">
+          <ListItem name="LI_31992" order="41" ID="31992.100004300" title="Intact" />
+          <ListItem name="LI_31993" order="42" ID="31993.100004300" title="Deficient" />
+         </List>
+        </ListField>
+       </Question>
+       <Question name="Q_31961" order="43" ID="31961.100004300" title="SDHB" mustImplement="false" minCard="0">
+        <ListField name="lf_31961_1" order="44">
+         <List name="lst_31961_2" order="45">
+          <ListItem name="LI_31962" order="46" ID="31962.100004300" title="Intact" />
+          <ListItem name="LI_31963" order="47" ID="31963.100004300" title="Deficient" />
+         </List>
+        </ListField>
+       </Question>
+       <Section name="S_820543" order="48" ID="820543.100004300" title="Other IHC Studies" mustImplement="false" minCard="0">
+        <ChildItems name="ch_820543_1" order="49">
+         <Question name="Q_31964" order="50" ID="31964.100004300" title="Test Name (repeat this question as needed)" mustImplement="false" minCard="0" maxCard="10">
+          <Property name="p_rptTxt_31964_1" order="51" propName="reportText" val="{no text}" />
+          <ResponseField name="rf_31964_2" order="52">
+           <Response name="rsp_31964_3" order="53">
+            <string name="str_31964_4" order="54" maxLength="4000" />
+           </Response>
+          </ResponseField>
+          <ChildItems name="ch_31964_5" order="55">
+           <Question name="Q_31973" order="56" ID="31973.100004300">
+            <Property name="p_altTxt_31973_1" order="57" propName="altText" val="Test Results" />
+            <ListField name="lf_31973_2" order="58">
+             <List name="lst_31973_3" order="59">
+              <ListItem name="LI_31994" order="60" ID="31994.100004300" title="Positive" />
+              <ListItem name="LI_31995" order="61" ID="31995.100004300" title="Negative" />
+              <ListItem name="LI_33014" order="62" ID="33014.100004300" title="Other (specify)">
+               <Property name="p_rptTxt_33014_1" order="63" propName="reportText" val="{no text}" />
+               <ListItemResponseField name="lirf_33014_2" order="64" responseRequired="true">
+                <Response name="rsp_33014_3" order="65">
+                 <string name="str_33014_4" order="66" maxLength="4000" />
+                </Response>
+               </ListItemResponseField>
+              </ListItem>
+             </List>
+            </ListField>
+           </Question>
+          </ChildItems>
+         </Question>
+        </ChildItems>
+       </Section>
+      </ChildItems>
+     </Section>
+     <Section name="S_820530" order="67" ID="820530.100004300" title="Molecular Genetic Studies (Note C)" mustImplement="false" minCard="0">
+      <Property name="p_rptTxt_820530_1" order="68" propName="reportText" val="Molecular Genetic Studies" />
+      <ChildItems name="ch_820530_2" order="69">
+       <Question name="Q_31975" order="70" ID="31975.100004300" title="KIT Mutational Analysis (Note D)" mustImplement="false" minCard="0">
+        <Property name="p_rptTxt_31975_1" order="71" propName="reportText" val="KIT Mutational Analysis" />
+        <ListField name="lf_31975_2" order="72">
+         <List name="lst_31975_3" order="73">
+          <ListItem name="LI_31976" order="74" ID="31976.100004300" title="No mutation detected" />
+          <ListItem name="LI_31977" order="75" ID="31977.100004300" title="Mutation identified (specify)">
+           <Property name="p_rptTxt_31977_1" order="76" propName="reportText" val="Mutation identified" />
+           <ListItemResponseField name="lirf_31977_2" order="77" responseRequired="true">
+            <Response name="rsp_31977_3" order="78">
+             <string name="str_31977_4" order="79" maxLength="4000" />
+            </Response>
+           </ListItemResponseField>
+          </ListItem>
+          <ListItem name="LI_31978" order="80" ID="31978.100004300" title="Cannot be determined (explain)">
+           <Property name="p_rptTxt_31978_1" order="81" propName="reportText" val="Cannot be determined" />
+           <ListItemResponseField name="lirf_31978_2" order="82" responseRequired="true">
+            <Response name="rsp_31978_3" order="83">
+             <string name="str_31978_4" order="84" maxLength="4000" />
+            </Response>
+           </ListItemResponseField>
+          </ListItem>
+         </List>
+        </ListField>
+       </Question>
+       <Question name="Q_32008" order="85" ID="32008.100004300" title="KIT Exons Assessed (Note D)" mustImplement="false" minCard="0">
+        <Property name="p_rptTxt_32008_1" order="86" propName="reportText" val="KIT Exons Assessed" />
+        <ListField name="lf_32008_2" order="87" maxSelections="0">
+         <List name="lst_32008_3" order="88">
+          <ListItem name="LI_32009" order="89" ID="32009.100004300" title="Exon 9" />
+          <ListItem name="LI_32010" order="90" ID="32010.100004300" title="Exon 11" />
+          <ListItem name="LI_32011" order="91" ID="32011.100004300" title="Exon 13" />
+          <ListItem name="LI_32012" order="92" ID="32012.100004300" title="Exon 14" />
+          <ListItem name="LI_32013" order="93" ID="32013.100004300" title="Exon 17" />
+          <ListItem name="LI_32014" order="94" ID="32014.100004300" title="Other (specify)">
+           <Property name="p_rptTxt_32014_1" order="95" propName="reportText" val="{no text}" />
+           <ListItemResponseField name="lirf_32014_2" order="96" responseRequired="true">
+            <Response name="rsp_32014_3" order="97">
+             <string name="str_32014_4" order="98" maxLength="4000" />
+            </Response>
+           </ListItemResponseField>
+          </ListItem>
+         </List>
+        </ListField>
+       </Question>
+       <Question name="Q_820601" order="99" ID="820601.100004300" title="PDGFRA Mutational Analysis (Note E)" mustImplement="false" minCard="0">
+        <Property name="p_rptTxt_820601_1" order="100" propName="reportText" val="PDGFRA Mutational Analysis" />
+        <ListField name="lf_820601_2" order="101">
+         <List name="lst_820601_3" order="102">
+          <ListItem name="LI_31996" order="103" ID="31996.100004300" title="No mutation detected" />
+          <ListItem name="LI_820602" order="104" ID="820602.100004300" title="Mutation identified (specify)">
+           <Property name="p_rptTxt_820602_1" order="105" propName="reportText" val="Mutation identified" />
+           <ListItemResponseField name="lirf_820602_2" order="106" responseRequired="true">
+            <Response name="rsp_820602_3" order="107">
+             <string name="str_820602_4" order="108" maxLength="4000" />
+            </Response>
+           </ListItemResponseField>
+          </ListItem>
+          <ListItem name="LI_31998" order="109" ID="31998.100004300" title="Cannot be determined (explain)">
+           <Property name="p_rptTxt_31998_1" order="110" propName="reportText" val="Cannot be determined" />
+           <ListItemResponseField name="lirf_31998_2" order="111" responseRequired="true">
+            <Response name="rsp_31998_3" order="112">
+             <string name="str_31998_4" order="113" maxLength="4000" />
+            </Response>
+           </ListItemResponseField>
+          </ListItem>
+         </List>
+        </ListField>
+       </Question>
+       <Question name="Q_32016" order="114" ID="32016.100004300" title="PDGFRA Exons Assessed (Note E)" mustImplement="false" minCard="0">
+        <Property name="p_rptTxt_32016_1" order="115" propName="reportText" val="PDGFRA Exons Assessed" />
+        <ListField name="lf_32016_2" order="116" maxSelections="0">
+         <List name="lst_32016_3" order="117">
+          <ListItem name="LI_32017" order="118" ID="32017.100004300" title="Exon 12" />
+          <ListItem name="LI_32018" order="119" ID="32018.100004300" title="Exon 14" />
+          <ListItem name="LI_32019" order="120" ID="32019.100004300" title="Exon 18" />
+          <ListItem name="LI_32020" order="121" ID="32020.100004300" title="Other (specify)">
+           <Property name="p_rptTxt_32020_1" order="122" propName="reportText" val="{no text}" />
+           <ListItemResponseField name="lirf_32020_2" order="123" responseRequired="true">
+            <Response name="rsp_32020_3" order="124">
+             <string name="str_32020_4" order="125" maxLength="4000" />
+            </Response>
+           </ListItemResponseField>
+          </ListItem>
+         </List>
+        </ListField>
+       </Question>
+       <Question name="Q_31981" order="126" ID="31981.100004300" title="SDH A / B / C / D Mutational Analysis (Note G)" mustImplement="false" minCard="0">
+        <Property name="p_rptTxt_31981_1" order="127" propName="reportText" val="SDH A / B / C / D Mutational Analysis" />
+        <ListField name="lf_31981_2" order="128">
+         <List name="lst_31981_3" order="129">
+          <ListItem name="LI_32002" order="130" ID="32002.100004300" title="No mutation detected" />
+          <ListItem name="LI_32003" order="131" ID="32003.100004300" title="Mutation identified (specify)">
+           <Property name="p_rptTxt_32003_1" order="132" propName="reportText" val="Mutation identified" />
+           <ListItemResponseField name="lirf_32003_2" order="133" responseRequired="true">
+            <Response name="rsp_32003_3" order="134">
+             <string name="str_32003_4" order="135" maxLength="4000" />
+            </Response>
+           </ListItemResponseField>
+          </ListItem>
+          <ListItem name="LI_32004" order="136" ID="32004.100004300" title="Cannot be determined (explain)">
+           <Property name="p_rptTxt_32004_1" order="137" propName="reportText" val="Cannot be determined" />
+           <ListItemResponseField name="lirf_32004_2" order="138" responseRequired="true">
+            <Response name="rsp_32004_3" order="139">
+             <string name="str_32004_4" order="140" maxLength="4000" />
+            </Response>
+           </ListItemResponseField>
+          </ListItem>
+         </List>
+        </ListField>
+       </Question>
+       <Question name="Q_31982" order="141" ID="31982.100004300" title="NF1 Mutational Analysis (Note H)" mustImplement="false" minCard="0">
+        <Property name="p_rptTxt_31982_1" order="142" propName="reportText" val="NF1 Mutational Analysis" />
+        <ListField name="lf_31982_2" order="143">
+         <List name="lst_31982_3" order="144">
+          <ListItem name="LI_32005" order="145" ID="32005.100004300" title="No mutation detected" />
+          <ListItem name="LI_32006" order="146" ID="32006.100004300" title="Mutation identified (specify)">
+           <Property name="p_rptTxt_32006_1" order="147" propName="reportText" val="Mutation identified" />
+           <ListItemResponseField name="lirf_32006_2" order="148" responseRequired="true">
+            <Response name="rsp_32006_3" order="149">
+             <string name="str_32006_4" order="150" maxLength="4000" />
+            </Response>
+           </ListItemResponseField>
+          </ListItem>
+          <ListItem name="LI_32007" order="151" ID="32007.100004300" title="Cannot be determined (explain)">
+           <Property name="p_rptTxt_32007_1" order="152" propName="reportText" val="Cannot be determined" />
+           <ListItemResponseField name="lirf_32007_2" order="153" responseRequired="true">
+            <Response name="rsp_32007_3" order="154">
+             <string name="str_32007_4" order="155" maxLength="4000" />
+            </Response>
+           </ListItemResponseField>
+          </ListItem>
+         </List>
+        </ListField>
+       </Question>
+       <Question name="Q_820590" order="156" ID="820590.100004300" title="BRAF Mutational Analysis (Note F)" mustImplement="false" minCard="0">
+        <Property name="p_rptTxt_820590_1" order="157" propName="reportText" val="BRAF Mutational Analysis" />
+        <ListField name="lf_820590_2" order="158" maxSelections="0">
+         <List name="lst_820590_3" order="159">
+          <ListItem name="LI_31999" order="160" ID="31999.100004300" title="No BRAF mutation detected" selectionDeselectsSiblings="true" />
+          <ListItem name="LI_32063" order="161" ID="32063.100004300" title="BRAF V600E (c.1799T&gt;A, exon 15) mutation" />
+          <ListItem name="LI_32000" order="162" ID="32000.100004300" title="Other BRAF mutation (specify)">
+           <Property name="p_rptTxt_32000_1" order="163" propName="reportText" val="{no text}" />
+           <ListItemResponseField name="lirf_32000_2" order="164" responseRequired="true">
+            <Response name="rsp_32000_3" order="165">
+             <string name="str_32000_4" order="166" maxLength="4000" />
+            </Response>
+           </ListItemResponseField>
+          </ListItem>
+          <ListItem name="LI_32001" order="167" ID="32001.100004300" title="Cannot be determined (explain)" selectionDeselectsSiblings="true">
+           <Property name="p_rptTxt_32001_1" order="168" propName="reportText" val="Cannot be determined" />
+           <ListItemResponseField name="lirf_32001_2" order="169" responseRequired="true">
+            <Response name="rsp_32001_3" order="170">
+             <string name="str_32001_4" order="171" maxLength="4000" />
+            </Response>
+           </ListItemResponseField>
+          </ListItem>
+         </List>
+        </ListField>
+       </Question>
+       <Question name="Q_820545" order="172" ID="820545.100004300" title="BRAF Fusion Gene Analysis (Note I)" mustImplement="false" minCard="0">
+        <Property name="p_rptTxt_820545_1" order="173" propName="reportText" val="BRAF Fusion Gene Analysis" />
+        <ListField name="lf_820545_2" order="174">
+         <List name="lst_820545_3" order="175">
+          <ListItem name="LI_820549" order="176" ID="820549.100004300" title="No fusion detected" />
+          <ListItem name="LI_820550" order="177" ID="820550.100004300" title="Fusion identified (specify)">
+           <Property name="p_rptTxt_820550_1" order="178" propName="reportText" val="Fusion identified " />
+           <ListItemResponseField name="lirf_820550_2" order="179" responseRequired="true">
+            <Response name="rsp_820550_3" order="180">
+             <string name="str_820550_4" order="181" maxLength="4000" />
+            </Response>
+           </ListItemResponseField>
+          </ListItem>
+          <ListItem name="LI_820551" order="182" ID="820551.100004300" title="Cannot be determined (explain)">
+           <Property name="p_rptTxt_820551_1" order="183" propName="reportText" val="Cannot be determined" />
+           <ListItemResponseField name="lirf_820551_2" order="184" responseRequired="true">
+            <Response name="rsp_820551_3" order="185">
+             <string name="str_820551_4" order="186" maxLength="4000" />
+            </Response>
+           </ListItemResponseField>
+          </ListItem>
+         </List>
+        </ListField>
+       </Question>
+       <Question name="Q_820544" order="187" ID="820544.100004300" title="FGFR1 Fusion Gene Analysis (Note I)" mustImplement="false" minCard="0">
+        <Property name="p_rptTxt_820544_1" order="188" propName="reportText" val="FGFR1 Fusion Gene Analysis" />
+        <ListField name="lf_820544_2" order="189">
+         <List name="lst_820544_3" order="190">
+          <ListItem name="LI_820547" order="191" ID="820547.100004300" title="No fusion detected" />
+          <ListItem name="LI_820546" order="192" ID="820546.100004300" title="Fusion identified (specify)">
+           <Property name="p_rptTxt_820546_1" order="193" propName="reportText" val="Fusion identified " />
+           <ListItemResponseField name="lirf_820546_2" order="194" responseRequired="true">
+            <Response name="rsp_820546_3" order="195">
+             <string name="str_820546_4" order="196" maxLength="4000" />
+            </Response>
+           </ListItemResponseField>
+          </ListItem>
+          <ListItem name="LI_820548" order="197" ID="820548.100004300" title="Cannot be determined (explain)">
+           <Property name="p_rptTxt_820548_1" order="198" propName="reportText" val="Cannot be determined" />
+           <ListItemResponseField name="lirf_820548_2" order="199" responseRequired="true">
+            <Response name="rsp_820548_3" order="200">
+             <string name="str_820548_4" order="201" maxLength="4000" />
+            </Response>
+           </ListItemResponseField>
+          </ListItem>
+         </List>
+        </ListField>
+       </Question>
+       <Section name="S_820542" order="202" ID="820542.100004300" title="Other Gene Mutational Analysis" mustImplement="false" minCard="0">
+        <ChildItems name="ch_820542_1" order="203">
+         <Question name="Q_820537" order="204" ID="820537.100004300" title="Mutation Name (repeat this question as needed)" mustImplement="false" minCard="0" maxCard="10">
+          <Property name="p_rptTxt_820537_1" order="205" propName="reportText" val="{no text}" />
+          <ResponseField name="rf_820537_2" order="206">
+           <Response name="rsp_820537_3" order="207">
+            <string name="str_820537_4" order="208" maxLength="4000" />
+           </Response>
+          </ResponseField>
+          <ChildItems name="ch_820537_5" order="209">
+           <Question name="Q_820538" order="210" ID="820538.100004300">
+            <Property name="p_altTxt_820538_1" order="211" propName="altText" val="Mutation Results" />
+            <ListField name="lf_820538_2" order="212">
+             <List name="lst_820538_3" order="213">
+              <ListItem name="LI_820540" order="214" ID="820540.100004300" title="No mutation detected" />
+              <ListItem name="LI_820539" order="215" ID="820539.100004300" title="Mutation identified (specify)">
+               <Property name="p_rptTxt_820539_1" order="216" propName="reportText" val="Mutation identified " />
+               <ListItemResponseField name="lirf_820539_2" order="217" responseRequired="true">
+                <Response name="rsp_820539_3" order="218">
+                 <string name="str_820539_4" order="219" maxLength="4000" />
+                </Response>
+               </ListItemResponseField>
+              </ListItem>
+              <ListItem name="LI_820541" order="220" ID="820541.100004300" title="Cannot be determined (explain)">
+               <Property name="p_rptTxt_820541_1" order="221" propName="reportText" val="Cannot be determined" />
+               <ListItemResponseField name="lirf_820541_2" order="222" responseRequired="true">
+                <Response name="rsp_820541_3" order="223">
+                 <string name="str_820541_4" order="224" maxLength="4000" />
+                </Response>
+               </ListItemResponseField>
+              </ListItem>
+             </List>
+            </ListField>
+           </Question>
+          </ChildItems>
+         </Question>
+        </ChildItems>
+       </Section>
+       <Section name="S_820536" order="225" ID="820536.100004300" title="Other Fusion Gene Event Analysis" mustImplement="false" minCard="0">
+        <ChildItems name="ch_820536_1" order="226">
+         <Question name="Q_820531" order="227" ID="820531.100004300" title="Fusion Name (repeat this question as needed)" mustImplement="false" minCard="0" maxCard="10">
+          <Property name="p_rptTxt_820531_1" order="228" propName="reportText" val="{no text}" />
+          <ResponseField name="rf_820531_2" order="229">
+           <Response name="rsp_820531_3" order="230">
+            <string name="str_820531_4" order="231" maxLength="4000" />
+           </Response>
+          </ResponseField>
+          <ChildItems name="ch_820531_5" order="232">
+           <Question name="Q_820532" order="233" ID="820532.100004300">
+            <Property name="p_altTxt_820532_1" order="234" propName="altText" val="Fusion Gene Results" />
+            <ListField name="lf_820532_2" order="235">
+             <List name="lst_820532_3" order="236">
+              <ListItem name="LI_820534" order="237" ID="820534.100004300" title="No fusion detected" />
+              <ListItem name="LI_820533" order="238" ID="820533.100004300" title="Fusion identified (specify)">
+               <Property name="p_rptTxt_820533_1" order="239" propName="reportText" val="Fusion identified " />
+               <ListItemResponseField name="lirf_820533_2" order="240" responseRequired="true">
+                <Response name="rsp_820533_3" order="241">
+                 <string name="str_820533_4" order="242" maxLength="4000" />
+                </Response>
+               </ListItemResponseField>
+              </ListItem>
+              <ListItem name="LI_820535" order="243" ID="820535.100004300" title="Cannot be determined (explain)">
+               <Property name="p_rptTxt_820535_1" order="244" propName="reportText" val="Cannot be determined" />
+               <ListItemResponseField name="lirf_820535_2" order="245" responseRequired="true">
+                <Response name="rsp_820535_3" order="246">
+                 <string name="str_820535_4" order="247" maxLength="4000" />
+                </Response>
+               </ListItemResponseField>
+              </ListItem>
+             </List>
+            </ListField>
+           </Question>
+          </ChildItems>
+         </Question>
+        </ChildItems>
+       </Section>
+      </ChildItems>
+     </Section>
+    </ChildItems>
+   </Section>
+   <Section name="S_381127" order="248" ID="381127.100004300" title="COMMENTS">
+    <Property name="p_rptTxt_381127_1" order="249" propName="reportText" val="{no text}" />
+    <ChildItems name="ch_381127_2" order="250">
+     <Question name="Q_32029" order="251" ID="32029.100004300" title="?Comment(s)" minCard="0">
+      <Property name="p_rptTxt_32029_1" order="252" propName="reportText" val="Comment(s)" />
+      <ResponseField name="rf_32029_2" order="253">
+       <Response name="rsp_32029_3" order="254">
+        <string name="str_32029_4" order="255" maxLength="4000" />
+       </Response>
+      </ResponseField>
+     </Question>
+    </ChildItems>
+   </Section>
+  </ChildItems>
+ </Body>
+ <Footer name="footer" order="256" ID="Footer.Stomach.GIST.Bmk.242_1.003.001.REL_sdcFDF">
+  <Property type="meta" styleClass="copyright" order="257" propName="CopyrightFooter" val="(c) 2022 College of American Pathologists.  All rights reserved.  License required for use." />
+ </Footer>
+</FormDesign>

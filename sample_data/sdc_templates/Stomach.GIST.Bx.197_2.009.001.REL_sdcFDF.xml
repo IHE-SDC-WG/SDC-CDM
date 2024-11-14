@@ -1,0 +1,627 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml-stylesheet type="text/xsl" href="sdctemplate.xslt"?>
+<FormDesign xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ID="Stomach.GIST.Bx.197_2.009.001.REL_sdcFDF" baseURI="www.cap.org/eCC" fullURI="_baseURI=www.cap.org/eCC&amp;_lineage=Stomach.GIST.Bx.197&amp;_version=2.009.001.REL&amp;_docType=sdcFDF" formTitle="GASTROINTESTINAL STROMAL TUMOR (GIST): Biopsy" lineage="Stomach.GIST.Bx.197" filename="Stomach.GIST.Bx.197_2.009.001.REL_sdcFDF.xml" version="2.009.001.REL" xmlns="urn:ihe:qrph:sdc:2016">
+ <Property name="Copyright" type="CAPeCC_static_text" styleClass="copyright" order="1" propName="Copyright" val="(c) 2022 College of American Pathologists.  All rights reserved.  License required for use." />
+ <Property name="GenericHeaderText" type="CAPeCC_static_text" order="2" propName="GenericHeaderText" val="Surgical Pathology Cancer Case Summary" />
+ <Property name="Category" type="CAPeCC_meta" order="3" propName="Category" val="Gastrointestinal" />
+ <Property name="OfficialName" type="CAPeCC_meta" order="4" propName="OfficialName" val="GASTROINTESTINAL STROMAL TUMOR (GIST): Biopsy" />
+ <Property name="CAP_ProtocolName" type="CAPeCC_meta" order="5" propName="CAP_ProtocolName" val="GIST Biopsy" />
+ <Property name="CAP_ProtocolShortName" type="CAPeCC_meta" order="6" propName="CAP_ProtocolShortName" val="Stomach.GIST.Bx" />
+ <Property name="CAP_ProtocolVersion" type="CAPeCC_meta" order="7" propName="CAP_ProtocolVersion" val="4.3.0.0" />
+ <Property name="TemplateID" type="CAPeCC_meta" order="8" propName="TemplateID" val="197.100004300" />
+ <Property name="Restrictions" type="CAPeCC_meta" order="9" propName="Restrictions" />
+ <Property name="CAP_Required" type="CAPeCC_meta" order="10" propName="CAP_Required" val="false" />
+ <Property name="WebPostingDate" type="CAPeCC_meta dt.dateTime" order="11" propName="WebPostingDate" val="12/14/2022" />
+ <Property name="ApprovalStatus" type="CAPeCC_meta" order="12" propName="ReleaseStatus" val="REL" />
+ <Property name="AJCC_Version" type="CAPeCC_meta" order="13" propName="AJCC_Version" val="8th Edition" />
+ <Body name="Body" order="14" ID="Stomach.GIST.Bx.197_2.009.001.REL_sdcFDF_Body">
+  <ChildItems name="ch_Body" order="15">
+   <DisplayedItem name="DI_42225" order="16" ID="42225.100004300" title="This case summary is recommended for reporting biopsy specimens, but is not required for accreditation purposes.">
+    <Property name="p_rptTxt_42225_1" order="17" propName="reportText" val="{no text}" />
+   </DisplayedItem>
+   <Section name="S_24158" order="18" ID="24158.100004300" title="CLINICAL" mustImplement="false" minCard="0">
+    <ChildItems name="ch_24158_1" order="19">
+     <Question name="Q_820499" order="20" ID="820499.100004300" title="Associated Syndrome" mustImplement="false" minCard="0">
+      <ListField name="lf_820499_1" order="21">
+       <List name="lst_820499_2" order="22">
+        <ListItem name="LI_820500" order="23" ID="820500.100004300" title="Carney triad" />
+        <ListItem name="LI_820501" order="24" ID="820501.100004300" title="Carney-Stratakis syndrome" />
+        <ListItem name="LI_820502" order="25" ID="820502.100004300" title="Neurofibromatosis type1" />
+        <ListItem name="LI_820503" order="26" ID="820503.100004300" title="Familial GIST syndrome" />
+        <ListItem name="LI_820504" order="27" ID="820504.100004300" title="Other (specify)">
+         <Property name="p_rptTxt_820504_1" order="28" propName="reportText" val="{no text}" />
+         <ListItemResponseField name="lirf_820504_2" order="29" responseRequired="true">
+          <Response name="rsp_820504_3" order="30">
+           <string name="str_820504_4" order="31" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_820505" order="32" ID="820505.100004300" title="Not specified" />
+       </List>
+      </ListField>
+     </Question>
+     <Question name="Q_24159" order="33" ID="24159.100004300" title="Prebiopsy Treatment" mustImplement="false" minCard="0">
+      <ListField name="lf_24159_1" order="34" maxSelections="0">
+       <List name="lst_24159_2" order="35">
+        <ListItem name="LI_24161" order="36" ID="24161.100004300" title="No known prebiopsy therapy" selectionDeselectsSiblings="true" />
+        <ListItem name="LI_24162" order="37" ID="24162.100004300" title="Systemic therapy performed (specify type)">
+         <Property name="p_rptTxt_24162_1" order="38" propName="reportText" val="Systemic therapy performed" />
+         <ListItemResponseField name="lirf_24162_2" order="39" responseRequired="true">
+          <Response name="rsp_24162_3" order="40">
+           <string name="str_24162_4" order="41" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_24165" order="42" ID="24165.100004300" title="Therapy performed, type not specified" />
+        <ListItem name="LI_24160" order="43" ID="24160.100004300" title="Not specified" selectionDeselectsSiblings="true" />
+       </List>
+      </ListField>
+     </Question>
+    </ChildItems>
+   </Section>
+   <Section name="S_24171" order="44" ID="24171.100004300" title="SPECIMEN">
+    <ChildItems name="ch_24171_1" order="45">
+     <Question name="Q_820507" order="46" ID="820507.100004300" title="Procedure">
+      <ListField name="lf_820507_1" order="47">
+       <List name="lst_820507_2" order="48">
+        <ListItem name="LI_24173" order="49" ID="24173.100004300" title="Core needle biopsy" />
+        <ListItem name="LI_24174" order="50" ID="24174.100004300" title="Endoscopic biopsy" />
+        <ListItem name="LI_820506" order="51" ID="820506.100004300" title="Fine needle aspiration biopsy" />
+        <ListItem name="LI_24175" order="52" ID="24175.100004300" title="Other (specify)">
+         <Property name="p_rptTxt_24175_1" order="53" propName="reportText" val="{no text}" />
+         <ListItemResponseField name="lirf_24175_2" order="54" responseRequired="true">
+          <Response name="rsp_24175_3" order="55">
+           <string name="str_24175_4" order="56" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_24176" order="57" ID="24176.100004300" title="Not specified" />
+       </List>
+      </ListField>
+     </Question>
+    </ChildItems>
+   </Section>
+   <Section name="S_24180" order="58" ID="24180.100004300" title="TUMOR">
+    <ChildItems name="ch_24180_1" order="59">
+     <Question name="Q_820509" order="60" ID="820509.100004300" title="Tumor Site (Note A)">
+      <Property name="p_rptTxt_820509_1" order="61" propName="reportText" val="Tumor Site" />
+      <ListField name="lf_820509_2" order="62">
+       <List name="lst_820509_3" order="63">
+        <ListItem name="LI_17603" order="64" ID="17603.100004300" title="Esophagus (specify location)">
+         <Property name="p_rptTxt_17603_1" order="65" propName="reportText" val="Esophagus" />
+         <ListItemResponseField name="lirf_17603_2" order="66" responseRequired="true">
+          <Response name="rsp_17603_3" order="67">
+           <string name="str_17603_4" order="68" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_820510" order="69" ID="820510.100004300" title="Gastroesophageal junction">
+         <ListItemResponseField name="lirf_820510_1" order="70">
+          <Response name="rsp_820510_2" order="71">
+           <string name="str_820510_3" order="72" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_17882" order="73" ID="17882.100004300" title="Stomach (specify location)">
+         <Property name="p_rptTxt_17882_1" order="74" propName="reportText" val="Stomach" />
+         <ListItemResponseField name="lirf_17882_2" order="75" responseRequired="true">
+          <Response name="rsp_17882_3" order="76">
+           <string name="str_17882_4" order="77" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_823273" order="78" ID="823273.100004300" title="Small intestine">
+         <Property name="p_rptTxt_823273_1" order="79" propName="reportText" val="{no text}" />
+         <ChildItems name="ch_823273_2" order="80">
+          <Question name="Q_820511" order="81" ID="820511.100004300">
+           <Property name="p_altTxt_820511_1" order="82" propName="altText" val="Subsite of Small Intestine" />
+           <ListField name="lf_820511_2" order="83">
+            <List name="lst_820511_3" order="84">
+             <ListItem name="LI_17912" order="85" ID="17912.100004300" title="Duodenum" />
+             <ListItem name="LI_17913" order="86" ID="17913.100004300" title="Jejunum" />
+             <ListItem name="LI_17915" order="87" ID="17915.100004300" title="Ileum (excluding ileocecal valve)" />
+             <ListItem name="LI_17923" order="88" ID="17923.100004300" title="Meckel diverticulum (site of neoplasm)">
+              <Property name="p_rptTxt_17923_1" order="89" propName="reportText" val="Meckel diverticulum" />
+             </ListItem>
+             <ListItem name="LI_17924" order="90" ID="17924.100004300" title="Small intestine, NOS" />
+            </List>
+           </ListField>
+          </Question>
+         </ChildItems>
+        </ListItem>
+        <ListItem name="LI_17925" order="91" ID="17925.100004300" title="Appendix">
+         <ListItemResponseField name="lirf_17925_1" order="92">
+          <Response name="rsp_17925_2" order="93">
+           <string name="str_17925_3" order="94" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_820512" order="95" ID="820512.100004300" title="Ileocecal valve">
+         <ListItemResponseField name="lirf_820512_1" order="96">
+          <Response name="rsp_820512_2" order="97">
+           <string name="str_820512_3" order="98" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_823274" order="99" ID="823274.100004300" title="Large intestine">
+         <Property name="p_rptTxt_823274_1" order="100" propName="reportText" val="{no text}" />
+         <ChildItems name="ch_823274_2" order="101">
+          <Question name="Q_820513" order="102" ID="820513.100004300">
+           <Property name="p_altTxt_820513_1" order="103" propName="altText" val="Subsite of Large Intestine" />
+           <ListField name="lf_820513_2" order="104">
+            <List name="lst_820513_3" order="105">
+             <ListItem name="LI_17942" order="106" ID="17942.100004300" title="Cecum" />
+             <ListItem name="LI_17949" order="107" ID="17949.100004300" title="Ascending colon" />
+             <ListItem name="LI_17950" order="108" ID="17950.100004300" title="Hepatic flexure of colon" />
+             <ListItem name="LI_17951" order="109" ID="17951.100004300" title="Transverse colon" />
+             <ListItem name="LI_17952" order="110" ID="17952.100004300" title="Splenic flexure of colon" />
+             <ListItem name="LI_17953" order="111" ID="17953.100004300" title="Descending colon" />
+             <ListItem name="LI_17954" order="112" ID="17954.100004300" title="Sigmoid colon" />
+             <ListItem name="LI_17964" order="113" ID="17964.100004300" title="Rectosigmoid junction">
+              <ListItemResponseField name="lirf_17964_1" order="114">
+               <Response name="rsp_17964_2" order="115">
+                <string name="str_17964_3" order="116" maxLength="4000" />
+               </Response>
+              </ListItemResponseField>
+             </ListItem>
+             <ListItem name="LI_17965" order="117" ID="17965.100004300" title="Rectum">
+              <ListItemResponseField name="lirf_17965_1" order="118">
+               <Response name="rsp_17965_2" order="119">
+                <string name="str_17965_3" order="120" maxLength="4000" />
+               </Response>
+              </ListItemResponseField>
+             </ListItem>
+             <ListItem name="LI_17956" order="121" ID="17956.100004300" title="Large intestine, NOS" />
+            </List>
+           </ListField>
+          </Question>
+         </ChildItems>
+        </ListItem>
+        <ListItem name="LI_17969" order="122" ID="17969.100004300" title="Retroperitoneum">
+         <ListItemResponseField name="lirf_17969_1" order="123">
+          <Response name="rsp_17969_2" order="124">
+           <string name="str_17969_3" order="125" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_17975" order="126" ID="17975.100004300" title="Peritoneum / abdomen (specify site)">
+         <Property name="p_rptTxt_17975_1" order="127" propName="reportText" val="Peritoneum / abdomen" />
+         <ListItemResponseField name="lirf_17975_2" order="128" responseRequired="true">
+          <Response name="rsp_17975_3" order="129">
+           <string name="str_17975_4" order="130" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_17977" order="131" ID="17977.100004300" title="Other (specify)">
+         <Property name="p_rptTxt_17977_1" order="132" propName="reportText" val="{no text}" />
+         <ListItemResponseField name="lirf_17977_2" order="133" responseRequired="true">
+          <Response name="rsp_17977_3" order="134">
+           <string name="str_17977_4" order="135" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_46882" order="136" ID="46882.100004300" title="Cannot be determined">
+         <ListItemResponseField name="lirf_46882_1" order="137">
+          <Response name="rsp_46882_2" order="138">
+           <string name="str_46882_3" order="139" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_17980" order="140" ID="17980.100004300" title="Not specified" />
+       </List>
+      </ListField>
+     </Question>
+     <Question name="Q_24181" order="141" ID="24181.100004300" title="Histologic Type">
+      <ListField name="lf_24181_1" order="142">
+       <List name="lst_24181_2" order="143">
+        <ListItem name="LI_24182" order="144" ID="24182.100004300" title="Gastrointestinal stromal tumor, spindle cell type" />
+        <ListItem name="LI_24183" order="145" ID="24183.100004300" title="Gastrointestinal stromal tumor, epithelioid type" />
+        <ListItem name="LI_24184" order="146" ID="24184.100004300" title="Gastrointestinal stromal tumor, mixed" />
+        <ListItem name="LI_24185" order="147" ID="24185.100004300" title="Gastrointestinal stromal tumor, other (specify)">
+         <Property name="p_rptTxt_24185_1" order="148" propName="reportText" val="Gastrointestinal stromal tumor" />
+         <ListItemResponseField name="lirf_24185_2" order="149" responseRequired="true">
+          <Response name="rsp_24185_3" order="150">
+           <string name="str_24185_4" order="151" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+       </List>
+      </ListField>
+      <ChildItems name="ch_24181_5" order="152">
+       <Question name="Q_379495" order="153" ID="379495.100004300" title="Histologic Type Comment" mustImplement="false" minCard="0">
+        <ResponseField name="rf_379495_1" order="154">
+         <Response name="rsp_379495_2" order="155">
+          <string name="str_379495_3" order="156" maxLength="4000" />
+         </Response>
+        </ResponseField>
+       </Question>
+      </ChildItems>
+     </Question>
+     <Question name="Q_820514" order="157" ID="820514.100004300" title="Tumor Size (based on clinicoradiologic estimate)">
+      <Property name="p_rptTxt_820514_1" order="158" propName="reportText" val="Tumor Size" />
+      <ListField name="lf_820514_2" order="159">
+       <List name="lst_820514_3" order="160">
+        <ListItem name="LI_820516" order="161" ID="820516.100004300" title="Greatest dimension in Centimeters (cm)">
+         <Property name="p_rptTxt_820516_1" order="162" propName="reportText" val="Greatest Dimension (Centimeters)" />
+         <ListItemResponseField name="lirf_820516_2" order="163" responseRequired="true">
+          <Response name="rsp_820516_3" order="164">
+           <decimal name="dec_820516_4" order="165" minInclusive="0.001" maxInclusive="100" fractionDigits="3" />
+          </Response>
+          <TextAfterResponse name="rtt_820516_5" order="166" val="cm" />
+          <ResponseUnits name="un_820516_6" order="167" val="cm" />
+         </ListItemResponseField>
+         <ChildItems name="ch_820516_7" order="168">
+          <Question name="Q_820517" order="169" ID="820517.100004300" title="Additional Dimension in Centimeters (cm)" mustImplement="false" minCard="0">
+           <Property name="p_rptTxt_820517_1" order="170" propName="reportText" val="Additional Dimension (Centimeters)" />
+           <ResponseField name="rf_820517_2" order="171">
+            <Response name="rsp_820517_3" order="172">
+             <decimal name="dec_820517_4" order="173" minInclusive="0.001" maxInclusive="100" fractionDigits="3" />
+            </Response>
+            <TextAfterResponse name="rtt_820517_5" order="174" val="cm" />
+            <ResponseUnits name="un_820517_6" order="175" val="cm" />
+           </ResponseField>
+          </Question>
+          <Question name="Q_820518" order="176" ID="820518.100004300" title="Additional Dimension in Centimeters (cm)" mustImplement="false" minCard="0">
+           <Property name="p_rptTxt_820518_1" order="177" propName="reportText" val="Additional Dimension (Centimeters)" />
+           <ResponseField name="rf_820518_2" order="178">
+            <Response name="rsp_820518_3" order="179">
+             <decimal name="dec_820518_4" order="180" minInclusive="0.001" maxInclusive="100" fractionDigits="3" />
+            </Response>
+            <TextAfterResponse name="rtt_820518_5" order="181" val="cm" />
+            <ResponseUnits name="un_820518_6" order="182" val="cm" />
+           </ResponseField>
+          </Question>
+         </ChildItems>
+        </ListItem>
+        <ListItem name="LI_820515" order="183" ID="820515.100004300" title="Cannot be determined (explain)">
+         <Property name="p_rptTxt_820515_1" order="184" propName="reportText" val="Cannot be determined" />
+         <ListItemResponseField name="lirf_820515_2" order="185" responseRequired="true">
+          <Response name="rsp_820515_3" order="186">
+           <string name="str_820515_4" order="187" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+       </List>
+      </ListField>
+     </Question>
+     <Question name="Q_823276" order="188" ID="823276.100004300" title="Mitotic Rate (Note B)">
+      <Property name="p_rptTxt_823276_1" order="189" propName="reportText" val="Mitotic Rate" />
+      <ListField name="lf_823276_2" order="190">
+       <List name="lst_823276_3" order="191">
+        <DisplayedItem name="DI_20717" order="192" ID="20717.100004300" title="The mitotic rate should be determined in 5 mm2 of tumor. With the use of older model microscopes, 50 HPF is equivalent to 5 mm2. Most modern microscopes with wider fields require approximately 20 to 25 HPF to encompass 5 mm2. If necessary, please measure a field of view to accurately determine actual number of fields required to be counted on individual microscopes to encompass 5 mm2.">
+         <Property name="p_rptTxt_20717_1" order="193" propName="reportText" val="{no text}" />
+        </DisplayedItem>
+        <ListItem name="LI_823275" order="194" ID="823275.100004300" title="Specify mitotic rate per 5 mm2">
+         <Property name="p_rptTxt_823275_1" order="195" propName="reportText" val="{no text}" />
+         <ListItemResponseField name="lirf_823275_2" order="196" responseRequired="true">
+          <Response name="rsp_823275_3" order="197">
+           <decimal name="dec_823275_4" order="198" minInclusive="0.01" maxInclusive="999" fractionDigits="2" />
+          </Response>
+          <TextAfterResponse name="rtt_823275_5" order="199" val="mitoses per 5 mm2" />
+          <ResponseUnits name="un_823275_6" order="200" val="mitoses per 5 mm2" />
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_380241" order="201" ID="380241.100004300" title="Other (specify)">
+         <Property name="p_rptTxt_380241_1" order="202" propName="reportText" val="{no text}" />
+         <ListItemResponseField name="lirf_380241_2" order="203" responseRequired="true">
+          <Response name="rsp_380241_3" order="204">
+           <string name="str_380241_4" order="205" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_16486" order="206" ID="16486.100004300" title="Cannot be determined (explain)">
+         <Property name="p_rptTxt_16486_1" order="207" propName="reportText" val="Cannot be determined" />
+         <ListItemResponseField name="lirf_16486_2" order="208" responseRequired="true">
+          <Response name="rsp_16486_3" order="209">
+           <string name="str_16486_4" order="210" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+       </List>
+      </ListField>
+     </Question>
+     <Question name="Q_51133" order="211" ID="51133.100004300" title="Histologic Grade (Note B)">
+      <Property name="p_rptTxt_51133_1" order="212" propName="reportText" val="Histologic Grade" />
+      <ListField name="lf_51133_2" order="213">
+       <List name="lst_51133_3" order="214">
+        <ListItem name="LI_58289" order="215" ID="58289.100004300" title="G1, low grade (mitotic rate less than or equal to 5 per 5 mm2)">
+         <Property name="p_rptTxt_58289_1" order="216" propName="reportText" val="G1, low grade" />
+        </ListItem>
+        <ListItem name="LI_57625" order="217" ID="57625.100004300" title="G2, high grade (mitotic rate greater than 5 per 5 mm2)">
+         <Property name="p_rptTxt_57625_1" order="218" propName="reportText" val="G2, high grade" />
+        </ListItem>
+        <ListItem name="LI_380240" order="219" ID="380240.100004300" title="Other (specify)">
+         <Property name="p_rptTxt_380240_1" order="220" propName="reportText" val="{no text}" />
+         <ListItemResponseField name="lirf_380240_2" order="221" responseRequired="true">
+          <Response name="rsp_380240_3" order="222">
+           <string name="str_380240_4" order="223" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_24187" order="224" ID="24187.100004300" title="GX, cannot be assessed">
+         <ListItemResponseField name="lirf_24187_1" order="225">
+          <Response name="rsp_24187_2" order="226">
+           <string name="str_24187_3" order="227" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+       </List>
+      </ListField>
+     </Question>
+     <Question name="Q_24198" order="228" ID="24198.100004300" title="Necrosis" mustImplement="false" minCard="0">
+      <ListField name="lf_24198_1" order="229">
+       <List name="lst_24198_2" order="230">
+        <ListItem name="LI_24200" order="231" ID="24200.100004300" title="Not identified" />
+        <ListItem name="LI_24201" order="232" ID="24201.100004300" title="Present">
+         <ChildItems name="ch_24201_1" order="233">
+          <Question name="Q_379496" order="234" ID="379496.100004300" title="Extent of Necrosis" mustImplement="false" minCard="0">
+           <ListField name="lf_379496_1" order="235">
+            <List name="lst_379496_2" order="236">
+             <ListItem name="LI_379497" order="237" ID="379497.100004300" title="Specify percentage">
+              <Property name="p_rptTxt_379497_1" order="238" propName="reportText" val="{no text}" />
+              <ListItemResponseField name="lirf_379497_2" order="239" responseRequired="true">
+               <Response name="rsp_379497_3" order="240">
+                <int name="int_379497_4" order="241" minInclusive="1" maxInclusive="100" />
+               </Response>
+               <TextAfterResponse name="rtt_379497_5" order="242" val="%" />
+               <ResponseUnits name="un_379497_6" order="243" val="%" />
+              </ListItemResponseField>
+             </ListItem>
+             <ListItem name="LI_379498" order="244" ID="379498.100004300" title="Other (specify)">
+              <Property name="p_rptTxt_379498_1" order="245" propName="reportText" val="{no text}" />
+              <ListItemResponseField name="lirf_379498_2" order="246" responseRequired="true">
+               <Response name="rsp_379498_3" order="247">
+                <string name="str_379498_4" order="248" maxLength="4000" />
+               </Response>
+              </ListItemResponseField>
+             </ListItem>
+             <ListItem name="LI_379499" order="249" ID="379499.100004300" title="Cannot be determined">
+              <ListItemResponseField name="lirf_379499_1" order="250">
+               <Response name="rsp_379499_2" order="251">
+                <string name="str_379499_3" order="252" maxLength="4000" />
+               </Response>
+              </ListItemResponseField>
+             </ListItem>
+            </List>
+           </ListField>
+          </Question>
+         </ChildItems>
+        </ListItem>
+        <ListItem name="LI_24199" order="253" ID="24199.100004300" title="Cannot be determined">
+         <ListItemResponseField name="lirf_24199_1" order="254">
+          <Response name="rsp_24199_2" order="255">
+           <string name="str_24199_3" order="256" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+       </List>
+      </ListField>
+     </Question>
+     <Question name="Q_49212" order="257" ID="49212.100004300" title="Treatment Effect (Note C)">
+      <Property name="p_rptTxt_49212_1" order="258" propName="reportText" val="Treatment Effect" />
+      <ListField name="lf_49212_2" order="259">
+       <List name="lst_49212_3" order="260">
+        <ListItem name="LI_45508" order="261" ID="45508.100004300" title="No known prebiopsy therapy" />
+        <ListItem name="LI_39766" order="262" ID="39766.100004300" title="Not identified" />
+        <ListItem name="LI_45863" order="263" ID="45863.100004300" title="Present">
+         <ChildItems name="ch_45863_1" order="264">
+          <Question name="Q_379500" order="265" ID="379500.100004300" title="Percentage of Viable Tumor" mustImplement="false" minCard="0">
+           <ListField name="lf_379500_1" order="266">
+            <List name="lst_379500_2" order="267">
+             <ListItem name="LI_379501" order="268" ID="379501.100004300" title="Specify percentage">
+              <Property name="p_rptTxt_379501_1" order="269" propName="reportText" val="{no text}" />
+              <ListItemResponseField name="lirf_379501_2" order="270" responseRequired="true">
+               <Response name="rsp_379501_3" order="271">
+                <int name="int_379501_4" order="272" minInclusive="1" maxInclusive="100" />
+               </Response>
+               <TextAfterResponse name="rtt_379501_5" order="273" val="%" />
+               <ResponseUnits name="un_379501_6" order="274" val="%" />
+              </ListItemResponseField>
+             </ListItem>
+             <ListItem name="LI_379502" order="275" ID="379502.100004300" title="Other (specify)">
+              <Property name="p_rptTxt_379502_1" order="276" propName="reportText" val="{no text}" />
+              <ListItemResponseField name="lirf_379502_2" order="277" responseRequired="true">
+               <Response name="rsp_379502_3" order="278">
+                <string name="str_379502_4" order="279" maxLength="4000" />
+               </Response>
+              </ListItemResponseField>
+             </ListItem>
+             <ListItem name="LI_379503" order="280" ID="379503.100004300" title="Cannot be determined">
+              <ListItemResponseField name="lirf_379503_1" order="281">
+               <Response name="rsp_379503_2" order="282">
+                <string name="str_379503_3" order="283" maxLength="4000" />
+               </Response>
+              </ListItemResponseField>
+             </ListItem>
+            </List>
+           </ListField>
+          </Question>
+         </ChildItems>
+        </ListItem>
+        <ListItem name="LI_49507" order="284" ID="49507.100004300" title="Cannot be determined">
+         <ListItemResponseField name="lirf_49507_1" order="285">
+          <Response name="rsp_49507_2" order="286">
+           <string name="str_49507_3" order="287" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+       </List>
+      </ListField>
+     </Question>
+     <Question name="Q_24223" order="288" ID="24223.100004300" title="Risk Assessment (Note D)">
+      <Property name="p_rptTxt_24223_1" order="289" propName="reportText" val="Risk Assessment" />
+      <ListField name="lf_24223_2" order="290">
+       <List name="lst_24223_3" order="291">
+        <ListItem name="LI_24224" order="292" ID="24224.100004300" title="None" />
+        <ListItem name="LI_24225" order="293" ID="24225.100004300" title="Very low risk" />
+        <ListItem name="LI_24226" order="294" ID="24226.100004300" title="Low risk" />
+        <ListItem name="LI_24227" order="295" ID="24227.100004300" title="Moderate risk" />
+        <ListItem name="LI_24228" order="296" ID="24228.100004300" title="High risk" />
+        <ListItem name="LI_24229" order="297" ID="24229.100004300" title="Overtly metastatic" />
+        <ListItem name="LI_24230" order="298" ID="24230.100004300" title="Cannot be determined">
+         <ListItemResponseField name="lirf_24230_1" order="299">
+          <Response name="rsp_24230_2" order="300">
+           <string name="str_24230_3" order="301" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+       </List>
+      </ListField>
+     </Question>
+     <Question name="Q_379504" order="302" ID="379504.100004300" title="Tumor Comment" mustImplement="false" minCard="0">
+      <ResponseField name="rf_379504_1" order="303">
+       <Response name="rsp_379504_2" order="304">
+        <string name="str_379504_3" order="305" maxLength="4000" />
+       </Response>
+      </ResponseField>
+     </Question>
+    </ChildItems>
+   </Section>
+   <Section name="S_24221" order="306" ID="24221.100004300" title="ADDITIONAL FINDINGS" mustImplement="false" minCard="0">
+    <ChildItems name="ch_24221_1" order="307">
+     <Question name="Q_24222" order="308" ID="24222.100004300" title="Additional Findings (specify)" mustImplement="false" minCard="0">
+      <Property name="p_rptTxt_24222_1" order="309" propName="reportText" val="Additional Findings" />
+      <ResponseField name="rf_24222_2" order="310">
+       <Response name="rsp_24222_3" order="311">
+        <string name="str_24222_4" order="312" maxLength="4000" />
+       </Response>
+      </ResponseField>
+     </Question>
+    </ChildItems>
+   </Section>
+   <Section name="S_24205" order="313" ID="24205.100004300" title="SPECIAL STUDIES (Note E)" mustImplement="false" minCard="0">
+    <Property name="p_rptTxt_24205_1" order="314" propName="reportText" val="SPECIAL STUDIES" />
+    <ChildItems name="ch_24205_2" order="315">
+     <DisplayedItem name="DI_32034" order="316" ID="32034.100004300" title="The CAP GIST Biomarker Template can be used for reporting biomarkers.">
+      <Property name="p_rptTxt_32034_1" order="317" propName="reportText" val="{no text}" />
+     </DisplayedItem>
+     <Question name="Q_820519" order="318" ID="820519.100004300" title="Immunohistochemical Studies" mustImplement="false" minCard="0">
+      <ListField name="lf_820519_1" order="319" maxSelections="0">
+       <List name="lst_820519_2" order="320">
+        <ListItem name="LI_24212" order="321" ID="24212.100004300" title="Not performed" selectionDeselectsSiblings="true" />
+        <ListItem name="LI_24211" order="322" ID="24211.100004300" title="KIT (CD117)">
+         <Property name="p_rptTxt_24211_1" order="323" propName="reportText" val="{no text}" />
+         <ChildItems name="ch_24211_2" order="324">
+          <Question name="Q_24207" order="325" ID="24207.100004300" title="KIT (CD117)">
+           <ListField name="lf_24207_1" order="326">
+            <List name="lst_24207_2" order="327">
+             <ListItem name="LI_24209" order="328" ID="24209.100004300" title="Positive" />
+             <ListItem name="LI_24210" order="329" ID="24210.100004300" title="Negative" />
+             <ListItem name="LI_33600" order="330" ID="33600.100004300" title="Pending" />
+            </List>
+           </ListField>
+          </Question>
+         </ChildItems>
+        </ListItem>
+        <ListItem name="LI_32035" order="331" ID="32035.100004300" title="DOG1 (ANO1)">
+         <Property name="p_rptTxt_32035_1" order="332" propName="reportText" val="{no text}" />
+         <ChildItems name="ch_32035_2" order="333">
+          <Question name="Q_32036" order="334" ID="32036.100004300" title="DOG1 (ANO1)">
+           <ListField name="lf_32036_1" order="335">
+            <List name="lst_32036_2" order="336">
+             <ListItem name="LI_32037" order="337" ID="32037.100004300" title="Positive" />
+             <ListItem name="LI_32038" order="338" ID="32038.100004300" title="Negative" />
+             <ListItem name="LI_33739" order="339" ID="33739.100004300" title="Pending" />
+            </List>
+           </ListField>
+          </Question>
+         </ChildItems>
+        </ListItem>
+        <ListItem name="LI_41620" order="340" ID="41620.100004300" title="SDHA">
+         <Property name="p_rptTxt_41620_1" order="341" propName="reportText" val="{no text}" />
+         <ChildItems name="ch_41620_2" order="342">
+          <Question name="Q_43054" order="343" ID="43054.100004300" title="SDHA">
+           <ListField name="lf_43054_1" order="344">
+            <List name="lst_43054_2" order="345">
+             <ListItem name="LI_41628" order="346" ID="41628.100004300" title="Intact" />
+             <ListItem name="LI_43062" order="347" ID="43062.100004300" title="Deficient" />
+             <ListItem name="LI_43071" order="348" ID="43071.100004300" title="Pending" />
+            </List>
+           </ListField>
+          </Question>
+         </ChildItems>
+        </ListItem>
+        <ListItem name="LI_43028" order="349" ID="43028.100004300" title="SDHB">
+         <Property name="p_rptTxt_43028_1" order="350" propName="reportText" val="{no text}" />
+         <ChildItems name="ch_43028_2" order="351">
+          <Question name="Q_43036" order="352" ID="43036.100004300" title="SDHB">
+           <ListField name="lf_43036_1" order="353">
+            <List name="lst_43036_2" order="354">
+             <ListItem name="LI_41614" order="355" ID="41614.100004300" title="Intact" />
+             <ListItem name="LI_43045" order="356" ID="43045.100004300" title="Deficient" />
+             <ListItem name="LI_41806" order="357" ID="41806.100004300" title="Pending" />
+            </List>
+           </ListField>
+          </Question>
+         </ChildItems>
+        </ListItem>
+        <ListItem name="LI_820523" order="358" ID="820523.100004300" title="BRAF">
+         <Property name="p_rptTxt_820523_1" order="359" propName="reportText" val="{no text}" />
+         <ChildItems name="ch_820523_2" order="360">
+          <Question name="Q_820520" order="361" ID="820520.100004300" title="BRAF">
+           <ListField name="lf_820520_1" order="362">
+            <List name="lst_820520_2" order="363">
+             <ListItem name="LI_820521" order="364" ID="820521.100004300" title="Positive" />
+             <ListItem name="LI_820522" order="365" ID="820522.100004300" title="Negative" />
+             <ListItem name="LI_820524" order="366" ID="820524.100004300" title="Pending" />
+            </List>
+           </ListField>
+          </Question>
+         </ChildItems>
+        </ListItem>
+        <ListItem name="LI_24213" order="367" ID="24213.100004300" title="Other (specify)">
+         <Property name="p_rptTxt_24213_1" order="368" propName="reportText" val="{no text}" />
+         <ListItemResponseField name="lirf_24213_2" order="369" responseRequired="true">
+          <Response name="rsp_24213_3" order="370">
+           <string name="str_24213_4" order="371" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+       </List>
+      </ListField>
+     </Question>
+     <Question name="Q_38747" order="372" ID="38747.100004300" title="Molecular Genetic Studies (eg., KIT, PDGFRA, SDHA  / B / C / D, RAS or NF1 mutational analysis or BRAF or FGFR1 fusion gene analysis)" mustImplement="false" minCard="0">
+      <Property name="p_rptTxt_38747_1" order="373" propName="reportText" val="Molecular Genetic Studies" />
+      <ListField name="lf_38747_2" order="374">
+       <List name="lst_38747_3" order="375">
+        <ListItem name="LI_54754" order="376" ID="54754.100004300" title="Performed, see biomarker report">
+         <ListItemResponseField name="lirf_54754_1" order="377">
+          <Response name="rsp_54754_2" order="378">
+           <string name="str_54754_3" order="379" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_38939" order="380" ID="38939.100004300" title="Performed (specify method(s) and result(s))">
+         <Property name="p_rptTxt_38939_1" order="381" propName="reportText" val="Performed" />
+         <ListItemResponseField name="lirf_38939_2" order="382" responseRequired="true">
+          <Response name="rsp_38939_3" order="383">
+           <string name="str_38939_4" order="384" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_57061" order="385" ID="57061.100004300" title="Pending" />
+        <ListItem name="LI_44884" order="386" ID="44884.100004300" title="Not performed" />
+       </List>
+      </ListField>
+     </Question>
+    </ChildItems>
+   </Section>
+   <Section name="S_381128" order="387" ID="381128.100004300" title="COMMENTS">
+    <Property name="p_rptTxt_381128_1" order="388" propName="reportText" val="{no text}" />
+    <ChildItems name="ch_381128_2" order="389">
+     <Question name="Q_24231" order="390" ID="24231.100004300" title="?Comment(s)" minCard="0">
+      <Property name="p_rptTxt_24231_1" order="391" propName="reportText" val="Comment(s)" />
+      <ResponseField name="rf_24231_2" order="392">
+       <Response name="rsp_24231_3" order="393">
+        <string name="str_24231_4" order="394" maxLength="4000" />
+       </Response>
+      </ResponseField>
+     </Question>
+    </ChildItems>
+   </Section>
+  </ChildItems>
+ </Body>
+ <Footer name="footer" order="395" ID="Footer.Stomach.GIST.Bx.197_2.009.001.REL_sdcFDF">
+  <Property type="meta" styleClass="copyright" order="396" propName="CopyrightFooter" val="(c) 2022 College of American Pathologists.  All rights reserved.  License required for use." />
+ </Footer>
+</FormDesign>

@@ -1,0 +1,860 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml-stylesheet type="text/xsl" href="sdctemplate.xslt"?>
+<FormDesign xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ID="HN.Bmk.522_1.001.001.REL_sdcFDF" baseURI="www.cap.org/eCC" fullURI="_baseURI=www.cap.org/eCC&amp;_lineage=HN.Bmk.522&amp;_version=1.001.001.REL&amp;_docType=sdcFDF" formTitle="Head and Neck Biomarker Reporting" lineage="HN.Bmk.522" filename="HN.Bmk.522_1.001.001.REL_sdcFDF.xml" version="1.001.001.REL" xmlns="urn:ihe:qrph:sdc:2016">
+ <Property name="Copyright" type="CAPeCC_static_text" styleClass="copyright" order="1" propName="Copyright" val="(c) 2023 College of American Pathologists.  All rights reserved.  License required for use." />
+ <Property name="GenericHeaderText" type="CAPeCC_static_text" order="2" propName="GenericHeaderText" val="Cancer Biomarker Reporting Template" />
+ <Property name="Category" type="CAPeCC_meta" order="3" propName="Category" val="Head and Neck" />
+ <Property name="OfficialName" type="CAPeCC_meta" order="4" propName="OfficialName" val="Head and Neck Biomarker Reporting" />
+ <Property name="CAP_ProtocolName" type="CAPeCC_meta" order="5" propName="CAP_ProtocolName" val="Head and Neck Biomarker Reporting" />
+ <Property name="CAP_ProtocolShortName" type="CAPeCC_meta" order="6" propName="CAP_ProtocolShortName" val="HN.Bmk" />
+ <Property name="CAP_ProtocolVersion" type="CAPeCC_meta" order="7" propName="CAP_ProtocolVersion" val="2.2.0.0" />
+ <Property name="TemplateID" type="CAPeCC_meta" order="8" propName="TemplateID" val="522.100004300" />
+ <Property name="Restrictions" type="CAPeCC_meta" order="9" propName="Restrictions" />
+ <Property name="CAP_Required" type="CAPeCC_meta" order="10" propName="CAP_Required" val="false" />
+ <Property name="WebPostingDate" type="CAPeCC_meta dt.dateTime" order="11" propName="WebPostingDate" val="9/20/2023" />
+ <Property name="ApprovalStatus" type="CAPeCC_meta" order="12" propName="ReleaseStatus" val="REL" />
+ <Body name="Body" order="13" ID="HN.Bmk.522_1.001.001.REL_sdcFDF_Body">
+  <ChildItems name="ch_Body" order="14">
+   <Section name="S_367234" order="15" ID="367234.100004300" title="MORPHOLOGIC DIAGNOSIS" mustImplement="false" minCard="0">
+    <Property name="p_rptTxt_367234_1" order="16" propName="reportText" val="{no text}" />
+    <ChildItems name="ch_367234_2" order="17">
+     <Question name="Q_367235" order="18" ID="367235.100004300" title="Diagnosis" mustImplement="false" minCard="0">
+      <Property name="p_rptTxt_367235_1" order="19" propName="reportText" val="{no text}" />
+      <ResponseField name="rf_367235_2" order="20">
+       <Response name="rsp_367235_3" order="21">
+        <string name="str_367235_4" order="22" maxLength="4000" />
+       </Response>
+      </ResponseField>
+     </Question>
+    </ChildItems>
+   </Section>
+   <Section name="S_330138" order="23" ID="330138.100004300" title="RESULTS" mustImplement="false" minCard="0">
+    <ChildItems name="ch_330138_1" order="24">
+     <Section name="S_330162" order="25" ID="330162.100004300" title="Head and Neck Squamous Cell Carcinoma (HNSCC)" mustImplement="false" minCard="0">
+      <Property name="p_rptTxt_330162_1" order="26" propName="reportText" val="{no text}" />
+      <ChildItems name="ch_330162_2" order="27">
+       <Section name="S_330163" order="28" ID="330163.100004300" title="Human Papillomavirus (HPV) Testing" mustImplement="false" minCard="0">
+        <Property name="p_rptTxt_330163_1" order="29" propName="reportText" val="{no text}" />
+        <ChildItems name="ch_330163_2" order="30">
+         <Question name="Q_891741" order="31" ID="891741.100004300" title="p16 IHC as a Surrogate for Transcriptionally Active High-Risk HPV" mustImplement="false" minCard="0">
+          <ListField name="lf_891741_1" order="32">
+           <List name="lst_891741_2" order="33">
+            <ListItem name="LI_330167" order="34" ID="330167.100004300" title="Negative (less than 50% diffuse and moderate-to-strong nuclear and cytoplasmic staining)" />
+            <ListItem name="LI_891742" order="35" ID="891742.100004300" title="Equivocal (less than 70% but greater than or equal to 50% diffuse and moderate-to-strong nuclear and cytoplasmic staining)" />
+            <ListItem name="LI_330166" order="36" ID="330166.100004300" title="Positive (greater than or equal to 70% diffuse and moderate-to-strong nuclear and cytoplasmic staining)" />
+            <ListItem name="LI_330168" order="37" ID="330168.100004300" title="Other results (including cytology specimens, specify)">
+             <Property name="p_rptTxt_330168_1" order="38" propName="reportText" val="{no text}" />
+             <ListItemResponseField name="lirf_330168_2" order="39" responseRequired="true">
+              <Response name="rsp_330168_3" order="40">
+               <string name="str_330168_4" order="41" maxLength="4000" />
+              </Response>
+             </ListItemResponseField>
+            </ListItem>
+            <ListItem name="LI_367231" order="42" ID="367231.100004300" title="Cannot be determined (explain)">
+             <Property name="p_rptTxt_367231_1" order="43" propName="reportText" val="Cannot be determined" />
+             <ListItemResponseField name="lirf_367231_2" order="44" responseRequired="true">
+              <Response name="rsp_367231_3" order="45">
+               <string name="str_367231_4" order="46" maxLength="4000" />
+              </Response>
+             </ListItemResponseField>
+            </ListItem>
+           </List>
+          </ListField>
+         </Question>
+         <Question name="Q_330169" order="47" ID="330169.100004300" title="HPV E6 / E7 mRNA ISH" mustImplement="false" minCard="0">
+          <ListField name="lf_330169_1" order="48">
+           <List name="lst_330169_2" order="49">
+            <ListItem name="LI_330170" order="50" ID="330170.100004300" title="Negative (no signal)" />
+            <ListItem name="LI_330171" order="51" ID="330171.100004300" title="Positive (cytoplasmic and / or nuclear signals)">
+             <ChildItems name="ch_330171_1" order="52">
+              <Question name="Q_330173" order="53" ID="330173.100004300" title="Specify Subtypes (if available)" mustImplement="false" minCard="0">
+               <Property name="p_rptTxt_330173_1" order="54" propName="reportText" val="Subtypes" />
+               <ResponseField name="rf_330173_2" order="55">
+                <Response name="rsp_330173_3" order="56">
+                 <string name="str_330173_4" order="57" maxLength="4000" />
+                </Response>
+               </ResponseField>
+              </Question>
+             </ChildItems>
+            </ListItem>
+            <ListItem name="LI_330172" order="58" ID="330172.100004300" title="Cannot be determined (explain)">
+             <Property name="p_rptTxt_330172_1" order="59" propName="reportText" val="Cannot be determined" />
+             <ListItemResponseField name="lirf_330172_2" order="60" responseRequired="true">
+              <Response name="rsp_330172_3" order="61">
+               <string name="str_330172_4" order="62" maxLength="4000" />
+              </Response>
+             </ListItemResponseField>
+            </ListItem>
+           </List>
+          </ListField>
+         </Question>
+         <Question name="Q_330174" order="63" ID="330174.100004300" title="HPV-DNA ISH" mustImplement="false" minCard="0">
+          <ListField name="lf_330174_1" order="64">
+           <List name="lst_330174_2" order="65">
+            <ListItem name="LI_330175" order="66" ID="330175.100004300" title="Negative (no nuclear signal)" />
+            <ListItem name="LI_330176" order="67" ID="330176.100004300" title="Positive (punctate and / or diffuse nuclear staining)">
+             <ChildItems name="ch_330176_1" order="68">
+              <Question name="Q_330181" order="69" ID="330181.100004300" title="Specify Subtypes (if available)" mustImplement="false" minCard="0">
+               <Property name="p_rptTxt_330181_1" order="70" propName="reportText" val="Subtypes" />
+               <ResponseField name="rf_330181_2" order="71">
+                <Response name="rsp_330181_3" order="72">
+                 <string name="str_330181_4" order="73" maxLength="4000" />
+                </Response>
+               </ResponseField>
+              </Question>
+             </ChildItems>
+            </ListItem>
+            <ListItem name="LI_330177" order="74" ID="330177.100004300" title="Cannot be determined (explain)">
+             <Property name="p_rptTxt_330177_1" order="75" propName="reportText" val="Cannot be determined" />
+             <ListItemResponseField name="lirf_330177_2" order="76" responseRequired="true">
+              <Response name="rsp_330177_3" order="77">
+               <string name="str_330177_4" order="78" maxLength="4000" />
+              </Response>
+             </ListItemResponseField>
+            </ListItem>
+           </List>
+          </ListField>
+         </Question>
+         <Question name="Q_891589" order="79" ID="891589.100004300" title="HPV-DNA PCR" mustImplement="false" minCard="0">
+          <ListField name="lf_891589_1" order="80">
+           <List name="lst_891589_2" order="81">
+            <ListItem name="LI_891590" order="82" ID="891590.100004300" title="Negative" />
+            <ListItem name="LI_891591" order="83" ID="891591.100004300" title="Positive">
+             <ChildItems name="ch_891591_1" order="84">
+              <Question name="Q_330187" order="85" ID="330187.100004300" title="Specify Subtypes (if available)" mustImplement="false" minCard="0">
+               <Property name="p_rptTxt_330187_1" order="86" propName="reportText" val="Subtypes" />
+               <ResponseField name="rf_330187_2" order="87">
+                <Response name="rsp_330187_3" order="88">
+                 <string name="str_330187_4" order="89" maxLength="4000" />
+                </Response>
+               </ResponseField>
+              </Question>
+             </ChildItems>
+            </ListItem>
+            <ListItem name="LI_330186" order="90" ID="330186.100004300" title="Cannot be determined (explain)">
+             <Property name="p_rptTxt_330186_1" order="91" propName="reportText" val="Cannot be determined" />
+             <ListItemResponseField name="lirf_330186_2" order="92" responseRequired="true">
+              <Response name="rsp_330186_3" order="93">
+               <string name="str_330186_4" order="94" maxLength="4000" />
+              </Response>
+             </ListItemResponseField>
+            </ListItem>
+           </List>
+          </ListField>
+         </Question>
+         <Question name="Q_891594" order="95" ID="891594.100004300" title="HPV E6 / E7 mRNA RT-PCR" mustImplement="false" minCard="0">
+          <ListField name="lf_891594_1" order="96">
+           <List name="lst_891594_2" order="97">
+            <ListItem name="LI_891595" order="98" ID="891595.100004300" title="Negative" />
+            <ListItem name="LI_891596" order="99" ID="891596.100004300" title="Positive">
+             <ChildItems name="ch_891596_1" order="100">
+              <Question name="Q_330192" order="101" ID="330192.100004300" title="Specify Subtypes (if available)" mustImplement="false" minCard="0">
+               <Property name="p_rptTxt_330192_1" order="102" propName="reportText" val="Subtypes" />
+               <ResponseField name="rf_330192_2" order="103">
+                <Response name="rsp_330192_3" order="104">
+                 <string name="str_330192_4" order="105" maxLength="4000" />
+                </Response>
+               </ResponseField>
+              </Question>
+             </ChildItems>
+            </ListItem>
+            <ListItem name="LI_330191" order="106" ID="330191.100004300" title="Cannot be determined (explain)">
+             <Property name="p_rptTxt_330191_1" order="107" propName="reportText" val="Cannot be determined" />
+             <ListItemResponseField name="lirf_330191_2" order="108" responseRequired="true">
+              <Response name="rsp_330191_3" order="109">
+               <string name="str_330191_4" order="110" maxLength="4000" />
+              </Response>
+             </ListItemResponseField>
+            </ListItem>
+           </List>
+          </ListField>
+         </Question>
+        </ChildItems>
+       </Section>
+       <Section name="S_330198" order="111" ID="330198.100004300" title="Epstein-Barr Virus (EBV) Testing" mustImplement="false" minCard="0">
+        <Property name="p_rptTxt_330198_1" order="112" propName="reportText" val="{no text}" />
+        <ChildItems name="ch_330198_2" order="113">
+         <Question name="Q_330193" order="114" ID="330193.100004300" title="EBV Early mRNA (EBER) ISH" mustImplement="false" minCard="0">
+          <ListField name="lf_330193_1" order="115">
+           <List name="lst_330193_2" order="116">
+            <ListItem name="LI_330194" order="117" ID="330194.100004300" title="Negative (no signal)" />
+            <ListItem name="LI_330195" order="118" ID="330195.100004300" title="Positive (nuclear signal)" />
+            <ListItem name="LI_330196" order="119" ID="330196.100004300" title="Cannot be determined (explain)">
+             <Property name="p_rptTxt_330196_1" order="120" propName="reportText" val="Cannot be determined" />
+             <ListItemResponseField name="lirf_330196_2" order="121" responseRequired="true">
+              <Response name="rsp_330196_3" order="122">
+               <string name="str_330196_4" order="123" maxLength="4000" />
+              </Response>
+             </ListItemResponseField>
+            </ListItem>
+           </List>
+          </ListField>
+         </Question>
+        </ChildItems>
+       </Section>
+       <Section name="S_330199" order="124" ID="330199.100004300" title="NUT Midline Carcinoma" mustImplement="false" minCard="0">
+        <Property name="p_rptTxt_330199_1" order="125" propName="reportText" val="{no text}" />
+        <ChildItems name="ch_330199_2" order="126">
+         <Question name="Q_330200" order="127" ID="330200.100004300" title="NUT IHC" mustImplement="false" minCard="0">
+          <ListField name="lf_330200_1" order="128">
+           <List name="lst_330200_2" order="129">
+            <ListItem name="LI_330201" order="130" ID="330201.100004300" title="Negative (no nuclear staining)" />
+            <ListItem name="LI_330202" order="131" ID="330202.100004300" title="Positive (nuclear staining)" />
+            <ListItem name="LI_330203" order="132" ID="330203.100004300" title="Cannot be determined (explain)">
+             <Property name="p_rptTxt_330203_1" order="133" propName="reportText" val="Cannot be determined" />
+             <ListItemResponseField name="lirf_330203_2" order="134" responseRequired="true">
+              <Response name="rsp_330203_3" order="135">
+               <string name="str_330203_4" order="136" maxLength="4000" />
+              </Response>
+             </ListItemResponseField>
+            </ListItem>
+           </List>
+          </ListField>
+         </Question>
+         <Question name="Q_330204" order="137" ID="330204.100004300" title="NUT Rearrangements (by Molecular Methods)" mustImplement="false" minCard="0">
+          <ListField name="lf_330204_1" order="138">
+           <List name="lst_330204_2" order="139">
+            <ListItem name="LI_330205" order="140" ID="330205.100004300" title="No NUT rearrangement detected" />
+            <ListItem name="LI_330206" order="141" ID="330206.100004300" title="NUT rearrangement detected">
+             <ChildItems name="ch_330206_1" order="142">
+              <Question name="Q_330208" order="143" ID="330208.100004300" title="Specify Fusion Partner (if available)" mustImplement="false" minCard="0">
+               <Property name="p_rptTxt_330208_1" order="144" propName="reportText" val="Fusion Partner" />
+               <ResponseField name="rf_330208_2" order="145">
+                <Response name="rsp_330208_3" order="146">
+                 <string name="str_330208_4" order="147" maxLength="4000" />
+                </Response>
+               </ResponseField>
+              </Question>
+             </ChildItems>
+            </ListItem>
+            <ListItem name="LI_330207" order="148" ID="330207.100004300" title="Cannot be determined (explain)">
+             <Property name="p_rptTxt_330207_1" order="149" propName="reportText" val="Cannot be determined" />
+             <ListItemResponseField name="lirf_330207_2" order="150" responseRequired="true">
+              <Response name="rsp_330207_3" order="151">
+               <string name="str_330207_4" order="152" maxLength="4000" />
+              </Response>
+             </ListItemResponseField>
+            </ListItem>
+           </List>
+          </ListField>
+         </Question>
+        </ChildItems>
+       </Section>
+      </ChildItems>
+     </Section>
+     <Section name="S_330210" order="153" ID="330210.100004300" title="Salivary Gland Carcinoma" mustImplement="false" minCard="0">
+      <Property name="p_rptTxt_330210_1" order="154" propName="reportText" val="{no text}" />
+      <ChildItems name="ch_330210_2" order="155">
+       <Section name="S_330244" order="156" ID="330244.100004300" title="Mucoepidermoid Carcinoma" mustImplement="false" minCard="0">
+        <Property name="p_rptTxt_330244_1" order="157" propName="reportText" val="{no text}" />
+        <ChildItems name="ch_330244_2" order="158">
+         <Question name="Q_330255" order="159" ID="330255.100004300" title="MAML2 Rearrangements (by Molecular Methods)" mustImplement="false" minCard="0">
+          <ListField name="lf_330255_1" order="160">
+           <List name="lst_330255_2" order="161">
+            <ListItem name="LI_330256" order="162" ID="330256.100004300" title="No MAML2 rearrangement detected" />
+            <ListItem name="LI_330257" order="163" ID="330257.100004300" title="MAML2 rearrangement detected">
+             <ChildItems name="ch_330257_1" order="164">
+              <Question name="Q_330259" order="165" ID="330259.100004300" title="Specify Fusion Partner (if available)" mustImplement="false" minCard="0">
+               <Property name="p_rptTxt_330259_1" order="166" propName="reportText" val="Fusion Partner" />
+               <ResponseField name="rf_330259_2" order="167">
+                <Response name="rsp_330259_3" order="168">
+                 <string name="str_330259_4" order="169" maxLength="4000" />
+                </Response>
+               </ResponseField>
+              </Question>
+             </ChildItems>
+            </ListItem>
+            <ListItem name="LI_330258" order="170" ID="330258.100004300" title="Cannot be determined (explain)">
+             <Property name="p_rptTxt_330258_1" order="171" propName="reportText" val="Cannot be determined" />
+             <ListItemResponseField name="lirf_330258_2" order="172" responseRequired="true">
+              <Response name="rsp_330258_3" order="173">
+               <string name="str_330258_4" order="174" maxLength="4000" />
+              </Response>
+             </ListItemResponseField>
+            </ListItem>
+           </List>
+          </ListField>
+         </Question>
+        </ChildItems>
+       </Section>
+       <Section name="S_330260" order="175" ID="330260.100004300" title="Adenoid Cystic Carcinoma" mustImplement="false" minCard="0">
+        <Property name="p_rptTxt_330260_1" order="176" propName="reportText" val="{no text}" />
+        <ChildItems name="ch_330260_2" order="177">
+         <Question name="Q_330284" order="178" ID="330284.100004300" title="MYB IHC" mustImplement="false" minCard="0">
+          <ListField name="lf_330284_1" order="179">
+           <List name="lst_330284_2" order="180">
+            <ListItem name="LI_330285" order="181" ID="330285.100004300" title="Negative (no nuclear staining)" />
+            <ListItem name="LI_330286" order="182" ID="330286.100004300" title="Positive (nuclear staining)" />
+            <ListItem name="LI_330287" order="183" ID="330287.100004300" title="Cannot be determined (explain)">
+             <Property name="p_rptTxt_330287_1" order="184" propName="reportText" val="Cannot be determined" />
+             <ListItemResponseField name="lirf_330287_2" order="185" responseRequired="true">
+              <Response name="rsp_330287_3" order="186">
+               <string name="str_330287_4" order="187" maxLength="4000" />
+              </Response>
+             </ListItemResponseField>
+            </ListItem>
+           </List>
+          </ListField>
+         </Question>
+         <Question name="Q_330261" order="188" ID="330261.100004300" title="MYB Rearrangements (by Molecular Methods)" mustImplement="false" minCard="0">
+          <ListField name="lf_330261_1" order="189">
+           <List name="lst_330261_2" order="190">
+            <ListItem name="LI_330262" order="191" ID="330262.100004300" title="No MYB rearrangement detected" />
+            <ListItem name="LI_330263" order="192" ID="330263.100004300" title="MYB rearrangement detected">
+             <ChildItems name="ch_330263_1" order="193">
+              <Question name="Q_330265" order="194" ID="330265.100004300" title="Specify Fusion Partner (if available)" mustImplement="false" minCard="0">
+               <Property name="p_rptTxt_330265_1" order="195" propName="reportText" val="Fusion Partner" />
+               <ResponseField name="rf_330265_2" order="196">
+                <Response name="rsp_330265_3" order="197">
+                 <string name="str_330265_4" order="198" maxLength="4000" />
+                </Response>
+               </ResponseField>
+              </Question>
+             </ChildItems>
+            </ListItem>
+            <ListItem name="LI_330264" order="199" ID="330264.100004300" title="Cannot be determined (explain)">
+             <Property name="p_rptTxt_330264_1" order="200" propName="reportText" val="Cannot be determined" />
+             <ListItemResponseField name="lirf_330264_2" order="201" responseRequired="true">
+              <Response name="rsp_330264_3" order="202">
+               <string name="str_330264_4" order="203" maxLength="4000" />
+              </Response>
+             </ListItemResponseField>
+            </ListItem>
+           </List>
+          </ListField>
+         </Question>
+         <Question name="Q_330271" order="204" ID="330271.100004300" title="MYB-L1 IHC" mustImplement="false" minCard="0">
+          <ListField name="lf_330271_1" order="205">
+           <List name="lst_330271_2" order="206">
+            <ListItem name="LI_330272" order="207" ID="330272.100004300" title="Negative (no nuclear staining)" />
+            <ListItem name="LI_330273" order="208" ID="330273.100004300" title="Positive (nuclear staining)" />
+            <ListItem name="LI_330274" order="209" ID="330274.100004300" title="Cannot be determined (explain)">
+             <Property name="p_rptTxt_330274_1" order="210" propName="reportText" val="Cannot be determined" />
+             <ListItemResponseField name="lirf_330274_2" order="211" responseRequired="true">
+              <Response name="rsp_330274_3" order="212">
+               <string name="str_330274_4" order="213" maxLength="4000" />
+              </Response>
+             </ListItemResponseField>
+            </ListItem>
+           </List>
+          </ListField>
+         </Question>
+         <Question name="Q_330279" order="214" ID="330279.100004300" title="MYB-L1 Rearrangements (by Molecular Methods)" mustImplement="false" minCard="0">
+          <ListField name="lf_330279_1" order="215">
+           <List name="lst_330279_2" order="216">
+            <ListItem name="LI_330280" order="217" ID="330280.100004300" title="No MYB-L1 rearrangement detected" />
+            <ListItem name="LI_330281" order="218" ID="330281.100004300" title="MYB-L1 rearrangement detected">
+             <ChildItems name="ch_330281_1" order="219">
+              <Question name="Q_330283" order="220" ID="330283.100004300" title="Specify Fusion Partner (if available)" mustImplement="false" minCard="0">
+               <Property name="p_rptTxt_330283_1" order="221" propName="reportText" val="Fusion Partner" />
+               <ResponseField name="rf_330283_2" order="222">
+                <Response name="rsp_330283_3" order="223">
+                 <string name="str_330283_4" order="224" maxLength="4000" />
+                </Response>
+               </ResponseField>
+              </Question>
+             </ChildItems>
+            </ListItem>
+            <ListItem name="LI_330282" order="225" ID="330282.100004300" title="Cannot be determined (explain)">
+             <Property name="p_rptTxt_330282_1" order="226" propName="reportText" val="Cannot be determined" />
+             <ListItemResponseField name="lirf_330282_2" order="227" responseRequired="true">
+              <Response name="rsp_330282_3" order="228">
+               <string name="str_330282_4" order="229" maxLength="4000" />
+              </Response>
+             </ListItemResponseField>
+            </ListItem>
+           </List>
+          </ListField>
+         </Question>
+        </ChildItems>
+       </Section>
+       <Section name="S_330307" order="230" ID="330307.100004300" title="Salivary Duct Carcinoma" mustImplement="false" minCard="0">
+        <Property name="p_rptTxt_330307_1" order="231" propName="reportText" val="{no text}" />
+        <ChildItems name="ch_330307_2" order="232">
+         <Question name="Q_330971" order="233" ID="330971.100004300" title="AR IHC" mustImplement="false" minCard="0">
+          <ListField name="lf_330971_1" order="234">
+           <List name="lst_330971_2" order="235">
+            <ListItem name="LI_330972" order="236" ID="330972.100004300" title="Negative (no nuclear staining)" />
+            <ListItem name="LI_330973" order="237" ID="330973.100004300" title="Positive (nuclear staining)" />
+            <ListItem name="LI_330974" order="238" ID="330974.100004300" title="Cannot be determined (explain)">
+             <Property name="p_rptTxt_330974_1" order="239" propName="reportText" val="Cannot be determined" />
+             <ListItemResponseField name="lirf_330974_2" order="240" responseRequired="true">
+              <Response name="rsp_330974_3" order="241">
+               <string name="str_330974_4" order="242" maxLength="4000" />
+              </Response>
+             </ListItemResponseField>
+            </ListItem>
+           </List>
+          </ListField>
+         </Question>
+         <Question name="Q_348245" order="243" ID="348245.100004300" title="HER2 Immunohistochemistry Interpretation" mustImplement="false" minCard="0">
+          <ListField name="lf_348245_1" order="244">
+           <List name="lst_348245_2" order="245">
+            <ListItem name="LI_348246" order="246" ID="348246.100004300" title="Negative" />
+            <ListItem name="LI_348248" order="247" ID="348248.100004300" title="Equivocal" />
+            <ListItem name="LI_348247" order="248" ID="348247.100004300" title="Positive" />
+           </List>
+          </ListField>
+         </Question>
+         <Question name="Q_348238" order="249" ID="348238.100004300" title="HER2 Immunohistochemistry Scoring System" mustImplement="false" minCard="0">
+          <ListField name="lf_348238_1" order="250">
+           <List name="lst_348238_2" order="251">
+            <ListItem name="LI_348253" order="252" ID="348253.100004300" title="Breast" />
+            <ListItem name="LI_348254" order="253" ID="348254.100004300" title="Gastric" />
+            <ListItem name="LI_348244" order="254" ID="348244.100004300" title="Other (specify)">
+             <Property name="p_rptTxt_348244_1" order="255" propName="reportText" val="{no text}" />
+             <ListItemResponseField name="lirf_348244_2" order="256" responseRequired="true">
+              <Response name="rsp_348244_3" order="257">
+               <string name="str_348244_4" order="258" maxLength="4000" />
+              </Response>
+             </ListItemResponseField>
+            </ListItem>
+           </List>
+          </ListField>
+         </Question>
+         <Question name="Q_348239" order="259" ID="348239.100004300" title="HER2 Immunohistochemistry Score" mustImplement="false" minCard="0">
+          <ListField name="lf_348239_1" order="260">
+           <List name="lst_348239_2" order="261">
+            <ListItem name="LI_348240" order="262" ID="348240.100004300" title="0" />
+            <ListItem name="LI_348241" order="263" ID="348241.100004300" title="1+" />
+            <ListItem name="LI_348242" order="264" ID="348242.100004300" title="2+" />
+            <ListItem name="LI_348252" order="265" ID="348252.100004300" title="3+" />
+            <ListItem name="LI_348243" order="266" ID="348243.100004300" title="Other (specify)">
+             <Property name="p_rptTxt_348243_1" order="267" propName="reportText" val="{no text}" />
+             <ListItemResponseField name="lirf_348243_2" order="268" responseRequired="true">
+              <Response name="rsp_348243_3" order="269">
+               <string name="str_348243_4" order="270" maxLength="4000" />
+              </Response>
+             </ListItemResponseField>
+            </ListItem>
+           </List>
+          </ListField>
+          <ChildItems name="ch_348239_5" order="271">
+           <Question name="Q_348255" order="272" ID="348255.100004300" title="Specify Percentage of Cells with Uniform Intense Complete Membrane Staining" mustImplement="false" minCard="0">
+            <Property name="p_rptTxt_348255_1" order="273" propName="reportText" val="Percentage of Cells with Uniform Intense Complete Membrane Staining" />
+            <ResponseField name="rf_348255_2" order="274">
+             <Response name="rsp_348255_3" order="275">
+              <int name="int_348255_4" order="276" minInclusive="0" maxInclusive="100" />
+             </Response>
+             <TextAfterResponse name="rtt_348255_5" order="277" val="%" />
+             <ResponseUnits name="un_348255_6" order="278" val="%" />
+            </ResponseField>
+           </Question>
+          </ChildItems>
+         </Question>
+         <Question name="Q_348233" order="279" ID="348233.100004300" title="HER2 Immunohistochemistry Antibody" mustImplement="false" minCard="0">
+          <ListField name="lf_348233_1" order="280">
+           <List name="lst_348233_2" order="281">
+            <ListItem name="LI_348234" order="282" ID="348234.100004300" title="HercepTest" />
+            <ListItem name="LI_348235" order="283" ID="348235.100004300" title="4B5" />
+            <ListItem name="LI_348236" order="284" ID="348236.100004300" title="SP3" />
+            <ListItem name="LI_348237" order="285" ID="348237.100004300" title="Other (specify)">
+             <Property name="p_rptTxt_348237_1" order="286" propName="reportText" val="{no text}" />
+             <ListItemResponseField name="lirf_348237_2" order="287" responseRequired="true">
+              <Response name="rsp_348237_3" order="288">
+               <string name="str_348237_4" order="289" maxLength="4000" />
+              </Response>
+             </ListItemResponseField>
+            </ListItem>
+           </List>
+          </ListField>
+         </Question>
+         <Question name="Q_348249" order="290" ID="348249.100004300" title="HER2 Immunohistochemistry Assay Information" mustImplement="false" minCard="0">
+          <ListField name="lf_348249_1" order="291">
+           <List name="lst_348249_2" order="292">
+            <ListItem name="LI_348250" order="293" ID="348250.100004300" title="Food and Drug Administration (FDA) cleared test / vendor (specify)">
+             <Property name="p_rptTxt_348250_1" order="294" propName="reportText" val="Food and Drug Administration (FDA) cleared test / vendor" />
+             <ListItemResponseField name="lirf_348250_2" order="295" responseRequired="true">
+              <Response name="rsp_348250_3" order="296">
+               <string name="str_348250_4" order="297" maxLength="4000" />
+              </Response>
+             </ListItemResponseField>
+            </ListItem>
+            <ListItem name="LI_348251" order="298" ID="348251.100004300" title="Laboratory-developed test" />
+           </List>
+          </ListField>
+         </Question>
+         <Question name="Q_330378" order="299" ID="330378.100004300" title="HER2 by in situ Hybridization" mustImplement="false" minCard="0">
+          <ListField name="lf_330378_1" order="300">
+           <List name="lst_330378_2" order="301">
+            <ListItem name="LI_330366" order="302" ID="330366.100004300" title="Negative (not amplified)" />
+            <ListItem name="LI_330367" order="303" ID="330367.100004300" title="Positive (amplified)" />
+            <ListItem name="LI_330368" order="304" ID="330368.100004300" title="Cannot be determined (indeterminate) (explain)">
+             <Property name="p_rptTxt_330368_1" order="305" propName="reportText" val="Cannot be determined (indeterminate)" />
+             <ListItemResponseField name="lirf_330368_2" order="306" responseRequired="true">
+              <Response name="rsp_330368_3" order="307">
+               <string name="str_330368_4" order="308" maxLength="4000" />
+              </Response>
+             </ListItemResponseField>
+            </ListItem>
+           </List>
+          </ListField>
+          <ChildItems name="ch_330378_5" order="309">
+           <Question name="Q_330348" order="310" ID="330348.100004300" title="Aneusomy (as defined by vendor kit used)" mustImplement="false" minCard="0">
+            <Property name="p_rptTxt_330348_1" order="311" propName="reportText" val="Aneusomy" />
+            <ListField name="lf_330348_2" order="312">
+             <List name="lst_330348_3" order="313">
+              <ListItem name="LI_330349" order="314" ID="330349.100004300" title="Not identified" />
+              <ListItem name="LI_330352" order="315" ID="330352.100004300" title="Present (explain)">
+               <Property name="p_rptTxt_330352_1" order="316" propName="reportText" val="Present" />
+               <ListItemResponseField name="lirf_330352_2" order="317" responseRequired="true">
+                <Response name="rsp_330352_3" order="318">
+                 <string name="str_330352_4" order="319" maxLength="4000" />
+                </Response>
+               </ListItemResponseField>
+              </ListItem>
+             </List>
+            </ListField>
+           </Question>
+           <Question name="Q_330353" order="320" ID="330353.100004300" title="Heterogeneous Signals" mustImplement="false" minCard="0">
+            <ListField name="lf_330353_1" order="321">
+             <List name="lst_330353_2" order="322">
+              <ListItem name="LI_330354" order="323" ID="330354.100004300" title="Not identified" />
+              <ListItem name="LI_330355" order="324" ID="330355.100004300" title="Present" />
+             </List>
+            </ListField>
+           </Question>
+           <Question name="Q_330364" order="325" ID="330364.100004300" title="Specify Percentage of Cells with Amplified HER2 Signals" mustImplement="false" minCard="0">
+            <Property name="p_rptTxt_330364_1" order="326" propName="reportText" val="Percentage of Cells with Amplified HER2 Signals" />
+            <ResponseField name="rf_330364_2" order="327">
+             <Response name="rsp_330364_3" order="328">
+              <int name="int_330364_4" order="329" minInclusive="0" maxInclusive="100" />
+             </Response>
+             <TextAfterResponse name="rtt_330364_5" order="330" val="%" />
+             <ResponseUnits name="un_330364_6" order="331" val="%" />
+            </ResponseField>
+           </Question>
+          </ChildItems>
+         </Question>
+        </ChildItems>
+       </Section>
+       <Section name="S_330288" order="332" ID="330288.100004300" title="Carcinoma ex Pleomorphic Adenoma / Pleomorphic Adenoma" mustImplement="false" minCard="0">
+        <Property name="p_rptTxt_330288_1" order="333" propName="reportText" val="{no text}" />
+        <ChildItems name="ch_330288_2" order="334">
+         <Question name="Q_330303" order="335" ID="330303.100004300" title="PLAG1 IHC" mustImplement="false" minCard="0">
+          <ListField name="lf_330303_1" order="336">
+           <List name="lst_330303_2" order="337">
+            <ListItem name="LI_330304" order="338" ID="330304.100004300" title="Negative (no nuclear staining)" />
+            <ListItem name="LI_330305" order="339" ID="330305.100004300" title="Positive (nuclear staining)" />
+            <ListItem name="LI_330306" order="340" ID="330306.100004300" title="Cannot be determined (explain)">
+             <Property name="p_rptTxt_330306_1" order="341" propName="reportText" val="Cannot be determined" />
+             <ListItemResponseField name="lirf_330306_2" order="342" responseRequired="true">
+              <Response name="rsp_330306_3" order="343">
+               <string name="str_330306_4" order="344" maxLength="4000" />
+              </Response>
+             </ListItemResponseField>
+            </ListItem>
+           </List>
+          </ListField>
+         </Question>
+         <Question name="Q_330289" order="345" ID="330289.100004300" title="PLAG1 Rearrangements (by Molecular Methods)" mustImplement="false" minCard="0">
+          <ListField name="lf_330289_1" order="346">
+           <List name="lst_330289_2" order="347">
+            <ListItem name="LI_330290" order="348" ID="330290.100004300" title="No PLAG1 rearrangement detected" />
+            <ListItem name="LI_330291" order="349" ID="330291.100004300" title="PLAG1 rearrangement detected">
+             <ChildItems name="ch_330291_1" order="350">
+              <Question name="Q_330293" order="351" ID="330293.100004300" title="Specify Fusion Partner (if available)" mustImplement="false" minCard="0">
+               <Property name="p_rptTxt_330293_1" order="352" propName="reportText" val="Fusion Partner" />
+               <ResponseField name="rf_330293_2" order="353">
+                <Response name="rsp_330293_3" order="354">
+                 <string name="str_330293_4" order="355" maxLength="4000" />
+                </Response>
+               </ResponseField>
+              </Question>
+             </ChildItems>
+            </ListItem>
+            <ListItem name="LI_330292" order="356" ID="330292.100004300" title="Cannot be determined (explain)">
+             <Property name="p_rptTxt_330292_1" order="357" propName="reportText" val="Cannot be determined" />
+             <ListItemResponseField name="lirf_330292_2" order="358" responseRequired="true">
+              <Response name="rsp_330292_3" order="359">
+               <string name="str_330292_4" order="360" maxLength="4000" />
+              </Response>
+             </ListItemResponseField>
+            </ListItem>
+           </List>
+          </ListField>
+         </Question>
+         <Question name="Q_330294" order="361" ID="330294.100004300" title="HMGA2 IHC" mustImplement="false" minCard="0">
+          <ListField name="lf_330294_1" order="362">
+           <List name="lst_330294_2" order="363">
+            <ListItem name="LI_330295" order="364" ID="330295.100004300" title="Negative (no nuclear staining)" />
+            <ListItem name="LI_330296" order="365" ID="330296.100004300" title="Positive (nuclear staining)" />
+            <ListItem name="LI_330297" order="366" ID="330297.100004300" title="Cannot be determined (explain)">
+             <Property name="p_rptTxt_330297_1" order="367" propName="reportText" val="Cannot be determined" />
+             <ListItemResponseField name="lirf_330297_2" order="368" responseRequired="true">
+              <Response name="rsp_330297_3" order="369">
+               <string name="str_330297_4" order="370" maxLength="4000" />
+              </Response>
+             </ListItemResponseField>
+            </ListItem>
+           </List>
+          </ListField>
+         </Question>
+         <Question name="Q_330298" order="371" ID="330298.100004300" title="HMGA2 Rearrangements (by Molecular Methods)" mustImplement="false" minCard="0">
+          <ListField name="lf_330298_1" order="372">
+           <List name="lst_330298_2" order="373">
+            <ListItem name="LI_330299" order="374" ID="330299.100004300" title="No HMGA2 rearrangement detected" />
+            <ListItem name="LI_330300" order="375" ID="330300.100004300" title="HMGA2 rearrangement detected">
+             <ChildItems name="ch_330300_1" order="376">
+              <Question name="Q_330302" order="377" ID="330302.100004300" title="Specify Fusion Partner (if available)" mustImplement="false" minCard="0">
+               <Property name="p_rptTxt_330302_1" order="378" propName="reportText" val="Fusion Partner" />
+               <ResponseField name="rf_330302_2" order="379">
+                <Response name="rsp_330302_3" order="380">
+                 <string name="str_330302_4" order="381" maxLength="4000" />
+                </Response>
+               </ResponseField>
+              </Question>
+             </ChildItems>
+            </ListItem>
+            <ListItem name="LI_330301" order="382" ID="330301.100004300" title="Cannot be determined (explain)">
+             <Property name="p_rptTxt_330301_1" order="383" propName="reportText" val="Cannot be determined" />
+             <ListItemResponseField name="lirf_330301_2" order="384" responseRequired="true">
+              <Response name="rsp_330301_3" order="385">
+               <string name="str_330301_4" order="386" maxLength="4000" />
+              </Response>
+             </ListItemResponseField>
+            </ListItem>
+           </List>
+          </ListField>
+         </Question>
+        </ChildItems>
+       </Section>
+       <Section name="S_330216" order="387" ID="330216.100004300" title="(Mammary Analogue) Secretory Carcinoma" mustImplement="false" minCard="0">
+        <Property name="p_rptTxt_330216_1" order="388" propName="reportText" val="{no text}" />
+        <ChildItems name="ch_330216_2" order="389">
+         <Question name="Q_330217" order="390" ID="330217.100004300" title="ETV6 Rearrangements (by Molecular Methods)" mustImplement="false" minCard="0">
+          <ListField name="lf_330217_1" order="391">
+           <List name="lst_330217_2" order="392">
+            <ListItem name="LI_330218" order="393" ID="330218.100004300" title="No ETV6 rearrangement detected" />
+            <ListItem name="LI_330219" order="394" ID="330219.100004300" title="ETV6 rearrangement detected">
+             <ChildItems name="ch_330219_1" order="395">
+              <Question name="Q_330221" order="396" ID="330221.100004300" title="Specify Fusion Partner (if available)" mustImplement="false" minCard="0">
+               <Property name="p_rptTxt_330221_1" order="397" propName="reportText" val="Fusion Partner" />
+               <ResponseField name="rf_330221_2" order="398">
+                <Response name="rsp_330221_3" order="399">
+                 <string name="str_330221_4" order="400" maxLength="4000" />
+                </Response>
+               </ResponseField>
+              </Question>
+             </ChildItems>
+            </ListItem>
+            <ListItem name="LI_330220" order="401" ID="330220.100004300" title="Cannot be determined (explain)">
+             <Property name="p_rptTxt_330220_1" order="402" propName="reportText" val="Cannot be determined" />
+             <ListItemResponseField name="lirf_330220_2" order="403" responseRequired="true">
+              <Response name="rsp_330220_3" order="404">
+               <string name="str_330220_4" order="405" maxLength="4000" />
+              </Response>
+             </ListItemResponseField>
+            </ListItem>
+           </List>
+          </ListField>
+         </Question>
+         <Question name="Q_330222" order="406" ID="330222.100004300" title="NTRK Rearrangements (by Molecular Methods)" mustImplement="false" minCard="0">
+          <ListField name="lf_330222_1" order="407">
+           <List name="lst_330222_2" order="408">
+            <ListItem name="LI_330396" order="409" ID="330396.100004300" title="NTRK rearrangement detected">
+             <ChildItems name="ch_330396_1" order="410">
+              <Question name="Q_330399" order="411" ID="330399.100004300" title="NTRK Type" mustImplement="false" minCard="0">
+               <ListField name="lf_330399_1" order="412">
+                <List name="lst_330399_2" order="413">
+                 <ListItem name="LI_330400" order="414" ID="330400.100004300" title="NTRK1" />
+                 <ListItem name="LI_330401" order="415" ID="330401.100004300" title="NTRK2" />
+                 <ListItem name="LI_330402" order="416" ID="330402.100004300" title="NTRK3" />
+                </List>
+               </ListField>
+              </Question>
+              <Question name="Q_330398" order="417" ID="330398.100004300" title="Specify Fusion Partner (if available)" mustImplement="false" minCard="0">
+               <Property name="p_rptTxt_330398_1" order="418" propName="reportText" val="Fusion Partner" />
+               <ResponseField name="rf_330398_2" order="419">
+                <Response name="rsp_330398_3" order="420">
+                 <string name="str_330398_4" order="421" maxLength="4000" />
+                </Response>
+               </ResponseField>
+              </Question>
+             </ChildItems>
+            </ListItem>
+            <ListItem name="LI_330395" order="422" ID="330395.100004300" title="No NTRK rearrangement detected" />
+            <ListItem name="LI_330225" order="423" ID="330225.100004300" title="Cannot be determined (explain)">
+             <Property name="p_rptTxt_330225_1" order="424" propName="reportText" val="Cannot be determined" />
+             <ListItemResponseField name="lirf_330225_2" order="425" responseRequired="true">
+              <Response name="rsp_330225_3" order="426">
+               <string name="str_330225_4" order="427" maxLength="4000" />
+              </Response>
+             </ListItemResponseField>
+            </ListItem>
+           </List>
+          </ListField>
+         </Question>
+        </ChildItems>
+       </Section>
+       <Section name="S_330209" order="428" ID="330209.100004300" title="(Hyalinizing) Clear Cell Carcinoma" mustImplement="false" minCard="0">
+        <Property name="p_rptTxt_330209_1" order="429" propName="reportText" val="{no text}" />
+        <ChildItems name="ch_330209_2" order="430">
+         <Question name="Q_330250" order="431" ID="330250.100004300" title="EWSR1 Rearrangements (by Molecular Methods)" mustImplement="false" minCard="0">
+          <ListField name="lf_330250_1" order="432">
+           <List name="lst_330250_2" order="433">
+            <ListItem name="LI_330251" order="434" ID="330251.100004300" title="No EWSR1 rearrangement detected" />
+            <ListItem name="LI_330252" order="435" ID="330252.100004300" title="EWSR1 rearrangement detected">
+             <ChildItems name="ch_330252_1" order="436">
+              <Question name="Q_330254" order="437" ID="330254.100004300" title="Specify Fusion Partner (if available)" mustImplement="false" minCard="0">
+               <Property name="p_rptTxt_330254_1" order="438" propName="reportText" val="Fusion Partner" />
+               <ResponseField name="rf_330254_2" order="439">
+                <Response name="rsp_330254_3" order="440">
+                 <string name="str_330254_4" order="441" maxLength="4000" />
+                </Response>
+               </ResponseField>
+              </Question>
+             </ChildItems>
+            </ListItem>
+            <ListItem name="LI_330253" order="442" ID="330253.100004300" title="Cannot be determined (explain)">
+             <Property name="p_rptTxt_330253_1" order="443" propName="reportText" val="Cannot be determined" />
+             <ListItemResponseField name="lirf_330253_2" order="444" responseRequired="true">
+              <Response name="rsp_330253_3" order="445">
+               <string name="str_330253_4" order="446" maxLength="4000" />
+              </Response>
+             </ListItemResponseField>
+            </ListItem>
+           </List>
+          </ListField>
+         </Question>
+        </ChildItems>
+       </Section>
+      </ChildItems>
+     </Section>
+     <Section name="S_330379" order="447" ID="330379.100004300" title="Sinonasal Malignancies" mustImplement="false" minCard="0">
+      <Property name="p_rptTxt_330379_1" order="448" propName="reportText" val="{no text}" />
+      <ChildItems name="ch_330379_2" order="449">
+       <Section name="S_330384" order="450" ID="330384.100004300" title="SMARCB1 (INI-1) and SMARCA4 (BRG-1) Deficient Sinonasal Carcinoma / Rhabdoid Tumor / Teratocarcinosarcoma" mustImplement="false" minCard="0">
+        <Property name="p_rptTxt_330384_1" order="451" propName="reportText" val="{no text}" />
+        <ChildItems name="ch_330384_2" order="452">
+         <Question name="Q_330380" order="453" ID="330380.100004300" title="INI1 IHC" mustImplement="false" minCard="0">
+          <ListField name="lf_330380_1" order="454">
+           <List name="lst_330380_2" order="455">
+            <ListItem name="LI_330381" order="456" ID="330381.100004300" title="Intact nuclear staining (negative for deletion / alteration)" />
+            <ListItem name="LI_330382" order="457" ID="330382.100004300" title="Loss of nuclear staining (positive for deletion / alteration)" />
+            <ListItem name="LI_330383" order="458" ID="330383.100004300" title="Cannot be determined (explain)">
+             <Property name="p_rptTxt_330383_1" order="459" propName="reportText" val="Cannot be determined" />
+             <ListItemResponseField name="lirf_330383_2" order="460" responseRequired="true">
+              <Response name="rsp_330383_3" order="461">
+               <string name="str_330383_4" order="462" maxLength="4000" />
+              </Response>
+             </ListItemResponseField>
+            </ListItem>
+           </List>
+          </ListField>
+         </Question>
+         <Question name="Q_330385" order="463" ID="330385.100004300" title="BRG1 IHC" mustImplement="false" minCard="0">
+          <ListField name="lf_330385_1" order="464">
+           <List name="lst_330385_2" order="465">
+            <ListItem name="LI_330386" order="466" ID="330386.100004300" title="Intact nuclear staining (negative for deletion / alteration)" />
+            <ListItem name="LI_330387" order="467" ID="330387.100004300" title="Loss of nuclear staining (positive for deletion / alteration)" />
+            <ListItem name="LI_330388" order="468" ID="330388.100004300" title="Cannot be determined (explain)">
+             <Property name="p_rptTxt_330388_1" order="469" propName="reportText" val="Cannot be determined" />
+             <ListItemResponseField name="lirf_330388_2" order="470" responseRequired="true">
+              <Response name="rsp_330388_3" order="471">
+               <string name="str_330388_4" order="472" maxLength="4000" />
+              </Response>
+             </ListItemResponseField>
+            </ListItem>
+           </List>
+          </ListField>
+         </Question>
+        </ChildItems>
+       </Section>
+       <Section name="S_330389" order="473" ID="330389.100004300" title="Biphenotypic Sinonasal Sarcoma" mustImplement="false" minCard="0">
+        <Property name="p_rptTxt_330389_1" order="474" propName="reportText" val="{no text}" />
+        <ChildItems name="ch_330389_2" order="475">
+         <Question name="Q_330394" order="476" ID="330394.100004300" title="PAX Rearrangements (by Molecular Methods)" mustImplement="false" minCard="0">
+          <ListField name="lf_330394_1" order="477">
+           <List name="lst_330394_2" order="478">
+            <ListItem name="LI_330224" order="479" ID="330224.100004300" title="PAX rearrangement detected">
+             <ChildItems name="ch_330224_1" order="480">
+              <Question name="Q_330235" order="481" ID="330235.100004300" title="PAX Type" mustImplement="false" minCard="0">
+               <ListField name="lf_330235_1" order="482">
+                <List name="lst_330235_2" order="483">
+                 <ListItem name="LI_330236" order="484" ID="330236.100004300" title="PAX3" />
+                 <ListItem name="LI_330237" order="485" ID="330237.100004300" title="PAX7" />
+                </List>
+               </ListField>
+              </Question>
+              <Question name="Q_330226" order="486" ID="330226.100004300" title="Specify Fusion Partner (if available)" mustImplement="false" minCard="0">
+               <Property name="p_rptTxt_330226_1" order="487" propName="reportText" val="Fusion Partner" />
+               <ResponseField name="rf_330226_2" order="488">
+                <Response name="rsp_330226_3" order="489">
+                 <string name="str_330226_4" order="490" maxLength="4000" />
+                </Response>
+               </ResponseField>
+              </Question>
+             </ChildItems>
+            </ListItem>
+            <ListItem name="LI_330223" order="491" ID="330223.100004300" title="No PAX rearrangement detected" />
+            <ListItem name="LI_330397" order="492" ID="330397.100004300" title="Cannot be determined (explain)">
+             <Property name="p_rptTxt_330397_1" order="493" propName="reportText" val="Cannot be determined" />
+             <ListItemResponseField name="lirf_330397_2" order="494" responseRequired="true">
+              <Response name="rsp_330397_3" order="495">
+               <string name="str_330397_4" order="496" maxLength="4000" />
+              </Response>
+             </ListItemResponseField>
+            </ListItem>
+           </List>
+          </ListField>
+         </Question>
+        </ChildItems>
+       </Section>
+      </ChildItems>
+     </Section>
+     <Section name="S_330403" order="497" ID="330403.100004300" title="Paraganglioma" mustImplement="false" minCard="0">
+      <Property name="p_rptTxt_330403_1" order="498" propName="reportText" val="{no text}" />
+      <ChildItems name="ch_330403_2" order="499">
+       <Question name="Q_330404" order="500" ID="330404.100004300" title="SDHB IHC" mustImplement="false" minCard="0">
+        <ListField name="lf_330404_1" order="501">
+         <List name="lst_330404_2" order="502">
+          <ListItem name="LI_330405" order="503" ID="330405.100004300" title="Intact cytoplasmic staining" />
+          <ListItem name="LI_330406" order="504" ID="330406.100004300" title="Loss of cytoplasmic staining" />
+          <ListItem name="LI_330407" order="505" ID="330407.100004300" title="Cannot be determined (explain)">
+           <Property name="p_rptTxt_330407_1" order="506" propName="reportText" val="Cannot be determined" />
+           <ListItemResponseField name="lirf_330407_2" order="507" responseRequired="true">
+            <Response name="rsp_330407_3" order="508">
+             <string name="str_330407_4" order="509" maxLength="4000" />
+            </Response>
+           </ListItemResponseField>
+          </ListItem>
+         </List>
+        </ListField>
+       </Question>
+      </ChildItems>
+     </Section>
+     <Section name="S_365444" order="510" ID="365444.100004300" title="Other Markers (repeat up to 10X, as needed)" mustImplement="false" minCard="0">
+      <Property name="p_rptTxt_365444_1" order="511" propName="reportText" val="{no text}" />
+      <ChildItems name="ch_365444_2" order="512">
+       <Question name="Q_365445" order="513" ID="365445.100004300" title="Specify Other Marker and Results" mustImplement="false" minCard="0" maxCard="10">
+        <Property name="p_rptTxt_365445_1" order="514" propName="reportText" val="{no text}" />
+        <ResponseField name="rf_365445_2" order="515">
+         <Response name="rsp_365445_3" order="516">
+          <string name="str_365445_4" order="517" maxLength="4000" />
+         </Response>
+        </ResponseField>
+       </Question>
+      </ChildItems>
+     </Section>
+    </ChildItems>
+   </Section>
+   <Section name="S_367233" order="518" ID="367233.100004300" title="COMMENTS">
+    <Property name="p_rptTxt_367233_1" order="519" propName="reportText" val="{no text}" />
+    <ChildItems name="ch_367233_2" order="520">
+     <Question name="Q_365443" order="521" ID="365443.100004300" title="?Comment(s)" minCard="0">
+      <Property name="p_rptTxt_365443_1" order="522" propName="reportText" val="Comment(s)" />
+      <ResponseField name="rf_365443_2" order="523">
+       <Response name="rsp_365443_3" order="524">
+        <string name="str_365443_4" order="525" maxLength="4000" />
+       </Response>
+      </ResponseField>
+     </Question>
+    </ChildItems>
+   </Section>
+  </ChildItems>
+ </Body>
+ <Footer name="footer" order="526" ID="Footer.HN.Bmk.522_1.001.001.REL_sdcFDF">
+  <Property type="meta" styleClass="copyright" order="527" propName="CopyrightFooter" val="(c) 2023 College of American Pathologists.  All rights reserved.  License required for use." />
+ </Footer>
+</FormDesign>

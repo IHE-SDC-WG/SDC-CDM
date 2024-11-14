@@ -1,0 +1,32 @@
+MSH|^~\&|LIS|SMLPTH^05D0579701^CLIA|Eureka|CCR|20230223190040||ORU^R01^ORU_R01|202102231900400001|D|2.5.1|||||||||VOL_V_40_ORU_R01^NAACCR_CP
+PID|1||AR00009634^^^SMM&0000301337&CALIF^MR~667415923^^^USSSA^SS||TestFourteen-Menethil^Arthus^^^^^L||19970531|M||U^Unknown^HL70005|65 10th St^^Redwood^CA^93205^USA^H||^PRN^PH^^1^650^2695588|||||||||||||||||N
+NK1|1|Testfourteen Menethil^John^^^^^L|FTH^Father^HL70063||^PRN^PH^^1^902^5434567
+ORC|RE||||||||||||||||||||SMM^A^^^^California^CALIF^^^0000301337|31872 Coast Hwy^^Laguna Beach^CA^92651^USA^B||24022 Calle de la Plata^Suite 305^Laguna Hills^CA^92653^USA^B
+OBR|1||15SL-2^SMLPTH^05D0579701^CLIA|60568-3^SYNOPTIC REPORT^LN|||20210223|||1073507190^Prendiville^Paul^L^^^^^CMS^L^^^NPI||||||1073507190^Prendiville^Paul^L^^^^^CMS^L^^^NPI|||||||||F
+OBX|1|ST|60573-3^Report template source^LN||CAP eCC||||||F|||20231005152616
+OBX|2|CWE|60572-5^Report template ID^LN||129.1000043^ADRENAL GLAND^CAPECC||||||F|||20231005152616
+OBX|3|ST|60574-1^Report template version ID^LN||3.007.011.1000043||||||F|||20231005152616
+OBX|4|CWE|2118.1000043^Tumor Site^CAPECC||2119.1000043^Adrenal gland^CAPECC||||||F|||20231005152616
+OBX|5|CWE|820603.1000043^Procedure^CAPECC||2122.1000043^Adrenalectomy, total^CAPECC||||||F|||20231005152616
+OBX|6|CWE|52756.1000043^Specimen Laterality^CAPECC||2126.1000043^Right^CAPECC||||||F|||20231005152616
+OBX|7|CWE|59852.1000043^Histologic Subtype (Notes C, D)^CAPECC||2117.1000043^Conventional adrenal cortical carcinoma^CAPECC^2227007^Adrenal cortical carcinoma (morphologic abnormality)^SCT||||||F|||20231005152616
+OBX|8|CWE|820395.1000043^Mitotic Tumor Grade (required for adult patients only) (Notes C, D)^CAPECC||51017.1000043^?Not applicable^CAPECC||||||F|||20231005152616
+OBX|9|CWE|2129.1000043^Tumor Size (Notes E, F)^CAPECC|2131|2131.1000043^Greatest dimension in Centimeters (cm)^CAPECC||||||F|||20231005152616
+OBX|10|NM|2129.1000043^Tumor Size (Notes E, F)^CAPECC|+2131.1000043|10|cm^CentiMeter^UCUM|||||F|||20231005152616
+OBX|11|CWE|820398.1000043^Adrenal Gland Weight (Note G)^CAPECC|44761|44761.1000043^Specify weight (g)^CAPECC||||||F|||20231005152616
+OBX|12|NM|820398.1000043^Adrenal Gland Weight (Note G)^CAPECC|44761|156||||||F|||20231005152616
+OBX|13|CWE|820404.1000043^Site(s) Involved by Direct Tumor Extension^CAPECC|45594|45594.1000043^Other adjacent organs and structures (specify)^CAPECC||||||F|||20231005152616
+OBX|14|ST|820404.1000043^Site(s) Involved by Direct Tumor Extension^CAPECC|45594|Capsular invasion and sinusoidal vascular invasion identified||||||F|||20231005152616
+OBX|15|CWE|39990.1000043^Lymphovascular Invasion (Note H)^CAPECC||45031.1000043^Lymphatic invasion^CAPECC||||||F|||20231005152616
+OBX|16|CWE|2153.1000043^Margin Status^CAPECC||2155.1000043^Carcinoma present at margin^CAPECC||||||F|||20231005152616
+OBX|17|CWE|354227.1000043^Margin(s) Involved by Carcinoma^CAPECC|354228|354228.1000043^Specify involved margin(s)^CAPECC||||||F|||20231005152616
+OBX|18|ST|354227.1000043^Margin(s) Involved by Carcinoma^CAPECC|354228|Soft tissue||||||F|||20231005152616
+OBX|19|CWE|372404.1000043^Regional Lymph Node Status^CAPECC||1868.1000043^Not applicable (no regional lymph nodes submitted or found)^CAPECC||||||F|||20231005152616
+OBX|20|CWE|354240.1000043^Distant Site(s) Involved, if applicable^CAPECC||354245.1000043^?Not applicable^CAPECC||||||F|||20231005152616
+OBX|21|CWE|820585.1000043^Modified Classification (required only if applicable)^CAPECC||820589.1000043^?Not applicable^CAPECC||||||F|||20231005152616
+OBX|22|CWE|327636.1000043^pT Category^CAPECC||2139.1000043^pT2: Tumor greater than 5 cm, no extra-adrenal invasion^CAPECC||||||F|||20231005152616
+OBX|23|CWE|820586.1000043^T Suffix (required only if applicable)^CAPECC||820587.1000043^?Not applicable^CAPECC||||||F|||20231005152616
+OBX|24|CWE|327638.1000043^pN Category (Note J)^CAPECC||327639.1000043^pN not assigned (no nodes submitted or found)^CAPECC||||||F|||20231005152616
+OBX|25|CWE|2149.1000043^pM Category (required only if confirmed pathologically) (Note K)^CAPECC||20895.1000043^?Not applicable - pM cannot be determined from the submitted specimen(s)^CAPECC||||||F|||20231005152616
+OBX|26|CWE|39188.1000043^Additional Findings^CAPECC||2163.1000043^None identified^CAPECC||||||F|||20231005152616
+OBX|27|ST|2168.1000043^?Comment(s)^CAPECC||Clinical Information: Adrenal gland received in formalin. Specimen integrity: Intact. Dimensions of specimen: 10x9.5x7 centimenters. Perineural invasion: Not identified. Lymph-Vascular Invasion: Small vessel (capillary lymphatic). Microscopic Tumor Extension: Capsular invasion and sinusoidal vascular invasion identified.  HS:Adrenal01||||||F|||20231005152616

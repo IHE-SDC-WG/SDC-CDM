@@ -1,0 +1,322 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml-stylesheet type="text/xsl" href="sdctemplate.xslt"?>
+<FormDesign xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ID="Heme.PlasmaCell_Immuno.Bx.Res.572_1.000.000.REL_sdcFDF" baseURI="www.cap.org/eCC" fullURI="_baseURI=www.cap.org/eCC&amp;_lineage=Heme.PlasmaCell_Immuno.Bx.Res.572&amp;_version=1.000.000.REL&amp;_docType=sdcFDF" formTitle="PLASMA CELL MALIGNANCIES AND IMMUNOGLOBULIN DEPOSITION RELATED DISORDERS" lineage="Heme.PlasmaCell_Immuno.Bx.Res.572" filename="Heme.PlasmaCell_Immuno.Bx.Res.572_1.000.000.REL_sdcFDF.xml" version="1.000.000.REL" xmlns="urn:ihe:qrph:sdc:2016">
+ <Property name="Copyright" type="CAPeCC_static_text" styleClass="copyright" order="1" propName="Copyright" val="(c) 2023 College of American Pathologists.  All rights reserved.  License required for use." />
+ <Property name="GenericHeaderText" type="CAPeCC_static_text" order="2" propName="GenericHeaderText" val="Surgical Pathology Cancer Case Summary" />
+ <Property name="Category" type="CAPeCC_meta" order="3" propName="Category" val="Hematologic" />
+ <Property name="OfficialName" type="CAPeCC_meta" order="4" propName="OfficialName" val="PLASMA CELL MALIGNANCIES AND IMMUNOGLOBULIN DEPOSITION RELATED DISORDERS" />
+ <Property name="CAP_ProtocolName" type="CAPeCC_meta" order="5" propName="CAP_ProtocolName" val="Plasma Cell Malignancies and Immunoglobulin Deposition Related Disorders" />
+ <Property name="CAP_ProtocolShortName" type="CAPeCC_meta" order="6" propName="CAP_ProtocolShortName" val="Heme.PlasmaCell_Immuno.Bx.Res" />
+ <Property name="CAP_ProtocolVersion" type="CAPeCC_meta" order="7" propName="CAP_ProtocolVersion" val="1.0.0.0" />
+ <Property name="TemplateID" type="CAPeCC_meta" order="8" propName="TemplateID" val="572.100004300" />
+ <Property name="Restrictions" type="CAPeCC_meta" order="9" propName="Restrictions" />
+ <Property name="CAP_Required" type="CAPeCC_meta" order="10" propName="CAP_Required" val="false" />
+ <Property name="WebPostingDate" type="CAPeCC_meta dt.dateTime" order="11" propName="WebPostingDate" val="9/20/2023" />
+ <Property name="ApprovalStatus" type="CAPeCC_meta" order="12" propName="ReleaseStatus" val="REL" />
+ <Body name="Body" order="13" ID="Heme.PlasmaCell_Immuno.Bx.Res.572_1.000.000.REL_sdcFDF_Body">
+  <ChildItems name="ch_Body" order="14">
+   <Section name="S_866139" order="15" ID="866139.100004300" title="TUMOR">
+    <ChildItems name="ch_866139_1" order="16">
+     <Question name="Q_867173" order="17" ID="867173.100004300" title="Site(s) of Tumor Involvement in Sample (Note A)">
+      <Property name="p_rptTxt_867173_1" order="18" propName="reportText" val="Site(s) of Tumor Involvement in Sample" />
+      <ListField name="lf_867173_2" order="19" maxSelections="0">
+       <List name="lst_867173_3" order="20">
+        <ListItem name="LI_867174" order="21" ID="867174.100004300" title="Bone marrow (non-targeted)">
+         <ChildItems name="ch_867174_1" order="22">
+          <Question name="Q_867182" order="23" ID="867182.100004300" title="?Specify Percent Involvement of Clonal Cells, if possible" minCard="0">
+           <Property name="p_rptTxt_867182_1" order="24" propName="reportText" val="Percent Involvement of Clonal Cells" />
+           <ResponseField name="rf_867182_2" order="25">
+            <Response name="rsp_867182_3" order="26">
+             <int name="int_867182_4" order="27" minInclusive="1" maxInclusive="100" />
+            </Response>
+            <TextAfterResponse name="rtt_867182_5" order="28" val="%" />
+            <ResponseUnits name="un_867182_6" order="29" val="%" />
+           </ResponseField>
+          </Question>
+         </ChildItems>
+        </ListItem>
+        <ListItem name="LI_867175" order="30" ID="867175.100004300" title="Blood">
+         <ChildItems name="ch_867175_1" order="31">
+          <Question name="Q_867183" order="32" ID="867183.100004300" title="?Specify Percent Involvement of Clonal Cells, if possible" minCard="0">
+           <Property name="p_rptTxt_867183_1" order="33" propName="reportText" val="Percent Involvement of Clonal Cells" />
+           <ResponseField name="rf_867183_2" order="34">
+            <Response name="rsp_867183_3" order="35">
+             <int name="int_867183_4" order="36" minInclusive="1" maxInclusive="100" />
+            </Response>
+            <TextAfterResponse name="rtt_867183_5" order="37" val="%" />
+            <ResponseUnits name="un_867183_6" order="38" val="%" />
+           </ResponseField>
+          </Question>
+         </ChildItems>
+        </ListItem>
+        <ListItem name="LI_867176" order="39" ID="867176.100004300" title="Bone (targeted biopsy, specify location)">
+         <Property name="p_rptTxt_867176_1" order="40" propName="reportText" val="Bone (targeted biopsy)" />
+         <ListItemResponseField name="lirf_867176_2" order="41" responseRequired="true">
+          <Response name="rsp_867176_3" order="42">
+           <string name="str_867176_4" order="43" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867177" order="44" ID="867177.100004300" title="Lymph node (targeted biopsy, specify location)">
+         <Property name="p_rptTxt_867177_1" order="45" propName="reportText" val="Lymph node (targeted biopsy)" />
+         <ListItemResponseField name="lirf_867177_2" order="46" responseRequired="true">
+          <Response name="rsp_867177_3" order="47">
+           <string name="str_867177_4" order="48" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867179" order="49" ID="867179.100004300" title="Extranodal / mucosal site (targeted biopsy, specify location)">
+         <Property name="p_rptTxt_867179_1" order="50" propName="reportText" val="Extranodal / mucosal site (targeted biopsy)" />
+         <ListItemResponseField name="lirf_867179_2" order="51" responseRequired="true">
+          <Response name="rsp_867179_3" order="52">
+           <string name="str_867179_4" order="53" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867180" order="54" ID="867180.100004300" title="Other (specify)">
+         <Property name="p_rptTxt_867180_1" order="55" propName="reportText" val="{no text}" />
+         <ListItemResponseField name="lirf_867180_2" order="56" responseRequired="true">
+          <Response name="rsp_867180_3" order="57">
+           <string name="str_867180_4" order="58" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+       </List>
+      </ListField>
+     </Question>
+     <Question name="Q_867184" order="59" ID="867184.100004300" title="Final Integrated Diagnosis (Note B)">
+      <Property name="p_rptTxt_867184_1" order="60" propName="reportText" val="Final Integrated Diagnosis" />
+      <ListField name="lf_867184_2" order="61">
+       <List name="lst_867184_3" order="62">
+        <DisplayedItem name="DI_867185" order="63" ID="867185.100004300" title="Plasma cell neoplasms and other diseases with paraproteins">
+         <Property name="p_rptTxt_867185_1" order="64" propName="reportText" val="{no text}" />
+        </DisplayedItem>
+        <ListItem name="LI_867186" order="65" ID="867186.100004300" title="Plasma cell neoplasms">
+         <Property name="p_rptTxt_867186_1" order="66" propName="reportText" val="{no text}" />
+         <ChildItems name="ch_867186_2" order="67">
+          <Question name="Q_867190" order="68" ID="867190.100004300">
+           <Property name="p_altTxt_867190_1" order="69" propName="altText" val="Plasma Cell Neoplasm" />
+           <ListField name="lf_867190_2" order="70">
+            <List name="lst_867190_3" order="71">
+             <ListItem name="LI_867191" order="72" ID="867191.100004300" title="Solitary plasmacytoma of bone" />
+             <ListItem name="LI_867192" order="73" ID="867192.100004300" title="Extramedullary plasmacytoma" />
+             <ListItem name="LI_867193" order="74" ID="867193.100004300" title="Plasma cell neoplasm involving bone marrow (clinical information required)">
+              <Property name="p_rptTxt_867193_1" order="75" propName="reportText" val="Plasma cell neoplasm involving bone marrow" />
+             </ListItem>
+             <ListItem name="LI_867194" order="76" ID="867194.100004300" title="Plasma cell myeloma / multiple myeloma" />
+             <ListItem name="LI_867195" order="77" ID="867195.100004300" title="Smoldering (asymptomatic) myeloma" />
+             <ListItem name="LI_867196" order="78" ID="867196.100004300" title="Plasma cell leukemia" />
+             <ListItem name="LI_891372" order="79" ID="891372.100004300" title="Other plasma cell neoplasm (specify)">
+              <Property name="p_rptTxt_891372_1" order="80" propName="reportText" val="{no text}" />
+              <ListItemResponseField name="lirf_891372_2" order="81" responseRequired="true">
+               <Response name="rsp_891372_3" order="82">
+                <string name="str_891372_4" order="83" maxLength="4000" />
+               </Response>
+              </ListItemResponseField>
+             </ListItem>
+            </List>
+           </ListField>
+          </Question>
+         </ChildItems>
+        </ListItem>
+        <ListItem name="LI_867187" order="84" ID="867187.100004300" title="Immunoglobulin-related (AL) amyloidosis">
+         <Property name="p_rptTxt_867187_1" order="85" propName="reportText" val="{no text}" />
+         <ChildItems name="ch_867187_2" order="86">
+          <Question name="Q_867197" order="87" ID="867197.100004300">
+           <Property name="p_altTxt_867197_1" order="88" propName="altText" val="Immunoglobulin-related (AL) amyloidosis" />
+           <ListField name="lf_867197_2" order="89">
+            <List name="lst_867197_3" order="90">
+             <ListItem name="LI_867199" order="91" ID="867199.100004300" title="Systemic AL amyloidosis" />
+             <ListItem name="LI_867200" order="92" ID="867200.100004300" title="Localized AL amyloidosis" />
+             <ListItem name="LI_867201" order="93" ID="867201.100004300" title="Heavy chain amyloidosis" />
+            </List>
+           </ListField>
+          </Question>
+         </ChildItems>
+        </ListItem>
+        <ListItem name="LI_867188" order="94" ID="867188.100004300" title="Monoclonal immunoglobulin deposition diseases">
+         <Property name="p_rptTxt_867188_1" order="95" propName="reportText" val="{no text}" />
+         <ChildItems name="ch_867188_2" order="96">
+          <Question name="Q_867202" order="97" ID="867202.100004300">
+           <Property name="p_altTxt_867202_1" order="98" propName="altText" val="Monoclonal Immunoglobulin Deposition Disease" />
+           <ListField name="lf_867202_2" order="99">
+            <List name="lst_867202_3" order="100">
+             <ListItem name="LI_867203" order="101" ID="867203.100004300" title="Light chain deposition disease" />
+             <ListItem name="LI_867204" order="102" ID="867204.100004300" title="Light and heavy chain deposition disease" />
+             <ListItem name="LI_867205" order="103" ID="867205.100004300" title="Heavy chain deposition disease" />
+            </List>
+           </ListField>
+          </Question>
+         </ChildItems>
+        </ListItem>
+        <ListItem name="LI_867189" order="104" ID="867189.100004300" title="Heavy chain diseases">
+         <Property name="p_rptTxt_867189_1" order="105" propName="reportText" val="{no text}" />
+         <ChildItems name="ch_867189_2" order="106">
+          <Question name="Q_867206" order="107" ID="867206.100004300">
+           <Property name="p_altTxt_867206_1" order="108" propName="altText" val="Heavy Chain Disease" />
+           <ListField name="lf_867206_2" order="109">
+            <List name="lst_867206_3" order="110">
+             <ListItem name="LI_867207" order="111" ID="867207.100004300" title="Mu heavy chain disease" />
+             <ListItem name="LI_867208" order="112" ID="867208.100004300" title="Gamma heavy chain disease" />
+             <ListItem name="LI_867209" order="113" ID="867209.100004300" title="Alpha heavy chain disease" />
+            </List>
+           </ListField>
+          </Question>
+         </ChildItems>
+        </ListItem>
+       </List>
+      </ListField>
+     </Question>
+    </ChildItems>
+   </Section>
+   <Section name="S_867210" order="114" ID="867210.100004300" title="SPECIAL STUDIES (Note C)">
+    <Property name="p_rptTxt_867210_1" order="115" propName="reportText" val="SPECIAL STUDIES" />
+    <ChildItems name="ch_867210_2" order="116">
+     <Question name="Q_867211" order="117" ID="867211.100004300" title="Immunoglobulin Depositions">
+      <ListField name="lf_867211_1" order="118">
+       <List name="lst_867211_2" order="119">
+        <ListItem name="LI_867212" order="120" ID="867212.100004300" title="Not detected on routine (H&amp;E) stain" />
+        <ListItem name="LI_867213" order="121" ID="867213.100004300" title="Not detected on Congo Red stain" />
+        <ListItem name="LI_867214" order="122" ID="867214.100004300" title="Positive for amyloid on Congo Red" />
+        <ListItem name="LI_867215" order="123" ID="867215.100004300" title="Positive for non-amyloid deposition (specify)">
+         <Property name="p_rptTxt_867215_1" order="124" propName="reportText" val="Positive for non-amyloid deposition" />
+         <ListItemResponseField name="lirf_867215_2" order="125" responseRequired="true">
+          <Response name="rsp_867215_3" order="126">
+           <string name="str_867215_4" order="127" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+       </List>
+      </ListField>
+     </Question>
+     <Question name="Q_891373" order="128" ID="891373.100004300" title="Immunohistochemistry">
+      <ListField name="lf_891373_1" order="129">
+       <List name="lst_891373_2" order="130">
+        <ListItem name="LI_891374" order="131" ID="891374.100004300" title="Not performed" />
+        <ListItem name="LI_891375" order="132" ID="891375.100004300" title="Performed (specify results)">
+         <Property name="p_rptTxt_891375_1" order="133" propName="reportText" val="Performed" />
+         <ListItemResponseField name="lirf_891375_2" order="134" responseRequired="true">
+          <Response name="rsp_891375_3" order="135">
+           <string name="str_891375_4" order="136" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_891402" order="137" ID="891402.100004300" title="Pending" />
+       </List>
+      </ListField>
+     </Question>
+     <Question name="Q_867216" order="138" ID="867216.100004300" title="Flow Cytometry">
+      <ListField name="lf_867216_1" order="139">
+       <List name="lst_867216_2" order="140">
+        <ListItem name="LI_867217" order="141" ID="867217.100004300" title="Not performed" />
+        <ListItem name="LI_867218" order="142" ID="867218.100004300" title="No aberrancy detected at level of sensitivity of assay" />
+        <ListItem name="LI_867219" order="143" ID="867219.100004300" title="Positive for abnormal population (specify immunophenotype, if possible)">
+         <Property name="p_rptTxt_867219_1" order="144" propName="reportText" val="Performed, positive for abnormal population" />
+         <ListItemResponseField name="lirf_867219_2" order="145">
+          <Response name="rsp_867219_3" order="146">
+           <string name="str_867219_4" order="147" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867220" order="148" ID="867220.100004300" title="Pending" />
+       </List>
+      </ListField>
+     </Question>
+     <Question name="Q_867221" order="149" ID="867221.100004300" title="Conventional Cytogenetics">
+      <ListField name="lf_867221_1" order="150">
+       <List name="lst_867221_2" order="151">
+        <ListItem name="LI_867222" order="152" ID="867222.100004300" title="Not performed" />
+        <ListItem name="LI_867227" order="153" ID="867227.100004300" title="No valid result(s) / no growth" />
+        <ListItem name="LI_867223" order="154" ID="867223.100004300" title="Normal diploid karyotype" />
+        <ListItem name="LI_867224" order="155" ID="867224.100004300" title="Abnormal karyotype (specify, if possible)">
+         <Property name="p_rptTxt_867224_1" order="156" propName="reportText" val="Abnormal karyotype" />
+         <ListItemResponseField name="lirf_867224_2" order="157">
+          <Response name="rsp_867224_3" order="158">
+           <string name="str_867224_4" order="159" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867225" order="160" ID="867225.100004300" title="Pending" />
+       </List>
+      </ListField>
+     </Question>
+     <Question name="Q_867232" order="161" ID="867232.100004300" title="Fluorescence in situ Hybridization">
+      <ListField name="lf_867232_1" order="162" maxSelections="0">
+       <List name="lst_867232_2" order="163">
+        <ListItem name="LI_867233" order="164" ID="867233.100004300" title="Not performed" selectionDeselectsSiblings="true" />
+        <ListItem name="LI_867234" order="165" ID="867234.100004300" title="Normal probes (specify loci tested)">
+         <Property name="p_rptTxt_867234_1" order="166" propName="reportText" val="Normal probes (loci tested)" />
+         <ListItemResponseField name="lirf_867234_2" order="167" responseRequired="true">
+          <Response name="rsp_867234_3" order="168">
+           <string name="str_867234_4" order="169" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+        <ListItem name="LI_867235" order="170" ID="867235.100004300" title="Hyperdiploidy" />
+        <ListItem name="LI_867236" order="171" ID="867236.100004300" title="13q (RB1) deletion" />
+        <ListItem name="LI_867237" order="172" ID="867237.100004300" title="1q21 gain / amplification (CKS1B, ADAR1)" />
+        <ListItem name="LI_867238" order="173" ID="867238.100004300" title="1p32 deletion (CDKN2C)" />
+        <ListItem name="LI_867239" order="174" ID="867239.100004300" title="t(11;14) (q13;q32) (CCND1::IGH) translocation" />
+        <ListItem name="LI_867240" order="175" ID="867240.100004300" title="t(4;14) (p16;q32) (FGFR3::IGH) translocation" />
+        <ListItem name="LI_867241" order="176" ID="867241.100004300" title="t(14;16) (q32;q23) (IGH::MAF) translocation" />
+        <ListItem name="LI_867242" order="177" ID="867242.100004300" title="t(6;14) (p25;q32) (CCND3::IGH) translocation" />
+        <ListItem name="LI_867243" order="178" ID="867243.100004300" title="t(12;14) (p13;q32) (CCND2::IGH) translocation" />
+        <ListItem name="LI_867244" order="179" ID="867244.100004300" title="t(14;20) (q32;q11) (IGH::MAFB) translocation" />
+        <ListItem name="LI_867245" order="180" ID="867245.100004300" title="t(8;14) (q24;q32) (MYC::IGH) translocation" />
+        <ListItem name="LI_867246" order="181" ID="867246.100004300" title="17p13 (TP53) deletion" />
+        <ListItem name="LI_867247" order="182" ID="867247.100004300" title="Abnormal probes (specify loci tested)">
+         <Property name="p_rptTxt_867247_1" order="183" propName="reportText" val="Abnormal probes (loci tested)" />
+         <ListItemResponseField name="lirf_867247_2" order="184" responseRequired="true">
+          <Response name="rsp_867247_3" order="185">
+           <string name="str_867247_4" order="186" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+       </List>
+      </ListField>
+     </Question>
+     <Question name="Q_867228" order="187" ID="867228.100004300" title="Molecular Alterations Detected" mustImplement="false" minCard="0">
+      <ListField name="lf_867228_1" order="188">
+       <List name="lst_867228_2" order="189">
+        <ListItem name="LI_867229" order="190" ID="867229.100004300" title="Not performed" />
+        <ListItem name="LI_867230" order="191" ID="867230.100004300" title="No alterations detected" />
+        <ListItem name="LI_867231" order="192" ID="867231.100004300" title="Abnormality detected (specify)">
+         <Property name="p_rptTxt_867231_1" order="193" propName="reportText" val="Abnormality detected" />
+         <ListItemResponseField name="lirf_867231_2" order="194" responseRequired="true">
+          <Response name="rsp_867231_3" order="195">
+           <string name="str_867231_4" order="196" maxLength="4000" />
+          </Response>
+         </ListItemResponseField>
+        </ListItem>
+       </List>
+      </ListField>
+     </Question>
+     <Question name="Q_867181" order="197" ID="867181.100004300" title="Specify Molecular Alterations Assayed" mustImplement="false" minCard="0">
+      <Property name="p_rptTxt_867181_1" order="198" propName="reportText" val="Molecular Alterations Assayed" />
+      <ResponseField name="rf_867181_2" order="199">
+       <Response name="rsp_867181_3" order="200">
+        <string name="str_867181_4" order="201" maxLength="4000" />
+       </Response>
+      </ResponseField>
+     </Question>
+    </ChildItems>
+   </Section>
+   <Section name="S_867249" order="202" ID="867249.100004300" title="COMMENTS">
+    <Property name="p_rptTxt_867249_1" order="203" propName="reportText" val="{no text}" />
+    <ChildItems name="ch_867249_2" order="204">
+     <Question name="Q_867248" order="205" ID="867248.100004300" title="?Comment(s)" minCard="0">
+      <Property name="p_rptTxt_867248_1" order="206" propName="reportText" val="Comment(s)" />
+      <ResponseField name="rf_867248_2" order="207">
+       <Response name="rsp_867248_3" order="208">
+        <string name="str_867248_4" order="209" maxLength="4000" />
+       </Response>
+      </ResponseField>
+     </Question>
+    </ChildItems>
+   </Section>
+  </ChildItems>
+ </Body>
+ <Footer name="footer" order="210" ID="Footer.Heme.PlasmaCell_Immuno.Bx.Res.572_1.000.000.REL_sdcFDF">
+  <Property type="meta" styleClass="copyright" order="211" propName="CopyrightFooter" val="(c) 2023 College of American Pathologists.  All rights reserved.  License required for use." />
+ </Footer>
+</FormDesign>
