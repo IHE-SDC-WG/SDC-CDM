@@ -1,0 +1,29 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+}
+
+#button-container {
+    margin-bottom: 10px;
+}
+
+.query-button {
+    margin-right: 5px;
+    margin-bottom: 5px;
+    padding: 5px 10px;
+    cursor: pointer;
+}
+
+#sql-input {
+    width: 100%;
+    box-sizing: border-box;
+    font-family: monospace;
+}
+
+#output {
+    background-color: #f4f4f4;
+    padding: 10px;
+    white-space: pre-wrap;
+    border: 1px solid #ccc;
+    margin-top: 10px;
+}

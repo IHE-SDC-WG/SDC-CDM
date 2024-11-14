@@ -33,6 +33,7 @@ def create_template_sdc_class(
     :return: The created TemplateSdcClass object
     """
     new_entry = TemplateSdcClass(
+        pk=None,
         sdcformdesignid=sdcformdesignid,
         baseuri=baseuri,
         lineage=lineage,
@@ -49,7 +50,7 @@ def create_template_sdc_class(
         session.refresh(new_entry)  # Refresh to get the generated PK
         logger.info(f"Successfully added: {new_entry}")
         return new_entry
-    except Exception as e:
+    except Exception:
         session.rollback()
         logger.error("Failed to add new TemplateSdcClass:", exc_info=True)
         raise
@@ -106,7 +107,7 @@ def create_template_instance_class(
         session.refresh(new_entry)
         logger.info(f"Successfully added: {new_entry}")
         return new_entry
-    except Exception as e:
+    except Exception:
         session.rollback()
         logger.error("Failed to add new TemplateInstanceClass:", exc_info=True)
         raise
@@ -211,7 +212,7 @@ def create_sdc_obs_class(
         session.refresh(new_entry)
         logger.info(f"Successfully added: {new_entry}")
         return new_entry
-    except Exception as e:
+    except Exception:
         session.rollback()
         logger.error("Failed to add new SdcObsClass:", exc_info=True)
         raise

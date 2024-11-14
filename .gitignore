@@ -1,2 +1,7 @@
 .env
 db-utils/samples
+
+venv
+__pycache__
+
+temp

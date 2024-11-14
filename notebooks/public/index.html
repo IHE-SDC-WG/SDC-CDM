@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>SQLite GUI</title>
+    <script src="sql-wasm-debug.js"></script>
+    <link rel="stylesheet" href="index.css">
+</head>
+
+<body>
+    <h1>SQLite Database Viewer</h1>
+
+    <!-- Container for predefined query buttons -->
+    <div id="button-container">
+        <button class="query-button" onclick="setQuery(predefinedQueries.last10)">Last 10 SDC Templates</button>
+        <button class="query-button" onclick="setQuery(predefinedQueries.countRows)">Count SDC Templates</button>
+    </div>
+
+    <textarea id="sql-input" rows="10" cols="80">SELECT * FROM templatesdcclass LIMIT 10;</textarea>
+    <button onclick="executeSQL()">Run</button>
+    <pre id="output"></pre>
+
+    <script>
+        const DB_PATH = 'sdc_cdm.db';
+        let db;
+
+        async function initSQL() {
+            const SQL = await initSqlJs({
+                locateFile: file => `sql-wasm-debug.wasm`
+            });
+            const response = await fetch(DB_PATH);
+            const buffer = await response.arrayBuffer();
+            db = new SQL.Database(new Uint8Array(buffer));
+        }
+
+        function executeSQL() {
+            const sql = document.getElementById('sql-input').value;
+            const res = db.exec(sql);
+            document.getElementById('output').textContent = JSON.stringify(res, null, 2);
+        }
+
+        function setQuery(query) {
+            document.getElementById('sql-input').value = query;
+        }
+
+        // Predefined queries stored in an object for easy access and extensibility
+        const predefinedQueries = {
+            last10: `SELECT *
+FROM templatesdcclass
+ORDER BY pk DESC
+LIMIT 10;`,
+
+            countRows: `SELECT COUNT(*) AS total_rows
+FROM templatesdcclass;`
+        };
+
+        initSQL();
+    </script>
+</body>
+
+</html>

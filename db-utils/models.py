@@ -1,15 +1,29 @@
-from sqlalchemy import Column, Integer, String, Text, ForeignKey
+from sqlalchemy import Column, Integer, MetaData, Sequence, String, Text, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
 # from sqlalchemy.orm import relationship
 
 Base = declarative_base()
+# metadata_obj = MetaData(schema="some_schema")
+
+
+# class Base(declarative_base):
+#     metadata = metadata_obj
+
+SCHEMA_NAME = "public"
 
 
 class TemplateSdcClass(Base):
     __tablename__ = "templatesdcclass"
-    __table_args__ = {"schema": "public"}
+    __table_args__ = {"schema": SCHEMA_NAME}
 
-    pk = Column(Integer, primary_key=True, autoincrement=True, nullable=False)
+    pk = Column(
+        Integer,
+        Sequence("templatesdcclass_pk_seq"),
+        server_default=Sequence("templatesdcclass_pk_seq").next_value(),
+        autoincrement=True,
+        primary_key=True,
+        nullable=False,
+    )
     sdcformdesignid = Column(String, nullable=True)
     baseuri = Column(String, nullable=True)
     lineage = Column(String, nullable=True)
@@ -25,13 +39,13 @@ class TemplateSdcClass(Base):
 
 class TemplateInstanceClass(Base):
     __tablename__ = "templateinstanceclass"
-    __table_args__ = {"schema": "public"}
+    __table_args__ = {"schema": SCHEMA_NAME}
 
     pk = Column(Integer, primary_key=True, autoincrement=True)
     templateinstanceversionguid = Column(String, nullable=True)
     templateinstanceversionuri = Column(String, nullable=True)
     templatesdcfk = Column(
-        Integer, ForeignKey("public.templatesdcclass.pk"), nullable=False
+        Integer, ForeignKey(f"{SCHEMA_NAME}.templatesdcclass.pk"), nullable=False
     )
     instanceversiondate = Column(String, nullable=True)
     diagreportprops = Column(String, nullable=True)
@@ -47,11 +61,11 @@ class TemplateInstanceClass(Base):
 
 class SdcObsClass(Base):
     __tablename__ = "sdcobsclass"
-    __table_args__ = {"schema": "public"}
+    __table_args__ = {"schema": SCHEMA_NAME}
 
     pk = Column(Integer, primary_key=True, autoincrement=True)
     templateinstanceclassfk = Column(
-        Integer, ForeignKey("public.templateinstanceclass.pk"), nullable=False
+        Integer, ForeignKey(f"{SCHEMA_NAME}.templateinstanceclass.pk"), nullable=False
     )
     # parentfk = Column(Integer, nullable=True)
     parentinstanceguid = Column(String, nullable=True)

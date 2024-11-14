@@ -9,6 +9,8 @@ Copy `.env.example` to `.env`. The default values will work
 
 To reset the database, run `docker compose down -v` to remove the db volume before running `docker compose up` again
 
-## Importing SDC forms
+## Importing SDC to the Database
 
-`python db-utils/import_sdc_form.py [file]` imports an XML SDC form into the database
+`python db-utils/import_sdc_form.py [file]` imports an XML SDC form
+
+`python db-utils/import_vol_v_message.py [file]` imports a NAACCR Vol V message

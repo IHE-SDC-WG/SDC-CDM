@@ -1,17 +1,12 @@
 #!/usr/bin/env python3
 
-import sys
-import argparse
 from lxml import etree
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 import logging
-from crud import (
+from crud_sqlite import (
     create_template_sdc_class,
     create_template_instance_class,
     create_sdc_obs_class,
 )
-from cli import get_database_url
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -19,19 +14,10 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def parse_arguments():
-    parser = argparse.ArgumentParser(
-        description="Process an XML file and import data into the database."
-    )
-    parser.add_argument("xml_file", help="Path to the XML file to process")
-    parser.add_argument("-d", "--database-url", help="", required=False)
-    return parser.parse_args()
-
-
-def process_xml(xml_root, session):
+def process_xml(xml_root, cursor):
     """
     :param xml_root: The root of the XML tree to process (lxml.etree.Element)
-    :param session: The SQLAlchemy database session.
+    :param cursor: The database cursor to use for inserting data
     """
     namespaces = {
         "sdc": "urn:ihe:qrph:sdc:2016",
@@ -45,20 +31,20 @@ def process_xml(xml_root, session):
     print(f"Form Design: {form_design}")
     if form_design is not None:
         new_template_sdc = create_template_sdc_class(
-            session=session,
-            sdcformdesignid=form_design.get("ID"),
-            baseuri=form_design.get("baseURI"),
-            lineage=form_design.get("lineage"),
-            version=form_design.get("version"),
-            fulluri=form_design.get("fullURI"),
-            formtitle=form_design.get("formTitle"),
+            cursor=cursor,
+            sdcformdesignid=form_design.get("ID") or "UNKNOWN",
+            baseuri=form_design.get("baseURI") or "UNKNOWN",
+            lineage=form_design.get("lineage") or "UNKNOWN",
+            version=form_design.get("version") or "UNKNOWN",
+            fulluri=form_design.get("fullURI") or "UNKNOWN",
+            formtitle=form_design.get("formTitle") or "UNKNOWN",
             sdc_xml=etree.tostring(form_design).decode("utf-8"),
             doctype="FD",  # TODO: Parse from fullURI
         )
 
         new_template_instance_class = create_template_instance_class(
-            session=session,
-            templatesdc_fk=new_template_sdc.pk,
+            cursor=cursor,
+            templatesdc_fk=new_template_sdc["pk"],
             # TODO: Fill in TemplateInstanceClass fields
         )
 
@@ -68,13 +54,13 @@ def process_xml(xml_root, session):
         assert child_items is not None
         for child in child_items:
             process_child_item(
-                child, session, namespaces, new_template_instance_class.pk
+                child, cursor, namespaces, new_template_instance_class["pk"]
             )
 
 
 def process_child_item(
     child_item,
-    session,
+    cursor,
     namespaces,
     template_instance_class_fk,
     section_id=None,
@@ -89,7 +75,7 @@ def process_child_item(
         for child in child_items:
             process_child_item(
                 child,
-                session,
+                cursor,
                 namespaces,
                 template_instance_class_fk,
                 section_id,
@@ -99,7 +85,7 @@ def process_child_item(
     for question in questions:
         process_question(
             question,
-            session,
+            cursor,
             namespaces,
             template_instance_class_fk,
             section_id,
@@ -108,7 +94,7 @@ def process_child_item(
 
 
 def process_question(
-    question, session, namespaces, template_instance_class_fk, section_id, section_guid
+    question, cursor, namespaces, template_instance_class_fk, section_id, section_guid
 ):
     question_id = question.get("name")
     question_guid = question.get("ID")
@@ -117,7 +103,7 @@ def process_question(
     if listfield is not None:
         process_list_field(
             listfield,
-            session,
+            cursor,
             namespaces,
             template_instance_class_fk,
             section_id,
@@ -130,7 +116,7 @@ def process_question(
     if responsefield is not None:
         process_response_field(
             responsefield,
-            session,
+            cursor,
             namespaces,
             template_instance_class_fk,
             section_id,
@@ -143,7 +129,7 @@ def process_question(
 
 def process_list_field(
     list_field,
-    session,
+    cursor,
     namespaces,
     template_instance_class_fk,
     section_id,
@@ -160,7 +146,7 @@ def process_list_field(
             if li_response_field is not None:
                 process_response_field(
                     li_response_field,
-                    session,
+                    cursor,
                     namespaces,
                     template_instance_class_fk,
                     section_id,
@@ -174,7 +160,7 @@ def process_list_field(
                 )
             else:
                 create_sdc_obs_class(
-                    session=session,
+                    cursor=cursor,
                     template_instance_class_fk=template_instance_class_fk,
                     section_id=section_id,
                     section_guid=section_guid,
@@ -190,7 +176,7 @@ def process_list_field(
 
 def process_response_field(
     response_field,
-    session,
+    cursor,
     namespaces,
     template_instance_class_fk,
     section_id,
@@ -217,7 +203,7 @@ def process_response_field(
         if response_string is not None:
             response_string_val = response_string.get("val")
         create_sdc_obs_class(
-            session=session,
+            cursor=cursor,
             template_instance_class_fk=template_instance_class_fk,
             section_id=section_id,
             section_guid=section_guid,
@@ -238,39 +224,3 @@ def process_response_field(
             reponse_string_nvarchar=response_string_val,
             sdc_order=response.get("order"),
         )
-
-
-def main(xml_file, database_url):
-    try:
-        tree = etree.parse(xml_file)
-        root = tree.getroot()
-    except etree.XMLSyntaxError as e:
-        print(f"Error parsing XML file: {e}")
-        sys.exit(1)
-    assert root is not None
-
-    try:
-        engine = create_engine(database_url)
-        Session = sessionmaker(bind=engine)
-        session = Session()
-    except Exception as e:
-        print(f"Error connecting to the database: {e}")
-        sys.exit(1)
-    assert session is not None
-
-    try:
-        process_xml(root, session)
-        session.commit()
-    except Exception as e:
-        session.rollback()
-        print("An error occurred while processing XML:", e)
-    finally:
-        session.close()
-
-
-if __name__ == "__main__":
-    args = parse_arguments()
-    if args.database_url is None:
-        args.database_url = get_database_url()
-
-    main(args.xml_file, args.database_url)
