@@ -12,14 +12,14 @@
 
 #!pwsh
 
-#!powershell
-
 # Build the SDC CDM libraries
+
 dotnet build ../sdc-tools
 
 #!csharp
 
 // Reference the SDC CDM libraries
+
 #r "../sdc-tools/SdcCdm/bin/Debug/net8.0/SdcCdm.dll"
 #r "../sdc-tools/SdcCdmInSqlite/bin/Debug/net8.0/SdcCdmInSqlite.dll"
 
@@ -30,17 +30,15 @@ using Hl7.Fhir.Serialization;
 
 #!csharp
 
+// Create CDM database instance
+
 SdcCdmInSqlite.SdcCdmInSqlite sdcCdmInstance = new("public/sdc_cdm.db", overwrite: true);
-
-#!csharp
-
-// Import CDM schema definitions
-
 sdcCdmInstance.BuildSchema();
 
 #!csharp
 
 // Import SDC templates
+
 using System.Xml.Linq;
 using System.IO;
 
@@ -49,30 +47,7 @@ var xmlFiles = Directory.GetFiles("../sample_data/sdc_templates", "*.xml").Take(
 foreach (var filePath in xmlFiles)
 {
     var doc = XDocument.Load(filePath);
-    XNamespace sdc = "urn:ihe:qrph:sdc:2016";
-
-    // Locate FormDesign node
-    var formDesign = doc.Root.Element(sdc + "FormDesign") ?? doc.Root;
-    if (formDesign == null)
-    {
-        Console.WriteLine($"No Form Design found in {Path.GetFileName(filePath)}");
-        continue;
-    }
-
-    Console.WriteLine($"Form Design: {formDesign}");
-
-    // Extract attributes
-    var sdcformdesignid = (string)formDesign.Attribute("ID");
-    var baseuri = (string)formDesign.Attribute("baseURI");
-    var lineage = (string)formDesign.Attribute("lineage");
-    var version = (string)formDesign.Attribute("version");
-    var fulluri = (string)formDesign.Attribute("fullURI");
-    var formtitle = (string)formDesign.Attribute("formTitle");
-    var sdc_xml = formDesign.ToString();
-    var doctype = "FD";
-    
-    // Insert data into database
-    sdcCdmInstance.WriteTemplateSdcClass(sdcformdesignid, baseuri, lineage, version, fulluri, formtitle, sdc_xml, doctype);
+    SdcCdm.TemplateImporter.ImportTemplate(sdcCdmInstance, doc.Root);
 }
 
 #!csharp
@@ -81,23 +56,14 @@ foreach (var filePath in xmlFiles)
 
 using System.IO;
 
-//var connection = new SqliteConnection("Data Source=public/sdc_cdm_dotnet.db;");
-//connection.Open();
-
 string directoryPath = Path.Combine("..", "sample_data", "sdc_xml");
 string[] sdc_xml_files = Directory.GetFiles(directoryPath, "*.xml");
 
-// Iterate over each XML file
 foreach (string xml_file in sdc_xml_files)
 {
-    // Read the XML content
     string xml_str = File.ReadAllText(xml_file);
-
-    // Parse the XML
     XDocument doc = XDocument.Parse(xml_str);
     XElement root = doc.Root;
-
-    // Call the process_xml equivalent
     SdcCdm.XmlFormImporter.ProcessXmlForm((ISdcCdm) sdcCdmInstance, root);
 }
 
@@ -109,15 +75,11 @@ using System.IO;
 string directoryPath = Path.Combine("..", "sample_data", "naaccr_v2");
 string[] v2_messages = Directory.GetFiles(directoryPath, "*.hl7");
 
-// Iterate over each V2 file
 foreach (var message in v2_messages)
 {
     try
     {
-        // Read the V2 content
         string message_str = File.ReadAllText(message);
-
-        // Call the import function
         SdcCdm.NAACCRVolVImporter.ImportNaaccrVolV(
             (ISdcCdm) sdcCdmInstance,
             message_str
