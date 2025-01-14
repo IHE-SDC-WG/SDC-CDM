@@ -9,7 +9,7 @@ cd "$SCRIPT_DIR"
 SCHEMA_NAME="public"
 SQLITE_SCHEMA_NAME="main"
 
-pushd database/ddl
+pushd ddl
 
 mkdir -p postgresql
 pushd postgresql

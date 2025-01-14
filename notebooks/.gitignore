@@ -1,0 +1,5 @@
+# Notebook intermediate files
+.ipynb_checkpoints/
+
+public/managed
+public/*.db

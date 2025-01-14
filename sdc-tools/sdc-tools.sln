@@ -1,0 +1,34 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SdcCdm", "SdcCdm\SdcCdm.csproj", "{573761D1-3DE9-4EA2-B4FD-0CB764DDC2AE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SdcCdmInSqlite", "SdcCdmInSqlite\SdcCdmInSqlite.csproj", "{6969104E-53C2-4D9F-A2C6-B2F7049B0618}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SdcCdm.Tests", "SdcCdm.Tests\SdcCdm.Tests.csproj", "{A7423D0B-169B-45F0-BD5D-954F70834490}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{573761D1-3DE9-4EA2-B4FD-0CB764DDC2AE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{573761D1-3DE9-4EA2-B4FD-0CB764DDC2AE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{573761D1-3DE9-4EA2-B4FD-0CB764DDC2AE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{573761D1-3DE9-4EA2-B4FD-0CB764DDC2AE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6969104E-53C2-4D9F-A2C6-B2F7049B0618}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6969104E-53C2-4D9F-A2C6-B2F7049B0618}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6969104E-53C2-4D9F-A2C6-B2F7049B0618}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6969104E-53C2-4D9F-A2C6-B2F7049B0618}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A7423D0B-169B-45F0-BD5D-954F70834490}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A7423D0B-169B-45F0-BD5D-954F70834490}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A7423D0B-169B-45F0-BD5D-954F70834490}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A7423D0B-169B-45F0-BD5D-954F70834490}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

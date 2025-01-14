@@ -5,3 +5,11 @@ venv
 __pycache__
 
 temp
+
+wasi-*/
+wabt-*/
+
+bin/
+obj/
+
+storage/
