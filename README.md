@@ -1,7 +1,25 @@
 # SDC-CDM
 A Common Data Model (CDM) for the Structured Data Capture (SDC) IG
 
-## Setup
+## Notebook
+
+### Dotnet
+
+The notebook showcases one way to use the CDM schema within a .NET application
+
+Open `notebooks/try_sdc_cdm_dotnet.dib` using VS Code with the Polyglot Notebooks extension installed
+
+The notebook will walk through how to:
+
+- Create a Sqlite database loaded with the CDM schema
+- Import SDC templates, SDC forms, and NAACCR V2 messages
+- Export CDM data into FHIR CPDS bundles
+
+## Standalone Database
+
+The CDM schema is maintained under `database/`. The following Docker instructions will start a Postgres database and load in the schema on first run.
+
+### Setup
 
 Copy `.env.example` to `.env`. The default values will work
 
@@ -9,8 +27,3 @@ Copy `.env.example` to `.env`. The default values will work
 
 To reset the database, run `docker compose down -v` to remove the db volume before running `docker compose up` again
 
-## Importing SDC to the Database
-
-`python db-utils/import_sdc_form.py [file]` imports an XML SDC form
-
-`python db-utils/import_vol_v_message.py [file]` imports a NAACCR Vol V message

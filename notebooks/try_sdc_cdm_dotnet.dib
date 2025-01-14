@@ -8,16 +8,25 @@
 
 #r "nuget:Microsoft.Data.Sqlite,9.0.0"
 #r "nuget:Wasmtime,22.0.0"
+#r "nuget:Hl7.Fhir.R4,6.0.0-alpha1"
+
+#!pwsh
+
+#!powershell
+
+# Build the SDC CDM libraries
+dotnet build ../sdc-tools
 
 #!csharp
 
 // Reference the SDC CDM libraries
-
 #r "../sdc-tools/SdcCdm/bin/Debug/net8.0/SdcCdm.dll"
 #r "../sdc-tools/SdcCdmInSqlite/bin/Debug/net8.0/SdcCdmInSqlite.dll"
 
 using SdcCdm;
 using SdcCdmInSqlite;
+using Hl7.Fhir.Model;
+using Hl7.Fhir.Serialization;
 
 #!csharp
 
@@ -119,4 +128,25 @@ foreach (var message in v2_messages)
         Console.WriteLine($"Error processing message: {message}: {e.Message}");
         continue;
     }
+}
+
+#!csharp
+
+// Convert form instance to FHIR CPDS Bundle
+
+string existingTemplate = "5b64392d-680e-4a96-94ca-3da4acf6bd27"; // ADRENAL_GLAND.xml instance ID
+
+Bundle bundle = null;
+
+bool result = FhirCPDSExporter.ExportFhirCpds(sdcCdmInstance, out bundle, existingTemplate);
+
+if (bundle != null)
+{
+    var serializer = new FhirJsonSerializer(new SerializerSettings { Pretty = true });
+    string bundleJson = serializer.SerializeToString(bundle);
+    Console.WriteLine(bundleJson);
+}
+else
+{
+    Console.WriteLine("Failed to export FHIR CPDS bundle.");
 }
