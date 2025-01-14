@@ -21,7 +21,7 @@ using SdcCdmInSqlite;
 
 #!csharp
 
-SdcCdmInSqlite.SdcCdmInSqlite sdcCdmInstance = new("public/try_sdc_cdm_dotnet.db");
+SdcCdmInSqlite.SdcCdmInSqlite sdcCdmInstance = new("public/sdc_cdm.db", overwrite: true);
 
 #!csharp
 
@@ -35,7 +35,8 @@ sdcCdmInstance.BuildSchema();
 using System.Xml.Linq;
 using System.IO;
 
-var xmlFiles = Directory.GetFiles("../sample_data/sdc_templates", "*.xml");
+// Only import the first two templates to avoid long operation
+var xmlFiles = Directory.GetFiles("../sample_data/sdc_templates", "*.xml").Take(2);
 foreach (var filePath in xmlFiles)
 {
     var doc = XDocument.Load(filePath);
@@ -62,7 +63,7 @@ foreach (var filePath in xmlFiles)
     var doctype = "FD";
     
     // Insert data into database
-    sdcCdm.WriteTemplateSdcClass(sdcformdesignid, baseuri, lineage, version, fulluri, formtitle, sdc_xml, doctype);
+    sdcCdmInstance.WriteTemplateSdcClass(sdcformdesignid, baseuri, lineage, version, fulluri, formtitle, sdc_xml, doctype);
 }
 
 #!csharp
@@ -119,36 +120,3 @@ foreach (var message in v2_messages)
         continue;
     }
 }
-
-#!csharp
-
-// Print data for debugging
-
-using Microsoft.Data.Sqlite;
-
-var connection = new SqliteConnection("Data Source=public/sdc_cdm_dotnet_3.db;");
-connection.Open();
-var results = new List<Dictionary<string, object>>();
-
-using (var cmd = connection.CreateCommand())
-        {
-            cmd.CommandText = @"
-                SELECT * FROM sdcobsclass;
-            ";
-
-
-    using (var reader = cmd.ExecuteReader())
-    {
-        var row = new Dictionary<string, object>();
-
-        for (int i = 0; i < reader.FieldCount; i++)
-        {
-            string columnName = reader.GetName(i);
-            object value = reader.IsDBNull(i) ? null : reader.GetValue(i);
-            row[columnName] = value;
-        }
-
-        results.Add(row);
-    }
-    }
-results

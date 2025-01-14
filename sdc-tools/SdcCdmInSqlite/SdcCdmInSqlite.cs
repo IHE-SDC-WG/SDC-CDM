@@ -5,7 +5,7 @@ namespace SdcCdmInSqlite;
 
 public class SdcCdmInSqlite : ISdcCdm
 {
-    public SdcCdmInSqlite(string dbFilePath, bool inMemory = false)
+    public SdcCdmInSqlite(string dbFilePath, bool inMemory = false, bool overwrite = false)
     {
         this.dbFilePath = dbFilePath;
         this.isMemoryDb = inMemory;
@@ -14,6 +14,10 @@ public class SdcCdmInSqlite : ISdcCdm
             Mode = inMemory ? SqliteOpenMode.Memory : SqliteOpenMode.ReadWriteCreate,
             DataSource = dbFilePath,
         }.ToString();
+        if (overwrite && !inMemory && File.Exists(dbFilePath))
+        {
+            File.Delete(dbFilePath);
+        }
         this.connection = new(connectionString);
         connection.Open();
     }

@@ -2,7 +2,7 @@
 
 from lxml import etree
 import logging
-from crud_sqlite import (
+from python_cdm_utils.crud_sqlite import (
     create_template_sdc_class,
     create_template_instance_class,
     create_sdc_obs_class,

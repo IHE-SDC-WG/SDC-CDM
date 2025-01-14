@@ -3,3 +3,4 @@
 
 public/managed
 public/*.db
+public/*.db-journal
