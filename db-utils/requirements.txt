@@ -1,3 +1,0 @@
-lxml==5.3.0
-SQLAlchemy==2.0.35
-psycopg2-binary==2.9.9
