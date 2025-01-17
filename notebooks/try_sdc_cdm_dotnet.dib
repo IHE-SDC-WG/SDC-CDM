@@ -14,14 +14,14 @@
 
 # Build the SDC CDM libraries
 
-dotnet build ../sdc-tools
+dotnet build ../SdcCdmLib
 
 #!csharp
 
 // Reference the SDC CDM libraries
 
-#r "../sdc-tools/SdcCdm/bin/Debug/net8.0/SdcCdm.dll"
-#r "../sdc-tools/SdcCdmInSqlite/bin/Debug/net8.0/SdcCdmInSqlite.dll"
+#r "../SdcCdmLib/SdcCdm/bin/Debug/net8.0/SdcCdm.dll"
+#r "../SdcCdmLib/SdcCdmInSqlite/bin/Debug/net8.0/SdcCdmInSqlite.dll"
 
 using SdcCdm;
 using SdcCdmInSqlite;
