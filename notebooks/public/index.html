@@ -15,6 +15,16 @@
     <div id="button-container">
         <button class="query-button" onclick="setQuery(predefinedQueries.last10)">Last 10 SDC Templates</button>
         <button class="query-button" onclick="setQuery(predefinedQueries.countRows)">Count SDC Templates</button>
+        <button class="query-button" onclick="setQuery(predefinedQueries.allTemplatesDCClass)">All Templates DC
+            Classes</button>
+        <button class="query-button" onclick="setQuery(predefinedQueries.countTemplateInstanceClasses)">Count Template
+            Instance Classes</button>
+        <button class="query-button" onclick="setQuery(predefinedQueries.joinTemplatesAndInstances)">Join Templates and
+            Instances</button>
+        <button class="query-button" onclick="setQuery(predefinedQueries.allSpecimenClasses)">All Specimen
+            Classes</button>
+        <button class="query-button" onclick="setQuery(predefinedQueries.countObservationspecimens)">Count Observation
+            Specimens</button>
     </div>
 
     <textarea id="sql-input" rows="10" cols="80">SELECT * FROM templatesdcclass LIMIT 10;</textarea>
@@ -52,7 +62,22 @@ ORDER BY pk DESC
 LIMIT 10;`,
 
             countRows: `SELECT COUNT(*) AS total_rows
-FROM templatesdcclass;`
+FROM templatesdcclass;`,
+
+            allTemplatesDCClass: `SELECT * FROM templatesdcclass;`,
+
+            countTemplateInstanceClasses: `SELECT COUNT(*) AS total_instances
+FROM templateinstanceclass;`,
+
+            joinTemplatesAndInstances: `SELECT tdc.pk, tdc.sdcformdesignid, tic.templateinstanceversionguid
+FROM templatesdcclass tdc
+JOIN templateinstanceclass tic ON tdc.pk = tic.templatesdcfk
+LIMIT 10;`,
+
+            allSpecimenClasses: `SELECT * FROM specimenclass;`,
+
+            countObservationspecimens: `SELECT COUNT(*) AS total_observationspecimens
+FROM observationspecimensclass;`
         };
 
         initSQL();
