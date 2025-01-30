@@ -20,6 +20,11 @@ public class SdcCdmInSqlite : ISdcCdm
         }
         this.connection = new(connectionString);
         connection.Open();
+
+        // Enable foreign key constraints
+        using var cmd = connection.CreateCommand();
+        cmd.CommandText = "PRAGMA foreign_keys = ON;";
+        cmd.ExecuteNonQuery();
     }
 
     private readonly string dbFilePath;

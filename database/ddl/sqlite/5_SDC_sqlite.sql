@@ -1,9 +1,40 @@
 -- Based on the mapping at "../SDC CDM Requirements.xlsx"
 
+-- Enable foreign key constraints
+PRAGMA foreign_keys = ON;
+
+BEGIN TRANSACTION;
+
+CREATE TABLE main.templatesdcclass (
+    pk integer PRIMARY KEY AUTOINCREMENT,
+    sdcformdesignid varchar(255) NULL,
+    baseuri varchar(255) NULL,
+    lineage varchar(255) NULL,
+    version varchar(255) NULL,
+    fulluri varchar(255) NULL,
+    formtitle varchar(255) NULL,
+    sdc_xml text NULL,
+    doctype varchar(255) NULL
+);
+
+CREATE TABLE main.templateinstanceclass (
+    pk integer PRIMARY KEY AUTOINCREMENT,
+    templateinstanceversionguid varchar(255) NULL,
+    templateinstanceversionuri varchar(255) NULL,
+    templatesdcfk integer NOT NULL REFERENCES templatesdcclass(pk),
+    instanceversiondate varchar(255) NULL,
+    diagreportprops varchar(255) NULL,
+    surgpathid varchar(255) NULL,
+    personfk integer NULL,
+    encounterfk integer NULL,
+    practitionerfk integer NULL,
+    reporttext varchar(255) NULL
+);
+
 CREATE TABLE main.sdcobsclass (
     pk integer PRIMARY KEY AUTOINCREMENT,
-    templateinstanceclassfk integer NOT NULL,
-    -- parentfk integer NULL,
+    templateinstanceclassfk integer NOT NULL REFERENCES templateinstanceclass(pk),
+    parentfk integer NULL REFERENCES sdcobsclass(pk),
     parentinstanceguid varchar(255) NULL,
     section_id varchar(255) NULL,
     section_guid varchar(255) NULL,
@@ -30,35 +61,11 @@ CREATE TABLE main.sdcobsclass (
     encounterfk integer NULL,
     practitionerfk integer NULL
 );
-CREATE TABLE main.templateinstanceclass (
-    pk integer PRIMARY KEY AUTOINCREMENT,
-    templateinstanceversionguid varchar(255) NULL,
-    templateinstanceversionuri varchar(255) NULL,
-    templatesdcfk integer NOT NULL,
-    instanceversiondate varchar(255) NULL,
-    diagreportprops varchar(255) NULL,
-    surgpathid varchar(255) NULL,
-    personfk integer NULL,
-    encounterfk integer NULL,
-    practitionerfk integer NULL,
-    reporttext varchar(255) NULL
-);
-CREATE TABLE main.templatesdcclass (
-    pk integer PRIMARY KEY AUTOINCREMENT,
-    sdcformdesignid varchar(255) NULL,
-    baseuri varchar(255) NULL,
-    lineage varchar(255) NULL,
-    version varchar(255) NULL,
-    fulluri varchar(255) NULL,
-    formtitle varchar(255) NULL,
-    sdc_xml text NULL,
-    doctype varchar(255) NULL
-);
 CREATE TABLE main.templatetermmapclass (
     pk integer PRIMARY KEY AUTOINCREMENT,
     templatemapid varchar(255) NULL,
     template varchar(255) NULL,
-    templatesdcfk integer NOT NULL,
+    templatesdcfk integer NOT NULL REFERENCES templatesdcclass(pk),
     mapxml varchar(255) NULL,
     codesystemname varchar(255) NULL,
     codesystemreleasedate varchar(255) NULL,
@@ -68,19 +75,15 @@ CREATE TABLE main.templatetermmapclass (
 );
 CREATE TABLE main.templatemapcontentclass (
     pk integer PRIMARY KEY AUTOINCREMENT,
-    templatetermmap_fk integer NOT NULL,
+    templatetermmap_fk integer NOT NULL REFERENCES templatetermmapclass(pk),
     targetid varchar(255) NULL,
     code varchar(255) NULL,
-    codetext varchar(255) NULL
-);
-CREATE TABLE main.observationspecimensclass (
-    observationspecimensclasspk integer PRIMARY KEY AUTOINCREMENT,
-    sdcobsclassfk integer NOT NULL,
-    specimenfk integer NOT NULL
+    codetext varchar(255) NULL,
+    codematch varchar(255) NULL
 );
 CREATE TABLE main.specimenclass (
     specimenpk integer PRIMARY KEY AUTOINCREMENT,
-    parentspecimenfk integer NOT NULL,
+    parentspecimenfk integer NULL REFERENCES specimenclass(specimenpk),
     patientid varchar(255) NULL,
     encounterid varchar(255) NULL,
     specimentypetext varchar(255) NULL,
@@ -93,24 +96,10 @@ CREATE TABLE main.specimenclass (
     collectiondate varchar(255) NULL
 );
 
--- ALTER TABLE main.sdcobsclass ADD CONSTRAINT fk_templateinstanceclass FOREIGN KEY (templateinstanceclassfk) REFERENCES main.templateinstanceclass (pk);
+CREATE TABLE main.observationspecimensclass (
+    observationspecimensclasspk integer PRIMARY KEY AUTOINCREMENT,
+    sdcobsclassfk integer NOT NULL REFERENCES sdcobsclass(pk),
+    specimenfk integer NOT NULL REFERENCES specimenclass(specimenpk)
+);
 
--- -- ALTER TABLE main.sdcobsclass  ADD CONSTRAINT fk_parentfk FOREIGN KEY (parentfk) REFERENCES main.sdcobsclass (pk);
-
--- ALTER TABLE main.templateinstanceclass  ADD CONSTRAINT fk_templatesdcfk FOREIGN KEY (templatesdcfk) REFERENCES main.templatesdcclass (pk);
-
--- ALTER TABLE main.templatetermmapclass  ADD CONSTRAINT fk_templatesdcfk FOREIGN KEY (templatesdcfk) REFERENCES main.templatesdcclass (pk);
-
--- ALTER TABLE main.templatemapcontentclass  ADD CONSTRAINT fk_templatetermmap_fk FOREIGN KEY (templatetermmap_fk) REFERENCES main.templatetermmapclass (pk);
-
--- ALTER TABLE main.observationspecimensclass  ADD CONSTRAINT fk_sdcobsclass FOREIGN KEY (sdcobsclassfk) REFERENCES main.sdcobsclass(pk);
-
--- ALTER TABLE main.observationspecimensclass  ADD CONSTRAINT fk_specimen FOREIGN KEY (specimenfk) REFERENCES main.specimenclass(specimenpk);
-
--- ALTER TABLE main.specimenclass  ADD CONSTRAINT fk_parentspecimen FOREIGN KEY (parentspecimenfk) REFERENCES main.specimenclass(specimenpk);
-
--- -- ALTER TABLE main.sdcobsclass  ADD CONSTRAINT fk_person FOREIGN KEY (personfk) REFERENCES main.person (person_id);
-
--- -- ALTER TABLE main.sdcobsclass  ADD CONSTRAINT fk_encounter FOREIGN KEY (encounterfk) REFERENCES main.visit_occurrence (visit_occurrence_id);
-
--- -- ALTER TABLE main.sdcobsclass  ADD CONSTRAINT fk_practitioner FOREIGN KEY (practitionerfk) REFERENCES main.provider (provider_id);
+COMMIT;
