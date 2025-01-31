@@ -2,6 +2,7 @@
 db-utils/samples
 
 venv
+.venv
 __pycache__
 
 temp
