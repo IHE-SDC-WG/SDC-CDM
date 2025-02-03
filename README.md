@@ -30,10 +30,10 @@ The SDC-CDM GitHub repository hosts the following projects to help users and dev
 
 The notebooks contain a number of examples of how to use the CDM schema.
 
-#### .NET
+#### .NET Polyglot Notebook
 
 1. **Open the Notebook:**
-   Open `notebooks/try_sdc_cdm_dotnet.dib` using VS Code with the [Polyglot Notebooks extension](https://marketplace.visualstudio.com/items?itemName=ms-dotnettools.polyglot-notebooks) installed.
+   Open [`notebooks/try_sdc_cdm_dotnet.dib`](notebooks/try_sdc_cdm_dotnet.dib) using VS Code with the [Polyglot Notebooks extension](https://marketplace.visualstudio.com/items?itemName=ms-dotnettools.polyglot-notebooks) installed.
 
 2. **Notebook Walkthrough:**
    The notebook will guide you through:
@@ -41,10 +41,10 @@ The notebooks contain a number of examples of how to use the CDM schema.
    - Importing SDC templates, SDC forms, and NAACCR V2 messages.
    - Exporting CDM data into FHIR CPDS bundles.
 
-#### Python
+#### Python Jupyter Notebook
 
 1. **Open the Notebook:**
-   Open `notebooks/try_sdc_cdm_python.ipynb` using a Jupyter notebook viewer.
+   Open [`notebooks/try_sdc_cdm_python.ipynb`](notebooks/try_sdc_cdm_python.ipynb) using a Jupyter notebook viewer.
 
 2. **Notebook Walkthrough:**
    The notebook will guide you through:
