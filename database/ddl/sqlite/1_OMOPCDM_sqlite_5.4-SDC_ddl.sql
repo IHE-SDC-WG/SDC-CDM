@@ -1,14 +1,19 @@
---sqlite CDM DDL Specification for OMOP Common Data Model 5.4
+-- Enable foreign key constraints
+PRAGMA foreign_keys = ON;
+
+BEGIN TRANSACTION;
+
+--sqlite CDM DDL Specification for OMOP Common Data Model 5.4-SDC
 --HINT DISTRIBUTE ON KEY (person_id)
 CREATE TABLE main.person (
-			person_id integer NOT NULL,
-			gender_concept_id integer NOT NULL,
+			person_id integer NOT NULL PRIMARY KEY AUTOINCREMENT,
+			gender_concept_id integer NOT NULL REFERENCES concept(concept_id),
 			year_of_birth integer NOT NULL,
 			month_of_birth integer NULL,
 			day_of_birth integer NULL,
 			birth_datetime REAL NULL,
-			race_concept_id integer NOT NULL,
-			ethnicity_concept_id integer NOT NULL,
+			race_concept_id integer NOT NULL REFERENCES concept(concept_id),
+			ethnicity_concept_id integer NOT NULL REFERENCES concept(concept_id),
 			location_id integer NULL,
 			provider_id integer NULL,
 			care_site_id integer NULL,
@@ -21,21 +26,21 @@ CREATE TABLE main.person (
 			ethnicity_source_concept_id integer NULL );
 --HINT DISTRIBUTE ON KEY (person_id)
 CREATE TABLE main.observation_period (
-			observation_period_id integer NOT NULL,
-			person_id integer NOT NULL,
+			observation_period_id integer NOT NULL PRIMARY KEY AUTOINCREMENT,
+			person_id integer NOT NULL REFERENCES person(person_id),
 			observation_period_start_date date NOT NULL,
 			observation_period_end_date date NOT NULL,
-			period_type_concept_id integer NOT NULL );
+			period_type_concept_id integer NOT NULL REFERENCES concept(concept_id) );
 --HINT DISTRIBUTE ON KEY (person_id)
 CREATE TABLE main.visit_occurrence (
-			visit_occurrence_id integer NOT NULL,
-			person_id integer NOT NULL,
-			visit_concept_id integer NOT NULL,
+			visit_occurrence_id integer NOT NULL PRIMARY KEY AUTOINCREMENT,
+			person_id integer NOT NULL REFERENCES person(person_id),
+			visit_concept_id integer NOT NULL REFERENCES concept(concept_id),
 			visit_start_date date NOT NULL,
 			visit_start_datetime REAL NULL,
 			visit_end_date date NOT NULL,
 			visit_end_datetime REAL NULL,
-			visit_type_concept_id Integer NOT NULL,
+			visit_type_concept_id Integer NOT NULL REFERENCES concept(concept_id),
 			provider_id integer NULL,
 			care_site_id integer NULL,
 			visit_source_value TEXT NULL,
@@ -47,14 +52,14 @@ CREATE TABLE main.visit_occurrence (
 			preceding_visit_occurrence_id integer NULL );
 --HINT DISTRIBUTE ON KEY (person_id)
 CREATE TABLE main.visit_detail (
-			visit_detail_id integer NOT NULL,
-			person_id integer NOT NULL,
-			visit_detail_concept_id integer NOT NULL,
+			visit_detail_id integer NOT NULL PRIMARY KEY AUTOINCREMENT,
+			person_id integer NOT NULL REFERENCES person(person_id),
+			visit_detail_concept_id integer NOT NULL REFERENCES concept(concept_id),
 			visit_detail_start_date date NOT NULL,
 			visit_detail_start_datetime REAL NULL,
 			visit_detail_end_date date NOT NULL,
 			visit_detail_end_datetime REAL NULL,
-			visit_detail_type_concept_id integer NOT NULL,
+			visit_detail_type_concept_id integer NOT NULL REFERENCES concept(concept_id),
 			provider_id integer NULL,
 			care_site_id integer NULL,
 			visit_detail_source_value TEXT NULL,
@@ -65,17 +70,17 @@ CREATE TABLE main.visit_detail (
 			discharged_to_concept_id integer NULL,
 			preceding_visit_detail_id integer NULL,
 			parent_visit_detail_id integer NULL,
-			visit_occurrence_id integer NOT NULL );
+			visit_occurrence_id integer NOT NULL REFERENCES visit_occurrence(visit_occurrence_id) );
 --HINT DISTRIBUTE ON KEY (person_id)
 CREATE TABLE main.condition_occurrence (
-			condition_occurrence_id integer NOT NULL,
-			person_id integer NOT NULL,
-			condition_concept_id integer NOT NULL,
+			condition_occurrence_id integer NOT NULL PRIMARY KEY AUTOINCREMENT,
+			person_id integer NOT NULL REFERENCES person(person_id),
+			condition_concept_id integer NOT NULL REFERENCES concept(concept_id),
 			condition_start_date date NOT NULL,
 			condition_start_datetime REAL NULL,
 			condition_end_date date NULL,
 			condition_end_datetime REAL NULL,
-			condition_type_concept_id integer NOT NULL,
+			condition_type_concept_id integer NOT NULL REFERENCES concept(concept_id),
 			condition_status_concept_id integer NULL,
 			stop_reason TEXT NULL,
 			provider_id integer NULL,
@@ -86,15 +91,15 @@ CREATE TABLE main.condition_occurrence (
 			condition_status_source_value TEXT NULL );
 --HINT DISTRIBUTE ON KEY (person_id)
 CREATE TABLE main.drug_exposure (
-			drug_exposure_id integer NOT NULL,
-			person_id integer NOT NULL,
-			drug_concept_id integer NOT NULL,
+			drug_exposure_id integer NOT NULL PRIMARY KEY AUTOINCREMENT,
+			person_id integer NOT NULL REFERENCES person(person_id),
+			drug_concept_id integer NOT NULL REFERENCES concept(concept_id),
 			drug_exposure_start_date date NOT NULL,
 			drug_exposure_start_datetime REAL NULL,
 			drug_exposure_end_date date NOT NULL,
 			drug_exposure_end_datetime REAL NULL,
 			verbatim_end_date date NULL,
-			drug_type_concept_id integer NOT NULL,
+			drug_type_concept_id integer NOT NULL REFERENCES concept(concept_id),
 			stop_reason TEXT NULL,
 			refills integer NULL,
 			quantity REAL NULL,
@@ -111,14 +116,14 @@ CREATE TABLE main.drug_exposure (
 			dose_unit_source_value TEXT NULL );
 --HINT DISTRIBUTE ON KEY (person_id)
 CREATE TABLE main.procedure_occurrence (
-			procedure_occurrence_id integer NOT NULL,
-			person_id integer NOT NULL,
-			procedure_concept_id integer NOT NULL,
+			procedure_occurrence_id integer NOT NULL PRIMARY KEY AUTOINCREMENT,
+			person_id integer NOT NULL REFERENCES person(person_id),
+			procedure_concept_id integer NOT NULL REFERENCES concept(concept_id),
 			procedure_date date NOT NULL,
 			procedure_datetime REAL NULL,
 			procedure_end_date date NULL,
 			procedure_end_datetime REAL NULL,
-			procedure_type_concept_id integer NOT NULL,
+			procedure_type_concept_id integer NOT NULL REFERENCES concept(concept_id),
 			modifier_concept_id integer NULL,
 			quantity integer NULL,
 			provider_id integer NULL,
@@ -129,14 +134,14 @@ CREATE TABLE main.procedure_occurrence (
 			modifier_source_value TEXT NULL );
 --HINT DISTRIBUTE ON KEY (person_id)
 CREATE TABLE main.device_exposure (
-			device_exposure_id integer NOT NULL,
-			person_id integer NOT NULL,
-			device_concept_id integer NOT NULL,
+			device_exposure_id integer NOT NULL PRIMARY KEY AUTOINCREMENT,
+			person_id integer NOT NULL REFERENCES person(person_id),
+			device_concept_id integer NOT NULL REFERENCES concept(concept_id),
 			device_exposure_start_date date NOT NULL,
 			device_exposure_start_datetime REAL NULL,
 			device_exposure_end_date date NULL,
 			device_exposure_end_datetime REAL NULL,
-			device_type_concept_id integer NOT NULL,
+			device_type_concept_id integer NOT NULL REFERENCES concept(concept_id),
 			unique_device_id TEXT NULL,
 			production_id TEXT NULL,
 			quantity integer NULL,
@@ -150,13 +155,13 @@ CREATE TABLE main.device_exposure (
 			unit_source_concept_id integer NULL );
 --HINT DISTRIBUTE ON KEY (person_id)
 CREATE TABLE main.measurement (
-			measurement_id integer NOT NULL,
-			person_id integer NOT NULL,
-			measurement_concept_id integer NOT NULL,
+			measurement_id integer NOT NULL PRIMARY KEY AUTOINCREMENT,
+			person_id integer NOT NULL REFERENCES person(person_id),
+			measurement_concept_id integer NOT NULL REFERENCES concept(concept_id),
 			measurement_date date NOT NULL,
 			measurement_datetime REAL NULL,
 			measurement_time TEXT NULL,
-			measurement_type_concept_id integer NOT NULL,
+			measurement_type_concept_id integer NOT NULL REFERENCES concept(concept_id),
 			operator_concept_id integer NULL,
 			value_as_number REAL NULL,
 			value_as_concept_id integer NULL,
@@ -175,12 +180,12 @@ CREATE TABLE main.measurement (
 			meas_event_field_concept_id integer NULL );
 --HINT DISTRIBUTE ON KEY (person_id)
 CREATE TABLE main.observation (
-			observation_id integer NOT NULL,
-			person_id integer NOT NULL,
-			observation_concept_id integer NOT NULL,
+			observation_id integer NOT NULL PRIMARY KEY AUTOINCREMENT,
+			person_id integer NOT NULL REFERENCES person(person_id),
+			observation_concept_id integer NOT NULL REFERENCES concept(concept_id),
 			observation_date date NOT NULL,
 			observation_datetime REAL NULL,
-			observation_type_concept_id integer NOT NULL,
+			observation_type_concept_id integer NOT NULL REFERENCES concept(concept_id),
 			value_as_number REAL NULL,
 			value_as_string TEXT NULL,
 			value_as_concept_id Integer NULL,
@@ -198,7 +203,7 @@ CREATE TABLE main.observation (
 			obs_event_field_concept_id integer NULL );
 --HINT DISTRIBUTE ON KEY (person_id)
 CREATE TABLE main.death (
-			person_id integer NOT NULL,
+			person_id integer NOT NULL REFERENCES person(person_id),
 			death_date date NOT NULL,
 			death_datetime REAL NULL,
 			death_type_concept_id integer NULL,
@@ -207,16 +212,16 @@ CREATE TABLE main.death (
 			cause_source_concept_id integer NULL );
 --HINT DISTRIBUTE ON KEY (person_id)
 CREATE TABLE main.note (
-			note_id integer NOT NULL,
-			person_id integer NOT NULL,
+			note_id integer NOT NULL PRIMARY KEY AUTOINCREMENT,
+			person_id integer NOT NULL REFERENCES person(person_id),
 			note_date date NOT NULL,
 			note_datetime REAL NULL,
-			note_type_concept_id integer NOT NULL,
-			note_class_concept_id integer NOT NULL,
+			note_type_concept_id integer NOT NULL REFERENCES concept(concept_id),
+			note_class_concept_id integer NOT NULL REFERENCES concept(concept_id),
 			note_title TEXT NULL,
 			note_text TEXT NOT NULL,
-			encoding_concept_id integer NOT NULL,
-			language_concept_id integer NOT NULL,
+			encoding_concept_id integer NOT NULL REFERENCES concept(concept_id),
+			language_concept_id integer NOT NULL REFERENCES concept(concept_id),
 			provider_id integer NULL,
 			visit_occurrence_id integer NULL,
 			visit_detail_id integer NULL,
@@ -225,7 +230,7 @@ CREATE TABLE main.note (
 			note_event_field_concept_id integer NULL );
 --HINT DISTRIBUTE ON RANDOM
 CREATE TABLE main.note_nlp (
-			note_nlp_id integer NOT NULL,
+			note_nlp_id integer NOT NULL PRIMARY KEY AUTOINCREMENT,
 			note_id integer NOT NULL,
 			section_concept_id integer NULL,
 			snippet TEXT NULL,
@@ -241,10 +246,10 @@ CREATE TABLE main.note_nlp (
 			term_modifiers TEXT NULL );
 --HINT DISTRIBUTE ON KEY (person_id)
 CREATE TABLE main.specimen (
-			specimen_id integer NOT NULL,
-			person_id integer NOT NULL,
-			specimen_concept_id integer NOT NULL,
-			specimen_type_concept_id integer NOT NULL,
+			specimen_id integer NOT NULL PRIMARY KEY AUTOINCREMENT,
+			person_id integer NOT NULL REFERENCES person(person_id),
+			specimen_concept_id integer NOT NULL REFERENCES concept(concept_id),
+			specimen_type_concept_id integer NOT NULL REFERENCES concept(concept_id),
 			specimen_date date NOT NULL,
 			specimen_datetime REAL NULL,
 			quantity REAL NULL,
@@ -258,14 +263,14 @@ CREATE TABLE main.specimen (
 			disease_status_source_value TEXT NULL );
 --HINT DISTRIBUTE ON RANDOM
 CREATE TABLE main.fact_relationship (
-			domain_concept_id_1 integer NOT NULL,
+			domain_concept_id_1 integer NOT NULL REFERENCES concept(concept_id),
 			fact_id_1 integer NOT NULL,
-			domain_concept_id_2 integer NOT NULL,
+			domain_concept_id_2 integer NOT NULL REFERENCES concept(concept_id),
 			fact_id_2 integer NOT NULL,
-			relationship_concept_id integer NOT NULL );
+			relationship_concept_id integer NOT NULL REFERENCES concept(concept_id) );
 --HINT DISTRIBUTE ON RANDOM
 CREATE TABLE main.location (
-			location_id integer NOT NULL,
+			location_id integer NOT NULL PRIMARY KEY AUTOINCREMENT,
 			address_1 TEXT NULL,
 			address_2 TEXT NULL,
 			city TEXT NULL,
@@ -279,7 +284,7 @@ CREATE TABLE main.location (
 			longitude REAL NULL );
 --HINT DISTRIBUTE ON RANDOM
 CREATE TABLE main.care_site (
-			care_site_id integer NOT NULL,
+			care_site_id integer NOT NULL PRIMARY KEY AUTOINCREMENT,
 			care_site_name TEXT NULL,
 			place_of_service_concept_id integer NULL,
 			location_id integer NULL,
@@ -287,7 +292,7 @@ CREATE TABLE main.care_site (
 			place_of_service_source_value TEXT NULL );
 --HINT DISTRIBUTE ON RANDOM
 CREATE TABLE main.provider (
-			provider_id integer NOT NULL,
+			provider_id integer NOT NULL PRIMARY KEY AUTOINCREMENT,
 			provider_name TEXT NULL,
 			npi TEXT NULL,
 			dea TEXT NULL,
@@ -302,8 +307,8 @@ CREATE TABLE main.provider (
 			gender_source_concept_id integer NULL );
 --HINT DISTRIBUTE ON KEY (person_id)
 CREATE TABLE main.payer_plan_period (
-			payer_plan_period_id integer NOT NULL,
-			person_id integer NOT NULL,
+			payer_plan_period_id integer NOT NULL PRIMARY KEY AUTOINCREMENT,
+			person_id integer NOT NULL REFERENCES person(person_id),
 			payer_plan_period_start_date date NOT NULL,
 			payer_plan_period_end_date date NOT NULL,
 			payer_concept_id integer NULL,
@@ -321,10 +326,10 @@ CREATE TABLE main.payer_plan_period (
 			stop_reason_source_concept_id integer NULL );
 --HINT DISTRIBUTE ON RANDOM
 CREATE TABLE main.cost (
-			cost_id integer NOT NULL,
+			cost_id integer NOT NULL PRIMARY KEY AUTOINCREMENT,
 			cost_event_id integer NOT NULL,
 			cost_domain_id TEXT NOT NULL,
-			cost_type_concept_id integer NOT NULL,
+			cost_type_concept_id integer NOT NULL REFERENCES concept(concept_id),
 			currency_concept_id integer NULL,
 			total_charge REAL NULL,
 			total_cost REAL NULL,
@@ -345,55 +350,55 @@ CREATE TABLE main.cost (
 			drg_source_value TEXT NULL );
 --HINT DISTRIBUTE ON KEY (person_id)
 CREATE TABLE main.drug_era (
-			drug_era_id integer NOT NULL,
-			person_id integer NOT NULL,
-			drug_concept_id integer NOT NULL,
+			drug_era_id integer NOT NULL PRIMARY KEY AUTOINCREMENT,
+			person_id integer NOT NULL REFERENCES person(person_id),
+			drug_concept_id integer NOT NULL REFERENCES concept(concept_id),
 			drug_era_start_date date NOT NULL,
 			drug_era_end_date date NOT NULL,
 			drug_exposure_count integer NULL,
 			gap_days integer NULL );
 --HINT DISTRIBUTE ON KEY (person_id)
 CREATE TABLE main.dose_era (
-			dose_era_id integer NOT NULL,
-			person_id integer NOT NULL,
-			drug_concept_id integer NOT NULL,
-			unit_concept_id integer NOT NULL,
+			dose_era_id integer NOT NULL PRIMARY KEY AUTOINCREMENT,
+			person_id integer NOT NULL REFERENCES person(person_id),
+			drug_concept_id integer NOT NULL REFERENCES concept(concept_id),
+			unit_concept_id integer NOT NULL REFERENCES concept(concept_id),
 			dose_value REAL NOT NULL,
 			dose_era_start_date date NOT NULL,
 			dose_era_end_date date NOT NULL );
 --HINT DISTRIBUTE ON KEY (person_id)
 CREATE TABLE main.condition_era (
-			condition_era_id integer NOT NULL,
-			person_id integer NOT NULL,
-			condition_concept_id integer NOT NULL,
+			condition_era_id integer NOT NULL PRIMARY KEY AUTOINCREMENT,
+			person_id integer NOT NULL REFERENCES person(person_id),
+			condition_concept_id integer NOT NULL REFERENCES concept(concept_id),
 			condition_era_start_date date NOT NULL,
 			condition_era_end_date date NOT NULL,
 			condition_occurrence_count integer NULL );
 --HINT DISTRIBUTE ON KEY (person_id)
 CREATE TABLE main.episode (
-			episode_id integer NOT NULL,
-			person_id integer NOT NULL,
-			episode_concept_id integer NOT NULL,
+			episode_id integer NOT NULL PRIMARY KEY AUTOINCREMENT,
+			person_id integer NOT NULL REFERENCES person(person_id),
+			episode_concept_id integer NOT NULL REFERENCES concept(concept_id),
 			episode_start_date date NOT NULL,
 			episode_start_datetime REAL NULL,
 			episode_end_date date NULL,
 			episode_end_datetime REAL NULL,
 			episode_parent_id integer NULL,
 			episode_number integer NULL,
-			episode_object_concept_id integer NOT NULL,
-			episode_type_concept_id integer NOT NULL,
+			episode_object_concept_id integer NOT NULL REFERENCES concept(concept_id),
+			episode_type_concept_id integer NOT NULL REFERENCES concept(concept_id),
 			episode_source_value TEXT NULL,
 			episode_source_concept_id integer NULL );
 --HINT DISTRIBUTE ON RANDOM
 CREATE TABLE main.episode_event (
-			episode_id integer NOT NULL,
+			episode_id integer NOT NULL REFERENCES episode(episode_id),
 			event_id integer NOT NULL,
-			episode_event_field_concept_id integer NOT NULL );
+			episode_event_field_concept_id integer NOT NULL REFERENCES concept(concept_id) );
 --HINT DISTRIBUTE ON RANDOM
 CREATE TABLE main.metadata (
-			metadata_id integer NOT NULL,
-			metadata_concept_id integer NOT NULL,
-			metadata_type_concept_id integer NOT NULL,
+			metadata_id integer NOT NULL PRIMARY KEY AUTOINCREMENT,
+			metadata_concept_id integer NOT NULL REFERENCES concept(concept_id),
+			metadata_type_concept_id integer NOT NULL REFERENCES concept(concept_id),
 			name TEXT NOT NULL,
 			value_as_string TEXT NULL,
 			value_as_concept_id integer NULL,
@@ -411,11 +416,11 @@ CREATE TABLE main.cdm_source (
 			source_release_date date NOT NULL,
 			cdm_release_date date NOT NULL,
 			cdm_version TEXT NULL,
-			cdm_version_concept_id integer NOT NULL,
+			cdm_version_concept_id integer NOT NULL REFERENCES concept(concept_id),
 			vocabulary_version TEXT NOT NULL );
 --HINT DISTRIBUTE ON RANDOM
 CREATE TABLE main.concept (
-			concept_id integer NOT NULL,
+			concept_id integer NOT NULL PRIMARY KEY AUTOINCREMENT,
 			concept_name TEXT NOT NULL,
 			domain_id TEXT NOT NULL,
 			vocabulary_id TEXT NOT NULL,
@@ -431,21 +436,21 @@ CREATE TABLE main.vocabulary (
 			vocabulary_name TEXT NOT NULL,
 			vocabulary_reference TEXT NULL,
 			vocabulary_version TEXT NULL,
-			vocabulary_concept_id integer NOT NULL );
+			vocabulary_concept_id integer NOT NULL REFERENCES concept(concept_id) );
 --HINT DISTRIBUTE ON RANDOM
 CREATE TABLE main.domain (
 			domain_id TEXT NOT NULL,
 			domain_name TEXT NOT NULL,
-			domain_concept_id integer NOT NULL );
+			domain_concept_id integer NOT NULL REFERENCES concept(concept_id) );
 --HINT DISTRIBUTE ON RANDOM
 CREATE TABLE main.concept_class (
 			concept_class_id TEXT NOT NULL,
 			concept_class_name TEXT NOT NULL,
-			concept_class_concept_id integer NOT NULL );
+			concept_class_concept_id integer NOT NULL REFERENCES concept(concept_id) );
 --HINT DISTRIBUTE ON RANDOM
 CREATE TABLE main.concept_relationship (
-			concept_id_1 integer NOT NULL,
-			concept_id_2 integer NOT NULL,
+			concept_id_1 integer NOT NULL REFERENCES concept(concept_id),
+			concept_id_2 integer NOT NULL REFERENCES concept(concept_id),
 			relationship_id TEXT NOT NULL,
 			valid_start_date date NOT NULL,
 			valid_end_date date NOT NULL,
@@ -457,33 +462,33 @@ CREATE TABLE main.relationship (
 			is_hierarchical TEXT NOT NULL,
 			defines_ancestry TEXT NOT NULL,
 			reverse_relationship_id TEXT NOT NULL,
-			relationship_concept_id integer NOT NULL );
+			relationship_concept_id integer NOT NULL REFERENCES concept(concept_id) );
 --HINT DISTRIBUTE ON RANDOM
 CREATE TABLE main.concept_synonym (
-			concept_id integer NOT NULL,
+			concept_id integer NOT NULL REFERENCES concept(concept_id),
 			concept_synonym_name TEXT NOT NULL,
-			language_concept_id integer NOT NULL );
+			language_concept_id integer NOT NULL REFERENCES concept(concept_id) );
 --HINT DISTRIBUTE ON RANDOM
 CREATE TABLE main.concept_ancestor (
-			ancestor_concept_id integer NOT NULL,
-			descendant_concept_id integer NOT NULL,
+			ancestor_concept_id integer NOT NULL REFERENCES concept(concept_id),
+			descendant_concept_id integer NOT NULL REFERENCES concept(concept_id),
 			min_levels_of_separation integer NOT NULL,
 			max_levels_of_separation integer NOT NULL );
 --HINT DISTRIBUTE ON RANDOM
 CREATE TABLE main.source_to_concept_map (
 			source_code TEXT NOT NULL,
-			source_concept_id integer NOT NULL,
+			source_concept_id integer NOT NULL REFERENCES concept(concept_id),
 			source_vocabulary_id TEXT NOT NULL,
 			source_code_description TEXT NULL,
-			target_concept_id integer NOT NULL,
+			target_concept_id integer NOT NULL REFERENCES concept(concept_id),
 			target_vocabulary_id TEXT NOT NULL,
 			valid_start_date date NOT NULL,
 			valid_end_date date NOT NULL,
 			invalid_reason TEXT NULL );
 --HINT DISTRIBUTE ON RANDOM
 CREATE TABLE main.drug_strength (
-			drug_concept_id integer NOT NULL,
-			ingredient_concept_id integer NOT NULL,
+			drug_concept_id integer NOT NULL REFERENCES concept(concept_id),
+			ingredient_concept_id integer NOT NULL REFERENCES concept(concept_id),
 			amount_value REAL NULL,
 			amount_unit_concept_id integer NULL,
 			numerator_value REAL NULL,
@@ -505,7 +510,101 @@ CREATE TABLE main.cohort_definition (
 			cohort_definition_id integer NOT NULL,
 			cohort_definition_name TEXT NOT NULL,
 			cohort_definition_description TEXT NULL,
-			definition_type_concept_id integer NOT NULL,
+			definition_type_concept_id integer NOT NULL REFERENCES concept(concept_id),
 			cohort_definition_syntax TEXT NULL,
-			subject_concept_id integer NOT NULL,
+			subject_concept_id integer NOT NULL REFERENCES concept(concept_id),
 			cohort_initiation_date date NULL );
+--HINT DISTRIBUTE ON RANDOM
+CREATE TABLE main.templatesdcclass (
+			pk integer NOT NULL PRIMARY KEY AUTOINCREMENT,
+			sdcformdesignid TEXT NULL,
+			baseuri TEXT NULL,
+			lineage TEXT NULL,
+			version TEXT NULL,
+			fulluri TEXT NULL,
+			formtitle TEXT NULL,
+			sdc_xml text NULL,
+			doctype TEXT NULL );
+--HINT DISTRIBUTE ON RANDOM
+CREATE TABLE main.templateinstanceclass (
+			pk integer NOT NULL PRIMARY KEY AUTOINCREMENT,
+			templateinstanceversionguid TEXT NULL,
+			templateinstanceversionuri TEXT NULL,
+			templatesdcfk integer NOT NULL REFERENCES templatesdcclass(pk),
+			instanceversiondate TEXT NULL,
+			diagreportprops TEXT NULL,
+			surgpathid TEXT NULL,
+			personfk integer NULL,
+			encounterfk integer NULL,
+			practitionerfk integer NULL,
+			reporttext TEXT NULL );
+--HINT DISTRIBUTE ON RANDOM
+CREATE TABLE main.sdcobsclass (
+			pk integer NOT NULL PRIMARY KEY AUTOINCREMENT,
+			templateinstanceclassfk integer NOT NULL REFERENCES templateinstanceclass(pk),
+			parentfk integer NULL,
+			parentinstanceguid TEXT NULL,
+			section_id TEXT NULL,
+			section_guid TEXT NULL,
+			q_text TEXT NULL,
+			q_instanceguid TEXT NULL,
+			q_id TEXT NULL,
+			li_text TEXT NULL,
+			li_id TEXT NULL,
+			li_instanceguid TEXT NULL,
+			li_parentguid TEXT NULL,
+			response TEXT NULL,
+			units TEXT NULL,
+			units_system TEXT NULL,
+			datatype TEXT NULL,
+			response_int integer NULL,
+			response_float REAL NULL,
+			response_datetime date NULL,
+			reponse_string_nvarchar TEXT NULL,
+			obsdatetime TEXT NULL,
+			sdcorder TEXT NULL,
+			sdcrepeatlevel TEXT NULL,
+			sdccomments TEXT NULL,
+			personfk integer NULL,
+			encounterfk integer NULL,
+			practitionerfk integer NULL );
+--HINT DISTRIBUTE ON RANDOM
+CREATE TABLE main.templatetermmapclass (
+			pk integer NOT NULL PRIMARY KEY AUTOINCREMENT,
+			templatemapid TEXT NULL,
+			template TEXT NULL,
+			templatesdcfk integer NOT NULL REFERENCES templatesdcclass(pk),
+			mapxml TEXT NULL,
+			codesystemname TEXT NULL,
+			codesystemreleasedate TEXT NULL,
+			codesystemversion TEXT NULL,
+			codesystemoid TEXT NULL,
+			codesystemuri TEXT NULL );
+--HINT DISTRIBUTE ON RANDOM
+CREATE TABLE main.templatemapcontentclass (
+			pk integer NOT NULL PRIMARY KEY AUTOINCREMENT,
+			templatetermmap_fk integer NOT NULL REFERENCES templatetermmapclass(pk),
+			targetid TEXT NULL,
+			code TEXT NULL,
+			codetext TEXT NULL,
+			codematch TEXT NULL );
+--HINT DISTRIBUTE ON RANDOM
+CREATE TABLE main.specimenclass (
+			specimenpk integer NOT NULL PRIMARY KEY AUTOINCREMENT,
+			parentspecimenfk integer NULL,
+			patientid TEXT NULL,
+			encounterid TEXT NULL,
+			specimentypetext TEXT NULL,
+			specimentypecode TEXT NULL,
+			sourcesitetext TEXT NULL,
+			sourcesitecode TEXT NULL,
+			collectionmethodtext TEXT NULL,
+			collectionmethodcode TEXT NULL,
+			specimencount TEXT NULL,
+			collectiondate TEXT NULL );
+--HINT DISTRIBUTE ON RANDOM
+CREATE TABLE main.observationspecimensclass (
+			observationspecimensclasspk integer NOT NULL PRIMARY KEY AUTOINCREMENT,
+			sdcobsclassfk integer NOT NULL REFERENCES sdcobsclass(pk),
+			specimenfk integer NOT NULL REFERENCES specimenclass(specimenpk) );
+COMMIT;

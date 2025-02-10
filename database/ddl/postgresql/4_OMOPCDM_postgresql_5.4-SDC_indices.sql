@@ -94,7 +94,7 @@ Standardized vocabularies
 CREATE INDEX idx_concept_concept_id  ON public.concept  (concept_id ASC);
 CLUSTER public.concept  USING idx_concept_concept_id ;
 CREATE INDEX idx_concept_code ON public.concept (concept_code ASC);
-CREATE INDEX idx_concept_vocabluary_id ON public.concept (vocabulary_id ASC);
+CREATE INDEX idx_concept_vocabulary_id ON public.concept (vocabulary_id ASC);
 CREATE INDEX idx_concept_domain_id ON public.concept (domain_id ASC);
 CREATE INDEX idx_concept_class_id ON public.concept (concept_class_id ASC);
 CREATE INDEX idx_vocabulary_vocabulary_id  ON public.vocabulary  (vocabulary_id ASC);

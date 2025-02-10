@@ -1,4 +1,4 @@
---postgresql CDM DDL Specification for OMOP Common Data Model 5.4
+--postgresql CDM DDL Specification for OMOP Common Data Model 5.4-SDC
 --HINT DISTRIBUTE ON KEY (person_id)
 CREATE TABLE public.person (
 			person_id integer NOT NULL,
@@ -509,3 +509,96 @@ CREATE TABLE public.cohort_definition (
 			cohort_definition_syntax TEXT NULL,
 			subject_concept_id integer NOT NULL,
 			cohort_initiation_date date NULL );
+--HINT DISTRIBUTE ON RANDOM
+CREATE TABLE public.templatesdcclass (
+			pk integer NOT NULL,
+			sdcformdesignid varchar(255) NULL,
+			baseuri varchar(255) NULL,
+			lineage varchar(255) NULL,
+			version varchar(255) NULL,
+			fulluri varchar(255) NULL,
+			formtitle varchar(255) NULL,
+			sdc_xml text NULL,
+			doctype varchar(255) NULL );
+--HINT DISTRIBUTE ON RANDOM
+CREATE TABLE public.templateinstanceclass (
+			pk integer NOT NULL,
+			templateinstanceversionguid varchar(255) NULL,
+			templateinstanceversionuri varchar(255) NULL,
+			templatesdcfk integer NOT NULL,
+			instanceversiondate varchar(255) NULL,
+			diagreportprops varchar(255) NULL,
+			surgpathid varchar(255) NULL,
+			personfk integer NULL,
+			encounterfk integer NULL,
+			practitionerfk integer NULL,
+			reporttext varchar(255) NULL );
+--HINT DISTRIBUTE ON RANDOM
+CREATE TABLE public.sdcobsclass (
+			pk integer NOT NULL,
+			templateinstanceclassfk integer NOT NULL,
+			parentfk integer NULL,
+			parentinstanceguid varchar(255) NULL,
+			section_id varchar(255) NULL,
+			section_guid varchar(255) NULL,
+			q_text varchar(255) NULL,
+			q_instanceguid varchar(255) NULL,
+			q_id varchar(255) NULL,
+			li_text varchar(255) NULL,
+			li_id varchar(255) NULL,
+			li_instanceguid varchar(255) NULL,
+			li_parentguid varchar(255) NULL,
+			response varchar(255) NULL,
+			units varchar(255) NULL,
+			units_system varchar(255) NULL,
+			datatype varchar(255) NULL,
+			response_int integer NULL,
+			response_float NUMERIC NULL,
+			response_datetime date NULL,
+			reponse_string_nvarchar varchar(255) NULL,
+			obsdatetime varchar(255) NULL,
+			sdcorder varchar(255) NULL,
+			sdcrepeatlevel varchar(255) NULL,
+			sdccomments varchar(255) NULL,
+			personfk integer NULL,
+			encounterfk integer NULL,
+			practitionerfk integer NULL );
+--HINT DISTRIBUTE ON RANDOM
+CREATE TABLE public.templatetermmapclass (
+			pk integer NOT NULL,
+			templatemapid varchar(255) NULL,
+			template varchar(255) NULL,
+			templatesdcfk integer NOT NULL,
+			mapxml varchar(255) NULL,
+			codesystemname varchar(255) NULL,
+			codesystemreleasedate varchar(255) NULL,
+			codesystemversion varchar(255) NULL,
+			codesystemoid varchar(255) NULL,
+			codesystemuri varchar(255) NULL );
+--HINT DISTRIBUTE ON RANDOM
+CREATE TABLE public.templatemapcontentclass (
+			pk integer NOT NULL,
+			templatetermmap_fk integer NOT NULL,
+			targetid varchar(255) NULL,
+			code varchar(255) NULL,
+			codetext varchar(255) NULL,
+			codematch varchar(255) NULL );
+--HINT DISTRIBUTE ON RANDOM
+CREATE TABLE public.specimenclass (
+			specimenpk integer NOT NULL,
+			parentspecimenfk integer NULL,
+			patientid varchar(255) NULL,
+			encounterid varchar(255) NULL,
+			specimentypetext varchar(255) NULL,
+			specimentypecode varchar(255) NULL,
+			sourcesitetext varchar(255) NULL,
+			sourcesitecode varchar(255) NULL,
+			collectionmethodtext varchar(255) NULL,
+			collectionmethodcode varchar(255) NULL,
+			specimencount varchar(255) NULL,
+			collectiondate varchar(255) NULL );
+--HINT DISTRIBUTE ON RANDOM
+CREATE TABLE public.observationspecimensclass (
+			observationspecimensclasspk integer NOT NULL,
+			sdcobsclassfk integer NOT NULL,
+			specimenfk integer NOT NULL );

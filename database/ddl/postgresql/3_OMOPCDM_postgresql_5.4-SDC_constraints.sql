@@ -1,4 +1,4 @@
---postgresql CDM Foreign Key Constraints for OMOP Common Data Model 5.4
+--postgresql CDM Foreign Key Constraints for OMOP Common Data Model 5.4-SDC
 ALTER TABLE public.person  ADD CONSTRAINT fpk_person_gender_concept_id FOREIGN KEY (gender_concept_id) REFERENCES public.CONCEPT (CONCEPT_ID);
 ALTER TABLE public.person  ADD CONSTRAINT fpk_person_race_concept_id FOREIGN KEY (race_concept_id) REFERENCES public.CONCEPT (CONCEPT_ID);
 ALTER TABLE public.person  ADD CONSTRAINT fpk_person_ethnicity_concept_id FOREIGN KEY (ethnicity_concept_id) REFERENCES public.CONCEPT (CONCEPT_ID);
@@ -175,3 +175,17 @@ ALTER TABLE public.drug_strength  ADD CONSTRAINT fpk_drug_strength_numerator_uni
 ALTER TABLE public.drug_strength  ADD CONSTRAINT fpk_drug_strength_denominator_unit_concept_id FOREIGN KEY (denominator_unit_concept_id) REFERENCES public.CONCEPT (CONCEPT_ID);
 ALTER TABLE public.cohort_definition  ADD CONSTRAINT fpk_cohort_definition_definition_type_concept_id FOREIGN KEY (definition_type_concept_id) REFERENCES public.CONCEPT (CONCEPT_ID);
 ALTER TABLE public.cohort_definition  ADD CONSTRAINT fpk_cohort_definition_subject_concept_id FOREIGN KEY (subject_concept_id) REFERENCES public.CONCEPT (CONCEPT_ID);
+ALTER TABLE public.templateinstanceclass  ADD CONSTRAINT fpk_templateinstanceclass_templatesdcfk FOREIGN KEY (templatesdcfk) REFERENCES public.templatesdcclass (pk);
+ALTER TABLE public.templateinstanceclass  ADD CONSTRAINT fpk_templateinstanceclass_personfk FOREIGN KEY (personfk) REFERENCES public.person (person_id);
+ALTER TABLE public.templateinstanceclass  ADD CONSTRAINT fpk_templateinstanceclass_encounterfk FOREIGN KEY (encounterfk) REFERENCES public.visit_occurrence (visit_occurrence_id);
+ALTER TABLE public.templateinstanceclass  ADD CONSTRAINT fpk_templateinstanceclass_practitionerfk FOREIGN KEY (practitionerfk) REFERENCES public.provider (provider_id);
+ALTER TABLE public.sdcobsclass  ADD CONSTRAINT fpk_sdcobsclass_templateinstanceclassfk FOREIGN KEY (templateinstanceclassfk) REFERENCES public.templateinstanceclass (pk);
+ALTER TABLE public.sdcobsclass  ADD CONSTRAINT fpk_sdcobsclass_parentfk FOREIGN KEY (parentfk) REFERENCES public.sdcobsclass (pk);
+ALTER TABLE public.sdcobsclass  ADD CONSTRAINT fpk_sdcobsclass_personfk FOREIGN KEY (personfk) REFERENCES public.person (person_id);
+ALTER TABLE public.sdcobsclass  ADD CONSTRAINT fpk_sdcobsclass_encounterfk FOREIGN KEY (encounterfk) REFERENCES public.visit_occurrence (visit_occurrence_id);
+ALTER TABLE public.sdcobsclass  ADD CONSTRAINT fpk_sdcobsclass_practitionerfk FOREIGN KEY (practitionerfk) REFERENCES public.provider (provider_id);
+ALTER TABLE public.templatetermmapclass  ADD CONSTRAINT fpk_templatetermmapclass_templatesdcfk FOREIGN KEY (templatesdcfk) REFERENCES public.templatesdcclass (pk);
+ALTER TABLE public.templatemapcontentclass  ADD CONSTRAINT fpk_templatemapcontentclass_templatetermmap_fk FOREIGN KEY (templatetermmap_fk) REFERENCES public.templatetermmapclass (pk);
+ALTER TABLE public.specimenclass  ADD CONSTRAINT fpk_specimenclass_parentspecimenfk FOREIGN KEY (parentspecimenfk) REFERENCES public.specimenclass (specimenpk);
+ALTER TABLE public.observationspecimensclass  ADD CONSTRAINT fpk_observationspecimensclass_sdcobsclassfk FOREIGN KEY (sdcobsclassfk) REFERENCES public.sdcobsclass (pk);
+ALTER TABLE public.observationspecimensclass  ADD CONSTRAINT fpk_observationspecimensclass_specimenfk FOREIGN KEY (specimenfk) REFERENCES public.specimenclass (specimenpk);
