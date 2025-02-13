@@ -11,7 +11,7 @@ from ddl_processor import DatabaseType, process_ddl_files
 # Repository details
 REPO_URL = "https://github.com/IHE-SDC-WG/OHDSI-CommonDataModel-SDC.git"
 TARGET_PATH = "inst/ddl/5.4-SDC"
-DEFAULT_COMMIT = "3c76c1d5e806d9ceb88e604972a7177c7da88a3b"
+DEFAULT_COMMIT = "d398292e90b6e0380560663f5750acf1fa5ec03c"
 
 # Supported database types and their source folders
 SUPPORTED_DBS = {DatabaseType.POSTGRESQL: "postgresql", DatabaseType.SQLITE: "sqlite"}
@@ -25,7 +25,7 @@ def fetch_ddl_files(commit: str, temp_dir: Path) -> Path:
     repo_dir = temp_dir / "repo"
     print("Cloning repository...")
     subprocess.run(
-        ["git", "clone", "--no-checkout", "--depth", "1", REPO_URL, str(repo_dir)],
+        ["git", "clone", "--no-checkout", REPO_URL, str(repo_dir)],
         check=True,
     )
 

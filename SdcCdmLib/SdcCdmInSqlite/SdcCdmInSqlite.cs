@@ -20,11 +20,6 @@ public class SdcCdmInSqlite : ISdcCdm
         }
         this.connection = new(connectionString);
         connection.Open();
-
-        // Enable foreign key constraints
-        using var cmd = connection.CreateCommand();
-        cmd.CommandText = "PRAGMA foreign_keys = ON;";
-        cmd.ExecuteNonQuery();
     }
 
     private readonly string dbFilePath;
@@ -102,8 +97,8 @@ public class SdcCdmInSqlite : ISdcCdm
         using var cmd = connection.CreateCommand();
         cmd.CommandText =
             @"
-                INSERT INTO main.templatesdcclass 
-                (sdcformdesignid, baseuri, lineage, version, fulluri, formtitle, sdc_xml, doctype)
+                INSERT INTO main.template_sdc 
+                (sdc_form_design_sdcid, base_uri, lineage, version, full_uri, form_title, sdc_xml, doc_type)
                 VALUES (@sdcformdesignid, @baseuri, @lineage, @version, @fulluri, @formtitle, @sdc_xml, @doctype);
                 SELECT last_insert_rowid();
             ";
@@ -140,8 +135,8 @@ public class SdcCdmInSqlite : ISdcCdm
         using var cmd = connection.CreateCommand();
         cmd.CommandText =
             @"
-                INSERT INTO templateinstanceclass 
-                (templateinstanceversionguid, templateinstanceversionuri, templatesdcfk, instanceversiondate, diagreportprops, surgpathid, personfk, encounterfk, practitionerfk, reporttext)
+                INSERT INTO template_instance 
+                (template_instance_version_guid, template_instance_version_uri, template_sdc_id, instance_version_date, diag_report_props, surg_path_sdcid, person_id, visit_occurrence_id, provider_id, report_text)
                 VALUES (@templateinstanceversionguid, @templateinstanceversionuri, @templatesdcfk, @instanceversiondate, @diagreportprops, @surgpathid, @personfk, @encounterfk, @practitionerfk, @reporttext);
                 SELECT last_insert_rowid();
             ";
@@ -200,8 +195,8 @@ public class SdcCdmInSqlite : ISdcCdm
         using var cmd = connection.CreateCommand();
         cmd.CommandText =
             @"
-                INSERT INTO sdcobsclass 
-                (templateinstanceclassfk, parentinstanceguid, section_id, section_guid, q_text, q_instanceguid, q_id, li_text, li_id, li_instanceguid, li_parentguid, response, units, units_system, datatype, response_int, response_float, response_datetime, reponse_string_nvarchar, obsdatetime, sdcorder, sdcrepeatlevel, sdccomments, personfk, encounterfk, practitionerfk)
+                INSERT INTO sdc_observation 
+                (template_instance_id, parentinstanceguid, section_sdcid, section_guid, question_text, question_instance_guid, question_sdcid, list_item_text, list_item_id, list_item_instanceguid, list_item_parentguid, response, units, units_system, datatype, response_int, response_float, response_datetime, reponse_string_nvarchar, obs_datetime, sdc_order, sdc_repeat_level, sdc_comments, person_id, visit_occurrence_id, provider_id)
                 VALUES (@templateinstanceclassfk, @parentinstanceguid, @section_id, @section_guid, @q_text, @q_instanceguid, @q_id, @li_text, @li_id, @li_instanceguid, @li_parentguid, @response, @units, @units_system, @datatype, @response_int, @response_float, @response_datetime, @reponse_string_nvarchar, @obsdatetime, @sdcorder, @sdcrepeatlevel, @sdccomments, @personfk, @encounterfk, @practitionerfk);
                 SELECT last_insert_rowid();
             ";
@@ -258,9 +253,9 @@ public class SdcCdmInSqlite : ISdcCdm
         using var cmd = connection.CreateCommand();
         cmd.CommandText =
             @"
-            SELECT pk
-            FROM templateinstanceclass
-            WHERE templateinstanceversionguid = @templateinstanceversionguid
+            SELECT template_instance_id
+            FROM template_instance
+            WHERE template_instance_version_guid = @templateinstanceversionguid
             ";
         cmd.Parameters.AddWithValue(
             "@templateinstanceversionguid",
@@ -308,20 +303,20 @@ public class SdcCdmInSqlite : ISdcCdm
         cmd.CommandText =
             @"
             SELECT
-                templateinstanceclass.pk,
-                templateinstanceversionguid,
-                templateinstanceversionuri,
-                templatesdcfk,
-                instanceversiondate,
-                diagreportprops,
-                surgpathid,
-                personfk,
-                encounterfk,
-                practitionerfk,
-                reporttext
-            FROM templateinstanceclass
-            INNER JOIN templatesdcclass ON templatesdcclass.pk = templateinstanceclass.templatesdcfk
-            WHERE templateinstanceclass.pk = @templateinstanceclasspk
+                template_instance.template_instance_id,
+                template_instance_version_guid,
+                template_instance_version_uri,
+                template_instance.template_sdc_id,
+                instance_version_date,
+                diag_report_props,
+                surg_path_sdcid,
+                person_id,
+                visit_occurrence_id,
+                provider_id,
+                report_text
+            FROM template_instance
+            INNER JOIN template_sdc ON template_sdc.template_sdc_id = template_instance.template_sdc_id
+            WHERE template_instance.template_instance_id = @templateinstanceclasspk
             ";
         cmd.Parameters.AddWithValue("@templateinstanceclasspk", templateInstanceClassPk);
         var reader = cmd.ExecuteReader();
@@ -353,36 +348,36 @@ public class SdcCdmInSqlite : ISdcCdm
         cmd.CommandText =
             @"
             SELECT
-                sdcobsclass.pk,
-                sdcobsclass.templateinstanceclassfk,
-                sdcobsclass.section_id,
-                sdcobsclass.section_guid,
-                sdcobsclass.q_text,
-                sdcobsclass.q_instanceguid,
-                sdcobsclass.q_id,
-                sdcobsclass.li_text,
-                sdcobsclass.li_id,
-                sdcobsclass.li_instanceguid,
-                sdcobsclass.li_parentguid,
-                sdcobsclass.response,
-                sdcobsclass.units,
-                sdcobsclass.units_system,
-                sdcobsclass.datatype,
-                sdcobsclass.response_int,
-                sdcobsclass.response_float,
-                sdcobsclass.response_datetime,
-                sdcobsclass.reponse_string_nvarchar,
-                sdcobsclass.obsdatetime,
-                sdcobsclass.sdcorder,
-                sdcobsclass.sdcrepeatlevel,
-                sdcobsclass.sdccomments,
-                sdcobsclass.personfk,
-                sdcobsclass.encounterfk,
-                sdcobsclass.practitionerfk
-            FROM sdcobsclass
-            INNER JOIN templateinstanceclass ON templateinstanceclass.pk = sdcobsclass.templateinstanceclassfk
-            WHERE templateinstanceclass.pk = @templateinstanceclasspk
-            ORDER BY sdcobsclass.pk
+                sdc_observation.sdc_observation_id,
+                sdc_observation.template_instance_id,
+                sdc_observation.section_sdcid,
+                sdc_observation.section_guid,
+                sdc_observation.question_text,
+                sdc_observation.question_instance_guid,
+                sdc_observation.question_sdcid,
+                sdc_observation.list_item_text,
+                sdc_observation.list_item_id,
+                sdc_observation.list_item_instanceguid,
+                sdc_observation.list_item_parentguid,
+                sdc_observation.response,
+                sdc_observation.units,
+                sdc_observation.units_system,
+                sdc_observation.datatype,
+                sdc_observation.response_int,
+                sdc_observation.response_float,
+                sdc_observation.response_datetime,
+                sdc_observation.reponse_string_nvarchar,
+                sdc_observation.obs_datetime,
+                sdc_observation.sdc_order,
+                sdc_observation.sdc_repeat_level,
+                sdc_observation.sdc_comments,
+                sdc_observation.person_id,
+                sdc_observation.visit_occurrence_id,
+                sdc_observation.provider_id
+            FROM sdc_observation
+            INNER JOIN template_instance ON template_instance.template_instance_id = sdc_observation.template_instance_id
+            WHERE template_instance.template_instance_id = @templateinstanceclasspk
+            ORDER BY sdc_observation.sdc_observation_id
             ";
         cmd.Parameters.AddWithValue("@templateinstanceclasspk", templateInstanceClassPk);
         var reader = cmd.ExecuteReader();
