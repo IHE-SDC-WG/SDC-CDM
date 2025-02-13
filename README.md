@@ -57,13 +57,13 @@ We maintain a .NET library at `SdcCdmLib/` that provides reference implementatio
 
 ### Standalone Database
 
-A docker compose file is provided to set up a PostgreSQL database along with the CDM schema.
+A docker compose file is provided under `database/` to set up a PostgreSQL database containing the CDM schema.
 
 1. **Copy Environment Variables:**
    ```
    cp .env.example .env
    ```
-   The default values will work for initial setup.
+   The default values will work for initial setup. Docker Compose will automatically use any `.env` file in the current working directory
 
 2. **Start Docker Compose:**
    ```
@@ -76,7 +76,7 @@ A docker compose file is provided to set up a PostgreSQL database along with the
    ```
    docker compose down -v
    ```
-   This command removes the database volume (with the `-v` flag). Afterward, you can restart the database with:
+   This command removes the persistent database volume (with the `-v` flag). Afterward, you can restart the database with:
    ```
    docker compose up
    ```
