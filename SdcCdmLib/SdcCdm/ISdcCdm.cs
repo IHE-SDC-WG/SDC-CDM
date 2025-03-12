@@ -97,6 +97,7 @@ public interface ISdcCdm
     );
 
     public bool FindPerson(long personPk, out long foundPersonPk);
+    public bool FindPersonByIdentifier(string identifier, out long foundPersonPk);
 
     public TemplateInstanceRecord GetTemplateInstanceRecord(long templateInstanceClassPk);
 

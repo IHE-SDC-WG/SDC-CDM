@@ -297,6 +297,31 @@ public class SdcCdmInSqlite : ISdcCdm
         return false;
     }
 
+    public bool FindPersonByIdentifier(string identifier, out long foundPersonPk)
+    {
+        using var cmd = connection.CreateCommand();
+        cmd.CommandText =
+            @"
+            SELECT
+                person.person_id, person.person_source_value
+            FROM
+                person
+            WHERE
+                person_source_value = @identifier
+            ";
+        cmd.Parameters.AddWithValue("@identifier", identifier);
+        using var reader = cmd.ExecuteReader();
+        if (reader.Read())
+        {
+            foundPersonPk = reader.GetInt64(0);
+            reader.Close();
+            return true;
+        }
+        reader.Close();
+        foundPersonPk = 0;
+        return false;
+    }
+
     public TemplateInstanceRecord GetTemplateInstanceRecord(long templateInstanceClassPk)
     {
         using var cmd = connection.CreateCommand();

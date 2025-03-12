@@ -1,0 +1,6 @@
+{
+    "xml.format.splitAttributes": "splitNewLine",
+    "[csharp]": {
+        "editor.defaultFormatter": "csharpier.csharpier-vscode",
+    },
+}

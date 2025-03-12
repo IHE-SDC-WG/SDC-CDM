@@ -14,7 +14,6 @@ public static class FhirCPDSExporter
     )
     {
         outCpdsBundle = null;
-        Bundle cpdsBundle = new();
         // Find the relevant row in the TemplateInstanceClass table
         if (
             !sdcCdm.FindTemplateInstanceClass(
@@ -44,144 +43,53 @@ public static class FhirCPDSExporter
 
         TemplateInstanceRecord record = sdcCdm.GetTemplateInstanceRecord(templateInstanceClassPk);
 
-        cpdsBundle.Id = Guid.NewGuid().ToString();
-        cpdsBundle.Type = Bundle.BundleType.Transaction;
-        cpdsBundle.Entry = [];
-
         // Create Bundle resources
-        Patient patient = GeneratePatient(sdcCdm, record.PersonFk);
-        cpdsBundle.Entry.Add(
-            new Bundle.EntryComponent
+        Bundle cpdsBundle = new()
+        {
+            Meta = new Meta
             {
-                Request = new Bundle.RequestComponent
-                {
-                    Method = Bundle.HTTPVerb.POST,
-                    Url = $"Patient/{patient.Id}",
-                },
-                Resource = patient,
-            }
-        );
+                Profile =
+                [
+                    "http://hl7.org/fhir/us/cancer-reporting/StructureDefinition/us-pathology-exchange-bundle",
+                ],
+            },
+            Id = Guid.NewGuid().ToString(),
+            Type = Bundle.BundleType.Transaction,
+            TimestampElement = Instant.Now(),
+            Entry = [],
+        };
 
+        // TODO: Use template_instance.person_id
+        Patient? patient = FindExistingPatient(sdcCdm);
+        if (patient == null)
+        {
+            Console.WriteLine("Generating new patient.");
+            patient = GeneratePatient(sdcCdm, record.PersonFk);
+        }
+        cpdsBundle.Entry.Add(CreateEntryComponentForPost(patient));
+
+        // TODO: Use template_instance.visit_occurrence_id
         Encounter encounter = GenerateEncounter(sdcCdm, record.EncounterFk);
         encounter.Subject = new ResourceReference($"Patient/{patient.Id}");
-        cpdsBundle.Entry.Add(
-            new Bundle.EntryComponent
-            {
-                Request = new Bundle.RequestComponent
-                {
-                    Method = Bundle.HTTPVerb.POST,
-                    Url = $"Encounter/{encounter.Id}",
-                },
-                Resource = encounter,
-            }
-        );
+        cpdsBundle.Entry.Add(CreateEntryComponentForPost(encounter));
 
+        // TODO: Use template_instance.provider_id
         Practitioner oncologist = GeneratePractitioner(sdcCdm, record.PractitionerFk, 0);
-        cpdsBundle.Entry.Add(
-            new Bundle.EntryComponent
-            {
-                Request = new Bundle.RequestComponent
-                {
-                    Method = Bundle.HTTPVerb.POST,
-                    Url = $"Practitioner/{oncologist.Id}",
-                },
-                Resource = oncologist,
-            }
-        );
+        cpdsBundle.Entry.Add(CreateEntryComponentForPost(oncologist));
         Practitioner pathologist = GeneratePractitioner(sdcCdm, null, 1);
-        cpdsBundle.Entry.Add(
-            new Bundle.EntryComponent
-            {
-                Request = new Bundle.RequestComponent
-                {
-                    Method = Bundle.HTTPVerb.POST,
-                    Url = $"Practitioner/{pathologist.Id}",
-                },
-                Resource = pathologist,
-            }
-        );
+        cpdsBundle.Entry.Add(CreateEntryComponentForPost(pathologist));
 
+        // TODO: Use provider.care_site_id
         Organization oncologyCenter = GenerateOrganization(sdcCdm, null, 0);
-        cpdsBundle.Entry.Add(
-            new Bundle.EntryComponent
-            {
-                Request = new Bundle.RequestComponent
-                {
-                    Method = Bundle.HTTPVerb.POST,
-                    Url = $"Organization/{oncologyCenter.Id}",
-                },
-                Resource = oncologyCenter,
-            }
-        );
+        cpdsBundle.Entry.Add(CreateEntryComponentForPost(oncologyCenter));
         Organization pathologyLab = GenerateOrganization(sdcCdm, null, 1);
-        cpdsBundle.Entry.Add(
-            new Bundle.EntryComponent
-            {
-                Request = new Bundle.RequestComponent
-                {
-                    Method = Bundle.HTTPVerb.POST,
-                    Url = $"Organization/{pathologyLab.Id}",
-                },
-                Resource = pathologyLab,
-            }
-        );
+        cpdsBundle.Entry.Add(CreateEntryComponentForPost(pathologyLab));
 
-        PractitionerRole oncologistRole = new()
-        {
-            Id = Guid.NewGuid().ToString(),
-            Meta = new Meta
-            {
-                Profile =
-                [
-                    "http://hl7.org/fhir/us/cancer-reporting/StructureDefinition/us-pathology-related-practitioner-role",
-                ],
-            },
-            Practitioner = new ResourceReference($"Practitioner/{oncologist.Id}"),
-            Organization = new ResourceReference($"Organization/{oncologyCenter.Id}"),
-            Telecom =
-            [
-                new() { System = ContactPoint.ContactPointSystem.Phone, Value = "000-000-0000" },
-            ],
-        };
-        cpdsBundle.Entry.Add(
-            new Bundle.EntryComponent
-            {
-                Request = new Bundle.RequestComponent
-                {
-                    Method = Bundle.HTTPVerb.POST,
-                    Url = $"PractitionerRole/{oncologistRole.Id}",
-                },
-                Resource = oncologistRole,
-            }
-        );
-        PractitionerRole pathologistRole = new()
-        {
-            Id = Guid.NewGuid().ToString(),
-            Meta = new Meta
-            {
-                Profile =
-                [
-                    "http://hl7.org/fhir/us/cancer-reporting/StructureDefinition/us-pathology-related-practitioner-role",
-                ],
-            },
-            Practitioner = new ResourceReference($"Practitioner/{pathologist.Id}"),
-            Organization = new ResourceReference($"Organization/{pathologyLab.Id}"),
-            Telecom =
-            [
-                new() { System = ContactPoint.ContactPointSystem.Phone, Value = "000-000-0001" },
-            ],
-        };
-        cpdsBundle.Entry.Add(
-            new Bundle.EntryComponent
-            {
-                Request = new Bundle.RequestComponent
-                {
-                    Method = Bundle.HTTPVerb.POST,
-                    Url = $"PractitionerRole/{pathologistRole.Id}",
-                },
-                Resource = pathologistRole,
-            }
-        );
+        // TODO: Use provider.specialty_concept_id/specialty_source_concept_id?
+        PractitionerRole oncologistRole = GeneratePractitionerRole(oncologist, oncologyCenter);
+        cpdsBundle.Entry.Add(CreateEntryComponentForPost(oncologistRole));
+        PractitionerRole pathologistRole = GeneratePractitionerRole(pathologist, pathologyLab);
+        cpdsBundle.Entry.Add(CreateEntryComponentForPost(pathologistRole));
 
         // Create Observation(s)
         // Get all SdcObsClass records for the template instance
@@ -189,32 +97,12 @@ public static class FhirCPDSExporter
         List<Observation> observations = GenerateObservationGroups(sdcCdm, sdcObsClasses);
         foreach (Observation observation in observations)
         {
-            cpdsBundle.Entry.Add(
-                new Bundle.EntryComponent
-                {
-                    Request = new Bundle.RequestComponent
-                    {
-                        Method = Bundle.HTTPVerb.POST,
-                        Url = $"Observation/{observation.Id}",
-                    },
-                    Resource = observation,
-                }
-            );
+            cpdsBundle.Entry.Add(CreateEntryComponentForPost(observation));
         }
 
-        // TODO: Gather all specimens from sdcObsClasses
+        // TODO: Gather all specimens by observation_specimens.sdc_observation_id
         Specimen specimen = GenerateSpecimen(sdcCdm, null);
-        cpdsBundle.Entry.Add(
-            new Bundle.EntryComponent
-            {
-                Request = new Bundle.RequestComponent
-                {
-                    Method = Bundle.HTTPVerb.POST,
-                    Url = $"Specimen/{specimen.Id}",
-                },
-                Resource = specimen,
-            }
-        );
+        cpdsBundle.Entry.Add(CreateEntryComponentForPost(specimen));
 
         byte[]? reportTextBase64Bytes = null;
         if (!string.IsNullOrEmpty(record.ReportText))
@@ -223,6 +111,13 @@ public static class FhirCPDSExporter
             string reportTextBase64 = Convert.ToBase64String(reportTextBytes);
             reportTextBase64Bytes = Encoding.ASCII.GetBytes(reportTextBase64);
         }
+        else
+        {
+            Console.WriteLine(
+                "Warning: Cannot populate DiagnosticReport.presentedForm because no report text found for this template instance."
+            );
+        }
+        // TODO: Add performer, resultsInterpreter, and specimen
         DiagnosticReport diagnosticReport = new()
         {
             Id = Guid.NewGuid().ToString(),
@@ -233,6 +128,10 @@ public static class FhirCPDSExporter
                     "http://hl7.org/fhir/us/cancer-reporting/StructureDefinition/us-pathology-diagnostic-report",
                 ],
             },
+            Identifier =
+            [
+                new() { System = "https://cap.org/eCC", Value = $"urn:uuid:{Guid.NewGuid()}" },
+            ],
             Status = DiagnosticReport.DiagnosticReportStatus.Final,
             Category =
             [
@@ -245,16 +144,18 @@ public static class FhirCPDSExporter
             Code = new CodeableConcept("http://loinc.org", "60568-3", "Pathology synoptic report"),
             Subject = new ResourceReference($"Patient/{patient.Id}"),
             Encounter = new ResourceReference($"Encounter/{encounter.Id}"),
-            Effective = new FhirDateTime(DateTime.Now.ToString("yyyy-MM-ddTHH:mm:sszzz")),
-            Result = observations
-                .FindAll(o =>
-                    o.Meta.Profile.Any(p =>
-                        p
-                        == "http://hl7.org/fhir/us/cancer-reporting/StructureDefinition/us-pathology-grouper-observation"
+            Effective = FhirDateTime.Now(),
+            Result =
+            [
+                .. observations
+                    .FindAll(o =>
+                        o.Meta.Profile.Any(p =>
+                            p
+                            == "http://hl7.org/fhir/us/cancer-reporting/StructureDefinition/us-pathology-grouper-observation"
+                        )
                     )
-                )
-                .Select(o => new ResourceReference($"Observation/{o.Id}"))
-                .ToList(),
+                    .Select(o => new ResourceReference($"Observation/{o.Id}")),
+            ],
             PresentedForm =
             [
                 reportTextBase64Bytes.IsNullOrEmpty()
@@ -262,18 +163,7 @@ public static class FhirCPDSExporter
                     : new Attachment { ContentType = "text/xml", Data = reportTextBase64Bytes },
             ],
         };
-        cpdsBundle.Entry.Insert(
-            0,
-            new Bundle.EntryComponent
-            {
-                Request = new Bundle.RequestComponent
-                {
-                    Method = Bundle.HTTPVerb.POST,
-                    Url = $"DiagnosticReport/{diagnosticReport.Id}",
-                },
-                Resource = diagnosticReport,
-            }
-        );
+        cpdsBundle.Entry.Insert(0, CreateEntryComponentForPost(diagnosticReport));
 
         Composition composition = new()
         {
@@ -285,9 +175,8 @@ public static class FhirCPDSExporter
                     "http://hl7.org/fhir/us/cancer-reporting/StructureDefinition/us-pathology-composition",
                 ],
             },
-
             Type = new CodeableConcept("http://loinc.org", "11526-1", "Pathology Study"),
-            Date = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:sszzz"),
+            DateElement = FhirDateTime.Now(),
             Subject = new ResourceReference($"Patient/{patient.Id}"),
             Author =
             [
@@ -309,21 +198,49 @@ public static class FhirCPDSExporter
                 },
             ],
         };
-        cpdsBundle.Entry.Insert(
-            0,
-            new Bundle.EntryComponent
-            {
-                Request = new Bundle.RequestComponent
-                {
-                    Method = Bundle.HTTPVerb.POST,
-                    Url = $"Composition/{composition.Id}",
-                },
-                Resource = composition,
-            }
-        );
+        cpdsBundle.Entry.Insert(0, CreateEntryComponentForPost(composition));
 
         outCpdsBundle = cpdsBundle;
         return true;
+    }
+
+    private static Bundle.EntryComponent CreateEntryComponentForPost(Resource resource)
+    {
+        return new()
+        {
+            Request = new Bundle.RequestComponent
+            {
+                Method = Bundle.HTTPVerb.POST,
+                Url = $"{resource.TypeName}/{resource.Id}",
+            },
+            Resource = resource,
+        };
+    }
+
+    private static Patient? FindExistingPatient(ISdcCdm sdcCdm)
+    {
+        // Hardcoded patient identifier for demonstration
+        string hardcodedPatientIdentifier = "0000000011";
+
+        // Implement the search logic here. This is a placeholder for the actual search.
+        // For example, you might have a method like sdcCdm.FindPersonByIdentifier
+        bool patientExists = sdcCdm.FindPersonByIdentifier(
+            hardcodedPatientIdentifier,
+            out long foundPersonPk
+        );
+
+        if (patientExists)
+        {
+            // Retrieve patient details using foundPersonPk
+            // This is a placeholder for actual retrieval logic
+            return new Patient
+            {
+                Id = foundPersonPk.ToString(),
+                // Populate other necessary fields
+            };
+        }
+
+        return null;
     }
 
     private static Patient GeneratePatient(ISdcCdm sdcCdm, long? personId)
@@ -525,13 +442,38 @@ public static class FhirCPDSExporter
         return organization;
     }
 
+    private static PractitionerRole GeneratePractitionerRole(
+        Practitioner practitioner,
+        Organization organization
+    )
+    {
+        // TODO: Set PractitionerRole code and specialty
+        return new()
+        {
+            Id = Guid.NewGuid().ToString(),
+            Meta = new Meta
+            {
+                Profile =
+                [
+                    "http://hl7.org/fhir/us/cancer-reporting/StructureDefinition/us-pathology-related-practitioner-role",
+                ],
+            },
+            Practitioner = new ResourceReference($"Practitioner/{practitioner.Id}"),
+            Organization = new ResourceReference($"Organization/{organization.Id}"),
+            Telecom =
+            [
+                new() { System = ContactPoint.ContactPointSystem.Phone, Value = "000-000-0000" },
+            ],
+        };
+    }
+
     private static List<Observation> GenerateObservationGroups(
         ISdcCdm sdcCdm,
         List<SdcObsClass> sdcObsClasses
     )
     {
         List<Observation> grouperObservations = [];
-        List<Observation> allObservations = [];
+        List<Observation> allObservations = []; // Returned by this function
         foreach (SdcObsClass sdcObsClass in sdcObsClasses)
         {
             if (sdcObsClass.SectionGuid == null || sdcObsClass.QId == null)
@@ -541,15 +483,15 @@ public static class FhirCPDSExporter
                 continue;
             }
             // Check if a grouper observation exists for the current sdcObsClass.SectionGuid
-            Observation? existingGrouper = grouperObservations.Find(o =>
+            Observation? sectionGrouper = grouperObservations.Find(o =>
                 o.Code.Coding.Any(c =>
                     c.Code == sdcObsClass.SectionGuid && c.System == "http://cap.org/eCC"
                 )
             );
-            if (existingGrouper == null)
+            if (sectionGrouper == null)
             {
-                // Create a new grouper observation for this section
-                existingGrouper = new()
+                // No grouper observation exists for this section, so create one for it
+                sectionGrouper = new()
                 {
                     Id = Guid.NewGuid().ToString(),
                     Meta = new Meta
@@ -564,21 +506,22 @@ public static class FhirCPDSExporter
                         new()
                         {
                             System = "https://cap.org/eCC",
-                            Value = $"urn:uuid:{Guid.NewGuid().ToString()}",
+                            Value = $"urn:uuid:{Guid.NewGuid()}",
                         },
                     ],
                     Status = ObservationStatus.Final,
+                    // TODO: Confirm this is the correct way to set the code
                     Code = new CodeableConcept(
                         "http://cap.org/eCC",
                         sdcObsClass.SectionGuid,
                         sdcObsClass.SectionId
                     ),
                 };
-                grouperObservations.Add(existingGrouper);
-                allObservations.Add(existingGrouper);
+                grouperObservations.Add(sectionGrouper);
+                allObservations.Add(sectionGrouper);
             }
 
-            // Create Observation resource for this sdcObsClass
+            // Create a FHIR Observation for this SDC Observation
             Observation newObservation = new()
             {
                 Id = Guid.NewGuid().ToString(),
@@ -591,11 +534,7 @@ public static class FhirCPDSExporter
                 },
                 Identifier =
                 [
-                    new()
-                    {
-                        System = "https://cap.org/eCC",
-                        Value = $"urn:uuid:{Guid.NewGuid().ToString()}",
-                    },
+                    new() { System = "https://cap.org/eCC", Value = $"urn:uuid:{Guid.NewGuid()}" },
                 ],
                 Status = ObservationStatus.Final,
                 Code = new CodeableConcept(
@@ -603,19 +542,13 @@ public static class FhirCPDSExporter
                     sdcObsClass.QId,
                     sdcObsClass.QText
                 ),
+                // TODO: Set value depending on SDC Observation datatype
+                Value = new FhirString(sdcObsClass.Response),
             };
-
-            // TODO: Add value depending on datatype
-            if (sdcObsClass.ReponseStringNvarchar != null)
-            {
-                newObservation.Value = new FhirString(sdcObsClass.ReponseStringNvarchar);
-            }
 
             allObservations.Add(newObservation);
 
-            existingGrouper.HasMember.Add(
-                new ResourceReference($"Observation/{newObservation.Id}")
-            );
+            sectionGrouper.HasMember.Add(new ResourceReference($"Observation/{newObservation.Id}"));
         }
         return allObservations;
     }
