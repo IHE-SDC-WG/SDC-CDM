@@ -239,6 +239,7 @@ public static class NAACCRVolVImporter
 
                 sdcCdm.WriteSdcObsClass(
                     new_template_instance_class_fk,
+                    parent_observation_id: null,
                     "UNKNOWN",
                     "UNKNOWN",
                     q_text,

@@ -69,6 +69,7 @@ public interface ISdcCdm
     );
     public long WriteSdcObsClass(
         long template_instance_class_fk,
+        long? parent_observation_id,
         string? section_id,
         string? section_guid,
         string? q_text,

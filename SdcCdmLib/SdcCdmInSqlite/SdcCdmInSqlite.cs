@@ -167,6 +167,7 @@ public class SdcCdmInSqlite : ISdcCdm
 
     public long WriteSdcObsClass(
         long template_instance_class_fk,
+        long? parent_observation_id,
         string? section_id,
         string? section_guid,
         string? q_text,
@@ -196,12 +197,16 @@ public class SdcCdmInSqlite : ISdcCdm
         cmd.CommandText =
             @"
                 INSERT INTO sdc_observation 
-                (template_instance_id, parentinstanceguid, section_sdcid, section_guid, question_text, question_instance_guid, question_sdcid, list_item_text, list_item_id, list_item_instanceguid, list_item_parentguid, response, units, units_system, datatype, response_int, response_float, response_datetime, reponse_string_nvarchar, obs_datetime, sdc_order, sdc_repeat_level, sdc_comments, person_id, visit_occurrence_id, provider_id)
-                VALUES (@templateinstanceclassfk, @parentinstanceguid, @section_id, @section_guid, @q_text, @q_instanceguid, @q_id, @li_text, @li_id, @li_instanceguid, @li_parentguid, @response, @units, @units_system, @datatype, @response_int, @response_float, @response_datetime, @reponse_string_nvarchar, @obsdatetime, @sdcorder, @sdcrepeatlevel, @sdccomments, @personfk, @encounterfk, @practitionerfk);
+                (template_instance_id, parent_observation_id, parentinstanceguid, section_sdcid, section_guid, question_text, question_instance_guid, question_sdcid, list_item_text, list_item_id, list_item_instanceguid, list_item_parentguid, response, units, units_system, datatype, response_int, response_float, response_datetime, reponse_string_nvarchar, obs_datetime, sdc_order, sdc_repeat_level, sdc_comments, person_id, visit_occurrence_id, provider_id)
+                VALUES (@templateinstanceclassfk, @parent_observation_id, @parentinstanceguid, @section_id, @section_guid, @q_text, @q_instanceguid, @q_id, @li_text, @li_id, @li_instanceguid, @li_parentguid, @response, @units, @units_system, @datatype, @response_int, @response_float, @response_datetime, @reponse_string_nvarchar, @obsdatetime, @sdcorder, @sdcrepeatlevel, @sdccomments, @personfk, @encounterfk, @practitionerfk);
                 SELECT last_insert_rowid();
             ";
 
         cmd.Parameters.AddWithValue("@templateinstanceclassfk", template_instance_class_fk);
+        cmd.Parameters.AddWithValue(
+            "@parent_observation_id",
+            parent_observation_id ?? (object)DBNull.Value
+        );
         cmd.Parameters.AddWithValue("@parentinstanceguid", DBNull.Value);
         cmd.Parameters.AddWithValue("@section_id", section_id ?? (object)DBNull.Value);
         cmd.Parameters.AddWithValue("@section_guid", section_guid ?? (object)DBNull.Value);
