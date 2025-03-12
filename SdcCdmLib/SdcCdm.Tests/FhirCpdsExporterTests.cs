@@ -6,14 +6,9 @@ using Xunit.Abstractions;
 
 namespace SdcCdm.Tests;
 
-public class FhirCpdsExporterTests
+public class FhirCpdsExporterTests(ITestOutputHelper output)
 {
-    private readonly ITestOutputHelper _output;
-
-    public FhirCpdsExporterTests(ITestOutputHelper output)
-    {
-        _output = output;
-    }
+    private readonly ITestOutputHelper _output = output;
 
     [Fact]
     public void ExportFhirCpds_GivenInvalidSdcCdm_ShouldReturnFalse()
