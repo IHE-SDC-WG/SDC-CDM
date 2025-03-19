@@ -128,13 +128,16 @@ public static class CsvImporter
 
     private static void ImportConceptBatch(ISdcCdm sdcCdm, List<ConceptRecord> batch)
     {
-        // This method would call the appropriate method on the ISdcCdm implementation
-        // For now, we'll just log that we would import these records
         foreach (var record in batch)
         {
-            // In a real implementation, this would call a method on sdcCdm to insert the record
-            // For example: sdcCdm.InsertConcept(record);
-            Console.WriteLine($"Would import concept: {record.ConceptId} - {record.ConceptName}");
+            try
+            {
+                sdcCdm.InsertConcept(record);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error importing concept {record.ConceptId}: {ex.Message}");
+            }
         }
     }
 }
