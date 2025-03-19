@@ -43,6 +43,48 @@ public record SdcObsClass(
     long? PractitionerFk
 );
 
+// DTO for creating a Person (excludes the PersonId)
+public record WritePersonDto(
+    long GenderConceptId,
+    int YearOfBirth,
+    int? MonthOfBirth,
+    int? DayOfBirth,
+    DateTimeOffset? BirthDatetime,
+    long RaceConceptId,
+    long EthnicityConceptId,
+    long? LocationId,
+    long? ProviderId,
+    long? CareSiteId,
+    string? PersonSourceValue,
+    string? GenderSourceValue,
+    long? GenderSourceConceptId,
+    string? RaceSourceValue,
+    long? RaceSourceConceptId,
+    string? EthnicitySourceValue,
+    long? EthnicitySourceConceptId
+);
+
+public record Person(
+    long PersonId,
+    long GenderConceptId,
+    int YearOfBirth,
+    int? MonthOfBirth,
+    int? DayOfBirth,
+    DateTimeOffset? BirthDatetime,
+    long RaceConceptId,
+    long EthnicityConceptId,
+    long? LocationId,
+    long? ProviderId,
+    long? CareSiteId,
+    string? PersonSourceValue,
+    string? GenderSourceValue,
+    long? GenderSourceConceptId,
+    string? RaceSourceValue,
+    long? RaceSourceConceptId,
+    string? EthnicitySourceValue,
+    long? EthnicitySourceConceptId
+);
+
 public interface ISdcCdm
 {
     public long WriteTemplateSdcClass(
@@ -89,6 +131,8 @@ public interface ISdcCdm
         string? reponse_string_nvarchar = null,
         string? li_parent_guid = null
     );
+
+    public Person WritePerson(WritePersonDto person);
 
     public bool FindTemplateSdcClass(string formDesignId, out long primaryKey);
     public bool FindTemplateInstanceClass(

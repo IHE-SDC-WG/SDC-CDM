@@ -243,6 +243,133 @@ public class SdcCdmInSqlite : ISdcCdm
         return (long)pk;
     }
 
+    public Person WritePerson(WritePersonDto dto)
+    {
+        using var cmd = connection.CreateCommand();
+        cmd.CommandText =
+            @"
+                INSERT INTO main.person
+                    (gender_concept_id, year_of_birth, month_of_birth, day_of_birth, birth_datetime,
+                    race_concept_id, ethnicity_concept_id, location_id, provider_id, care_site_id,
+                    person_source_value, gender_source_value, gender_source_concept_id,
+                    race_source_value, race_source_concept_id, ethnicity_source_value, ethnicity_source_concept_id)
+                VALUES
+                    (@genderconceptid, @yearofbirth, @monthofbirth, @dayofbirth, @birthdatetime,
+                    @raceconceptid, @ethnicityconceptid, @locationid, @providerid, @caresiteid,
+                    @personsourcevalue, @gendersourcevalue, @gendersourceconceptid,
+                    @racesourcevalue, @racesourceconceptid, @ethnicitysourcevalue, @ethnicitysourceconceptid)
+                RETURNING 
+                    person_id, gender_concept_id, year_of_birth, month_of_birth, day_of_birth,
+                    birth_datetime, race_concept_id, ethnicity_concept_id, location_id, provider_id,
+                    care_site_id, person_source_value, gender_source_value, gender_source_concept_id,
+                    race_source_value, race_source_concept_id, ethnicity_source_value, ethnicity_source_concept_id;
+            ";
+
+        cmd.Parameters.AddWithValue("@genderconceptid", dto.GenderConceptId);
+        cmd.Parameters.AddWithValue("@yearofbirth", dto.YearOfBirth);
+        cmd.Parameters.AddWithValue(
+            "@monthofbirth",
+            dto.MonthOfBirth.HasValue ? dto.MonthOfBirth.Value : DBNull.Value
+        );
+        cmd.Parameters.AddWithValue(
+            "@dayofbirth",
+            dto.DayOfBirth.HasValue ? dto.DayOfBirth.Value : DBNull.Value
+        );
+        cmd.Parameters.AddWithValue(
+            "@birthdatetime",
+            dto.BirthDatetime.HasValue ? dto.BirthDatetime.Value : DBNull.Value
+        );
+        cmd.Parameters.AddWithValue("@raceconceptid", dto.RaceConceptId);
+        cmd.Parameters.AddWithValue("@ethnicityconceptid", dto.EthnicityConceptId);
+        cmd.Parameters.AddWithValue(
+            "@locationid",
+            dto.LocationId.HasValue ? dto.LocationId.Value : DBNull.Value
+        );
+        cmd.Parameters.AddWithValue(
+            "@providerid",
+            dto.ProviderId.HasValue ? dto.ProviderId.Value : DBNull.Value
+        );
+        cmd.Parameters.AddWithValue(
+            "@caresiteid",
+            dto.CareSiteId.HasValue ? dto.CareSiteId.Value : DBNull.Value
+        );
+        cmd.Parameters.AddWithValue(
+            "@personsourcevalue",
+            dto.PersonSourceValue != null ? dto.PersonSourceValue : DBNull.Value
+        );
+        cmd.Parameters.AddWithValue(
+            "@gendersourcevalue",
+            dto.GenderSourceValue != null ? dto.GenderSourceValue : DBNull.Value
+        );
+        cmd.Parameters.AddWithValue(
+            "@gendersourceconceptid",
+            dto.GenderSourceConceptId.HasValue ? dto.GenderSourceConceptId.Value : DBNull.Value
+        );
+        cmd.Parameters.AddWithValue(
+            "@racesourcevalue",
+            dto.RaceSourceValue != null ? dto.RaceSourceValue : DBNull.Value
+        );
+        cmd.Parameters.AddWithValue(
+            "@racesourceconceptid",
+            dto.RaceSourceConceptId.HasValue ? dto.RaceSourceConceptId.Value : DBNull.Value
+        );
+        cmd.Parameters.AddWithValue(
+            "@ethnicitysourcevalue",
+            dto.EthnicitySourceValue != null ? dto.EthnicitySourceValue : DBNull.Value
+        );
+        cmd.Parameters.AddWithValue(
+            "@ethnicitysourceconceptid",
+            dto.EthnicitySourceConceptId.HasValue
+                ? dto.EthnicitySourceConceptId.Value
+                : DBNull.Value
+        );
+
+        using var reader = cmd.ExecuteReader();
+        if (!reader.Read())
+            throw new Exception("Failed to retrieve inserted PersonId.");
+
+        // Reconstruct the Person record based on the data from the DB.
+        var personId = reader.GetInt64(0);
+        var genderConceptId = reader.GetInt64(1);
+        var yearOfBirth = reader.GetInt32(2);
+        int? monthOfBirth = reader.IsDBNull(3) ? null : reader.GetInt32(3);
+        int? dayOfBirth = reader.IsDBNull(4) ? null : reader.GetInt32(4);
+        DateTimeOffset? birthDatetime = reader.IsDBNull(5) ? null : reader.GetDateTime(5);
+        var raceConceptId = reader.GetInt64(6);
+        var ethnicityConceptId = reader.GetInt64(7);
+        long? locationId = reader.IsDBNull(8) ? null : reader.GetInt64(8);
+        long? providerId = reader.IsDBNull(9) ? null : reader.GetInt64(9);
+        long? careSiteId = reader.IsDBNull(10) ? null : reader.GetInt64(10);
+        string? personSourceValue = reader.IsDBNull(11) ? null : reader.GetString(11);
+        string? genderSourceValue = reader.IsDBNull(12) ? null : reader.GetString(12);
+        long? genderSourceConceptId = reader.IsDBNull(13) ? null : reader.GetInt64(13);
+        string? raceSourceValue = reader.IsDBNull(14) ? null : reader.GetString(14);
+        long? raceSourceConceptId = reader.IsDBNull(15) ? null : reader.GetInt64(15);
+        string? ethnicitySourceValue = reader.IsDBNull(16) ? null : reader.GetString(16);
+        long? ethnicitySourceConceptId = reader.IsDBNull(17) ? null : reader.GetInt64(17);
+
+        return new Person(
+            personId,
+            genderConceptId,
+            yearOfBirth,
+            monthOfBirth,
+            dayOfBirth,
+            birthDatetime,
+            raceConceptId,
+            ethnicityConceptId,
+            locationId,
+            providerId,
+            careSiteId,
+            personSourceValue,
+            genderSourceValue,
+            genderSourceConceptId,
+            raceSourceValue,
+            raceSourceConceptId,
+            ethnicitySourceValue,
+            ethnicitySourceConceptId
+        );
+    }
+
     public bool FindTemplateSdcClass(string formDesignId, out long primaryKey)
     {
         primaryKey = 0;
