@@ -22,7 +22,12 @@ public static class CsvImporter
     /// <returns>The number of records successfully imported.</returns>
     /// <exception cref="FileNotFoundException">Thrown when the CSV file is not found.</exception>
     /// <exception cref="InvalidOperationException">Thrown when there's an error processing the CSV data.</exception>
-    public static int ImportConceptCsv(ISdcCdm sdcCdm, string csvFilePath, int batchSize = 1000, bool hasHeaderRow = true)
+    public static int ImportConceptCsv(
+        ISdcCdm sdcCdm,
+        string csvFilePath,
+        int batchSize = 1000,
+        bool hasHeaderRow = true
+    )
     {
         if (!File.Exists(csvFilePath))
         {
@@ -30,27 +35,27 @@ public static class CsvImporter
         }
 
         int recordsImported = 0;
-        
+
         try
         {
             using var reader = new StreamReader(csvFilePath);
             var config = new CsvConfiguration(CultureInfo.InvariantCulture)
             {
                 HasHeaderRecord = hasHeaderRow,
-                MissingFieldFound = null
+                MissingFieldFound = null,
             };
-            
+
             using var csv = new CsvReader(reader, config);
-            
+
             // Skip header if present
             if (hasHeaderRow)
             {
                 csv.Read();
                 csv.ReadHeader();
             }
-            
+
             var batch = new List<ConceptRecord>();
-            
+
             while (csv.Read())
             {
                 try
@@ -58,25 +63,44 @@ public static class CsvImporter
                     var record = new ConceptRecord
                     {
                         ConceptId = csv.TryGetField<int>(0, out var conceptId) ? conceptId : 0,
-                        ConceptName = csv.TryGetField<string>(1, out var conceptName) ? conceptName : string.Empty,
-                        DomainId = csv.TryGetField<string>(2, out var domainId) ? domainId : string.Empty,
-                        VocabularyId = csv.TryGetField<string>(3, out var vocabularyId) ? vocabularyId : string.Empty,
-                        ConceptClassId = csv.TryGetField<string>(4, out var conceptClassId) ? conceptClassId : string.Empty,
-                        StandardConcept = csv.TryGetField<string>(5, out var standardConcept) ? standardConcept : null,
-                        ConceptCode = csv.TryGetField<string>(6, out var conceptCode) ? conceptCode : string.Empty,
-                        ValidStartDate = csv.TryGetField<DateTime>(7, out var validStartDate) ? validStartDate : DateTime.MinValue,
-                        ValidEndDate = csv.TryGetField<DateTime>(8, out var validEndDate) ? validEndDate : DateTime.MaxValue,
-                        InvalidReason = csv.TryGetField<string>(9, out var invalidReason) ? invalidReason : null
+                        ConceptName = csv.TryGetField<string>(1, out var conceptName)
+                            ? conceptName
+                            : string.Empty,
+                        DomainId = csv.TryGetField<string>(2, out var domainId)
+                            ? domainId
+                            : string.Empty,
+                        VocabularyId = csv.TryGetField<string>(3, out var vocabularyId)
+                            ? vocabularyId
+                            : string.Empty,
+                        ConceptClassId = csv.TryGetField<string>(4, out var conceptClassId)
+                            ? conceptClassId
+                            : string.Empty,
+                        StandardConcept = csv.TryGetField<string>(5, out var standardConcept)
+                            ? standardConcept
+                            : null,
+                        ConceptCode = csv.TryGetField<string>(6, out var conceptCode)
+                            ? conceptCode
+                            : string.Empty,
+                        ValidStartDate = csv.TryGetField<DateTime>(7, out var validStartDate)
+                            ? validStartDate
+                            : DateTime.MinValue,
+                        ValidEndDate = csv.TryGetField<DateTime>(8, out var validEndDate)
+                            ? validEndDate
+                            : DateTime.MaxValue,
+                        InvalidReason = csv.TryGetField<string>(9, out var invalidReason)
+                            ? invalidReason
+                            : null,
                     };
-                    
+
                     batch.Add(record);
-                    
+
                     if (batch.Count >= batchSize)
                     {
                         ImportConceptBatch(sdcCdm, batch);
                         recordsImported += batch.Count;
                         batch.Clear();
                         Console.WriteLine($"Imported {recordsImported} concept records...");
+                        return recordsImported;
                     }
                 }
                 catch (Exception ex)
@@ -84,7 +108,7 @@ public static class CsvImporter
                     Console.WriteLine($"Error processing record: {ex.Message}");
                 }
             }
-            
+
             // Import any remaining records
             if (batch.Count > 0)
             {
@@ -92,7 +116,7 @@ public static class CsvImporter
                 recordsImported += batch.Count;
                 Console.WriteLine($"Imported {recordsImported} concept records...");
             }
-            
+
             Console.WriteLine($"Successfully imported {recordsImported} concept records.");
             return recordsImported;
         }
@@ -101,7 +125,7 @@ public static class CsvImporter
             throw new InvalidOperationException($"Error importing concept CSV: {ex.Message}", ex);
         }
     }
-    
+
     private static void ImportConceptBatch(ISdcCdm sdcCdm, List<ConceptRecord> batch)
     {
         // This method would call the appropriate method on the ISdcCdm implementation
