@@ -1,24 +1,17 @@
+using System.Diagnostics;
+
 namespace SdcCdm;
 
 public static class NAACCRVolVImporter
 {
-    public static void ImportNaaccrVolV(
-        ISdcCdm sdcCdm,
-        string hl7_message,
-        bool exit_on_error = true
-    )
+    private static void ErrorCallback(string message)
     {
-        void print_extracted_var(string str) => Console.WriteLine($"! {str}");
+        Debug.Assert(message != null, "No message provided for error callback");
+        throw new Exception(message);
+    }
 
-        void hl7_error(string message)
-        {
-            Console.WriteLine($"Error: {message}");
-            if (exit_on_error)
-            {
-                throw new Exception(message);
-            }
-        }
-
+    public static void ImportNaaccrVolV(ISdcCdm sdcCdm, string hl7_message)
+    {
         string get_field(string[] fields, int index)
         {
             // If fields[0] == "MSH", use index-1, else index.
@@ -61,49 +54,58 @@ public static class NAACCRVolVImporter
         }
 
         // Split the HL7 message into lines
-        var lines = hl7_message.Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
+        var lines = hl7_message.Split(['\n'], StringSplitOptions.RemoveEmptyEntries);
 
         // MSH segment
         var msh_segment = get_first_segment(lines, "MSH");
         if (msh_segment == null)
         {
-            hl7_error("No MSH segment found");
+            ErrorCallback("No MSH segment found");
             return;
         }
         var msh_segment_fields = msh_segment.Split('|');
         var message_type = get_field(msh_segment_fields, 9);
         if (message_type != "ORU^R01^ORU_R01")
         {
-            hl7_error($"Unknown message type: {message_type}");
+            ErrorCallback($"Unknown message type: {message_type}");
         }
-        Console.WriteLine($"Message type: {message_type}");
+        Debug.Print($"Message type: {message_type}");
         var message_profile = get_field(msh_segment_fields, 21).Trim();
         if (message_profile != "VOL_V_40_ORU_R01^NAACCR_CP")
         {
-            hl7_error($"Unknown message profile: {message_profile}");
+            ErrorCallback($"Unknown message profile: {message_profile}");
         }
-        Console.WriteLine($"Message profile: {message_profile}");
+        Debug.Print($"Message profile: {message_profile}");
+
+        // Get Person data from the first PID segment
+        var pid_segment = get_first_segment(lines, "PID");
+        if (pid_segment == null)
+        {
+            ErrorCallback("No PID segment found");
+            return;
+        }
+        var pid_segment_fields = pid_segment.Split('|');
 
         // OBR segment
         var obr_segment = get_first_segment(lines, "OBR");
         if (obr_segment == null)
         {
-            hl7_error("No OBR segment found");
+            ErrorCallback("No OBR segment found");
             return;
         }
         var obr_segment_fields = obr_segment.Split('|');
         var report_type = get_field(obr_segment_fields, 4);
         if (report_type != "60568-3^SYNOPTIC REPORT^LN")
         {
-            hl7_error($"Unknown report type: {report_type}");
+            ErrorCallback($"Unknown report type: {report_type}");
         }
-        Console.WriteLine($"Report type: {report_type}");
+        Debug.Print($"Report type: {report_type}");
 
         // OBX segments
         var obx_segments = get_all_segments(lines, "OBX");
         if (obx_segments.Count < 3)
         {
-            hl7_error("Not enough OBX segments found");
+            ErrorCallback("Not enough OBX segments found");
             return;
         }
 
@@ -113,15 +115,15 @@ public static class NAACCRVolVImporter
         var observation_identifier = get_field(first_obx_fields, 3);
         if (observation_identifier != "60573-3^Report template source^LN")
         {
-            hl7_error($"Unexpected observation identifier: {observation_identifier}");
+            ErrorCallback($"Unexpected observation identifier: {observation_identifier}");
         }
-        Console.WriteLine($"First OBX identifier: {observation_identifier}");
+        Debug.Print($"First OBX identifier: {observation_identifier}");
         var document_source_style = get_field(first_obx_fields, 5);
         if (document_source_style != "CAP eCC")
         {
-            hl7_error($"Unexpected document source style: {document_source_style}");
+            ErrorCallback($"Unexpected document source style: {document_source_style}");
         }
-        Console.WriteLine($"Document source style: {document_source_style}");
+        Debug.Print($"Document source style: {document_source_style}");
 
         // Second OBX
         var second_obx = obx_segments[1];
@@ -129,14 +131,13 @@ public static class NAACCRVolVImporter
         observation_identifier = get_field(second_obx_fields, 3);
         if (observation_identifier != "60572-5^Report template ID^LN")
         {
-            hl7_error($"Unexpected observation identifier: {observation_identifier}");
+            ErrorCallback($"Unexpected observation identifier: {observation_identifier}");
         }
         var template_id = get_field(second_obx_fields, 5);
         var template_id_parts = template_id.Split('^');
         // Assuming template_id always has at least two parts
         var form_title = template_id_parts.Length > 1 ? template_id_parts[1] : "UNKNOWN_FORM_TITLE";
-        Console.WriteLine($"Template ID: {template_id}");
-        print_extracted_var($"Form Title: {form_title}");
+        Debug.Print($"Template ID: {template_id}");
 
         // Third OBX
         var third_obx = obx_segments[2];
@@ -144,10 +145,9 @@ public static class NAACCRVolVImporter
         observation_identifier = get_field(third_obx_fields, 3);
         if (observation_identifier != "60574-1^Report template version ID^LN")
         {
-            hl7_error($"Unexpected observation identifier: {observation_identifier}");
+            ErrorCallback($"Unexpected observation identifier: {observation_identifier}");
         }
         var version_id = get_field(third_obx_fields, 5);
-        print_extracted_var($"Version ID: {version_id}");
 
         // Insert into DB (template_sdc)
         var new_template_sdc_pk = sdcCdm.WriteTemplateSdcClass(
@@ -177,8 +177,6 @@ public static class NAACCRVolVImporter
             var obs_id_parts = observation_identifier.Split('^');
             var q_id = obs_id_parts.Length > 0 ? obs_id_parts[0] : null;
             var q_text = obs_id_parts.Length > 1 ? obs_id_parts[1] : null;
-            Console.WriteLine($"Q ID: {q_id}");
-            Console.WriteLine($"Q Text: {q_text}");
 
             var observation_sub_id = get_field(obx_segment_fields, 4);
             if (!string.IsNullOrEmpty(observation_sub_id))
@@ -196,9 +194,7 @@ public static class NAACCRVolVImporter
 
                 if (obs_sub_id_map.ContainsKey(observation_sub_id))
                 {
-                    Console.WriteLine(
-                        $"@@@@@ Observation sub ID already exists: {observation_sub_id}"
-                    );
+                    Debug.Print($"@@@@@ Observation sub ID already exists: {observation_sub_id}");
                 }
                 else
                 {
@@ -212,9 +208,9 @@ public static class NAACCRVolVImporter
                 }
                 if (!string.IsNullOrEmpty(observation_units))
                 {
-                    Console.WriteLine($"Observation units: {observation_units}");
+                    Debug.Print($"Observation units: {observation_units}");
                 }
-                Console.WriteLine($"@@@ Observation sub ID: {observation_sub_id}");
+                Debug.Print($"@@@ Observation sub ID: {observation_sub_id}");
             }
             else
             {

@@ -35,7 +35,7 @@ namespace SdcCdm.Tests
             string hl7Message = File.ReadAllText(hl7Path);
 
             // Act
-            NAACCRVolVImporter.ImportNaaccrVolV(sdcCdm, hl7Message, exit_on_error: false);
+            NAACCRVolVImporter.ImportNaaccrVolV(sdcCdm, hl7Message);
 
             // Assert
             Assert.True(true, "Expected ImportNaaccrVolV to execute without errors.");
