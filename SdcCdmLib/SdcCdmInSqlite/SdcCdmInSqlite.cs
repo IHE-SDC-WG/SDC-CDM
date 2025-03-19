@@ -5,6 +5,38 @@ namespace SdcCdmInSqlite;
 
 public class SdcCdmInSqlite : ISdcCdm
 {
+    /// <summary>
+    /// Inserts a concept record into the concept table.
+    /// </summary>
+    /// <param name="concept">The concept record to insert.</param>
+    /// <returns>The ID of the inserted concept.</returns>
+    public long InsertConcept(ConceptRecord concept)
+    {
+        using var cmd = connection.CreateCommand();
+        cmd.CommandText = @"
+            INSERT INTO main.concept 
+            (concept_id, concept_name, domain_id, vocabulary_id, concept_class_id, 
+             standard_concept, concept_code, valid_start_date, valid_end_date, invalid_reason)
+            VALUES 
+            (@conceptId, @conceptName, @domainId, @vocabularyId, @conceptClassId, 
+             @standardConcept, @conceptCode, @validStartDate, @validEndDate, @invalidReason);
+            SELECT last_insert_rowid();
+        ";
+
+        cmd.Parameters.AddWithValue("@conceptId", concept.ConceptId);
+        cmd.Parameters.AddWithValue("@conceptName", concept.ConceptName);
+        cmd.Parameters.AddWithValue("@domainId", concept.DomainId);
+        cmd.Parameters.AddWithValue("@vocabularyId", concept.VocabularyId);
+        cmd.Parameters.AddWithValue("@conceptClassId", concept.ConceptClassId);
+        cmd.Parameters.AddWithValue("@standardConcept", concept.StandardConcept ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue("@conceptCode", concept.ConceptCode);
+        cmd.Parameters.AddWithValue("@validStartDate", concept.ValidStartDate);
+        cmd.Parameters.AddWithValue("@validEndDate", concept.ValidEndDate);
+        cmd.Parameters.AddWithValue("@invalidReason", concept.InvalidReason ?? (object)DBNull.Value);
+
+        var result = cmd.ExecuteScalar();
+        return result != null ? Convert.ToInt64(result) : -1;
+    }
     public SdcCdmInSqlite(string dbFilePath, bool inMemory = false, bool overwrite = false)
     {
         this.dbFilePath = dbFilePath;

@@ -87,6 +87,12 @@ public record Person(
 
 public interface ISdcCdm
 {
+    /// <summary>
+    /// Inserts a concept record into the concept table.
+    /// </summary>
+    /// <param name="concept">The concept record to insert.</param>
+    /// <returns>The ID of the inserted concept.</returns>
+    long InsertConcept(ConceptRecord concept);
     public long WriteTemplateSdcClass(
         string sdcformdesignid,
         string? baseuri = null,
