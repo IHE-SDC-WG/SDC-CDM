@@ -13,7 +13,8 @@ public class SdcCdmInSqlite : ISdcCdm
     public long InsertConcept(ConceptRecord concept)
     {
         using var cmd = connection.CreateCommand();
-        cmd.CommandText = @"
+        cmd.CommandText =
+            @"
             INSERT INTO main.concept 
             (concept_id, concept_name, domain_id, vocabulary_id, concept_class_id, 
              standard_concept, concept_code, valid_start_date, valid_end_date, invalid_reason)
@@ -28,15 +29,22 @@ public class SdcCdmInSqlite : ISdcCdm
         cmd.Parameters.AddWithValue("@domainId", concept.DomainId);
         cmd.Parameters.AddWithValue("@vocabularyId", concept.VocabularyId);
         cmd.Parameters.AddWithValue("@conceptClassId", concept.ConceptClassId);
-        cmd.Parameters.AddWithValue("@standardConcept", concept.StandardConcept ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue(
+            "@standardConcept",
+            concept.StandardConcept ?? (object)DBNull.Value
+        );
         cmd.Parameters.AddWithValue("@conceptCode", concept.ConceptCode);
         cmd.Parameters.AddWithValue("@validStartDate", concept.ValidStartDate);
         cmd.Parameters.AddWithValue("@validEndDate", concept.ValidEndDate);
-        cmd.Parameters.AddWithValue("@invalidReason", concept.InvalidReason ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue(
+            "@invalidReason",
+            concept.InvalidReason ?? (object)DBNull.Value
+        );
 
         var result = cmd.ExecuteScalar();
         return result != null ? Convert.ToInt64(result) : -1;
     }
+
     public SdcCdmInSqlite(string dbFilePath, bool inMemory = false, bool overwrite = false)
     {
         this.dbFilePath = dbFilePath;
@@ -229,8 +237,8 @@ public class SdcCdmInSqlite : ISdcCdm
         cmd.CommandText =
             @"
                 INSERT INTO sdc_observation 
-                (template_instance_id, parent_observation_id, parentinstanceguid, section_sdcid, section_guid, question_text, question_instance_guid, question_sdcid, list_item_text, list_item_id, list_item_instanceguid, list_item_parentguid, response, units, units_system, datatype, response_int, response_float, response_datetime, reponse_string_nvarchar, obs_datetime, sdc_order, sdc_repeat_level, sdc_comments, person_id, visit_occurrence_id, provider_id)
-                VALUES (@templateinstanceclassfk, @parent_observation_id, @parentinstanceguid, @section_id, @section_guid, @q_text, @q_instanceguid, @q_id, @li_text, @li_id, @li_instanceguid, @li_parentguid, @response, @units, @units_system, @datatype, @response_int, @response_float, @response_datetime, @reponse_string_nvarchar, @obsdatetime, @sdcorder, @sdcrepeatlevel, @sdccomments, @personfk, @encounterfk, @practitionerfk);
+                (template_instance_id, parent_observation_id, parent_instance_guid, section_sdcid, section_guid, question_text, question_instance_guid, question_sdcid, list_item_text, list_item_id, list_item_instance_guid, list_item_parent_guid, response, units, units_system, datatype, response_int, response_float, response_datetime, reponse_string_nvarchar, obs_datetime, sdc_order, sdc_repeat_level, sdc_comments)
+                VALUES (@templateinstanceclassfk, @parent_observation_id, @parentinstanceguid, @section_id, @section_guid, @q_text, @q_instanceguid, @q_id, @li_text, @li_id, @li_instanceguid, @li_parentguid, @response, @units, @units_system, @datatype, @response_int, @response_float, @response_datetime, @reponse_string_nvarchar, @obsdatetime, @sdcorder, @sdcrepeatlevel, @sdccomments);
                 SELECT last_insert_rowid();
             ";
 
@@ -267,15 +275,12 @@ public class SdcCdmInSqlite : ISdcCdm
         cmd.Parameters.AddWithValue("@sdcorder", sdc_order ?? (object)DBNull.Value);
         cmd.Parameters.AddWithValue("@sdcrepeatlevel", DBNull.Value);
         cmd.Parameters.AddWithValue("@sdccomments", DBNull.Value);
-        cmd.Parameters.AddWithValue("@personfk", DBNull.Value);
-        cmd.Parameters.AddWithValue("@encounterfk", DBNull.Value);
-        cmd.Parameters.AddWithValue("@practitionerfk", DBNull.Value);
 
         var pk = cmd.ExecuteScalar() ?? -1;
         return (long)pk;
     }
 
-    public Person WritePerson(WritePersonDto dto)
+    public ISdcCdm.Person? WritePerson(in ISdcCdm.PersonDTO dto)
     {
         using var cmd = connection.CreateCommand();
         cmd.CommandText =
@@ -358,7 +363,7 @@ public class SdcCdmInSqlite : ISdcCdm
 
         using var reader = cmd.ExecuteReader();
         if (!reader.Read())
-            throw new Exception("Failed to retrieve inserted PersonId.");
+            return null;
 
         // Reconstruct the Person record based on the data from the DB.
         var personId = reader.GetInt64(0);
@@ -380,37 +385,36 @@ public class SdcCdmInSqlite : ISdcCdm
         string? ethnicitySourceValue = reader.IsDBNull(16) ? null : reader.GetString(16);
         long? ethnicitySourceConceptId = reader.IsDBNull(17) ? null : reader.GetInt64(17);
 
-        return new Person(
-            personId,
-            genderConceptId,
-            yearOfBirth,
-            monthOfBirth,
-            dayOfBirth,
-            birthDatetime,
-            raceConceptId,
-            ethnicityConceptId,
-            locationId,
-            providerId,
-            careSiteId,
-            personSourceValue,
-            genderSourceValue,
-            genderSourceConceptId,
-            raceSourceValue,
-            raceSourceConceptId,
-            ethnicitySourceValue,
-            ethnicitySourceConceptId
-        );
+        return new()
+        {
+            PersonId = personId,
+            GenderConceptId = genderConceptId,
+            YearOfBirth = yearOfBirth,
+            MonthOfBirth = monthOfBirth,
+            DayOfBirth = dayOfBirth,
+            BirthDatetime = birthDatetime,
+            RaceConceptId = raceConceptId,
+            EthnicityConceptId = ethnicityConceptId,
+            LocationId = locationId,
+            ProviderId = providerId,
+            CareSiteId = careSiteId,
+            PersonSourceValue = personSourceValue,
+            GenderSourceValue = genderSourceValue,
+            GenderSourceConceptId = genderSourceConceptId,
+            RaceSourceValue = raceSourceValue,
+            RaceSourceConceptId = raceSourceConceptId,
+            EthnicitySourceValue = ethnicitySourceValue,
+            EthnicitySourceConceptId = ethnicitySourceConceptId,
+        };
     }
 
-    public bool FindTemplateSdcClass(string formDesignId, out long primaryKey)
+    public long? FindTemplateSdcClass(string formDesignId)
     {
-        primaryKey = 0;
-        return false;
+        throw new NotImplementedException();
     }
 
-    public bool FindTemplateInstanceClass(
+    public long? FindTemplateInstanceClass(
         string instanceVersionGuid,
-        out long templateInstanceClassPk,
         string? instanceVersionDate = null
     )
     {
@@ -428,20 +432,18 @@ public class SdcCdmInSqlite : ISdcCdm
         var reader = cmd.ExecuteReader();
         if (reader.Read())
         {
-            templateInstanceClassPk = reader.GetInt64(0);
+            long templateInstanceClassPk = reader.GetInt64(0);
             reader.Close();
-            return true;
+            return templateInstanceClassPk;
         }
         reader.Close();
-        templateInstanceClassPk = -1L;
-        return false;
+        return null;
 
         // TODO: Support searching by instanceVersionDate
     }
 
-    public bool FindPerson(long personPk, out long foundPersonPk)
+    public long? FindPerson(long personPk)
     {
-        foundPersonPk = -1L;
         using var cmd = connection.CreateCommand();
         cmd.CommandText =
             @"
@@ -453,15 +455,15 @@ public class SdcCdmInSqlite : ISdcCdm
         var reader = cmd.ExecuteReader();
         if (reader.Read())
         {
-            foundPersonPk = reader.GetInt64(0);
+            long foundPersonPk = reader.GetInt64(0);
             reader.Close();
-            return true;
+            return foundPersonPk;
         }
         reader.Close();
-        return false;
+        return null;
     }
 
-    public bool FindPersonByIdentifier(string identifier, out long foundPersonPk)
+    public long? FindPersonByIdentifier(string identifier)
     {
         using var cmd = connection.CreateCommand();
         cmd.CommandText =
@@ -477,16 +479,15 @@ public class SdcCdmInSqlite : ISdcCdm
         using var reader = cmd.ExecuteReader();
         if (reader.Read())
         {
-            foundPersonPk = reader.GetInt64(0);
+            long foundPersonPk = reader.GetInt64(0);
             reader.Close();
-            return true;
+            return foundPersonPk;
         }
         reader.Close();
-        foundPersonPk = 0;
-        return false;
+        return null;
     }
 
-    public TemplateInstanceRecord GetTemplateInstanceRecord(long templateInstanceClassPk)
+    public TemplateInstanceRecord? GetTemplateInstanceRecord(long templateInstanceClassPk)
     {
         using var cmd = connection.CreateCommand();
         cmd.CommandText =
@@ -528,7 +529,7 @@ public class SdcCdmInSqlite : ISdcCdm
             return record;
         }
         reader.Close();
-        throw new Exception("No template instance record found");
+        return null;
     }
 
     public List<SdcObsClass> GetSdcObsClasses(long templateInstanceClassPk)
@@ -546,8 +547,8 @@ public class SdcCdmInSqlite : ISdcCdm
                 sdc_observation.question_sdcid,
                 sdc_observation.list_item_text,
                 sdc_observation.list_item_id,
-                sdc_observation.list_item_instanceguid,
-                sdc_observation.list_item_parentguid,
+                sdc_observation.list_item_instance_guid,
+                sdc_observation.list_item_parent_guid,
                 sdc_observation.response,
                 sdc_observation.units,
                 sdc_observation.units_system,
@@ -559,10 +560,7 @@ public class SdcCdmInSqlite : ISdcCdm
                 sdc_observation.obs_datetime,
                 sdc_observation.sdc_order,
                 sdc_observation.sdc_repeat_level,
-                sdc_observation.sdc_comments,
-                sdc_observation.person_id,
-                sdc_observation.visit_occurrence_id,
-                sdc_observation.provider_id
+                sdc_observation.sdc_comments
             FROM sdc_observation
             INNER JOIN template_instance ON template_instance.template_instance_id = sdc_observation.template_instance_id
             WHERE template_instance.template_instance_id = @templateinstanceclasspk
@@ -597,10 +595,7 @@ public class SdcCdmInSqlite : ISdcCdm
                     reader.IsDBNull(19) ? null : reader.GetDateTimeOffset(19),
                     reader.IsDBNull(20) ? null : reader.GetString(20),
                     reader.IsDBNull(21) ? null : reader.GetString(21),
-                    reader.IsDBNull(22) ? null : reader.GetString(22),
-                    reader.IsDBNull(23) ? null : reader.GetInt64(23),
-                    reader.IsDBNull(24) ? null : reader.GetInt64(24),
-                    reader.IsDBNull(25) ? null : reader.GetInt64(25)
+                    reader.IsDBNull(22) ? null : reader.GetString(22)
                 )
             );
             reader.Close();
@@ -608,5 +603,15 @@ public class SdcCdmInSqlite : ISdcCdm
         }
         reader.Close();
         throw new Exception("No template instance records found");
+    }
+
+    public long? FindTemplateItem(string template_item_sdcid)
+    {
+        throw new NotImplementedException();
+    }
+
+    public ISdcCdm.TemplateItem? WriteTemplateItem(in ISdcCdm.TemplateItemDTO templateItem)
+    {
+        throw new NotImplementedException();
     }
 }

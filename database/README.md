@@ -1,8 +1,8 @@
 ## SDC-CDM Schema Files
 
-`SDC CDM Requirements.xlsx` describes the SDC tables in a human-readable format.
+The SDC tables in described in a human-readable format in `SDC CDM Requirements.xlsx`
 
-OMOP tables are described at https://ohdsi.github.io/CommonDataModel/cdm54.html
+The OMOP tables are described at https://ohdsi.github.io/CommonDataModel/cdm54.html
 
 Data Definition Language (DDL) files are provided under `ddl/` for the following backends:
 
@@ -11,7 +11,7 @@ Data Definition Language (DDL) files are provided under `ddl/` for the following
 
 ### Guide to updating the DDLs
 
-DDL templates are generated in our [OHDSI/CommonDataModel fork](https://github.com/IHE-SDC-WG/OHDSI-CommonDataModel-SDC). The following .csv files should be considered the source of truth for this schema:
+DDL templates are generated in our [OHDSI/CommonDataModel fork](https://github.com/IHE-SDC-WG/OHDSI-CommonDataModel-SDC). The following .csv files should be considered the source of truth for the SDC-CDM schema:
 - [OMOP_CDMv5.4-SDC_Table_Level.csv](https://github.com/IHE-SDC-WG/OHDSI-CommonDataModel-SDC/blob/add-SDC-schema/inst/csv/OMOP_CDMv5.4-SDC_Table_Level.csv)
 - [OMOP_CDMv5.4-SDC_Field_Level.csv](https://github.com/IHE-SDC-WG/OHDSI-CommonDataModel-SDC/blob/add-SDC-schema/inst/csv/OMOP_CDMv5.4-SDC_Field_Level.csv)
 

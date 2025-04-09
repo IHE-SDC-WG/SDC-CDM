@@ -14,9 +14,12 @@ class MyHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Origin", "*")
         super().end_headers()
 
+
 with socketserver.TCPServer(("", PORT), MyHTTPRequestHandler) as httpd:
     print(f"Serving directory '{DIRECTORY}' at http://localhost:{PORT}")
-    print(f"Try https://lite.datasette.io/?url=http://localhost:8000/sdc_cdm.db for a friendlier GUI into the database")
+    print(
+        "Try https://lite.datasette.io/?url=http://localhost:8000/sdc_cdm.db for a friendlier GUI into the database"
+    )
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:

@@ -28,6 +28,7 @@ ALTER TABLE public.domain  ADD CONSTRAINT xpk_domain PRIMARY KEY (domain_id);
 ALTER TABLE public.concept_class  ADD CONSTRAINT xpk_concept_class PRIMARY KEY (concept_class_id);
 ALTER TABLE public.relationship  ADD CONSTRAINT xpk_relationship PRIMARY KEY (relationship_id);
 ALTER TABLE public.template_sdc  ADD CONSTRAINT xpk_template_sdc PRIMARY KEY (template_sdc_id);
+ALTER TABLE public.template_item  ADD CONSTRAINT xpk_template_item PRIMARY KEY (template_item_id);
 ALTER TABLE public.template_instance  ADD CONSTRAINT xpk_template_instance PRIMARY KEY (template_instance_id);
 ALTER TABLE public.sdc_observation  ADD CONSTRAINT xpk_sdc_observation PRIMARY KEY (sdc_observation_id);
 ALTER TABLE public.template_term_map  ADD CONSTRAINT xpk_template_term_map PRIMARY KEY (template_term_map_id);

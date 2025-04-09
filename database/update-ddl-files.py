@@ -11,7 +11,7 @@ from ddl_processor import DatabaseType, process_ddl_files
 # Repository details
 REPO_URL = "https://github.com/IHE-SDC-WG/OHDSI-CommonDataModel-SDC.git"
 TARGET_PATH = "inst/ddl/5.4-SDC"
-DEFAULT_COMMIT = "d398292e90b6e0380560663f5750acf1fa5ec03c"
+DEFAULT_COMMIT = "3faab12004b98a23fd2db5de9acfad78c10220ed"
 
 # Supported database types and their source folders
 SUPPORTED_DBS = {DatabaseType.POSTGRESQL: "postgresql", DatabaseType.SQLITE: "sqlite"}

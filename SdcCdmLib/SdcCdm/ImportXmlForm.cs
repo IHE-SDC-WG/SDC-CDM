@@ -4,6 +4,11 @@ namespace SdcCdm;
 
 public static class XmlFormImporter
 {
+    /**
+    <summary>Imports an SDCFormSubmission XML form into the SDC CDM.</summary>
+    <param name="sdcCdm">The SDC CDM to import the form into.</param>
+    <param name="sdcSubmissionPackage">The SDCFormSubmission XML form to import.</param>
+    */
     public static void ProcessXmlForm(ISdcCdm sdcCdm, XElement sdcSubmissionPackage)
     {
         XNamespace sdc = "urn:ihe:qrph:sdc:2016";
@@ -17,13 +22,12 @@ public static class XmlFormImporter
             formDesign.Attribute("ID")?.Value
             ?? throw new Exception("No Form Design ID provided in XML");
 
-        // Check if the template already exists
-        var success = sdcCdm.FindTemplateSdcClass(sdc_form_design_id, out long template_sdc_id);
-
-        if (!success)
-        {
-            // Create new template
-            template_sdc_id = sdcCdm.WriteTemplateSdcClass(
+        // Find the row pertaining to the template we are submitting a filled form of.
+        // We are creating a row for the template if one does not exist.
+        // TODO: Should we fail to import the form if the template does not exist?
+        long template_sdc_id =
+            sdcCdm.FindTemplateSdcClass(sdc_form_design_id)
+            ?? sdcCdm.WriteTemplateSdcClass(
                 sdc_form_design_id,
                 formDesign.Attribute("baseURI")?.Value ?? "UNKNOWN",
                 formDesign.Attribute("lineage")?.Value ?? "UNKNOWN",
@@ -33,9 +37,8 @@ public static class XmlFormImporter
                 formDesign.ToString(),
                 "FD"
             );
-        }
 
-        var template_instance_id = sdcCdm.WriteTemplateInstanceClass(
+        long template_instance_id = sdcCdm.WriteTemplateInstanceClass(
             template_sdc_id,
             sdcSubmissionPackage.Attribute("instanceID")?.Value ?? null,
             sdcSubmissionPackage.Attribute("instanceVersionURI")?.Value ?? null,

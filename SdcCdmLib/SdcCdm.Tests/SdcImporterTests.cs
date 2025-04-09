@@ -17,6 +17,7 @@ namespace SdcCdm.Tests
         {
             _output = output;
         }
+
         [Fact]
         public void ProcessXmlForm_ExecutesWithoutError()
         {
@@ -53,10 +54,14 @@ namespace SdcCdm.Tests
         public void ImportAllHL7Files_ExecutesWithoutError()
         {
             // Arrange
-            var sdcCdm = new SdcCdmInSqlite.SdcCdmInSqlite("SdcCdm.Tests", true);
+            var sdcCdm = new SdcCdmInSqlite.SdcCdmInSqlite(
+                "/workspaces/SDC-CDM/notebooks/public/SdcCdm.HL7Samples.Tests.db",
+                false,
+                true
+            );
             sdcCdm.BuildSchema();
             string hl7Directory = Path.Combine(AppContext.BaseDirectory, "TestData", "HL7");
-            
+
             // Skip test if directory doesn't exist
             if (!Directory.Exists(hl7Directory))
             {
@@ -67,10 +72,10 @@ namespace SdcCdm.Tests
             // Find all .hl7 files recursively
             var hl7Files = GetAllHL7Files(hl7Directory);
             _output.WriteLine($"Found {hl7Files.Count} HL7 files to process");
-            
+
             // Process each file
             int processedCount = 0;
-            List<string> failedFiles = new List<string>();
+            List<string> failedFiles = [];
 
             foreach (var hl7File in hl7Files)
             {
@@ -89,7 +94,9 @@ namespace SdcCdm.Tests
             }
 
             // Assert
-            _output.WriteLine($"Successfully processed {processedCount} of {hl7Files.Count} HL7 files");
+            _output.WriteLine(
+                $"Successfully processed {processedCount} of {hl7Files.Count} HL7 files"
+            );
             if (failedFiles.Count > 0)
             {
                 _output.WriteLine("Failed files:");
@@ -98,24 +105,26 @@ namespace SdcCdm.Tests
                     _output.WriteLine($"  - {file}");
                 }
             }
-            
-            Assert.True(processedCount > 0 || hl7Files.Count == 0, 
-                "Expected to process at least one HL7 file successfully if files were found");
+
+            Assert.True(
+                processedCount > 0 || hl7Files.Count == 0,
+                "Expected to process at least one HL7 file successfully if files were found"
+            );
         }
 
-        private List<string> GetAllHL7Files(string directory)
+        private static List<string> GetAllHL7Files(string directory)
         {
             var files = new List<string>();
-            
+
             // Add files in current directory
             files.AddRange(Directory.GetFiles(directory, "*.hl7"));
-            
+
             // Recursively add files from subdirectories
             foreach (var subDir in Directory.GetDirectories(directory))
             {
                 files.AddRange(GetAllHL7Files(subDir));
             }
-            
+
             return files;
         }
     }

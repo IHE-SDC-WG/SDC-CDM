@@ -1,8 +1,8 @@
 using System.Diagnostics;
 
-namespace SdcCdm;
+namespace SdcCdm.Hl7v2;
 
-public static class NAACCRVolVImporter
+public static class Importers
 {
     private static void ErrorCallback(string message)
     {
@@ -12,6 +12,8 @@ public static class NAACCRVolVImporter
 
     public static void ImportNaaccrVolV(ISdcCdm sdcCdm, string hl7_message)
     {
+        void print_extracted_var(string str) => Debug.Print($"! {str}");
+
         string get_field(string[] fields, int index)
         {
             // If fields[0] == "MSH", use index-1, else index.
@@ -71,20 +73,11 @@ public static class NAACCRVolVImporter
         }
         Debug.Print($"Message type: {message_type}");
         var message_profile = get_field(msh_segment_fields, 21).Trim();
-        // if (message_profile != "VOL_V_40_ORU_R01^NAACCR_CP")
-        // {
-        //     ErrorCallback($"Unknown message profile: {message_profile}");
-        // }
-        // Debug.Print($"Message profile: {message_profile}");
-
-        // Get Person data from the first PID segment
-        var pid_segment = get_first_segment(lines, "PID");
-        if (pid_segment == null)
+        if (message_profile != "VOL_V_40_ORU_R01^NAACCR_CP")
         {
-            ErrorCallback("No PID segment found");
-            return;
+            ErrorCallback($"Unknown message profile: {message_profile}");
         }
-        var pid_segment_fields = pid_segment.Split('|');
+        Debug.Print($"Message profile: {message_profile}");
 
         // OBR segment
         var obr_segment = get_first_segment(lines, "OBR");
@@ -138,6 +131,7 @@ public static class NAACCRVolVImporter
         // Assuming template_id always has at least two parts
         var form_title = template_id_parts.Length > 1 ? template_id_parts[1] : "UNKNOWN_FORM_TITLE";
         Debug.Print($"Template ID: {template_id}");
+        print_extracted_var($"Form Title: {form_title}");
 
         // Third OBX
         var third_obx = obx_segments[2];
@@ -148,6 +142,7 @@ public static class NAACCRVolVImporter
             ErrorCallback($"Unexpected observation identifier: {observation_identifier}");
         }
         var version_id = get_field(third_obx_fields, 5);
+        print_extracted_var($"Version ID: {version_id}");
 
         // Insert into DB (template_sdc)
         var new_template_sdc_pk = sdcCdm.WriteTemplateSdcClass(
@@ -187,8 +182,8 @@ public static class NAACCRVolVImporter
                 string? li_id = null;
                 if (obs_val_parts.Length > 1)
                 {
-                    li_id = obs_val_parts[0];
-                    li_text = obs_val_parts[1];
+                    li_text = obs_val_parts[0];
+                    li_id = obs_val_parts[1];
                 }
                 var observation_units = get_field(obx_segment_fields, 6);
 
@@ -228,8 +223,8 @@ public static class NAACCRVolVImporter
                     var obs_val_parts = observation_value.Split('^');
                     if (obs_val_parts.Length > 1)
                     {
-                        li_id = obs_val_parts[0];
-                        li_text = obs_val_parts[1];
+                        li_text = obs_val_parts[0];
+                        li_id = obs_val_parts[1];
                     }
                 }
 
