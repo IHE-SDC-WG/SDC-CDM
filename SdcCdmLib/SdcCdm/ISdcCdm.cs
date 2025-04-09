@@ -102,8 +102,8 @@ public interface ISdcCdm
 
     public struct TemplateItemDTO
     {
-        public string TemplateSdcId;
-        public string? ParentTemplateItemId;
+        public long TemplateSdcId;
+        public long? ParentTemplateItemId;
         public string TemplateItemSdcid;
         public string? Type;
         public string? VisibleText;
@@ -116,8 +116,8 @@ public interface ISdcCdm
     public struct TemplateItem
     {
         public long TemplateItemId;
-        public string TemplateSdcId;
-        public string? ParentTemplateItemId;
+        public long TemplateSdcId;
+        public long? ParentTemplateItemId;
         public string TemplateItemSdcid;
         public string? Type;
         public string? VisibleText;
