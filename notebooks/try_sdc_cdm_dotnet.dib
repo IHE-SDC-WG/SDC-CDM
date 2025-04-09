@@ -1,6 +1,6 @@
 #!meta
 
-{"kernelInfo":{"defaultKernelName":"csharp","items":[{"aliases":[],"name":"csharp"}]}}
+{"kernelInfo":{"defaultKernelName":"csharp","items":[{"name":"csharp","languageName":"C#","aliases":["c#","cs"]},{"name":"fsharp","languageName":"F#","aliases":["f#","fs"]},{"name":"html","languageName":"HTML"},{"name":"http","languageName":"HTTP"},{"name":"javascript","languageName":"JavaScript","aliases":["js"]},{"name":"kql","languageName":"KQL"},{"name":"mermaid","languageName":"Mermaid"},{"name":"pwsh","languageName":"PowerShell","aliases":["powershell"]},{"name":"sql","languageName":"SQL"},{"name":"value"}]}}
 
 #!csharp
 
@@ -9,6 +9,7 @@
 #r "nuget:Microsoft.Data.Sqlite,9.0.0"
 #r "nuget:Wasmtime,22.0.0"
 #r "nuget:Hl7.Fhir.R4,6.0.0-alpha1"
+#r "nuget:CsvHelper,33.0.1"
 
 #!pwsh
 
@@ -27,8 +28,6 @@ using SdcCdm;
 using SdcCdmInSqlite;
 using Hl7.Fhir.Model;
 using Hl7.Fhir.Serialization;
-
-#!csharp
 
 // Create CDM database instance
 
@@ -49,6 +48,11 @@ foreach (var filePath in xmlFiles)
     var doc = XDocument.Load(filePath);
     SdcCdm.TemplateImporter.ImportTemplate(sdcCdmInstance, doc.Root);
 }
+
+#!csharp
+
+// Import SDC Template Row Data
+SdcCdm.TemplateRowDataImporter.ImportTemplateRowData((ISdcCdm) sdcCdmInstance, Path.Combine("..", "sample_data", "TemplateHistory(in).csv"));
 
 #!csharp
 
@@ -98,9 +102,7 @@ foreach (var message in v2_messages)
 
 string existingTemplate = "5b64392d-680e-4a96-94ca-3da4acf6bd27"; // ADRENAL_GLAND.xml instance ID
 
-Bundle bundle = null;
-
-bool result = FhirCPDSExporter.ExportFhirCpds(sdcCdmInstance, out bundle, existingTemplate);
+Bundle? bundle = FhirCPDSExporter.ExportFhirCpds(sdcCdmInstance, existingTemplate);
 
 if (bundle != null)
 {

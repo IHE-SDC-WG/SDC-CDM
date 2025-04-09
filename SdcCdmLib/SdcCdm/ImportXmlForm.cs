@@ -24,7 +24,9 @@ public static class XmlFormImporter
 
         // Find the row pertaining to the template we are submitting a filled form of.
         // We are creating a row for the template if one does not exist.
-        // TODO: Should we fail to import the form if the template does not exist?
+        // TODO: We should fail to import the form if the template does not
+        // exist, since a submitted form does not necessarily contain all
+        // information required to create a template.
         long template_sdc_id =
             sdcCdm.FindTemplateSdcClass(sdc_form_design_id)
             ?? sdcCdm.WriteTemplateSdcClass(

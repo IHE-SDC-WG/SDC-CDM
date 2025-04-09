@@ -410,7 +410,14 @@ public class SdcCdmInSqlite : ISdcCdm
 
     public long? FindTemplateSdcClass(string formDesignId)
     {
-        throw new NotImplementedException();
+        using var cmd = connection.CreateCommand();
+        cmd.CommandText =
+            @"SELECT template_sdc_id
+              FROM template_sdc
+              WHERE sdc_form_design_sdcid = @formDesignId";
+        cmd.Parameters.AddWithValue("@formDesignId", formDesignId);
+        using var reader = cmd.ExecuteReader();
+        return reader.Read() ? reader.GetInt64(0) : null;
     }
 
     public long? FindTemplateInstanceClass(
