@@ -520,6 +520,18 @@ CREATE TABLE public.template_sdc (
 			form_title varchar(255) NULL,
 			sdc_xml TEXT NULL,
 			doc_type varchar(255) NULL );
+--HINT DISTRIBUTE ON RANDOM
+CREATE TABLE public.template_item (
+			template_item_id integer NOT NULL,
+			template_sdc_id integer NOT NULL,
+			parent_template_item_id integer NULL,
+			template_item_sdcid varchar(255) NULL,
+			type varchar(255) NULL,
+			visible_text varchar(255) NULL,
+			invisible_text varchar(255) NULL,
+			min_cardinality varchar(255) NULL,
+			must_implement varchar(255) NULL,
+			item_order varchar(255) NULL );
 --HINT DISTRIBUTE ON KEY (person_id)
 CREATE TABLE public.template_instance (
 			template_instance_id integer NOT NULL,
@@ -533,12 +545,12 @@ CREATE TABLE public.template_instance (
 			visit_occurrence_id integer NULL,
 			provider_id integer NULL,
 			report_text TEXT NULL );
---HINT DISTRIBUTE ON KEY (person_id)
+--HINT DISTRIBUTE ON RANDOM
 CREATE TABLE public.sdc_observation (
 			sdc_observation_id integer NOT NULL,
 			template_instance_id integer NOT NULL,
 			parent_observation_id integer NULL,
-			parentinstanceguid varchar(255) NULL,
+			parent_instance_guid varchar(255) NULL,
 			section_sdcid varchar(255) NULL,
 			section_guid varchar(255) NULL,
 			question_text varchar(255) NULL,
@@ -546,8 +558,8 @@ CREATE TABLE public.sdc_observation (
 			question_sdcid varchar(255) NULL,
 			list_item_text varchar(255) NULL,
 			list_item_id varchar(255) NULL,
-			list_item_instanceguid varchar(255) NULL,
-			list_item_parentguid varchar(255) NULL,
+			list_item_instance_guid varchar(255) NULL,
+			list_item_parent_guid varchar(255) NULL,
 			response TEXT NULL,
 			units varchar(255) NULL,
 			units_system varchar(255) NULL,
@@ -559,10 +571,7 @@ CREATE TABLE public.sdc_observation (
 			obs_datetime varchar(255) NULL,
 			sdc_order varchar(255) NULL,
 			sdc_repeat_level varchar(255) NULL,
-			sdc_comments varchar(255) NULL,
-			person_id integer NULL,
-			visit_occurrence_id integer NULL,
-			provider_id integer NULL );
+			sdc_comments varchar(255) NULL );
 --HINT DISTRIBUTE ON RANDOM
 CREATE TABLE public.template_term_map (
 			template_term_map_id integer NOT NULL,

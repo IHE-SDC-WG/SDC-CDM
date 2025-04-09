@@ -37,14 +37,17 @@ public record SdcObsClass(
     DateTimeOffset? ObsDateTime,
     string? SdcOrder,
     string? SdcRepeatLevel,
-    string? SdcComments,
-    long? PersonFk,
-    long? EncounterFk,
-    long? PractitionerFk
+    string? SdcComments
 );
 
 public interface ISdcCdm
 {
+    /// <summary>
+    /// Inserts a concept record into the concept table.
+    /// </summary>
+    /// <param name="concept">The concept record to insert.</param>
+    /// <returns>The ID of the inserted concept.</returns>
+    long InsertConcept(ConceptRecord concept);
     public long WriteTemplateSdcClass(
         string sdcformdesignid,
         string? baseuri = null,
@@ -69,6 +72,7 @@ public interface ISdcCdm
     );
     public long WriteSdcObsClass(
         long template_instance_class_fk,
+        long? parent_observation_id,
         string? section_id,
         string? section_guid,
         string? q_text,
@@ -89,17 +93,91 @@ public interface ISdcCdm
         string? li_parent_guid = null
     );
 
-    public bool FindTemplateSdcClass(string formDesignId, out long primaryKey);
-    public bool FindTemplateInstanceClass(
+    public long? FindTemplateSdcClass(string formDesignId);
+
+    public long? FindTemplateInstanceClass(
         string instanceVersionGuid,
-        out long templateInstanceClassPk,
         string? instanceVersionDate = null
     );
 
-    public bool FindPerson(long personPk, out long foundPersonPk);
-    public bool FindPersonByIdentifier(string identifier, out long foundPersonPk);
+    public struct TemplateItemDTO
+    {
+        public long TemplateSdcId;
+        public long? ParentTemplateItemId;
+        public string TemplateItemSdcid;
+        public string? Type;
+        public string? VisibleText;
+        public string? InvisibleText;
+        public string? MinCard;
+        public string? MustImplement;
+        public string? ItemOrder;
+    };
 
-    public TemplateInstanceRecord GetTemplateInstanceRecord(long templateInstanceClassPk);
+    public struct TemplateItem
+    {
+        public long TemplateItemId;
+        public long TemplateSdcId;
+        public long? ParentTemplateItemId;
+        public string TemplateItemSdcid;
+        public string? Type;
+        public string? VisibleText;
+        public string? InvisibleText;
+        public string? MinCard;
+        public string? MustImplement;
+        public string? ItemOrder;
+    };
+
+    public TemplateItem? WriteTemplateItem(in TemplateItemDTO templateItem);
+    public long? FindTemplateItem(string template_item_sdcid);
+
+    public struct PersonDTO
+    {
+        public long GenderConceptId;
+        public int YearOfBirth;
+        public int? MonthOfBirth;
+        public int? DayOfBirth;
+        public DateTimeOffset? BirthDatetime;
+        public long RaceConceptId;
+        public long EthnicityConceptId;
+        public long? LocationId;
+        public long? ProviderId;
+        public long? CareSiteId;
+        public string? PersonSourceValue;
+        public string? GenderSourceValue;
+        public long? GenderSourceConceptId;
+        public string? RaceSourceValue;
+        public long? RaceSourceConceptId;
+        public string? EthnicitySourceValue;
+        public long? EthnicitySourceConceptId;
+    };
+
+    public struct Person
+    {
+        public long PersonId;
+        public long GenderConceptId;
+        public int YearOfBirth;
+        public int? MonthOfBirth;
+        public int? DayOfBirth;
+        public DateTimeOffset? BirthDatetime;
+        public long RaceConceptId;
+        public long EthnicityConceptId;
+        public long? LocationId;
+        public long? ProviderId;
+        public long? CareSiteId;
+        public string? PersonSourceValue;
+        public string? GenderSourceValue;
+        public long? GenderSourceConceptId;
+        public string? RaceSourceValue;
+        public long? RaceSourceConceptId;
+        public string? EthnicitySourceValue;
+        public long? EthnicitySourceConceptId;
+    };
+
+    public Person? WritePerson(in PersonDTO person);
+    public long? FindPerson(long personPk);
+    public long? FindPersonByIdentifier(string identifier);
+
+    public TemplateInstanceRecord? GetTemplateInstanceRecord(long templateInstanceClassPk);
 
     public List<SdcObsClass> GetSdcObsClasses(long templateInstanceClassPk);
 }

@@ -175,15 +175,14 @@ ALTER TABLE public.drug_strength  ADD CONSTRAINT fpk_drug_strength_numerator_uni
 ALTER TABLE public.drug_strength  ADD CONSTRAINT fpk_drug_strength_denominator_unit_concept_id FOREIGN KEY (denominator_unit_concept_id) REFERENCES public.CONCEPT (CONCEPT_ID);
 ALTER TABLE public.cohort_definition  ADD CONSTRAINT fpk_cohort_definition_definition_type_concept_id FOREIGN KEY (definition_type_concept_id) REFERENCES public.CONCEPT (CONCEPT_ID);
 ALTER TABLE public.cohort_definition  ADD CONSTRAINT fpk_cohort_definition_subject_concept_id FOREIGN KEY (subject_concept_id) REFERENCES public.CONCEPT (CONCEPT_ID);
+ALTER TABLE public.template_item  ADD CONSTRAINT fpk_template_item_template_sdc_id FOREIGN KEY (template_sdc_id) REFERENCES public.template_sdc (template_sdc_id);
+ALTER TABLE public.template_item  ADD CONSTRAINT fpk_template_item_parent_template_item_id FOREIGN KEY (parent_template_item_id) REFERENCES public.template_item (template_item_id);
 ALTER TABLE public.template_instance  ADD CONSTRAINT fpk_template_instance_template_sdc_id FOREIGN KEY (template_sdc_id) REFERENCES public.template_sdc (template_sdc_id);
 ALTER TABLE public.template_instance  ADD CONSTRAINT fpk_template_instance_person_id FOREIGN KEY (person_id) REFERENCES public.person (person_id);
 ALTER TABLE public.template_instance  ADD CONSTRAINT fpk_template_instance_visit_occurrence_id FOREIGN KEY (visit_occurrence_id) REFERENCES public.visit_occurrence (visit_occurrence_id);
 ALTER TABLE public.template_instance  ADD CONSTRAINT fpk_template_instance_provider_id FOREIGN KEY (provider_id) REFERENCES public.provider (provider_id);
 ALTER TABLE public.sdc_observation  ADD CONSTRAINT fpk_sdc_observation_template_instance_id FOREIGN KEY (template_instance_id) REFERENCES public.template_instance (template_instance_id);
 ALTER TABLE public.sdc_observation  ADD CONSTRAINT fpk_sdc_observation_parent_observation_id FOREIGN KEY (parent_observation_id) REFERENCES public.sdc_observation (sdc_observation_id);
-ALTER TABLE public.sdc_observation  ADD CONSTRAINT fpk_sdc_observation_person_id FOREIGN KEY (person_id) REFERENCES public.person (person_id);
-ALTER TABLE public.sdc_observation  ADD CONSTRAINT fpk_sdc_observation_visit_occurrence_id FOREIGN KEY (visit_occurrence_id) REFERENCES public.visit_occurrence (visit_occurrence_id);
-ALTER TABLE public.sdc_observation  ADD CONSTRAINT fpk_sdc_observation_provider_id FOREIGN KEY (provider_id) REFERENCES public.provider (provider_id);
 ALTER TABLE public.template_term_map  ADD CONSTRAINT fpk_template_term_map_template_sdc_id FOREIGN KEY (template_sdc_id) REFERENCES public.template_sdc (template_sdc_id);
 ALTER TABLE public.template_map_content  ADD CONSTRAINT fpk_template_map_content_template_term_map_id FOREIGN KEY (template_term_map_id) REFERENCES public.template_term_map (template_term_map_id);
 ALTER TABLE public.sdc_specimen  ADD CONSTRAINT fpk_sdc_specimen_parent_specimen_id FOREIGN KEY (parent_specimen_id) REFERENCES public.sdc_specimen (sdc_specimen_id);

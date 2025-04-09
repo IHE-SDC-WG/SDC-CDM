@@ -4,6 +4,11 @@ namespace SdcCdm;
 
 public static class XmlFormImporter
 {
+    /**
+    <summary>Imports an SDCFormSubmission XML form into the SDC CDM.</summary>
+    <param name="sdcCdm">The SDC CDM to import the form into.</param>
+    <param name="sdcSubmissionPackage">The SDCFormSubmission XML form to import.</param>
+    */
     public static void ProcessXmlForm(ISdcCdm sdcCdm, XElement sdcSubmissionPackage)
     {
         XNamespace sdc = "urn:ihe:qrph:sdc:2016";
@@ -13,19 +18,30 @@ public static class XmlFormImporter
             ?? throw new Exception("No Form Design found in XML");
         Console.WriteLine($"Form Design: {formDesign}");
 
-        var new_template_sdc_pk = sdcCdm.WriteTemplateSdcClass(
-            formDesign.Attribute("ID")?.Value ?? "UNKNOWN",
-            formDesign.Attribute("baseURI")?.Value ?? "UNKNOWN",
-            formDesign.Attribute("lineage")?.Value ?? "UNKNOWN",
-            formDesign.Attribute("version")?.Value ?? "UNKNOWN",
-            formDesign.Attribute("fullURI")?.Value ?? "UNKNOWN",
-            formDesign.Attribute("formTitle")?.Value ?? "UNKNOWN",
-            formDesign.ToString(),
-            "FD"
-        );
+        string sdc_form_design_id =
+            formDesign.Attribute("ID")?.Value
+            ?? throw new Exception("No Form Design ID provided in XML");
 
-        var new_template_instance_class_pk = sdcCdm.WriteTemplateInstanceClass(
-            new_template_sdc_pk,
+        // Find the row pertaining to the template we are submitting a filled form of.
+        // We are creating a row for the template if one does not exist.
+        // TODO: We should fail to import the form if the template does not
+        // exist, since a submitted form does not necessarily contain all
+        // information required to create a template.
+        long template_sdc_id =
+            sdcCdm.FindTemplateSdcClass(sdc_form_design_id)
+            ?? sdcCdm.WriteTemplateSdcClass(
+                sdc_form_design_id,
+                formDesign.Attribute("baseURI")?.Value ?? "UNKNOWN",
+                formDesign.Attribute("lineage")?.Value ?? "UNKNOWN",
+                formDesign.Attribute("version")?.Value ?? "UNKNOWN",
+                formDesign.Attribute("fullURI")?.Value ?? "UNKNOWN",
+                formDesign.Attribute("formTitle")?.Value ?? "UNKNOWN",
+                formDesign.ToString(),
+                "FD"
+            );
+
+        long template_instance_id = sdcCdm.WriteTemplateInstanceClass(
+            template_sdc_id,
             sdcSubmissionPackage.Attribute("instanceID")?.Value ?? null,
             sdcSubmissionPackage.Attribute("instanceVersionURI")?.Value ?? null,
             sdcSubmissionPackage.Attribute("instanceVersion")?.Value ?? null
@@ -40,7 +56,7 @@ public static class XmlFormImporter
 
         foreach (XElement child in childItems)
         {
-            ProcessChildItem(sdcCdm, child, new_template_instance_class_pk);
+            ProcessChildItem(sdcCdm, child, template_instance_id);
         }
     }
 
@@ -49,7 +65,8 @@ public static class XmlFormImporter
         XElement childItem,
         long template_instance_class_fk,
         string? section_id = null,
-        string? section_guid = null
+        string? section_guid = null,
+        long? parent_observation_id = null
     )
     {
         XNamespace sdc = "urn:ihe:qrph:sdc:2016";
@@ -57,12 +74,10 @@ public static class XmlFormImporter
         var sections = childItem.Elements(sdc + "Section");
         foreach (XElement section in sections)
         {
-            string? inner_section_id = section.Attribute("title")?.Value;
-            if (string.IsNullOrEmpty(inner_section_id))
-                continue;
             string? inner_section_guid = section.Attribute("ID")?.Value;
             if (string.IsNullOrEmpty(inner_section_guid))
                 continue;
+            string? inner_section_id = section.Attribute("title")?.Value;
 
             IEnumerable<XElement> childItems =
                 section.Elements(sdc + "ChildItems")
@@ -80,15 +95,20 @@ public static class XmlFormImporter
             }
         }
 
-        if (string.IsNullOrEmpty(section_id))
-            return;
         if (string.IsNullOrEmpty(section_guid))
             return;
 
         var questions = childItem.Elements(sdc + "Question");
         foreach (XElement question in questions)
         {
-            ProcessQuestion(sdcCdm, question, template_instance_class_fk, section_id, section_guid);
+            ProcessQuestion(
+                sdcCdm,
+                question,
+                template_instance_class_fk,
+                section_id,
+                section_guid,
+                null
+            );
         }
     }
 
@@ -96,8 +116,9 @@ public static class XmlFormImporter
         ISdcCdm sdcCdm,
         XElement question,
         long template_instance_class_fk,
-        string section_id,
-        string section_guid
+        string? section_id,
+        string section_guid,
+        long? parent_observation_id
     )
     {
         XNamespace sdc = "urn:ihe:qrph:sdc:2016";
@@ -106,7 +127,10 @@ public static class XmlFormImporter
         string? question_guid = question.Attribute("ID")?.Value;
         string? question_text = question.Attribute("title")?.Value;
 
+        // Only one of ListField or ResponseField is allowed under each SDC Question
         XElement? listField = question.Element(sdc + "ListField");
+        XElement? responseField = question.Element(sdc + "ResponseField");
+
         if (listField != null)
         {
             ProcessListField(
@@ -117,12 +141,11 @@ public static class XmlFormImporter
                 section_guid,
                 question_text,
                 question_id,
-                question_guid
+                question_guid,
+                null
             );
         }
-
-        XElement? responseField = question.Element(sdc + "ResponseField");
-        if (responseField != null)
+        else if (responseField != null)
         {
             ProcessResponseField(
                 sdcCdm,
@@ -132,8 +155,13 @@ public static class XmlFormImporter
                 section_guid,
                 question_text,
                 question_id,
-                question_guid
+                question_guid,
+                null
             );
+        }
+        else
+        {
+            Console.Write("Warning: No ListField or ResponseField found for Question");
         }
     }
 
@@ -141,11 +169,12 @@ public static class XmlFormImporter
         ISdcCdm sdcCdm,
         XElement listField,
         long template_instance_class_fk,
-        string section_id,
+        string? section_id,
         string section_guid,
         string? question_text,
         string? question_id,
-        string? question_guid
+        string? question_guid,
+        long? parent_observation_id
     )
     {
         XNamespace sdc = "urn:ihe:qrph:sdc:2016";
@@ -155,6 +184,11 @@ public static class XmlFormImporter
         {
             foreach (XElement listItem in listElem.Elements(sdc + "ListItem"))
             {
+                // If this ListItem is 'selected' then create an SDC Observation for it, otherwise skip it
+                bool listItemSelected = listItem.Attribute("selected")?.Value == "true";
+                if (!listItemSelected)
+                    continue;
+
                 XElement? li_response_field = listItem.Element(sdc + "ListItemResponseField");
                 if (li_response_field != null)
                 {
@@ -167,6 +201,7 @@ public static class XmlFormImporter
                         question_text,
                         question_id,
                         question_guid,
+                        null,
                         li_text: listItem.Attribute("title")?.Value,
                         li_id: listItem.Attribute("name")?.Value,
                         li_instance_guid: listItem.Attribute("ID")?.Value
@@ -176,6 +211,7 @@ public static class XmlFormImporter
                 {
                     sdcCdm.WriteSdcObsClass(
                         template_instance_class_fk,
+                        parent_observation_id: null,
                         section_id,
                         section_guid,
                         question_text,
@@ -195,11 +231,12 @@ public static class XmlFormImporter
         ISdcCdm sdcCdm,
         XElement responseField,
         long template_instance_class_fk,
-        string section_id,
+        string? section_id,
         string section_guid,
         string? question_text,
         string? question_id,
         string? question_guid,
+        long? parent_observation_id,
         string? li_text = null,
         string? li_id = null,
         string? li_instance_guid = null,
@@ -226,6 +263,7 @@ public static class XmlFormImporter
 
             sdcCdm.WriteSdcObsClass(
                 template_instance_class_fk,
+                parent_observation_id: null,
                 section_id,
                 section_guid,
                 question_text,

@@ -6,22 +6,18 @@ namespace SdcCdm;
 
 public static class FhirCPDSExporter
 {
-    public static bool ExportFhirCpds(
+    public static Bundle? ExportFhirCpds(
         ISdcCdm sdcCdm,
-        out Bundle? outCpdsBundle,
         string instanceVersionGuid,
         string? instanceVersionDate = null
     )
     {
-        outCpdsBundle = null;
         // Find the relevant row in the TemplateInstanceClass table
-        if (
-            !sdcCdm.FindTemplateInstanceClass(
-                instanceVersionGuid,
-                out long templateInstanceClassPk,
-                instanceVersionDate
-            )
-        )
+        long? templateInstanceClassPk = sdcCdm.FindTemplateInstanceClass(
+            instanceVersionGuid,
+            instanceVersionDate
+        );
+        if (!templateInstanceClassPk.HasValue)
         {
             if (string.IsNullOrEmpty(instanceVersionDate))
             {
@@ -37,11 +33,16 @@ public static class FhirCPDSExporter
                     instanceVersionGuid: {instanceVersionGuid}, instanceVersionDate: {instanceVersionDate}"
                 );
             }
-            return false;
+            return null;
         }
-        Console.WriteLine($"Found TemplateInstanceClass: {templateInstanceClassPk}");
+        long templateInstanceClassPkValue = templateInstanceClassPk.Value;
+        Console.WriteLine($"Found TemplateInstanceClass: {templateInstanceClassPkValue}");
 
-        TemplateInstanceRecord record = sdcCdm.GetTemplateInstanceRecord(templateInstanceClassPk);
+        TemplateInstanceRecord? record =
+            sdcCdm.GetTemplateInstanceRecord(templateInstanceClassPkValue)
+            ?? throw new Exception(
+                $"Failed to retrieve TemplateInstanceRecord for template instance class {templateInstanceClassPkValue}"
+            );
 
         // Create Bundle resources
         Bundle cpdsBundle = new()
@@ -93,7 +94,7 @@ public static class FhirCPDSExporter
 
         // Create Observation(s)
         // Get all SdcObsClass records for the template instance
-        List<SdcObsClass> sdcObsClasses = sdcCdm.GetSdcObsClasses(templateInstanceClassPk);
+        List<SdcObsClass> sdcObsClasses = sdcCdm.GetSdcObsClasses(templateInstanceClassPkValue);
         List<Observation> observations = GenerateObservationGroups(sdcCdm, sdcObsClasses);
         foreach (Observation observation in observations)
         {
@@ -200,8 +201,7 @@ public static class FhirCPDSExporter
         };
         cpdsBundle.Entry.Insert(0, CreateEntryComponentForPost(composition));
 
-        outCpdsBundle = cpdsBundle;
-        return true;
+        return cpdsBundle;
     }
 
     private static Bundle.EntryComponent CreateEntryComponentForPost(Resource resource)
@@ -224,12 +224,9 @@ public static class FhirCPDSExporter
 
         // Implement the search logic here. This is a placeholder for the actual search.
         // For example, you might have a method like sdcCdm.FindPersonByIdentifier
-        bool patientExists = sdcCdm.FindPersonByIdentifier(
-            hardcodedPatientIdentifier,
-            out long foundPersonPk
-        );
+        long? foundPersonPk = sdcCdm.FindPersonByIdentifier(hardcodedPatientIdentifier);
 
-        if (patientExists)
+        if (foundPersonPk != null)
         {
             // Retrieve patient details using foundPersonPk
             // This is a placeholder for actual retrieval logic

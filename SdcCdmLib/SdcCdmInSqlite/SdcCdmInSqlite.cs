@@ -5,6 +5,46 @@ namespace SdcCdmInSqlite;
 
 public class SdcCdmInSqlite : ISdcCdm
 {
+    /// <summary>
+    /// Inserts a concept record into the concept table.
+    /// </summary>
+    /// <param name="concept">The concept record to insert.</param>
+    /// <returns>The ID of the inserted concept.</returns>
+    public long InsertConcept(ConceptRecord concept)
+    {
+        using var cmd = connection.CreateCommand();
+        cmd.CommandText =
+            @"
+            INSERT INTO main.concept 
+            (concept_id, concept_name, domain_id, vocabulary_id, concept_class_id, 
+             standard_concept, concept_code, valid_start_date, valid_end_date, invalid_reason)
+            VALUES 
+            (@conceptId, @conceptName, @domainId, @vocabularyId, @conceptClassId, 
+             @standardConcept, @conceptCode, @validStartDate, @validEndDate, @invalidReason);
+            SELECT last_insert_rowid();
+        ";
+
+        cmd.Parameters.AddWithValue("@conceptId", concept.ConceptId);
+        cmd.Parameters.AddWithValue("@conceptName", concept.ConceptName);
+        cmd.Parameters.AddWithValue("@domainId", concept.DomainId);
+        cmd.Parameters.AddWithValue("@vocabularyId", concept.VocabularyId);
+        cmd.Parameters.AddWithValue("@conceptClassId", concept.ConceptClassId);
+        cmd.Parameters.AddWithValue(
+            "@standardConcept",
+            concept.StandardConcept ?? (object)DBNull.Value
+        );
+        cmd.Parameters.AddWithValue("@conceptCode", concept.ConceptCode);
+        cmd.Parameters.AddWithValue("@validStartDate", concept.ValidStartDate);
+        cmd.Parameters.AddWithValue("@validEndDate", concept.ValidEndDate);
+        cmd.Parameters.AddWithValue(
+            "@invalidReason",
+            concept.InvalidReason ?? (object)DBNull.Value
+        );
+
+        var result = cmd.ExecuteScalar();
+        return result != null ? Convert.ToInt64(result) : -1;
+    }
+
     public SdcCdmInSqlite(string dbFilePath, bool inMemory = false, bool overwrite = false)
     {
         this.dbFilePath = dbFilePath;
@@ -89,11 +129,6 @@ public class SdcCdmInSqlite : ISdcCdm
         string? doctype
     )
     {
-        // Print data for debugging:
-        Console.WriteLine(
-            $"TemplateSdcClass: {sdcformdesignid}, {baseuri}, {lineage}, {version}, {fulluri}, {formtitle}, {sdc_xml}, {doctype}"
-        );
-
         using var cmd = connection.CreateCommand();
         cmd.CommandText =
             @"
@@ -104,13 +139,13 @@ public class SdcCdmInSqlite : ISdcCdm
             ";
 
         cmd.Parameters.AddWithValue("@sdcformdesignid", sdcformdesignid);
-        cmd.Parameters.AddWithValue("@baseuri", baseuri);
-        cmd.Parameters.AddWithValue("@lineage", lineage);
-        cmd.Parameters.AddWithValue("@version", version);
-        cmd.Parameters.AddWithValue("@fulluri", fulluri);
-        cmd.Parameters.AddWithValue("@formtitle", formtitle);
-        cmd.Parameters.AddWithValue("@sdc_xml", sdc_xml);
-        cmd.Parameters.AddWithValue("@doctype", doctype);
+        cmd.Parameters.AddWithValue("@baseuri", baseuri ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue("@lineage", lineage ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue("@version", version ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue("@fulluri", fulluri ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue("@formtitle", formtitle ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue("@sdc_xml", sdc_xml ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue("@doctype", doctype ?? (object)DBNull.Value);
 
         var pk = cmd.ExecuteScalar() ?? -1;
         return (long)pk;
@@ -167,6 +202,7 @@ public class SdcCdmInSqlite : ISdcCdm
 
     public long WriteSdcObsClass(
         long template_instance_class_fk,
+        long? parent_observation_id,
         string? section_id,
         string? section_guid,
         string? q_text,
@@ -196,12 +232,16 @@ public class SdcCdmInSqlite : ISdcCdm
         cmd.CommandText =
             @"
                 INSERT INTO sdc_observation 
-                (template_instance_id, parentinstanceguid, section_sdcid, section_guid, question_text, question_instance_guid, question_sdcid, list_item_text, list_item_id, list_item_instanceguid, list_item_parentguid, response, units, units_system, datatype, response_int, response_float, response_datetime, reponse_string_nvarchar, obs_datetime, sdc_order, sdc_repeat_level, sdc_comments, person_id, visit_occurrence_id, provider_id)
-                VALUES (@templateinstanceclassfk, @parentinstanceguid, @section_id, @section_guid, @q_text, @q_instanceguid, @q_id, @li_text, @li_id, @li_instanceguid, @li_parentguid, @response, @units, @units_system, @datatype, @response_int, @response_float, @response_datetime, @reponse_string_nvarchar, @obsdatetime, @sdcorder, @sdcrepeatlevel, @sdccomments, @personfk, @encounterfk, @practitionerfk);
+                (template_instance_id, parent_observation_id, parent_instance_guid, section_sdcid, section_guid, question_text, question_instance_guid, question_sdcid, list_item_text, list_item_id, list_item_instance_guid, list_item_parent_guid, response, units, units_system, datatype, response_int, response_float, response_datetime, reponse_string_nvarchar, obs_datetime, sdc_order, sdc_repeat_level, sdc_comments)
+                VALUES (@templateinstanceclassfk, @parent_observation_id, @parentinstanceguid, @section_id, @section_guid, @q_text, @q_instanceguid, @q_id, @li_text, @li_id, @li_instanceguid, @li_parentguid, @response, @units, @units_system, @datatype, @response_int, @response_float, @response_datetime, @reponse_string_nvarchar, @obsdatetime, @sdcorder, @sdcrepeatlevel, @sdccomments);
                 SELECT last_insert_rowid();
             ";
 
         cmd.Parameters.AddWithValue("@templateinstanceclassfk", template_instance_class_fk);
+        cmd.Parameters.AddWithValue(
+            "@parent_observation_id",
+            parent_observation_id ?? (object)DBNull.Value
+        );
         cmd.Parameters.AddWithValue("@parentinstanceguid", DBNull.Value);
         cmd.Parameters.AddWithValue("@section_id", section_id ?? (object)DBNull.Value);
         cmd.Parameters.AddWithValue("@section_guid", section_guid ?? (object)DBNull.Value);
@@ -230,23 +270,153 @@ public class SdcCdmInSqlite : ISdcCdm
         cmd.Parameters.AddWithValue("@sdcorder", sdc_order ?? (object)DBNull.Value);
         cmd.Parameters.AddWithValue("@sdcrepeatlevel", DBNull.Value);
         cmd.Parameters.AddWithValue("@sdccomments", DBNull.Value);
-        cmd.Parameters.AddWithValue("@personfk", DBNull.Value);
-        cmd.Parameters.AddWithValue("@encounterfk", DBNull.Value);
-        cmd.Parameters.AddWithValue("@practitionerfk", DBNull.Value);
 
         var pk = cmd.ExecuteScalar() ?? -1;
         return (long)pk;
     }
 
-    public bool FindTemplateSdcClass(string formDesignId, out long primaryKey)
+    public ISdcCdm.Person? WritePerson(in ISdcCdm.PersonDTO dto)
     {
-        primaryKey = 0;
-        return false;
+        using var cmd = connection.CreateCommand();
+        cmd.CommandText =
+            @"
+                INSERT INTO main.person
+                    (gender_concept_id, year_of_birth, month_of_birth, day_of_birth, birth_datetime,
+                    race_concept_id, ethnicity_concept_id, location_id, provider_id, care_site_id,
+                    person_source_value, gender_source_value, gender_source_concept_id,
+                    race_source_value, race_source_concept_id, ethnicity_source_value, ethnicity_source_concept_id)
+                VALUES
+                    (@genderconceptid, @yearofbirth, @monthofbirth, @dayofbirth, @birthdatetime,
+                    @raceconceptid, @ethnicityconceptid, @locationid, @providerid, @caresiteid,
+                    @personsourcevalue, @gendersourcevalue, @gendersourceconceptid,
+                    @racesourcevalue, @racesourceconceptid, @ethnicitysourcevalue, @ethnicitysourceconceptid)
+                RETURNING 
+                    person_id, gender_concept_id, year_of_birth, month_of_birth, day_of_birth,
+                    birth_datetime, race_concept_id, ethnicity_concept_id, location_id, provider_id,
+                    care_site_id, person_source_value, gender_source_value, gender_source_concept_id,
+                    race_source_value, race_source_concept_id, ethnicity_source_value, ethnicity_source_concept_id;
+            ";
+
+        cmd.Parameters.AddWithValue("@genderconceptid", dto.GenderConceptId);
+        cmd.Parameters.AddWithValue("@yearofbirth", dto.YearOfBirth);
+        cmd.Parameters.AddWithValue(
+            "@monthofbirth",
+            dto.MonthOfBirth.HasValue ? dto.MonthOfBirth.Value : DBNull.Value
+        );
+        cmd.Parameters.AddWithValue(
+            "@dayofbirth",
+            dto.DayOfBirth.HasValue ? dto.DayOfBirth.Value : DBNull.Value
+        );
+        cmd.Parameters.AddWithValue(
+            "@birthdatetime",
+            dto.BirthDatetime.HasValue ? dto.BirthDatetime.Value : DBNull.Value
+        );
+        cmd.Parameters.AddWithValue("@raceconceptid", dto.RaceConceptId);
+        cmd.Parameters.AddWithValue("@ethnicityconceptid", dto.EthnicityConceptId);
+        cmd.Parameters.AddWithValue(
+            "@locationid",
+            dto.LocationId.HasValue ? dto.LocationId.Value : DBNull.Value
+        );
+        cmd.Parameters.AddWithValue(
+            "@providerid",
+            dto.ProviderId.HasValue ? dto.ProviderId.Value : DBNull.Value
+        );
+        cmd.Parameters.AddWithValue(
+            "@caresiteid",
+            dto.CareSiteId.HasValue ? dto.CareSiteId.Value : DBNull.Value
+        );
+        cmd.Parameters.AddWithValue(
+            "@personsourcevalue",
+            dto.PersonSourceValue != null ? dto.PersonSourceValue : DBNull.Value
+        );
+        cmd.Parameters.AddWithValue(
+            "@gendersourcevalue",
+            dto.GenderSourceValue != null ? dto.GenderSourceValue : DBNull.Value
+        );
+        cmd.Parameters.AddWithValue(
+            "@gendersourceconceptid",
+            dto.GenderSourceConceptId.HasValue ? dto.GenderSourceConceptId.Value : DBNull.Value
+        );
+        cmd.Parameters.AddWithValue(
+            "@racesourcevalue",
+            dto.RaceSourceValue != null ? dto.RaceSourceValue : DBNull.Value
+        );
+        cmd.Parameters.AddWithValue(
+            "@racesourceconceptid",
+            dto.RaceSourceConceptId.HasValue ? dto.RaceSourceConceptId.Value : DBNull.Value
+        );
+        cmd.Parameters.AddWithValue(
+            "@ethnicitysourcevalue",
+            dto.EthnicitySourceValue != null ? dto.EthnicitySourceValue : DBNull.Value
+        );
+        cmd.Parameters.AddWithValue(
+            "@ethnicitysourceconceptid",
+            dto.EthnicitySourceConceptId.HasValue
+                ? dto.EthnicitySourceConceptId.Value
+                : DBNull.Value
+        );
+
+        using var reader = cmd.ExecuteReader();
+        if (!reader.Read())
+            return null;
+
+        // Reconstruct the Person record based on the data from the DB.
+        var personId = reader.GetInt64(0);
+        var genderConceptId = reader.GetInt64(1);
+        var yearOfBirth = reader.GetInt32(2);
+        int? monthOfBirth = reader.IsDBNull(3) ? null : reader.GetInt32(3);
+        int? dayOfBirth = reader.IsDBNull(4) ? null : reader.GetInt32(4);
+        DateTimeOffset? birthDatetime = reader.IsDBNull(5) ? null : reader.GetDateTime(5);
+        var raceConceptId = reader.GetInt64(6);
+        var ethnicityConceptId = reader.GetInt64(7);
+        long? locationId = reader.IsDBNull(8) ? null : reader.GetInt64(8);
+        long? providerId = reader.IsDBNull(9) ? null : reader.GetInt64(9);
+        long? careSiteId = reader.IsDBNull(10) ? null : reader.GetInt64(10);
+        string? personSourceValue = reader.IsDBNull(11) ? null : reader.GetString(11);
+        string? genderSourceValue = reader.IsDBNull(12) ? null : reader.GetString(12);
+        long? genderSourceConceptId = reader.IsDBNull(13) ? null : reader.GetInt64(13);
+        string? raceSourceValue = reader.IsDBNull(14) ? null : reader.GetString(14);
+        long? raceSourceConceptId = reader.IsDBNull(15) ? null : reader.GetInt64(15);
+        string? ethnicitySourceValue = reader.IsDBNull(16) ? null : reader.GetString(16);
+        long? ethnicitySourceConceptId = reader.IsDBNull(17) ? null : reader.GetInt64(17);
+
+        return new()
+        {
+            PersonId = personId,
+            GenderConceptId = genderConceptId,
+            YearOfBirth = yearOfBirth,
+            MonthOfBirth = monthOfBirth,
+            DayOfBirth = dayOfBirth,
+            BirthDatetime = birthDatetime,
+            RaceConceptId = raceConceptId,
+            EthnicityConceptId = ethnicityConceptId,
+            LocationId = locationId,
+            ProviderId = providerId,
+            CareSiteId = careSiteId,
+            PersonSourceValue = personSourceValue,
+            GenderSourceValue = genderSourceValue,
+            GenderSourceConceptId = genderSourceConceptId,
+            RaceSourceValue = raceSourceValue,
+            RaceSourceConceptId = raceSourceConceptId,
+            EthnicitySourceValue = ethnicitySourceValue,
+            EthnicitySourceConceptId = ethnicitySourceConceptId,
+        };
     }
 
-    public bool FindTemplateInstanceClass(
+    public long? FindTemplateSdcClass(string formDesignId)
+    {
+        using var cmd = connection.CreateCommand();
+        cmd.CommandText =
+            @"SELECT template_sdc_id
+              FROM template_sdc
+              WHERE sdc_form_design_sdcid = @formDesignId";
+        cmd.Parameters.AddWithValue("@formDesignId", formDesignId);
+        using var reader = cmd.ExecuteReader();
+        return reader.Read() ? reader.GetInt64(0) : null;
+    }
+
+    public long? FindTemplateInstanceClass(
         string instanceVersionGuid,
-        out long templateInstanceClassPk,
         string? instanceVersionDate = null
     )
     {
@@ -264,20 +434,18 @@ public class SdcCdmInSqlite : ISdcCdm
         var reader = cmd.ExecuteReader();
         if (reader.Read())
         {
-            templateInstanceClassPk = reader.GetInt64(0);
+            long templateInstanceClassPk = reader.GetInt64(0);
             reader.Close();
-            return true;
+            return templateInstanceClassPk;
         }
         reader.Close();
-        templateInstanceClassPk = -1L;
-        return false;
+        return null;
 
         // TODO: Support searching by instanceVersionDate
     }
 
-    public bool FindPerson(long personPk, out long foundPersonPk)
+    public long? FindPerson(long personPk)
     {
-        foundPersonPk = -1L;
         using var cmd = connection.CreateCommand();
         cmd.CommandText =
             @"
@@ -289,15 +457,15 @@ public class SdcCdmInSqlite : ISdcCdm
         var reader = cmd.ExecuteReader();
         if (reader.Read())
         {
-            foundPersonPk = reader.GetInt64(0);
+            long foundPersonPk = reader.GetInt64(0);
             reader.Close();
-            return true;
+            return foundPersonPk;
         }
         reader.Close();
-        return false;
+        return null;
     }
 
-    public bool FindPersonByIdentifier(string identifier, out long foundPersonPk)
+    public long? FindPersonByIdentifier(string identifier)
     {
         using var cmd = connection.CreateCommand();
         cmd.CommandText =
@@ -313,16 +481,15 @@ public class SdcCdmInSqlite : ISdcCdm
         using var reader = cmd.ExecuteReader();
         if (reader.Read())
         {
-            foundPersonPk = reader.GetInt64(0);
+            long foundPersonPk = reader.GetInt64(0);
             reader.Close();
-            return true;
+            return foundPersonPk;
         }
         reader.Close();
-        foundPersonPk = 0;
-        return false;
+        return null;
     }
 
-    public TemplateInstanceRecord GetTemplateInstanceRecord(long templateInstanceClassPk)
+    public TemplateInstanceRecord? GetTemplateInstanceRecord(long templateInstanceClassPk)
     {
         using var cmd = connection.CreateCommand();
         cmd.CommandText =
@@ -364,7 +531,7 @@ public class SdcCdmInSqlite : ISdcCdm
             return record;
         }
         reader.Close();
-        throw new Exception("No template instance record found");
+        return null;
     }
 
     public List<SdcObsClass> GetSdcObsClasses(long templateInstanceClassPk)
@@ -382,8 +549,8 @@ public class SdcCdmInSqlite : ISdcCdm
                 sdc_observation.question_sdcid,
                 sdc_observation.list_item_text,
                 sdc_observation.list_item_id,
-                sdc_observation.list_item_instanceguid,
-                sdc_observation.list_item_parentguid,
+                sdc_observation.list_item_instance_guid,
+                sdc_observation.list_item_parent_guid,
                 sdc_observation.response,
                 sdc_observation.units,
                 sdc_observation.units_system,
@@ -395,10 +562,7 @@ public class SdcCdmInSqlite : ISdcCdm
                 sdc_observation.obs_datetime,
                 sdc_observation.sdc_order,
                 sdc_observation.sdc_repeat_level,
-                sdc_observation.sdc_comments,
-                sdc_observation.person_id,
-                sdc_observation.visit_occurrence_id,
-                sdc_observation.provider_id
+                sdc_observation.sdc_comments
             FROM sdc_observation
             INNER JOIN template_instance ON template_instance.template_instance_id = sdc_observation.template_instance_id
             WHERE template_instance.template_instance_id = @templateinstanceclasspk
@@ -433,10 +597,7 @@ public class SdcCdmInSqlite : ISdcCdm
                     reader.IsDBNull(19) ? null : reader.GetDateTimeOffset(19),
                     reader.IsDBNull(20) ? null : reader.GetString(20),
                     reader.IsDBNull(21) ? null : reader.GetString(21),
-                    reader.IsDBNull(22) ? null : reader.GetString(22),
-                    reader.IsDBNull(23) ? null : reader.GetInt64(23),
-                    reader.IsDBNull(24) ? null : reader.GetInt64(24),
-                    reader.IsDBNull(25) ? null : reader.GetInt64(25)
+                    reader.IsDBNull(22) ? null : reader.GetString(22)
                 )
             );
             reader.Close();
@@ -444,5 +605,82 @@ public class SdcCdmInSqlite : ISdcCdm
         }
         reader.Close();
         throw new Exception("No template instance records found");
+    }
+
+    public long? FindTemplateItem(string template_item_sdcid)
+    {
+        throw new NotImplementedException();
+    }
+
+    public ISdcCdm.TemplateItem? WriteTemplateItem(in ISdcCdm.TemplateItemDTO templateItem)
+    {
+        using var cmd = connection.CreateCommand();
+        cmd.CommandText =
+            @"
+                INSERT INTO template_item
+                    (template_sdc_id, parent_template_item_id,
+                    template_item_sdcid, type, visible_text, invisible_text,
+                    min_cardinality, must_implement, item_order)
+                VALUES 
+                    (@templatesdcfk, @parenttemplateitemid, 
+                    @templateitem_sdcid, @type, @visibletext, @invisibletext, 
+                    @mincard, @mustimplement, @itemorder)
+                RETURNING
+                    template_item_id, template_sdc_id, parent_template_item_id, 
+                    template_item_sdcid, type, visible_text, invisible_text, 
+                    min_cardinality, must_implement, item_order;
+            ";
+
+        cmd.Parameters.AddWithValue("@templatesdcfk", templateItem.TemplateSdcId);
+        cmd.Parameters.AddWithValue(
+            "@parenttemplateitemid",
+            templateItem.ParentTemplateItemId ?? (object)DBNull.Value
+        );
+        cmd.Parameters.AddWithValue("@templateitem_sdcid", templateItem.TemplateItemSdcid);
+        cmd.Parameters.AddWithValue("@type", templateItem.Type ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue(
+            "@visibletext",
+            templateItem.VisibleText ?? (object)DBNull.Value
+        );
+        cmd.Parameters.AddWithValue(
+            "@invisibletext",
+            templateItem.InvisibleText ?? (object)DBNull.Value
+        );
+        cmd.Parameters.AddWithValue("@mincard", templateItem.MinCard ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue(
+            "@mustimplement",
+            templateItem.MustImplement ?? (object)DBNull.Value
+        );
+        cmd.Parameters.AddWithValue("@itemorder", templateItem.ItemOrder ?? (object)DBNull.Value);
+
+        using var reader = cmd.ExecuteReader();
+        if (!reader.Read())
+            return null;
+
+        // Reconstruct the template item record based on the data from the DB.
+        var templateItemId = reader.GetInt64(0);
+        var templateSdcId = reader.GetInt64(1);
+        long? parentTemplateItemId = reader.IsDBNull(2) ? null : reader.GetInt64(2);
+        var templateItemSdcid = reader.GetString(3);
+        var type = reader.IsDBNull(4) ? null : reader.GetString(4);
+        var visibleText = reader.IsDBNull(5) ? null : reader.GetString(5);
+        var invisibleText = reader.IsDBNull(6) ? null : reader.GetString(6);
+        var minCard = reader.IsDBNull(7) ? null : reader.GetString(7);
+        var mustImplement = reader.IsDBNull(8) ? null : reader.GetString(8);
+        var itemOrder = reader.IsDBNull(9) ? null : reader.GetString(9);
+
+        return new()
+        {
+            TemplateItemId = templateItemId,
+            TemplateSdcId = templateSdcId,
+            ParentTemplateItemId = parentTemplateItemId,
+            TemplateItemSdcid = templateItemSdcid,
+            Type = type,
+            VisibleText = visibleText,
+            InvisibleText = invisibleText,
+            MinCard = minCard,
+            MustImplement = mustImplement,
+            ItemOrder = itemOrder,
+        };
     }
 }
