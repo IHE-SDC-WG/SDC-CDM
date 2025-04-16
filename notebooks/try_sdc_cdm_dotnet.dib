@@ -2,16 +2,6 @@
 
 {"kernelInfo":{"defaultKernelName":"csharp","items":[{"name":"csharp","languageName":"C#","aliases":["c#","cs"]},{"name":"fsharp","languageName":"F#","aliases":["f#","fs"]},{"name":"html","languageName":"HTML"},{"name":"http","languageName":"HTTP"},{"name":"javascript","languageName":"JavaScript","aliases":["js"]},{"name":"kql","languageName":"KQL"},{"name":"mermaid","languageName":"Mermaid"},{"name":"pwsh","languageName":"PowerShell","aliases":["powershell"]},{"name":"sql","languageName":"SQL"},{"name":"value"}]}}
 
-#!csharp
-
-// Reference external packages needed for this notebook
-
-#r "nuget:Microsoft.Data.Sqlite,9.0.0"
-#r "nuget:Wasmtime,22.0.0"
-#r "nuget:Hl7.Fhir.R4,6.0.0-alpha1"
-#r "nuget:CsvHelper,33.0.1"
-#r "nuget:Microsoft.Extensions.Logging,9.0.4"
-
 #!pwsh
 
 # Build the SDC CDM libraries
@@ -20,23 +10,31 @@ dotnet build ../SdcCdmLib
 
 #!csharp
 
+/** Reference any external libraries and the SDC CDM library assembly */
+
+#r "nuget:Microsoft.Data.Sqlite,9.0.0"
+#r "nuget:Hl7.Fhir.R4,6.0.0-alpha1"
+#r "nuget:CsvHelper,33.0.1"
+#r "nuget:Microsoft.Extensions.Logging,9.0.4"
 #r "../SdcCdmLib/SdcCdm/bin/Debug/net8.0/SdcCdm.dll"
 #r "../SdcCdmLib/SdcCdmInSqlite/bin/Debug/net8.0/SdcCdmInSqlite.dll"
 
+#!csharp
+
+/** Create a new Sqlite database instance for the SDC CDM. */
+
 using SdcCdm;
 using SdcCdmInSqlite;
-
-// Create CDM database instance
 
 SdcCdmInSqlite.SdcCdmInSqlite sdcCdmInstance = new("public/sdc_cdm.db", overwrite: true);
 sdcCdmInstance.BuildSchema();
 
 #!csharp
 
+/** Import SDC templates */
+
 using System.Xml.Linq;
 using System.IO;
-
-// Import SDC templates
 
 // Only import the first two templates to avoid long operation
 var xmlFiles = Directory.GetFiles("../sample_data/sdc_templates", "*.xml").Take(2);
@@ -48,14 +46,15 @@ foreach (var filePath in xmlFiles)
 
 #!csharp
 
-// Import SDC Template Row Data
+/** Import SDC Template Row Data */
+
 SdcCdm.TemplateRowDataImporter.ImportTemplateRowData((ISdcCdm) sdcCdmInstance, Path.Combine("..", "sample_data", "TemplateHistory(in).csv"));
 
 #!csharp
 
-using System.IO;
+/** Import sample SDC XML files */
 
-// Import sample SDC XML files
+using System.IO;
 
 string directoryPath = Path.Combine("..", "sample_data", "sdc_xml");
 string[] sdc_xml_files = Directory.GetFiles(directoryPath, "*.xml");
@@ -70,9 +69,9 @@ foreach (string xml_file in sdc_xml_files)
 
 #!csharp
 
-using System.IO;
+/** Import NAACCR V2 messages */
 
-// Import NAACCR V2 messages
+using System.IO;
 
 string directoryPath = Path.Combine("..", "sample_data", "naaccr_v2");
 string[] v2_messages = Directory.GetFiles(directoryPath, "*.hl7");
@@ -96,10 +95,10 @@ foreach (var message in v2_messages)
 
 #!csharp
 
+/** Convert form instance to FHIR CPDS Bundle */
+
 using Hl7.Fhir.Model;
 using Hl7.Fhir.Serialization;
-
-// Convert form instance to FHIR CPDS Bundle
 
 string existingTemplate = "5b64392d-680e-4a96-94ca-3da4acf6bd27"; // ADRENAL_GLAND.xml instance ID
 
