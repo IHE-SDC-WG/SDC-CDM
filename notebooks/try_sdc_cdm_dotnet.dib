@@ -10,6 +10,7 @@
 #r "nuget:Wasmtime,22.0.0"
 #r "nuget:Hl7.Fhir.R4,6.0.0-alpha1"
 #r "nuget:CsvHelper,33.0.1"
+#r "nuget:Microsoft.Extensions.Logging,9.0.4"
 
 #!pwsh
 
@@ -19,15 +20,11 @@ dotnet build ../SdcCdmLib
 
 #!csharp
 
-// Reference the SDC CDM libraries
-
 #r "../SdcCdmLib/SdcCdm/bin/Debug/net8.0/SdcCdm.dll"
 #r "../SdcCdmLib/SdcCdmInSqlite/bin/Debug/net8.0/SdcCdmInSqlite.dll"
 
 using SdcCdm;
 using SdcCdmInSqlite;
-using Hl7.Fhir.Model;
-using Hl7.Fhir.Serialization;
 
 // Create CDM database instance
 
@@ -36,10 +33,10 @@ sdcCdmInstance.BuildSchema();
 
 #!csharp
 
-// Import SDC templates
-
 using System.Xml.Linq;
 using System.IO;
+
+// Import SDC templates
 
 // Only import the first two templates to avoid long operation
 var xmlFiles = Directory.GetFiles("../sample_data/sdc_templates", "*.xml").Take(2);
@@ -56,9 +53,9 @@ SdcCdm.TemplateRowDataImporter.ImportTemplateRowData((ISdcCdm) sdcCdmInstance, P
 
 #!csharp
 
-// Import sample SDC XML files
-
 using System.IO;
+
+// Import sample SDC XML files
 
 string directoryPath = Path.Combine("..", "sample_data", "sdc_xml");
 string[] sdc_xml_files = Directory.GetFiles(directoryPath, "*.xml");
@@ -73,9 +70,10 @@ foreach (string xml_file in sdc_xml_files)
 
 #!csharp
 
+using System.IO;
+
 // Import NAACCR V2 messages
 
-using System.IO;
 string directoryPath = Path.Combine("..", "sample_data", "naaccr_v2");
 string[] v2_messages = Directory.GetFiles(directoryPath, "*.hl7");
 
@@ -97,6 +95,9 @@ foreach (var message in v2_messages)
 }
 
 #!csharp
+
+using Hl7.Fhir.Model;
+using Hl7.Fhir.Serialization;
 
 // Convert form instance to FHIR CPDS Bundle
 

@@ -1,4 +1,5 @@
 ﻿using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Logging;
 using SdcCdm;
 
 namespace SdcCdmInSqlite;
@@ -45,6 +46,12 @@ public class SdcCdmInSqlite : ISdcCdm
         return result != null ? Convert.ToInt64(result) : -1;
     }
 
+    private static readonly ILoggerFactory _loggerFactory = LoggerFactory.Create(builder =>
+    {
+        builder.AddConsole();
+    });
+    public ILogger Logger { get; set; }
+
     public SdcCdmInSqlite(string dbFilePath, bool inMemory = false, bool overwrite = false)
     {
         this.dbFilePath = dbFilePath;
@@ -60,6 +67,8 @@ public class SdcCdmInSqlite : ISdcCdm
         }
         this.connection = new(connectionString);
         connection.Open();
+
+        Logger = _loggerFactory.CreateLogger<SdcCdmInSqlite>();
     }
 
     private readonly string dbFilePath;
@@ -91,9 +100,9 @@ public class SdcCdmInSqlite : ISdcCdm
         foreach (var resourceName in sqlResourceNames)
         {
             // Extract a friendly file name (optional)
-            string fileName = resourceName.Substring(resourcePrefix.Length);
+            string fileName = resourceName[resourcePrefix.Length..];
 
-            Console.WriteLine($"Executing {fileName}...");
+            Logger.LogTrace("Executing {fileName}...", fileName);
 
             // Read the embedded SQL script
             using (Stream? stream = assembly.GetManifestResourceStream(resourceName))
@@ -101,21 +110,22 @@ public class SdcCdmInSqlite : ISdcCdm
                 if (stream == null)
                 {
                     throw new Exception(
-                        $"Internal error - could not find SQL script {resourceName}."
+                        $"Could not find SQL script {resourceName}, which is required for the database schema."
                     );
                 }
 
                 using StreamReader reader = new(stream);
                 string sqlScript = reader.ReadToEnd();
 
-                // Assuming you have an open connection named 'connection'
                 using var command = connection.CreateCommand();
                 command.CommandText = sqlScript;
                 command.ExecuteNonQuery();
             }
 
-            Console.WriteLine($"Finished executing {fileName}.");
+            Logger.LogTrace("Finished executing {fileName}.", fileName);
         }
+
+        Logger.LogInformation("Finished building schema.");
     }
 
     public long WriteTemplateSdcClass(
@@ -164,9 +174,6 @@ public class SdcCdmInSqlite : ISdcCdm
         string? report_text
     )
     {
-        // Print data for debugging:
-        Console.WriteLine($"TemplateInstanceClass: {templatesdc_fk}");
-
         using var cmd = connection.CreateCommand();
         cmd.CommandText =
             @"
@@ -223,11 +230,6 @@ public class SdcCdmInSqlite : ISdcCdm
         string? li_parent_guid
     )
     {
-        // Print data for debugging:
-        Console.WriteLine(
-            $"SdcObsClass: {template_instance_class_fk}, {section_id}, {section_guid}, {q_text}, {q_instance_guid}, {q_id}, {li_text}, {li_id}, {li_instance_guid}, {sdc_order}, {response}, {units}, {units_system}, {datatype}, {response_int}, {response_float}, {response_datetime}, {reponse_string_nvarchar}, {li_parent_guid}"
-        );
-
         using var cmd = connection.CreateCommand();
         cmd.CommandText =
             @"
@@ -489,7 +491,7 @@ public class SdcCdmInSqlite : ISdcCdm
         return null;
     }
 
-    public TemplateInstanceRecord? GetTemplateInstanceRecord(long templateInstanceClassPk)
+    public ISdcCdm.TemplateInstanceRecord? GetTemplateInstanceRecord(long templateInstanceClassPk)
     {
         using var cmd = connection.CreateCommand();
         cmd.CommandText =
@@ -514,7 +516,7 @@ public class SdcCdmInSqlite : ISdcCdm
         var reader = cmd.ExecuteReader();
         if (reader.Read())
         {
-            TemplateInstanceRecord record = new(
+            ISdcCdm.TemplateInstanceRecord record = new(
                 reader.GetInt64(0),
                 reader.IsDBNull(1) ? null : reader.GetString(1),
                 reader.IsDBNull(2) ? null : reader.GetString(2),

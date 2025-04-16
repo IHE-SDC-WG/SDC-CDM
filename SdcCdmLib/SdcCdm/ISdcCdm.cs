@@ -1,18 +1,6 @@
-﻿namespace SdcCdm;
+﻿using Microsoft.Extensions.Logging;
 
-public record TemplateInstanceRecord(
-    long Pk,
-    string? TemplateInstanceVersionGuid,
-    string? TemplateInstanceVersionUri,
-    long Templatesdcfk,
-    string? InstanceVersionDate,
-    string? DiagReportProps,
-    string? SurgPathId,
-    long? PersonFk,
-    long? EncounterFk,
-    long? PractitionerFk,
-    string? ReportText
-);
+namespace SdcCdm;
 
 public record SdcObsClass(
     long Pk,
@@ -42,6 +30,8 @@ public record SdcObsClass(
 
 public interface ISdcCdm
 {
+    public ILogger Logger { get; set; }
+
     /// <summary>
     /// Inserts a concept record into the concept table.
     /// </summary>
@@ -176,6 +166,20 @@ public interface ISdcCdm
     public Person? WritePerson(in PersonDTO person);
     public long? FindPerson(long personPk);
     public long? FindPersonByIdentifier(string identifier);
+
+    public record TemplateInstanceRecord(
+        long Pk,
+        string? TemplateInstanceVersionGuid,
+        string? TemplateInstanceVersionUri,
+        long Templatesdcfk,
+        string? InstanceVersionDate,
+        string? DiagReportProps,
+        string? SurgPathId,
+        long? PersonFk,
+        long? EncounterFk,
+        long? PractitionerFk,
+        string? ReportText
+    );
 
     public TemplateInstanceRecord? GetTemplateInstanceRecord(long templateInstanceClassPk);
 

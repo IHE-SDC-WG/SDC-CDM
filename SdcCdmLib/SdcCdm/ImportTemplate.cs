@@ -1,4 +1,5 @@
 using System.Xml.Linq;
+using Microsoft.Extensions.Logging;
 
 namespace SdcCdm;
 
@@ -10,16 +11,19 @@ public static class TemplateImporter
         var formDesign = xmlRoot.Element(sdc + "FormDesign") ?? xmlRoot;
         if (formDesign == null)
         {
-            Console.WriteLine($"No Form Design found in {xmlRoot.Name}");
+            sdcCdm.Logger.LogWarning(
+                "No Form Design found in {XmlName} while attempting to import template -- skipping import",
+                xmlRoot.Name
+            );
             return false;
         }
 
-        Console.WriteLine($"Form Design: {formDesign}");
+        sdcCdm.Logger.LogTrace("Imported template with form_design: {FormDesign}", formDesign);
 
         var sdcformdesignid = formDesign.Attribute("ID")?.Value;
         if (string.IsNullOrEmpty(sdcformdesignid))
         {
-            Console.WriteLine($"No Form Design ID found in {xmlRoot.Name}");
+            sdcCdm.Logger.LogWarning("No Form Design ID found in {XmlName}", xmlRoot.Name);
             return false;
         }
         var baseuri = formDesign.Attribute("baseURI")?.Value;

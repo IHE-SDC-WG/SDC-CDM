@@ -38,7 +38,7 @@ public static class FhirCPDSExporter
         long templateInstanceClassPkValue = templateInstanceClassPk.Value;
         Console.WriteLine($"Found TemplateInstanceClass: {templateInstanceClassPkValue}");
 
-        TemplateInstanceRecord? record =
+        ISdcCdm.TemplateInstanceRecord? record =
             sdcCdm.GetTemplateInstanceRecord(templateInstanceClassPkValue)
             ?? throw new Exception(
                 $"Failed to retrieve TemplateInstanceRecord for template instance class {templateInstanceClassPkValue}"
