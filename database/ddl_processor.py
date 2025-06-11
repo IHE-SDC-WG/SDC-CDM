@@ -10,6 +10,7 @@ ORIGINAL_SCHEMA_NAME = "@cdmDatabaseSchema"
 class DatabaseType(Enum):
     POSTGRESQL = auto()
     SQLITE = auto()
+    SQLSERVER = auto()
 
 
 @dataclass
@@ -32,6 +33,9 @@ class DatabaseConfig:
             ),
             DatabaseType.SQLITE: cls(
                 schema_name="main", file_prefix_map=base_prefix_map
+            ),
+            DatabaseType.SQLSERVER: cls(
+                schema_name="dbo", file_prefix_map=base_prefix_map
             ),
         }
         return configs[db_type]
@@ -153,6 +157,12 @@ def process_postgresql_content(content: str) -> str:
     return content.replace("@cdmDatabaseSchema", schema_name)
 
 
+def process_sqlserver_content(content: str) -> str:
+    """Process content specifically for SQL Server database"""
+    schema_name = DatabaseConfig.get_config(DatabaseType.SQLSERVER).schema_name
+    return content.replace("@cdmDatabaseSchema", schema_name)
+
+
 def process_ddl_files(
     input_files: Dict[str, str], db_type: DatabaseType
 ) -> Dict[str, str]:
@@ -197,6 +207,17 @@ def process_ddl_files(
         processed_files.update(
             {
                 f"{config.file_prefix_map[key]}{Path(filepath).name}": process_postgresql_content(
+                    file_contents[key]
+                )
+                for key, filepath in input_files.items()
+            }
+        )
+
+    elif db_type == DatabaseType.SQLSERVER:
+        # Process each file according to SQL Server requirements
+        processed_files.update(
+            {
+                f"{config.file_prefix_map[key]}{Path(filepath).name}": process_sqlserver_content(
                     file_contents[key]
                 )
                 for key, filepath in input_files.items()

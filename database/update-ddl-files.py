@@ -14,7 +14,11 @@ TARGET_PATH = "inst/ddl/5.4-SDC"
 DEFAULT_COMMIT = "3faab12004b98a23fd2db5de9acfad78c10220ed"
 
 # Supported database types and their source folders
-SUPPORTED_DBS = {DatabaseType.POSTGRESQL: "postgresql", DatabaseType.SQLITE: "sqlite"}
+SUPPORTED_DBS = {
+    DatabaseType.POSTGRESQL: "postgresql", 
+    DatabaseType.SQLITE: "sqlite",
+    DatabaseType.SQLSERVER: "sql_server"
+}
 
 # Required files for processing
 REQUIRED_FILES = ["ddl", "primary_keys", "constraints", "indices"]
