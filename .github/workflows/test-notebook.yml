@@ -1,0 +1,49 @@
+name: Test Polyglot Notebook
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test-notebook:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.404'
+        
+    - name: Create output directories
+      run: |
+        mkdir -p notebooks/public
+        mkdir -p NotebookTest/public
+        
+    - name: Restore and build SDC CDM libraries
+      run: |
+        dotnet restore SdcCdmLib
+        dotnet build SdcCdmLib --no-restore
+      
+    - name: Restore and build notebook test
+      run: |
+        dotnet restore NotebookTest
+        dotnet build NotebookTest --no-restore
+      
+    - name: Run notebook logic test
+      run: |
+        cd NotebookTest
+        dotnet run --no-build
+        
+    - name: Verify database was created
+      run: |
+        if [ -f NotebookTest/public/sdc_cdm.db ]; then
+          echo "✓ SQLite database was created successfully"
+          ls -la NotebookTest/public/sdc_cdm.db
+        else
+          echo "❌ SQLite database was not created"
+          exit 1
+        fi
