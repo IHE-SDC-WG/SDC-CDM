@@ -1,0 +1,222 @@
+#!meta
+
+{"kernelInfo":{"defaultKernelName":"csharp","items":[{"name":"csharp","languageName":"C#","aliases":["c#","cs"]},{"name":"fsharp","languageName":"F#","aliases":["f#","fs"]},{"name":"html","languageName":"HTML"},{"name":"http","languageName":"HTTP"},{"name":"javascript","languageName":"JavaScript","aliases":["js"]},{"name":"kql","languageName":"KQL"},{"name":"mermaid","languageName":"Mermaid"},{"name":"pwsh","languageName":"PowerShell","aliases":["powershell"]},{"name":"sql","languageName":"SQL"},{"name":"value"}]}}
+
+#!pwsh
+
+# Build the SDC CDM libraries
+
+dotnet build ../SdcCdmLib
+
+#!csharp
+
+/** Reference external libraries for SQL Server connectivity */
+
+#r "nuget:Microsoft.Data.SqlClient,6.0.1"
+#r "nuget:Microsoft.Extensions.Logging,9.0.4"
+
+#!csharp
+
+/** Setup SQL Server connection and import SDC CDM schema */
+
+using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Logging;
+using System.IO;
+
+// Connection string for SQL Server
+// Note: Update this connection string to match your SQL Server instance
+string connectionString = "Server=localhost;Database=SdcCdm;Integrated Security=true;TrustServerCertificate=true;";
+
+// Alternative connection string for SQL Server with username/password
+// string connectionString = "Server=localhost;Database=SdcCdm;User Id=sa;Password=YourPassword;TrustServerCertificate=true;";
+
+Console.WriteLine("Connecting to SQL Server...");
+
+#!csharp
+
+/** Create database if it doesn't exist and import schema */
+
+using Microsoft.Data.SqlClient;
+
+async Task CreateDatabaseAndSchema()
+{
+    // First, connect to master database to create our database
+    var masterConnectionString = connectionString.Replace("Database=SdcCdm", "Database=master");
+    
+    using var masterConnection = new SqlConnection(masterConnectionString);
+    await masterConnection.OpenAsync();
+    
+    // Create database if it doesn't exist
+    var createDbCommand = new SqlCommand(@"
+        IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = 'SdcCdm')
+        BEGIN
+            CREATE DATABASE SdcCdm;
+        END", masterConnection);
+    
+    await createDbCommand.ExecuteNonQueryAsync();
+    Console.WriteLine("Database 'SdcCdm' created or already exists.");
+    
+    // Now connect to our database and execute schema files
+    using var connection = new SqlConnection(connectionString);
+    await connection.OpenAsync();
+    Console.WriteLine("Connected to SdcCdm database.");
+    
+    // Define the SQL files to execute in order
+    string[] sqlFiles = {
+        "../database/ddl/sql_server/1_OMOPCDM_sql_server_5.4-SDC_ddl.sql",
+        "../database/ddl/sql_server/2_OMOPCDM_sql_server_5.4-SDC_primary_keys.sql",
+        "../database/ddl/sql_server/3_OMOPCDM_sql_server_5.4-SDC_constraints.sql",
+        "../database/ddl/sql_server/4_OMOPCDM_sql_server_5.4-SDC_indices.sql"
+    };
+    
+    foreach (var sqlFile in sqlFiles)
+    {
+        if (!File.Exists(sqlFile))
+        {
+            Console.WriteLine($"Warning: SQL file not found: {sqlFile}");
+            continue;
+        }
+        
+        Console.WriteLine($"Executing {Path.GetFileName(sqlFile)}...");
+        
+        string sqlContent = await File.ReadAllTextAsync(sqlFile);
+        
+        // Split by GO statements (SQL Server batch separator)
+        var batches = sqlContent.Split(new[] { "\nGO\n", "\nGO\r\n", "\rGO\r", "\nGO ", " GO\n" }, 
+                                      StringSplitOptions.RemoveEmptyEntries);
+        
+        foreach (var batch in batches)
+        {
+            var trimmedBatch = batch.Trim();
+            if (string.IsNullOrEmpty(trimmedBatch) || trimmedBatch.Equals("GO", StringComparison.OrdinalIgnoreCase))
+                continue;
+                
+            try
+            {
+                var command = new SqlCommand(trimmedBatch, connection);
+                await command.ExecuteNonQueryAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Warning: Error executing batch in {Path.GetFileName(sqlFile)}: {ex.Message}");
+                // Continue with next batch - some errors might be expected (like table already exists)
+            }
+        }
+        
+        Console.WriteLine($"Finished executing {Path.GetFileName(sqlFile)}.");
+    }
+    
+    Console.WriteLine("Schema import completed!");
+}
+
+await CreateDatabaseAndSchema();
+
+#!csharp
+
+/** Verify schema creation by listing tables */
+
+using Microsoft.Data.SqlClient;
+
+async Task VerifySchema()
+{
+    using var connection = new SqlConnection(connectionString);
+    await connection.OpenAsync();
+    
+    var command = new SqlCommand(@"
+        SELECT 
+            TABLE_SCHEMA,
+            TABLE_NAME,
+            TABLE_TYPE
+        FROM INFORMATION_SCHEMA.TABLES 
+        WHERE TABLE_TYPE = 'BASE TABLE'
+        ORDER BY TABLE_SCHEMA, TABLE_NAME", connection);
+    
+    using var reader = await command.ExecuteReaderAsync();
+    
+    Console.WriteLine("Tables created in the database:");
+    Console.WriteLine("Schema\t\tTable Name");
+    Console.WriteLine("------\t\t----------");
+    
+    var tableCount = 0;
+    while (await reader.ReadAsync())
+    {
+        var schema = reader.GetString("TABLE_SCHEMA");
+        var tableName = reader.GetString("TABLE_NAME");
+        Console.WriteLine($"{schema}\t\t{tableName}");
+        tableCount++;
+    }
+    
+    Console.WriteLine($"\nTotal tables created: {tableCount}");
+}
+
+await VerifySchema();
+
+#!csharp
+
+/** Verify SDC-specific tables are present */
+
+using Microsoft.Data.SqlClient;
+
+async Task VerifySdcTables()
+{
+    using var connection = new SqlConnection(connectionString);
+    await connection.OpenAsync();
+    
+    // Check for SDC-specific tables
+    string[] sdcTables = { "template_sdc", "template_item", "template_instance" };
+    
+    Console.WriteLine("\nVerifying SDC-specific tables:");
+    
+    foreach (var tableName in sdcTables)
+    {
+        var command = new SqlCommand($@"
+            SELECT COUNT(*) 
+            FROM INFORMATION_SCHEMA.TABLES 
+            WHERE TABLE_NAME = '{tableName}' AND TABLE_TYPE = 'BASE TABLE'", connection);
+        
+        var count = (int)await command.ExecuteScalarAsync();
+        var status = count > 0 ? "✓ Found" : "✗ Missing";
+        Console.WriteLine($"{status}\t{tableName}");
+    }
+}
+
+await VerifySdcTables();
+
+#!csharp
+
+/** Show sample table structure for one of the SDC tables */
+
+using Microsoft.Data.SqlClient;
+
+async Task ShowTableStructure()
+{
+    using var connection = new SqlConnection(connectionString);
+    await connection.OpenAsync();
+    
+    var command = new SqlCommand(@"
+        SELECT 
+            COLUMN_NAME,
+            DATA_TYPE,
+            IS_NULLABLE,
+            COLUMN_DEFAULT
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_NAME = 'template_sdc'
+        ORDER BY ORDINAL_POSITION", connection);
+    
+    using var reader = await command.ExecuteReaderAsync();
+    
+    Console.WriteLine("\nStructure of 'template_sdc' table:");
+    Console.WriteLine("Column Name\t\tData Type\tNullable\tDefault");
+    Console.WriteLine("-----------\t\t---------\t--------\t-------");
+    
+    while (await reader.ReadAsync())
+    {
+        var columnName = reader.GetString("COLUMN_NAME");
+        var dataType = reader.GetString("DATA_TYPE");
+        var isNullable = reader.GetString("IS_NULLABLE");
+        var columnDefault = reader.IsDBNull("COLUMN_DEFAULT") ? "NULL" : reader.GetString("COLUMN_DEFAULT");
+        Console.WriteLine($"{columnName}\t\t{dataType}\t\t{isNullable}\t{columnDefault}");
+    }
+}
+
+await ShowTableStructure();
