@@ -34,8 +34,15 @@ namespace NotebookTest
                     foreach (var filePath in xmlFiles)
                     {
                         var doc = XDocument.Load(filePath);
-                        SdcCdm.TemplateImporter.ImportTemplate(sdcCdmInstance, doc.Root);
-                        Console.WriteLine($"✓ Imported template: {Path.GetFileName(filePath)}");
+                        if (doc.Root != null)
+                        {
+                            SdcCdm.TemplateImporter.ImportTemplate(sdcCdmInstance, doc.Root);
+                            Console.WriteLine($"✓ Imported template: {Path.GetFileName(filePath)}");
+                        }
+                        else
+                        {
+                            Console.WriteLine($"⚠ Invalid XML file: {Path.GetFileName(filePath)}");
+                        }
                     }
                 }
                 else
@@ -66,8 +73,15 @@ namespace NotebookTest
                     {
                         var xmlStr = File.ReadAllText(xmlFile);
                         var doc = XDocument.Parse(xmlStr);
-                        SdcCdm.XmlFormImporter.ProcessXmlForm((ISdcCdm)sdcCdmInstance, doc.Root);
-                        Console.WriteLine($"✓ Imported SDC XML: {Path.GetFileName(xmlFile)}");
+                        if (doc.Root != null)
+                        {
+                            SdcCdm.XmlFormImporter.ProcessXmlForm((ISdcCdm)sdcCdmInstance, doc.Root);
+                            Console.WriteLine($"✓ Imported SDC XML: {Path.GetFileName(xmlFile)}");
+                        }
+                        else
+                        {
+                            Console.WriteLine($"⚠ Invalid SDC XML file: {Path.GetFileName(xmlFile)}");
+                        }
                     }
                 }
                 else

@@ -17,4 +17,6 @@ storage/
 
 .devcontainer/
 
+# Generated test files
+NotebookTest/public/
 
