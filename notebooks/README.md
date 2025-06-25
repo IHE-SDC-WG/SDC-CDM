@@ -92,22 +92,3 @@ jupyter notebook
 
 # Open try_sdc_cdm_python.ipynb in the browser interface
 ```
-
-#### From Command Line
-
-```bash
-# Convert and run the notebook (requires nbconvert)
-pip install nbconvert
-jupyter nbconvert --to script try_sdc_cdm_python.ipynb --output temp_script.py
-
-# Note: The converted script may need manual editing to replace IPython magic commands
-# It's recommended to use Jupyter or VS Code for the best experience
-python temp_script.py
-```
-
-The notebook will guide you through:
-- Installing required dependencies automatically
-- Creating a SQLite database loaded with the CDM schema
-- Importing SDC templates and forms from sample data  
-- Importing NAACCR V2 messages
-- Querying and working with the database
