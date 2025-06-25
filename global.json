@@ -1,7 +1,7 @@
 // Used by the .NET Core SDK to set the default SDK version for command-line tools.
 {
   "sdk": {
-    "version": "8.0.404",
+    "version": "8.0.117",
     "rollForward": "latestFeature"
   }
 }

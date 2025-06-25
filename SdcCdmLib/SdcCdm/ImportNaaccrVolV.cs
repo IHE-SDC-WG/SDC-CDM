@@ -54,7 +54,7 @@ public static class NAACCRVolVImporter
         }
 
         // Split the HL7 message into lines
-        var lines = hl7_message.Split(['\n'], StringSplitOptions.RemoveEmptyEntries);
+        var lines = hl7_message.Split(new char[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
 
         // MSH segment
         var msh_segment = get_first_segment(lines, "MSH");
