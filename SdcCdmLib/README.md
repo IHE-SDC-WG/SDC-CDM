@@ -3,7 +3,18 @@
 This directory contains the SDC CDM .NET library, which provides reference implementations for importing and exporting SDC (Structured Data Capture) data. The library consists of three main projects:
 
 - **SdcCdm** - Core library containing the abstract API (`ISdcCdm`) and various importers/exporters
+  - **`ISdcCdm`** - Abstract interface defining the CDM API
+  - **Import capabilities** for:
+    - SDC XML Forms
+    - NAACCR V2 Messages (HL7v2)
+    - CSV data (concepts, templates)
+  - **Export capabilities** for:
+    - FHIR CPDS Bundles
+    - Template data
 - **SdcCdmInSqlite** - SQLite-based implementation of the SDC CDM API
+  - Implements all abstract methods from `ISdcCdm`
+  - Automatically builds database schema from embedded SQL scripts
+  - Supports both in-memory and file-based databases
 - **SdcCdm.Tests** - Unit tests for the library functionality
 
 ## Prerequisites
@@ -36,65 +47,15 @@ This will restore NuGet packages and compile all three projects in the solution.
 dotnet test
 ```
 
-Note: Some tests may fail due to missing test data files or database path issues, but this demonstrates the test infrastructure is working.
-
-## Project Components
-
-### SdcCdm (Core Library)
-
-The main library providing:
-- **`ISdcCdm`** - Abstract interface defining the CDM API
-- **Import capabilities** for:
-  - SDC XML Forms
-  - NAACCR V2 Messages (HL7v2)
-  - CSV data (concepts, templates)
-- **Export capabilities** for:
-  - FHIR CPDS Bundles
-  - Template data
-
-### SdcCdmInSqlite (SQLite Implementation)
-
-Concrete implementation of `ISdcCdm` using SQLite database:
-- Implements all abstract methods from `ISdcCdm`
-- Automatically builds database schema from embedded SQL scripts
-- Supports both in-memory and file-based databases
-- Provides methods for reading/writing SDC templates, instances, and observations
-
-### SdcCdm.Tests (Unit Tests)
-
-Test suite covering:
-- SDC data import functionality
-- FHIR CPDS export functionality
-- Vocabulary import operations
-- Database operations and schema validation
-
 ## Development
 
-### Key Dependencies
+### Dependencies
 
 - **Microsoft.Data.Sqlite** - SQLite database access
 - **Hl7.Fhir.R4** - FHIR R4 support for CPDS exports
 - **CsvHelper** - CSV file processing
 - **Microsoft.Extensions.Logging** - Logging infrastructure
 - **xUnit** - Testing framework
-
-### Running Individual Tests
-
-To run specific test classes:
-
-```bash
-# Run only SDC importer tests
-dotnet test --filter "SdcImporterTests"
-
-# Run only vocabulary tests
-dotnet test --filter "VocabImporterTests"
-```
-
-### Building in Release Mode
-
-```bash
-dotnet build -c Release
-```
 
 ## Usage Examples
 
