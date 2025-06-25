@@ -22,8 +22,6 @@ This directory contains the SDC CDM .NET library, which provides reference imple
 - .NET 8.0 SDK or later
 - Basic familiarity with .NET development and command-line tools
 
-> **Note**: If you encounter SDK version conflicts, you may need to update the `global.json` file in the repository root to match your installed .NET SDK version.
-
 ## Quick Start
 
 ### 1. Clone and Navigate
