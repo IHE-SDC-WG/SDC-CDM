@@ -1,25 +1,3 @@
-## serve_db.py
-
-This script is used to serve the SQLite database in a web browser.
-
-### Requirements
-
-- Python 3.12
-- `sql-wasm-debug.wasm` and `sql-wasm-debug.js` from https://github.com/sql-js/sql.js under `./public`
-  - Use script `./fetch-sqlite-wasm.sh` to fulfill this requirement
-- A SQLite database file at `./public/sdc_cdm.db`
-  - Use either notebook to fulfill this requirement
-
-### Usage
-
-```bash
-python serve_db.py
-```
-
-The webpage will be served at http://localhost:8000
-
-Enter a SQL query in the text area and click "Run" to execute the query.
-
 ## try_sdc_cdm_dotnet.dib
 
 This .NET Polyglot Notebook demonstrates how to use the SDC-CDM with .NET libraries to create databases, import data, and export FHIR bundles.
@@ -92,3 +70,24 @@ jupyter notebook
 
 # Open try_sdc_cdm_python.ipynb in the browser interface
 ```
+## serve_db.py
+
+This script is used to serve the SQLite database in a web browser.
+
+### Requirements
+
+- Python 3.12
+- `sql-wasm-debug.wasm` and `sql-wasm-debug.js` from https://github.com/sql-js/sql.js under `./public`
+  - Use script `./fetch-sqlite-wasm.sh` to fulfill this requirement
+- A SQLite database file at `./public/sdc_cdm.db`
+  - Use either notebook to fulfill this requirement
+
+### Usage
+
+```bash
+python serve_db.py
+```
+
+The webpage will be served at http://localhost:8000
+
+Enter a SQL query in the text area and click "Run" to execute the query.
