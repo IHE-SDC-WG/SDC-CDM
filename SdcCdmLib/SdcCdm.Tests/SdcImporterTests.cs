@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Xml.Linq;
+using Hl7.Fhir.Model;
+using Hl7.Fhir.Serialization;
 using SdcCdm;
 using SdcCdmInSqlite;
 using Xunit;
@@ -126,6 +128,22 @@ namespace SdcCdm.Tests
             }
 
             return files;
+        }
+
+        [Fact]
+        public void ImportFHIRIPSJSONToResource_ExecutesWithoutError()
+        {
+            string ipsFilePath = Path.Combine(
+                AppContext.BaseDirectory,
+                "TestData",
+                "Bundle-IPS-examples-Bundle-01.json"
+            );
+            string ipsJsonString = File.ReadAllText(ipsFilePath);
+
+            Resource output = Importers.parseJSONStringToResourceType<Resource>(ipsJsonString);
+            _output.WriteLine(output.ToJson());
+
+            Assert.True(true, "Expected ImportFHIRIPSJSONToResource to execute without errors.");
         }
     }
 }
