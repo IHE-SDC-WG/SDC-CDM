@@ -144,9 +144,13 @@ namespace SdcCdm.Tests
 
             var serializer = new FhirJsonSerializer(new SerializerSettings() { Pretty = true });
             var prettyIps = serializer.SerializeToString(parsedIps);
-            _output.WriteLine(prettyIps);
+            // _output.WriteLine(prettyIps);
 
             var resourceTypes = Parse.getResourceTypesFromBundle(parsedIps);
+
+            var processedBundle = Parse.ProcessBundle(parsedIps);
+
+            processedBundle.ForEach(i => _output.WriteLine(i.ToString()));;
 
             Assert.True(true, "Expected ImportFHIRIPSJSONToResource to execute without errors.");
         }
