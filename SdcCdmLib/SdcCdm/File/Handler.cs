@@ -1,6 +1,5 @@
-
 enum InputFileType
 {
-  JSON,
-  XML
+    JSON,
+    XML,
 }

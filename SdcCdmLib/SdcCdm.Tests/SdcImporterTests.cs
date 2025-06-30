@@ -140,11 +140,13 @@ namespace SdcCdm.Tests
             );
             string ipsJsonString = File.ReadAllText(ipsFilePath);
 
-            Bundle parsedIps = Importers.parseJSONStringToResourceType<Bundle>(ipsJsonString);
+            Bundle parsedIps = Parse.parseJSONStringToResourceType<Bundle>(ipsJsonString);
 
             var serializer = new FhirJsonSerializer(new SerializerSettings() { Pretty = true });
             var prettyIps = serializer.SerializeToString(parsedIps);
             _output.WriteLine(prettyIps);
+
+            var resourceTypes = Parse.getResourceTypesFromBundle(parsedIps);
 
             Assert.True(true, "Expected ImportFHIRIPSJSONToResource to execute without errors.");
         }

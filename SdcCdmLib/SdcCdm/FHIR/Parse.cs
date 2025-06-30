@@ -1,7 +1,8 @@
+using Hl7.Fhir.FhirPath;
 using Hl7.Fhir.Model;
 using Hl7.Fhir.Serialization;
 
-public static class Importers
+public static class Parse
 {
     private static T parseFromString<T>(string input, InputFileType fileType)
         where T : Resource
@@ -22,5 +23,15 @@ public static class Importers
         var parser = new FhirJsonParser();
         var parsedResource = parser.Parse<T>(JSONString);
         return parsedResource;
+    }
+
+    public static IGrouping<string, string>[] getResourceTypesFromBundle(Bundle bundle)
+    {
+        var entries = bundle.Entry;
+        var resourceTypes = entries.GroupBy(
+            entry => entry.Resource.TypeName,
+            entry => entry.Resource.Id
+        );
+        return resourceTypes.ToArray();
     }
 }
