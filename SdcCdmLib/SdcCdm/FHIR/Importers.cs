@@ -1,5 +1,6 @@
 using System.Reflection;
 using Hl7.Fhir.Model;
+using Hl7.Fhir.Utility;
 
 namespace SdcCdm.FHIR;
 
@@ -34,8 +35,10 @@ public static class Importers
                 case Observation o:
                     ImportFhirObservation(o);
                     break;
-                case Composition c:
                 case Patient p:
+                    ImportFhirPatient(p);
+                    break;
+                case Composition c:
                 case Practitioner pr:
                 case Organization or:
                 case Condition co:
@@ -64,6 +67,35 @@ public static class Importers
 
         // sdcCdm.WriteSdcObsClass
 
+
+        return;
+    }
+
+    private static void ImportFhirPatient(Patient p)
+    {
+        System.Diagnostics.Debug.WriteLine($" - Handling {p.TypeName} with ID: {p.Id}");
+
+        AdministrativeGender? gender = p.Gender;
+        string birthdate = p.BirthDate;
+        string? race;
+        string? ethnicity;
+        List<Address> address = p.Address;
+        List<ResourceReference> generalPractitioner = p.GeneralPractitioner;
+        ResourceReference managingOrganization = p.ManagingOrganization;
+        // var personsourcevalue;
+        // var gendersourcevalue;
+        // var gendersourceconceptid;
+        // var racesourcevalue;
+        // var racesourceconceptid;
+        // var ehtnicitysourcevalue;
+        // var ehtnicitysourceconceptid;
+
+        ISdcCdm.PersonDTO person = new ISdcCdm.PersonDTO
+        {
+            GenderConceptId = Converters.GenderFHIRToOMOP(gender),
+            YearOfBirth = 5,
+            MonthOfBirth = 6,
+        };
 
         return;
     }
