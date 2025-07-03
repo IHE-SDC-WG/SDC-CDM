@@ -5,7 +5,7 @@ using Hl7.Fhir.Serialization;
 
 public static class Parse
 {
-    private static T parseFromString<T>(string input, InputFileType fileType)
+    public static T ParseFromString<T>(string input, InputFileType fileType)
         where T : Resource
     {
         switch (fileType)
@@ -26,20 +26,21 @@ public static class Parse
         return parsedResource;
     }
 
-    public static IGrouping<string, Base?[]>[] getResourceTypesFromBundle(Bundle bundle)
-    {
-        var entries = bundle.Entry;
-        var resourceTypes = entries.GroupBy(
-            entry => entry.Resource.TypeName,
-            entry => bundle.Select($"Bundle.entry.ofType({entry.Resource.TypeName})").ToArray()
-        );
-        return [.. resourceTypes];
-    }
+    // public static IGrouping<string, Base?[]>[] getResourceTypesFromBundle(Bundle bundle)
+    // {
+    //     var entries = bundle.Entry;
+    //     var resourceTypes = entries.GroupBy(
+    //         entry => entry.Resource.TypeName,
+    //         entry => bundle.Select($"Bundle.entry.ofType({entry.Resource.TypeName})").ToArray()
+    //     );
+    //     return [.. resourceTypes];
+    // }
 
-    public static List<string> ProcessBundle(Bundle bundle)
+    public static void ProcessBundle(Bundle bundle)
     {
+        System.Diagnostics.Debug.WriteLine($"Handling {bundle.TypeName} with ID: {bundle.Id}");
+
         // Group entries by their resource type
-        List<string> outputArray = new List<string>();
         var groupedResources = bundle
             .Entry.Where(e => e.Resource != null)
             .GroupBy(e => e.Resource.GetType());
@@ -47,33 +48,81 @@ public static class Parse
         foreach (var group in groupedResources)
         {
             Type resourceType = group.Key;
-            outputArray.Add(
+            System.Diagnostics.Debug.WriteLine(
                 $"Processing {group.Count()} resource(s) of type: {resourceType.Name}"
             );
 
             // Dynamically invoke generic processing method
             MethodInfo method = typeof(Parse).GetMethod(
-                nameof(ProcessGroup),
+                nameof(ProcessResourceGroup),
                 BindingFlags.NonPublic | BindingFlags.Static
             );
             MethodInfo generic = method.MakeGenericMethod(resourceType);
-            generic.Invoke(null, new object[] { group.Select(e => e.Resource), outputArray });
+            generic.Invoke(null, new object[] { group.Select(e => e.Resource) });
         }
-        return outputArray;
     }
 
-    private static List<string> ProcessGroup<T>(IEnumerable<Resource> resources, List<string> outputArray)
+    public static void InvokeGenericResourceParser(Type resourceType, Resource resource)
+    {
+        MethodInfo method = typeof(Parse).GetMethod(
+            nameof(ProcessResource),
+            BindingFlags.NonPublic | BindingFlags.Static
+        );
+        MethodInfo generic = method.MakeGenericMethod(resourceType);
+        generic.Invoke(null, [resource]);
+    }
+
+    private static void ProcessResourceGroup<T>(IEnumerable<Resource> resources)
         where T : Resource
     {
         foreach (var resource in resources)
         {
-            var typedResource = resource as T;
-            if (typedResource != null)
+            ProcessResource<T>(resource);
+        }
+    }
+
+    private static void ProcessResource<T>(Resource resource)
+        where T : Resource
+    {
+        var typedResource = resource as T;
+        if (typedResource != null)
+        {
+            switch (typedResource)
             {
-                // Custom logic based on type T
-                outputArray.Add($" - Handling {typeof(T).Name} with ID: {typedResource.Id}");
+                case Observation o:
+                    ProcessObservation(o);
+                    break;
+                case Composition c:
+                case Patient p:
+                case Practitioner pr:
+                case Organization or:
+                case Condition co:
+                case MedicationStatement ms:
+                case Medication m:
+                case AllergyIntolerance a:
+                    System.Diagnostics.Debug.WriteLine(
+                        $" - Unhandled resourcetype {typeof(T).Name} with ID: {typedResource.Id}"
+                    );
+                    break;
+                case Bundle b:
+                    ProcessBundle(b);
+                    return;
+                default:
+                    throw new NotImplementedException(
+                        $" - Unhandled resourcetype {typeof(T).Name} with ID: {typedResource.Id}"
+                    );
             }
         }
-        return outputArray;
+    }
+
+    private static void ProcessObservation(Observation o)
+    {
+        System.Diagnostics.Debug.WriteLine($" - Handling {o.TypeName} with ID: {o.Id}");
+        // o.TryDeriveResourceType
+
+        // sdcCdm.WriteSdcObsClass
+
+
+        return;
     }
 }

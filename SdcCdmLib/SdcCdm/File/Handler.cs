@@ -1,4 +1,4 @@
-enum InputFileType
+public enum InputFileType
 {
     JSON,
     XML,

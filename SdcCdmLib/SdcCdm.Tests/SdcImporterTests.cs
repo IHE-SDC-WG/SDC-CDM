@@ -5,6 +5,7 @@ using System.Xml.Linq;
 using Hl7.Fhir.Model;
 using Hl7.Fhir.Serialization;
 using SdcCdm;
+using SdcCdm.FHIR;
 using SdcCdmInSqlite;
 using Xunit;
 using Xunit.Abstractions;
@@ -133,25 +134,15 @@ namespace SdcCdm.Tests
         [Fact]
         public void ImportFHIRIPSJSONToResource_ExecutesWithoutError()
         {
+            var sdcCdm = new SdcCdmInSqlite.SdcCdmInSqlite("SdcCdm.Tests", true);
+            sdcCdm.BuildSchema();
             string ipsFilePath = Path.Combine(
                 AppContext.BaseDirectory,
                 "TestData",
                 "Bundle-IPS-examples-Bundle-01.json"
             );
             string ipsJsonString = File.ReadAllText(ipsFilePath);
-
-            Bundle parsedIps = Parse.parseJSONStringToResourceType<Bundle>(ipsJsonString);
-
-            var serializer = new FhirJsonSerializer(new SerializerSettings() { Pretty = true });
-            var prettyIps = serializer.SerializeToString(parsedIps);
-            // _output.WriteLine(prettyIps);
-
-            var resourceTypes = Parse.getResourceTypesFromBundle(parsedIps);
-
-            var processedBundle = Parse.ProcessBundle(parsedIps);
-
-            processedBundle.ForEach(i => _output.WriteLine(i.ToString()));;
-
+            Importers.ImportFhir(sdcCdm, ipsJsonString);
             Assert.True(true, "Expected ImportFHIRIPSJSONToResource to execute without errors.");
         }
     }
