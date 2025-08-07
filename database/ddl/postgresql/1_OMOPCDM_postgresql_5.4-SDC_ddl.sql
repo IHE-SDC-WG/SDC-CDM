@@ -172,7 +172,22 @@ CREATE TABLE public.measurement (
 			unit_source_concept_id integer NULL,
 			value_source_value varchar(50) NULL,
 			measurement_event_id integer NULL,
-			meas_event_field_concept_id integer NULL );
+			meas_event_field_concept_id integer NULL,
+			-- SDC-specific columns for ECP data
+			sdc_template_instance_guid varchar(255) NULL,
+			sdc_question_identifier varchar(255) NULL,
+			sdc_response_value TEXT NULL,
+			sdc_response_type varchar(50) NULL,
+			sdc_template_version varchar(255) NULL,
+			sdc_question_text varchar(500) NULL,
+			sdc_section_identifier varchar(255) NULL,
+			sdc_list_item_id varchar(255) NULL,
+			sdc_list_item_text varchar(500) NULL,
+			sdc_units varchar(100) NULL,
+			sdc_datatype varchar(50) NULL,
+			sdc_order integer NULL,
+			sdc_repeat_level integer NULL,
+			sdc_comments TEXT NULL );
 --HINT DISTRIBUTE ON KEY (person_id)
 CREATE TABLE public.observation (
 			observation_id integer NOT NULL,
@@ -611,3 +626,33 @@ CREATE TABLE public.observation_specimens (
 			observation_specimens_id integer NOT NULL,
 			sdc_observation_id integer NOT NULL,
 			sdc_specimen_id integer NOT NULL );
+
+-- SDC Template Instance table for ECP data
+--HINT DISTRIBUTE ON RANDOM
+CREATE TABLE public.sdc_template_instance_ecp (
+			sdc_template_instance_ecp_id integer NOT NULL,
+			template_name varchar(255) NOT NULL,
+			template_version varchar(255) NOT NULL,
+			template_lineage varchar(255) NULL,
+			template_base_uri varchar(500) NULL,
+			template_instance_guid varchar(255) NOT NULL,
+			template_instance_version_guid varchar(255) NULL,
+			template_instance_version_uri varchar(500) NULL,
+			instance_version_date date NULL,
+			person_id integer NULL,
+			visit_occurrence_id integer NULL,
+			provider_id integer NULL,
+			report_text TEXT NULL,
+			-- NAACCR V2 specific fields from first 3 OBX segments
+			report_template_source varchar(255) NULL,
+			report_template_id varchar(255) NULL,
+			report_template_version_id varchar(255) NULL,
+			tumor_site varchar(255) NULL,
+			procedure_type varchar(255) NULL,
+			specimen_laterality varchar(255) NULL,
+			-- Metadata fields
+			created_datetime TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			updated_datetime TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			-- Constraints
+			CONSTRAINT sdc_template_instance_ecp_pk PRIMARY KEY (sdc_template_instance_ecp_id),
+			CONSTRAINT sdc_template_instance_ecp_guid_unique UNIQUE (template_instance_guid) );

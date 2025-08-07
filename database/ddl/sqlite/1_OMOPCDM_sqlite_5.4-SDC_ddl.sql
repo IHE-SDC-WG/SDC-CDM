@@ -177,7 +177,22 @@ CREATE TABLE main.measurement (
 			unit_source_concept_id integer NULL,
 			value_source_value TEXT NULL,
 			measurement_event_id integer NULL,
-			meas_event_field_concept_id integer NULL );
+			meas_event_field_concept_id integer NULL,
+			-- SDC-specific columns for ECP data
+			sdc_template_instance_guid TEXT NULL,
+			sdc_question_identifier TEXT NULL,
+			sdc_response_value TEXT NULL,
+			sdc_response_type TEXT NULL,
+			sdc_template_version TEXT NULL,
+			sdc_question_text TEXT NULL,
+			sdc_section_identifier TEXT NULL,
+			sdc_list_item_id TEXT NULL,
+			sdc_list_item_text TEXT NULL,
+			sdc_units TEXT NULL,
+			sdc_datatype TEXT NULL,
+			sdc_order integer NULL,
+			sdc_repeat_level integer NULL,
+			sdc_comments TEXT NULL );
 --HINT DISTRIBUTE ON KEY (person_id)
 CREATE TABLE main.observation (
 			observation_id integer NOT NULL PRIMARY KEY AUTOINCREMENT,
@@ -616,4 +631,31 @@ CREATE TABLE main.observation_specimens (
 			observation_specimens_id integer NOT NULL PRIMARY KEY AUTOINCREMENT,
 			sdc_observation_id integer NOT NULL REFERENCES sdc_observation(sdc_observation_id),
 			sdc_specimen_id integer NOT NULL REFERENCES sdc_specimen(sdc_specimen_id) );
+
+-- SDC Template Instance table for ECP data
+--HINT DISTRIBUTE ON RANDOM
+CREATE TABLE main.sdc_template_instance_ecp (
+			sdc_template_instance_ecp_id integer NOT NULL PRIMARY KEY AUTOINCREMENT,
+			template_name TEXT NOT NULL,
+			template_version TEXT NOT NULL,
+			template_lineage TEXT NULL,
+			template_base_uri TEXT NULL,
+			template_instance_guid TEXT NOT NULL UNIQUE,
+			template_instance_version_guid TEXT NULL,
+			template_instance_version_uri TEXT NULL,
+			instance_version_date date NULL,
+			person_id integer NULL REFERENCES person(person_id),
+			visit_occurrence_id integer NULL REFERENCES visit_occurrence(visit_occurrence_id),
+			provider_id integer NULL REFERENCES provider(provider_id),
+			report_text TEXT NULL,
+			-- NAACCR V2 specific fields from first 3 OBX segments
+			report_template_source TEXT NULL,
+			report_template_id TEXT NULL,
+			report_template_version_id TEXT NULL,
+			tumor_site TEXT NULL,
+			procedure_type TEXT NULL,
+			specimen_laterality TEXT NULL,
+			-- Metadata fields
+			created_datetime REAL DEFAULT (julianday('now')),
+			updated_datetime REAL DEFAULT (julianday('now')) );
 COMMIT;

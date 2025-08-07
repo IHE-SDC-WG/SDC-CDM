@@ -35,3 +35,4 @@ ALTER TABLE public.template_term_map  ADD CONSTRAINT xpk_template_term_map PRIMA
 ALTER TABLE public.template_map_content  ADD CONSTRAINT xpk_template_map_content PRIMARY KEY (template_map_content_id);
 ALTER TABLE public.sdc_specimen  ADD CONSTRAINT xpk_sdc_specimen PRIMARY KEY (sdc_specimen_id);
 ALTER TABLE public.observation_specimens  ADD CONSTRAINT xpk_observation_specimens PRIMARY KEY (observation_specimens_id);
+ALTER TABLE public.sdc_template_instance_ecp  ADD CONSTRAINT xpk_sdc_template_instance_ecp PRIMARY KEY (sdc_template_instance_ecp_id);
