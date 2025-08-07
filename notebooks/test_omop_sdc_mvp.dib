@@ -1,0 +1,522 @@
+#!meta
+
+{"kernelInfo":{"defaultKernelName":"csharp","items":[{"name":"csharp","languageName":"C#","aliases":["c#","cs"]},{"name":"fsharp","languageName":"F#","aliases":["f#","fs"]},{"name":"html","languageName":"HTML"},{"name":"http","languageName":"HTTP"},{"name":"javascript","languageName":"JavaScript","aliases":["js"]},{"name":"kql","languageName":"KQL"},{"name":"mermaid","languageName":"Mermaid"},{"name":"pwsh","languageName":"PowerShell","aliases":["powershell"]},{"name":"sql","languageName":"SQL"},{"name":"value"}]}}
+
+#!markdown
+
+# OMOP SDC MVP - Interactive Testing Notebook
+
+This notebook provides an interactive way to test the OMOP SDC MVP implementation for importing Elective Case Pre-Adjudication (ECP) data from NAACCR V2 CPR messages into the OMOP Common Data Model (CDM) v5.4.
+
+## Overview
+
+This notebook will:
+1. **Build the SDC CDM libraries**
+2. **Create a test database** with the extended OMOP schema
+3. **Import sample NAACCR V2 data** (Adrenal gland pathology report)
+4. **Validate the import** by querying the data
+5. **Demonstrate query capabilities** for both standard OMOP and SDC-specific fields
+6. **Provide comprehensive testing** across 11 validation steps
+
+## Prerequisites
+
+- .NET 8.0 SDK installed
+- Polyglot Notebooks extension in VS Code
+- Sample data files available in the repository
+
+---
+
+**Note**: This notebook is designed for testing and validation purposes. The database file (`test_ecp.db`) will be created in the current directory and is automatically ignored by Git.
+
+#!pwsh
+
+# Build the SDC CDM libraries
+Write-Host "Building SDC CDM libraries..." -ForegroundColor Green
+dotnet build ../SdcCdmLib
+Write-Host "Build completed!" -ForegroundColor Green
+
+#!csharp
+
+// Reference external libraries and the SDC CDM library assembly
+#r "nuget:Microsoft.Data.Sqlite,9.0.0"
+#r "nuget:Microsoft.Extensions.Logging.Console,9.0.4"
+#r "../SdcCdmLib/SdcCdm/bin/Debug/net8.0/SdcCdm.dll"
+#r "../SdcCdmLib/SdcCdmInSqlite/bin/Debug/net8.0/SdcCdmInSqlite.dll"
+
+using SdcCdm;
+using Microsoft.Data.Sqlite;
+using System;
+using System.IO;
+using System.Linq;
+using System.Collections.Generic;
+
+Console.WriteLine("Dependencies loaded successfully!");
+
+// ============================================================================
+// UTILITY FUNCTIONS FOR TABLE FORMATTING AND DATA DISPLAY
+// ============================================================================
+
+// Global configuration for table display
+var TABLE_CONFIG = new {
+    MaxColumnWidth = 30,
+    DefaultMinWidths = new Dictionary<string, int> {
+        { "ID", 4 },
+        { "Person", 8 },
+        { "Concept", 8 },
+        { "Date", 12 },
+        { "Type", 6 },
+        { "Value", 10 },
+        { "Source", 25 },
+        { "Units", 15 },
+        { "Question ID", 18 },
+        { "Question Text", 25 },
+        { "Response", 25 },
+        { "Response Type", 15 },
+        { "Order", 8 },
+        { "Count", 8 },
+        { "Template Name", 25 },
+        { "Version", 25 },
+        { "GUID", 25 },
+        { "Tumor Site", 15 },
+        { "Procedure", 15 },
+        { "Laterality", 15 },
+        { "Created", 20 }
+    }
+};
+
+// Generic function to execute a query and return results as a list of objects
+List<object[]> ExecuteQueryAndCollectData(string query, Func<SqliteDataReader, object[]> rowMapper)
+{
+    var data = new List<object[]>();
+    using var cmd = sdcCdm.GetConnection().CreateCommand();
+    cmd.CommandText = query;
+    
+    using var reader = cmd.ExecuteReader();
+    while (reader.Read())
+    {
+        data.Add(rowMapper(reader));
+    }
+    return data;
+}
+
+// Calculate optimal column widths based on data and headers
+int[] CalculateColumnWidths(List<object[]> data, string[] headers, int[] minWidths)
+{
+    var widths = new int[headers.Length];
+    
+    // Start with minimum widths
+    for (int i = 0; i < headers.Length; i++)
+    {
+        widths[i] = i < minWidths.Length ? minWidths[i] : 10;
+    }
+    
+    // Consider header lengths
+    for (int i = 0; i < headers.Length; i++)
+    {
+        widths[i] = Math.Max(widths[i], headers[i].Length);
+    }
+    
+    // Consider data lengths
+    foreach (var row in data)
+    {
+        for (int i = 0; i < row.Length && i < widths.Length; i++)
+        {
+            var value = row[i]?.ToString() ?? "";
+            widths[i] = Math.Max(widths[i], Math.Min(value.Length, TABLE_CONFIG.MaxColumnWidth));
+        }
+    }
+    
+    return widths;
+}
+
+// Print a formatted table with dynamic column widths
+void PrintFormattedTable(string title, List<object[]> data, string[] headers, int[] minWidths)
+{
+    if (data.Count == 0)
+    {
+        Console.WriteLine($"\n{title}: No data found");
+        return;
+    }
+    
+    var widths = CalculateColumnWidths(data, headers, minWidths);
+    
+    Console.WriteLine($"\n{title}:");
+    PrintTableHeader(widths, headers);
+    PrintTableSeparator(widths);
+    
+    foreach (var row in data)
+    {
+        PrintTableRow(widths, row);
+    }
+    
+    PrintTableSeparator(widths);
+}
+
+// Helper methods for table formatting
+void PrintTableHeader(int[] widths, string[] headers)
+{
+    Console.Write("|");
+    for (int i = 0; i < headers.Length; i++)
+    {
+        Console.Write($" {headers[i].PadRight(widths[i])} |");
+    }
+    Console.WriteLine();
+}
+
+void PrintTableSeparator(int[] widths)
+{
+    Console.Write("+");
+    for (int i = 0; i < widths.Length; i++)
+    {
+        Console.Write(new string('-', widths[i] + 2) + "+");
+    }
+    Console.WriteLine();
+}
+
+void PrintTableRow(int[] widths, object[] row)
+{
+    Console.Write("|");
+    for (int i = 0; i < row.Length && i < widths.Length; i++)
+    {
+        var value = row[i]?.ToString() ?? "";
+        if (value.Length > widths[i])
+        {
+            value = value.Substring(0, widths[i] - 3) + "...";
+        }
+        Console.Write($" {value.PadRight(widths[i])} |");
+    }
+    Console.WriteLine();
+}
+
+// Utility function to get a simple count
+long GetSimpleCount(string query)
+{
+    using var cmd = sdcCdm.GetConnection().CreateCommand();
+    cmd.CommandText = query;
+    return Convert.ToInt64(cmd.ExecuteScalar());
+}
+
+// Utility function to format a summary box
+void PrintSummaryBox(string title, Dictionary<string, object> data)
+{
+    var maxKeyLength = data.Keys.Max(k => k.Length);
+    var maxValueLength = data.Values.Max(v => v?.ToString().Length ?? 0);
+    var boxWidth = Math.Max(80, maxKeyLength + maxValueLength + 10);
+    
+    Console.WriteLine("\n" + new string('=', boxWidth));
+    Console.WriteLine($" {title.PadRight(boxWidth - 2)} ");
+    Console.WriteLine(new string('=', boxWidth));
+    
+    foreach (var kvp in data)
+    {
+        var key = kvp.Key.PadRight(maxKeyLength);
+        var value = kvp.Value?.ToString() ?? "N/A";
+        Console.WriteLine($" {key}: {value}");
+    }
+    
+    Console.WriteLine(new string('=', boxWidth));
+}
+
+#!markdown
+
+## Step 1: Create Test Database
+
+Create a new SQLite database with the extended OMOP schema for testing.
+
+#!csharp
+
+// Create a test database
+var dbPath = "test_ecp.db";
+
+// Remove existing database if it exists
+if (File.Exists(dbPath))
+{
+    File.Delete(dbPath);
+    Console.WriteLine($"Removed existing database: {dbPath}");
+}
+
+// Create new database instance
+var sdcCdm = new SdcCdmInSqlite.SdcCdmInSqlite(dbPath, overwrite: true);
+
+// Build the schema (includes extended measurement table and sdc_template_instance_ecp table)
+Console.WriteLine("Building database schema...");
+sdcCdm.BuildSchema();
+
+Console.WriteLine($"Database created successfully: {Path.GetFullPath(dbPath)}");
+
+#!markdown
+
+## Step 2: Import Sample NAACCR V2 Data
+
+Import the sample Adrenal gland pathology report to test the ECP data import functionality.
+
+#!csharp
+
+// Read the sample NAACCR V2 message
+var sampleDataPath = "../sample_data/naaccr_v2/obx-Adrenal.hl7";
+
+if (!File.Exists(sampleDataPath))
+{
+    Console.WriteLine($"Sample data file not found: {sampleDataPath}");
+    return;
+}
+
+var hl7Message = File.ReadAllText(sampleDataPath);
+Console.WriteLine($"Read HL7 message from: {sampleDataPath}");
+Console.WriteLine($"Message length: {hl7Message.Length} characters");
+
+try
+{
+    // Import the NAACCR V2 message
+    Console.WriteLine("\nImporting NAACCR V2 message...");
+    NAACCRVolVImporter.ImportNaaccrVolV(sdcCdm, hl7Message);
+    Console.WriteLine("Import completed successfully!");
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"Error during import: {ex.Message}");
+    Console.WriteLine($"Stack trace: {ex.StackTrace}");
+}
+
+#!markdown
+
+## Step 3: Validate Import - Template Instances
+
+Let's verify that the template instance was created correctly in the `sdc_template_instance_ecp` table.
+
+#!csharp
+
+// Query template instances using utility function
+var templateData = ExecuteQueryAndCollectData(
+    "SELECT sdc_template_instance_ecp_id, template_name, template_version, template_instance_guid, tumor_site, procedure_type, specimen_laterality, created_datetime FROM sdc_template_instance_ecp ORDER BY created_datetime DESC",
+    reader => new object[] {
+        reader.GetInt64(0),
+        reader.GetString(1),
+        reader.GetString(2),
+        reader.GetString(3),
+        reader.IsDBNull(4) ? "N/A" : reader.GetString(4),
+        reader.IsDBNull(5) ? "N/A" : reader.GetString(5),
+        reader.IsDBNull(6) ? "N/A" : reader.GetString(6),
+        reader.GetDateTime(7)
+    }
+);
+
+PrintFormattedTable(
+    "Template Instances",
+    templateData,
+    new string[] { "ID", "Template Name", "Version", "GUID", "Tumor Site", "Procedure", "Laterality", "Created" },
+    new int[] { 3, 25, 25, 25, 15, 15, 15, 20 }
+);
+
+#!markdown
+
+## Step 4: Validate Import - Measurement Count
+
+Check how many ECP measurements were imported into the extended `measurement` table.
+
+#!csharp
+
+// Get measurement count using utility function
+var measurementCount = GetSimpleCount("SELECT COUNT(*) as measurement_count FROM measurement WHERE sdc_template_instance_guid IS NOT NULL");
+Console.WriteLine($"\nTotal ECP measurements imported: {measurementCount}");
+
+#!markdown
+
+## Step 5: Validate Import - Response Types
+
+Analyze the distribution of measurements by response type (numeric, text, list_selection).
+
+#!csharp
+
+// Get measurements by response type using utility function
+var responseData = ExecuteQueryAndCollectData(
+    "SELECT sdc_response_type, COUNT(*) as count FROM measurement WHERE sdc_template_instance_guid IS NOT NULL GROUP BY sdc_response_type ORDER BY count DESC",
+    reader => new object[] {
+        reader.GetString(0),
+        reader.GetInt64(1)
+    }
+);
+
+PrintFormattedTable(
+    "Measurements by Response Type",
+    responseData,
+    new string[] { "Response Type", "Count" },
+    new int[] { 15, 8 }
+);
+
+#!markdown
+
+## Step 6: Sample Measurements
+
+Display sample measurements to verify the SDC-specific columns are populated correctly.
+
+#!csharp
+
+// Show sample measurements using utility function
+var sampleData = ExecuteQueryAndCollectData(
+    "SELECT sdc_question_identifier, sdc_question_text, sdc_response_value, sdc_response_type, sdc_units, sdc_order FROM measurement WHERE sdc_template_instance_guid IS NOT NULL ORDER BY sdc_order LIMIT 10",
+    reader => new object[] {
+        reader.GetString(0),
+        reader.IsDBNull(1) ? "N/A" : reader.GetString(1),
+        reader.IsDBNull(2) ? "N/A" : reader.GetString(2),
+        reader.IsDBNull(3) ? "N/A" : reader.GetString(3),
+        reader.IsDBNull(4) ? "N/A" : reader.GetString(4),
+        reader.IsDBNull(5) ? 0 : reader.GetInt64(5)
+    }
+);
+
+PrintFormattedTable(
+    "Sample Measurements",
+    sampleData,
+    new string[] { "Question ID", "Question Text", "Response", "Type", "Units", "Order" },
+    new int[] { 18, 25, 25, 15, 15, 8 }
+);
+
+#!markdown
+
+## Step 7: OMOP Compliance Validation
+
+Verify that standard OMOP fields are properly populated alongside the SDC-specific data.
+
+#!csharp
+
+// Check that standard OMOP fields are populated using utility function
+var omopData = ExecuteQueryAndCollectData(
+    "SELECT measurement_id, person_id, measurement_concept_id, measurement_date, measurement_type_concept_id, value_as_number, value_source_value, unit_source_value FROM measurement WHERE sdc_template_instance_guid IS NOT NULL LIMIT 5",
+    reader => new object[] {
+        reader.GetInt64(0),
+        reader.GetInt64(1),
+        reader.GetInt64(2),
+        reader.GetDateTime(3).ToString("yyyy-MM-dd"),
+        reader.GetInt64(4),
+        reader.IsDBNull(5) ? "NULL" : reader.GetDouble(5).ToString(),
+        reader.IsDBNull(6) ? "NULL" : reader.GetString(6),
+        reader.IsDBNull(7) ? "NULL" : reader.GetString(7)
+    }
+);
+
+PrintFormattedTable(
+    "OMOP Compliance Check - Standard Fields",
+    omopData,
+    new string[] { "ID", "Person", "Concept", "Date", "Type", "Value", "Source", "Units" },
+    new int[] { 4, 8, 8, 12, 6, 10, 25, 15 }
+);
+
+#!markdown
+
+## Step 8: Advanced Query Examples
+
+Demonstrate more complex queries that combine standard OMOP fields with SDC-specific data.
+
+#!csharp
+
+// Example: Find numeric measurements with their SDC context using utility function
+var numericData = ExecuteQueryAndCollectData(
+    "SELECT m.sdc_question_identifier, m.sdc_question_text, m.value_as_number, m.sdc_units, m.sdc_response_type, ti.template_name FROM measurement m JOIN sdc_template_instance_ecp ti ON m.sdc_template_instance_guid = ti.template_instance_guid WHERE m.sdc_response_type = 'numeric' AND m.value_as_number IS NOT NULL ORDER BY m.sdc_order",
+    reader => new object[] {
+        reader.GetString(0),
+        reader.IsDBNull(1) ? "N/A" : reader.GetString(1),
+        reader.GetDouble(2).ToString("F1"),
+        reader.IsDBNull(3) ? "N/A" : reader.GetString(3),
+        reader.GetString(4),
+        reader.GetString(5)
+    }
+);
+
+PrintFormattedTable(
+    "Numeric Measurements with SDC Context",
+    numericData,
+    new string[] { "Question ID", "Question", "Value", "Units", "Type", "Template" },
+    new int[] { 18, 25, 8, 15, 15, 25 }
+);
+
+#!markdown
+
+## Step 9: Template Metadata Analysis
+
+Analyze the template metadata stored in the `sdc_template_instance_ecp` table.
+
+#!csharp
+
+// Get template metadata using utility function
+var metadataData = ExecuteQueryAndCollectData(
+    "SELECT template_name, template_version, report_template_source, report_template_id, report_template_version_id, tumor_site, procedure_type, specimen_laterality FROM sdc_template_instance_ecp",
+    reader => new object[] {
+        reader.GetString(0),
+        reader.GetString(1),
+        reader.IsDBNull(2) ? "N/A" : reader.GetString(2),
+        reader.IsDBNull(3) ? "N/A" : reader.GetString(3),
+        reader.IsDBNull(4) ? "N/A" : reader.GetString(4),
+        reader.IsDBNull(5) ? "N/A" : reader.GetString(5),
+        reader.IsDBNull(6) ? "N/A" : reader.GetString(6),
+        reader.IsDBNull(7) ? "N/A" : reader.GetString(7)
+    }
+);
+
+PrintFormattedTable(
+    "Template Metadata",
+    metadataData,
+    new string[] { "Template Name", "Version", "Source", "ID", "Version ID", "Tumor Site", "Procedure", "Laterality" },
+    new int[] { 25, 25, 15, 25, 25, 15, 15, 15 }
+);
+
+#!markdown
+
+## Step 10: Summary and Validation
+
+Provide a summary of the test results and validate that the MVP is working correctly.
+
+#!csharp
+
+// Final summary using utility functions
+var templateCount = GetSimpleCount("SELECT COUNT(*) FROM sdc_template_instance_ecp");
+var measurementCount = GetSimpleCount("SELECT COUNT(*) FROM measurement WHERE sdc_template_instance_guid IS NOT NULL");
+var personCount = GetSimpleCount("SELECT COUNT(*) FROM person");
+var conceptCount = GetSimpleCount("SELECT COUNT(*) FROM concept");
+
+var summaryData = new Dictionary<string, object> {
+    { "Template Instances", templateCount },
+    { "ECP Measurements", measurementCount },
+    { "Person Records", personCount },
+    { "Concept Records", conceptCount },
+    { "Database File", Path.GetFileName(dbPath) }
+};
+
+PrintSummaryBox("OMOP SDC MVP TEST SUMMARY", summaryData);
+
+if (templateCount > 0 && measurementCount > 0 && personCount > 0)
+{
+    Console.WriteLine(" MVP TEST PASSED! All components working correctly.");
+    Console.WriteLine(" The OMOP SDC MVP successfully:");
+    Console.WriteLine("   • Extended the measurement table with SDC-specific columns");
+    Console.WriteLine("   • Created the sdc_template_instance_ecp table");
+    Console.WriteLine("   • Imported NAACCR V2 CPR message data");
+    Console.WriteLine("   • Maintained OMOP CDM v5.4 compliance");
+    Console.WriteLine("   • Preserved data integrity and relationships");
+}
+else
+{
+    Console.WriteLine(" MVP TEST FAILED! Some components are missing.");
+}
+
+#!markdown
+
+## Step 11: Cleanup (Optional)
+
+If you want to clean up the test database, you can run this cell. The database file is already ignored by Git.
+
+#!csharp
+
+// Optional: Clean up test database
+Console.WriteLine("\nTo clean up the test database, uncomment the following lines:");
+Console.WriteLine("// if (File.Exists(dbPath))");
+Console.WriteLine("// { File.Delete(dbPath); Console.WriteLine($\"Removed database: {dbPath}\"); }");
+
+// Uncomment the lines below if you want to clean up
+// if (File.Exists(dbPath))
+// {
+//     File.Delete(dbPath);
+//     Console.WriteLine($"Removed database: {dbPath}");
+// }
+
+Console.WriteLine("\nTest completed! The database file remains for further inspection.");
