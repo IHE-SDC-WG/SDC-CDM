@@ -184,4 +184,73 @@ public interface ISdcCdm
     public TemplateInstanceRecord? GetTemplateInstanceRecord(long templateInstanceClassPk);
 
     public List<SdcObsClass> GetSdcObsClasses(long templateInstanceClassPk);
+
+    // New methods for ECP data handling
+    public long WriteSdcTemplateInstanceEcp(
+        string template_name,
+        string template_version,
+        string template_instance_guid,
+        long? person_id = null,
+        long? visit_occurrence_id = null,
+        long? provider_id = null,
+        string? report_text = null,
+        string? report_template_source = null,
+        string? report_template_id = null,
+        string? report_template_version_id = null,
+        string? tumor_site = null,
+        string? procedure_type = null,
+        string? specimen_laterality = null
+    );
+
+    public long WriteMeasurementWithSdcData(
+        long person_id,
+        long measurement_concept_id,
+        DateTime measurement_date,
+        long measurement_type_concept_id,
+        double? value_as_number = null,
+        string? value_as_string = null,
+        string? unit_source_value = null,
+        string? measurement_source_value = null,
+        // SDC-specific fields
+        string? sdc_template_instance_guid = null,
+        string? sdc_question_identifier = null,
+        string? sdc_response_value = null,
+        string? sdc_response_type = null,
+        string? sdc_template_version = null,
+        string? sdc_question_text = null,
+        string? sdc_section_identifier = null,
+        string? sdc_list_item_id = null,
+        string? sdc_list_item_text = null,
+        string? sdc_units = null,
+        string? sdc_datatype = null,
+        int? sdc_order = null,
+        int? sdc_repeat_level = null,
+        string? sdc_comments = null
+    );
+
+    public record SdcTemplateInstanceEcpRecord(
+        long Pk,
+        string TemplateName,
+        string TemplateVersion,
+        string TemplateInstanceGuid,
+        long? PersonId,
+        long? VisitOccurrenceId,
+        long? ProviderId,
+        string? ReportText,
+        string? ReportTemplateSource,
+        string? ReportTemplateId,
+        string? ReportTemplateVersionId,
+        string? TumorSite,
+        string? ProcedureType,
+        string? SpecimenLaterality,
+        DateTime CreatedDatetime,
+        DateTime UpdatedDatetime
+    );
+
+    public SdcTemplateInstanceEcpRecord? GetSdcTemplateInstanceEcpRecord(
+        long templateInstanceEcpPk
+    );
+    public SdcTemplateInstanceEcpRecord? FindSdcTemplateInstanceEcpByGuid(
+        string templateInstanceGuid
+    );
 }

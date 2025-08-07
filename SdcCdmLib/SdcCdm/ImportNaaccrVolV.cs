@@ -99,155 +99,175 @@ public static class NAACCRVolVImporter
         {
             ErrorCallback($"Unknown report type: {report_type}");
         }
-        Debug.Print($"Report type: {report_type}");
 
-        // OBX segments
+        // Extract person data
+        var person_source_value = get_field(pid_segment_fields, 3);
+        var person_name = get_field(pid_segment_fields, 5);
+        var birth_date = get_field(pid_segment_fields, 7);
+        var gender = get_field(pid_segment_fields, 8);
+
+        // Parse birth date
+        DateTime? birth_datetime = null;
+        if (!string.IsNullOrEmpty(birth_date) && birth_date.Length >= 8)
+        {
+            try
+            {
+                var year = int.Parse(birth_date.Substring(0, 4));
+                var month = int.Parse(birth_date.Substring(4, 2));
+                var day = int.Parse(birth_date.Substring(6, 2));
+                birth_datetime = new DateTime(year, month, day);
+            }
+            catch (Exception ex)
+            {
+                Debug.Print($"Error parsing birth date: {ex.Message}");
+            }
+        }
+
+        // Create or find person
+        var existingPersonId = sdcCdm.FindPersonByIdentifier(person_source_value);
+        long? personId = null;
+
+        if (existingPersonId == null)
+        {
+            // Create new person record
+            var personDto = new ISdcCdm.PersonDTO
+            {
+                PersonSourceValue = person_source_value,
+                YearOfBirth = birth_datetime?.Year ?? 1900,
+                MonthOfBirth = birth_datetime?.Month,
+                DayOfBirth = birth_datetime?.Day,
+                BirthDatetime = birth_datetime,
+                GenderConceptId =
+                    gender == "M" ? 8507L
+                    : gender == "F" ? 8532L
+                    : 0L, // Male/Female/Unknown
+                RaceConceptId = 0L, // Unknown
+                EthnicityConceptId = 0L, // Unknown
+            };
+            var newPerson = sdcCdm.WritePerson(personDto);
+            personId = newPerson?.PersonId;
+        }
+        else
+        {
+            personId = existingPersonId;
+        }
+
+        // Extract template metadata from first 3 OBX segments
         var obx_segments = get_all_segments(lines, "OBX");
         if (obx_segments.Count < 3)
         {
-            ErrorCallback("Not enough OBX segments found");
+            ErrorCallback("Not enough OBX segments for template metadata");
             return;
         }
 
-        // First OBX
-        var first_obx = obx_segments[0];
-        var first_obx_fields = first_obx.Split('|');
-        var observation_identifier = get_field(first_obx_fields, 3);
-        if (observation_identifier != "60573-3^Report template source^LN")
-        {
-            ErrorCallback($"Unexpected observation identifier: {observation_identifier}");
-        }
-        Debug.Print($"First OBX identifier: {observation_identifier}");
-        var document_source_style = get_field(first_obx_fields, 5);
-        if (document_source_style != "CAP eCC")
-        {
-            ErrorCallback($"Unexpected document source style: {document_source_style}");
-        }
-        Debug.Print($"Document source style: {document_source_style}");
+        // Parse template metadata from first 3 OBX segments
+        var template_source = "";
+        var template_id = "";
+        var template_version = "";
 
-        // Second OBX
-        var second_obx = obx_segments[1];
-        var second_obx_fields = second_obx.Split('|');
-        observation_identifier = get_field(second_obx_fields, 3);
-        if (observation_identifier != "60572-5^Report template ID^LN")
+        if (obx_segments.Count > 0)
         {
-            ErrorCallback($"Unexpected observation identifier: {observation_identifier}");
+            var obx1_fields = obx_segments[0].Split('|');
+            template_source = get_field(obx1_fields, 5);
         }
-        var template_id = get_field(second_obx_fields, 5);
-        var template_id_parts = template_id.Split('^');
-        // Assuming template_id always has at least two parts
-        var form_title = template_id_parts.Length > 1 ? template_id_parts[1] : "UNKNOWN_FORM_TITLE";
-        Debug.Print($"Template ID: {template_id}");
 
-        // Third OBX
-        var third_obx = obx_segments[2];
-        var third_obx_fields = third_obx.Split('|');
-        observation_identifier = get_field(third_obx_fields, 3);
-        if (observation_identifier != "60574-1^Report template version ID^LN")
+        if (obx_segments.Count > 1)
         {
-            ErrorCallback($"Unexpected observation identifier: {observation_identifier}");
+            var obx2_fields = obx_segments[1].Split('|');
+            template_id = get_field(obx2_fields, 5);
         }
-        var version_id = get_field(third_obx_fields, 5);
 
-        // Insert into DB (template_sdc)
-        var new_template_sdc_pk = sdcCdm.WriteTemplateSdcClass(
-            "UNKNOWN",
-            "UNKNOWN",
-            "UNKNOWN",
-            version_id ?? "UNKNOWN",
-            "UNKNOWN",
-            form_title,
-            "UNKNOWN",
-            "FD"
+        if (obx_segments.Count > 2)
+        {
+            var obx3_fields = obx_segments[2].Split('|');
+            template_version = get_field(obx3_fields, 5);
+        }
+
+        // Generate template instance GUID
+        var template_instance_guid = Guid.NewGuid().ToString();
+
+        // Create SDC template instance for ECP data
+        var template_instance_id = sdcCdm.WriteSdcTemplateInstanceEcp(
+            template_name: template_id,
+            template_version: template_version,
+            template_instance_guid: template_instance_guid,
+            person_id: personId,
+            report_template_source: template_source,
+            report_template_id: template_id,
+            report_template_version_id: template_version
         );
 
-        // Insert into DB (template_instance_class)
-        var new_template_instance_class_pk = sdcCdm.WriteTemplateInstanceClass(new_template_sdc_pk);
-        var new_template_instance_class_fk = new_template_instance_class_pk;
-
-        // Build map of observations
-        var obs_sub_id_map = new Dictionary<string, Dictionary<string, string?>>();
-
-        var rest_of_obx_segments = obx_segments.Skip(3);
-        foreach (var obx_segment in rest_of_obx_segments)
+        // Process OBX segments for ECP data (starting from 4th OBX)
+        for (int i = 3; i < obx_segments.Count; i++)
         {
-            var obx_segment_fields = obx_segment.Split('|');
-            var observation_data_type = get_field(obx_segment_fields, 2);
-            observation_identifier = get_field(obx_segment_fields, 3);
-            var obs_id_parts = observation_identifier.Split('^');
-            var q_id = obs_id_parts.Length > 0 ? obs_id_parts[0] : null;
-            var q_text = obs_id_parts.Length > 1 ? obs_id_parts[1] : null;
+            var obx_fields = obx_segments[i].Split('|');
+            var obx_value_type = get_field(obx_fields, 2);
+            var obx_observation_id = get_field(obx_fields, 3);
+            var obx_value = get_field(obx_fields, 5);
+            var obx_units = get_field(obx_fields, 6);
 
-            var observation_sub_id = get_field(obx_segment_fields, 4);
-            if (!string.IsNullOrEmpty(observation_sub_id))
+            // Skip narrative content (focus on structured ECP data)
+            if (obx_value_type == "ST" && obx_value.Length > 200)
             {
-                var observation_value = get_field(obx_segment_fields, 5);
-                var obs_val_parts = observation_value.Split('^');
-                string? li_text = null;
-                string? li_id = null;
-                if (obs_val_parts.Length > 1)
-                {
-                    li_id = obs_val_parts[0];
-                    li_text = obs_val_parts[1];
-                }
-                var observation_units = get_field(obx_segment_fields, 6);
-
-                if (obs_sub_id_map.ContainsKey(observation_sub_id))
-                {
-                    Debug.Print($"@@@@@ Observation sub ID already exists: {observation_sub_id}");
-                }
-                else
-                {
-                    obs_sub_id_map[observation_sub_id] = new Dictionary<string, string?>
-                    {
-                        { "q_id", q_id },
-                        { "q_text", q_text },
-                        { "value", observation_value },
-                        { "units", observation_units },
-                    };
-                }
-                if (!string.IsNullOrEmpty(observation_units))
-                {
-                    Debug.Print($"Observation units: {observation_units}");
-                }
-                Debug.Print($"@@@ Observation sub ID: {observation_sub_id}");
+                continue; // Skip long narrative text
             }
-            else
+
+            // Parse question identifier from observation ID
+            var question_parts = obx_observation_id.Split('^');
+            var question_identifier =
+                question_parts.Length > 0 ? question_parts[0] : obx_observation_id;
+            var question_text = question_parts.Length > 1 ? question_parts[1] : "";
+
+            // Determine response type and value
+            string response_type = "text";
+            string response_value = obx_value;
+            double? numeric_value = null;
+
+            switch (obx_value_type)
             {
-                var observation_value = get_field(obx_segment_fields, 5);
-                string? response = null;
-                string? li_text = null;
-                string? li_id = null;
-                if (observation_data_type == "ST")
-                {
-                    response =
-                        observation_value.Length > 99 ? observation_value[..99] : observation_value;
-                }
-                else
-                {
-                    var obs_val_parts = observation_value.Split('^');
-                    if (obs_val_parts.Length > 1)
+                case "NM":
+                    response_type = "numeric";
+                    if (double.TryParse(obx_value, out double num_val))
                     {
-                        li_id = obs_val_parts[0];
-                        li_text = obs_val_parts[1];
+                        numeric_value = num_val;
                     }
-                }
-
-                sdcCdm.WriteSdcObsClass(
-                    new_template_instance_class_fk,
-                    parent_observation_id: null,
-                    "UNKNOWN",
-                    "UNKNOWN",
-                    q_text,
-                    "UNKNOWN",
-                    q_id,
-                    li_text,
-                    li_id,
-                    "UNKNOWN",
-                    "UNKNOWN",
-                    response
-                );
+                    break;
+                case "CWE":
+                    response_type = "list_selection";
+                    break;
+                case "ST":
+                    response_type = "text";
+                    break;
+                default:
+                    response_type = "text";
+                    break;
             }
+
+            // Create measurement record with SDC-specific data
+            var measurement_id = sdcCdm.WriteMeasurementWithSdcData(
+                person_id: personId ?? 0,
+                measurement_concept_id: 0, // Will be mapped to appropriate OMOP concept
+                measurement_date: DateTime.Now.Date,
+                measurement_type_concept_id: 32856, // Laboratory measurement
+                value_as_number: numeric_value,
+                value_as_string: response_value,
+                unit_source_value: obx_units,
+                measurement_source_value: obx_observation_id,
+                // SDC-specific fields
+                sdc_template_instance_guid: template_instance_guid,
+                sdc_question_identifier: question_identifier,
+                sdc_response_value: response_value,
+                sdc_response_type: response_type,
+                sdc_template_version: template_version,
+                sdc_question_text: question_text,
+                sdc_units: obx_units,
+                sdc_datatype: obx_value_type,
+                sdc_order: i - 2 // OBX sequence number
+            );
         }
+
+        Debug.Print(
+            $"Successfully imported NAACCR V2 message with {obx_segments.Count - 3} ECP data points"
+        );
     }
 }

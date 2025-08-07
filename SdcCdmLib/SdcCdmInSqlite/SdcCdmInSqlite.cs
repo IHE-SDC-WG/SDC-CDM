@@ -125,6 +125,9 @@ public class SdcCdmInSqlite : ISdcCdm
             Logger.LogTrace("Finished executing {fileName}.", fileName);
         }
 
+        // Insert essential concepts for basic functionality
+        InsertEssentialConcepts();
+
         Logger.LogInformation("Finished building schema.");
     }
 
@@ -619,70 +622,377 @@ public class SdcCdmInSqlite : ISdcCdm
         using var cmd = connection.CreateCommand();
         cmd.CommandText =
             @"
-                INSERT INTO template_item
-                    (template_sdc_id, parent_template_item_id,
-                    template_item_sdcid, type, visible_text, invisible_text,
-                    min_cardinality, must_implement, item_order)
+            INSERT INTO main.template_item 
+            (template_sdc_id, parent_template_item_id, template_item_sdcid, type, visible_text, 
+             invisible_text, min_cardinality, must_implement, item_order)
                 VALUES 
-                    (@templatesdcfk, @parenttemplateitemid, 
-                    @templateitem_sdcid, @type, @visibletext, @invisibletext, 
-                    @mincard, @mustimplement, @itemorder)
-                RETURNING
-                    template_item_id, template_sdc_id, parent_template_item_id, 
-                    template_item_sdcid, type, visible_text, invisible_text, 
-                    min_cardinality, must_implement, item_order;
-            ";
+            (@templateSdcId, @parentTemplateItemId, @templateItemSdcid, @type, @visibleText, 
+             @invisibleText, @minCardinality, @mustImplement, @itemOrder);
+            SELECT last_insert_rowid();
+        ";
 
-        cmd.Parameters.AddWithValue("@templatesdcfk", templateItem.TemplateSdcId);
+        cmd.Parameters.AddWithValue("@templateSdcId", templateItem.TemplateSdcId);
         cmd.Parameters.AddWithValue(
-            "@parenttemplateitemid",
+            "@parentTemplateItemId",
             templateItem.ParentTemplateItemId ?? (object)DBNull.Value
         );
-        cmd.Parameters.AddWithValue("@templateitem_sdcid", templateItem.TemplateItemSdcid);
+        cmd.Parameters.AddWithValue("@templateItemSdcid", templateItem.TemplateItemSdcid);
         cmd.Parameters.AddWithValue("@type", templateItem.Type ?? (object)DBNull.Value);
         cmd.Parameters.AddWithValue(
-            "@visibletext",
+            "@visibleText",
             templateItem.VisibleText ?? (object)DBNull.Value
         );
         cmd.Parameters.AddWithValue(
-            "@invisibletext",
+            "@invisibleText",
             templateItem.InvisibleText ?? (object)DBNull.Value
         );
-        cmd.Parameters.AddWithValue("@mincard", templateItem.MinCard ?? (object)DBNull.Value);
         cmd.Parameters.AddWithValue(
-            "@mustimplement",
+            "@minCardinality",
+            templateItem.MinCard ?? (object)DBNull.Value
+        );
+        cmd.Parameters.AddWithValue(
+            "@mustImplement",
             templateItem.MustImplement ?? (object)DBNull.Value
         );
-        cmd.Parameters.AddWithValue("@itemorder", templateItem.ItemOrder ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue("@itemOrder", templateItem.ItemOrder ?? (object)DBNull.Value);
 
-        using var reader = cmd.ExecuteReader();
-        if (!reader.Read())
+        var result = cmd.ExecuteScalar();
+        if (result == null)
             return null;
 
-        // Reconstruct the template item record based on the data from the DB.
-        var templateItemId = reader.GetInt64(0);
-        var templateSdcId = reader.GetInt64(1);
-        long? parentTemplateItemId = reader.IsDBNull(2) ? null : reader.GetInt64(2);
-        var templateItemSdcid = reader.GetString(3);
-        var type = reader.IsDBNull(4) ? null : reader.GetString(4);
-        var visibleText = reader.IsDBNull(5) ? null : reader.GetString(5);
-        var invisibleText = reader.IsDBNull(6) ? null : reader.GetString(6);
-        var minCard = reader.IsDBNull(7) ? null : reader.GetString(7);
-        var mustImplement = reader.IsDBNull(8) ? null : reader.GetString(8);
-        var itemOrder = reader.IsDBNull(9) ? null : reader.GetString(9);
-
-        return new()
+        var templateItemId = Convert.ToInt64(result);
+        return new ISdcCdm.TemplateItem
         {
             TemplateItemId = templateItemId,
-            TemplateSdcId = templateSdcId,
-            ParentTemplateItemId = parentTemplateItemId,
-            TemplateItemSdcid = templateItemSdcid,
-            Type = type,
-            VisibleText = visibleText,
-            InvisibleText = invisibleText,
-            MinCard = minCard,
-            MustImplement = mustImplement,
-            ItemOrder = itemOrder,
+            TemplateSdcId = templateItem.TemplateSdcId,
+            ParentTemplateItemId = templateItem.ParentTemplateItemId,
+            TemplateItemSdcid = templateItem.TemplateItemSdcid,
+            Type = templateItem.Type,
+            VisibleText = templateItem.VisibleText,
+            InvisibleText = templateItem.InvisibleText,
+            MinCard = templateItem.MinCard,
+            MustImplement = templateItem.MustImplement,
+            ItemOrder = templateItem.ItemOrder,
         };
+    }
+
+    // New methods for ECP data handling
+    public long WriteSdcTemplateInstanceEcp(
+        string template_name,
+        string template_version,
+        string template_instance_guid,
+        long? person_id = null,
+        long? visit_occurrence_id = null,
+        long? provider_id = null,
+        string? report_text = null,
+        string? report_template_source = null,
+        string? report_template_id = null,
+        string? report_template_version_id = null,
+        string? tumor_site = null,
+        string? procedure_type = null,
+        string? specimen_laterality = null
+    )
+    {
+        using var cmd = connection.CreateCommand();
+        cmd.CommandText =
+            @"
+            INSERT INTO main.sdc_template_instance_ecp 
+            (template_name, template_version, template_instance_guid, person_id, visit_occurrence_id, 
+             provider_id, report_text, report_template_source, report_template_id, report_template_version_id,
+             tumor_site, procedure_type, specimen_laterality)
+            VALUES 
+            (@templateName, @templateVersion, @templateInstanceGuid, @personId, @visitOccurrenceId, 
+             @providerId, @reportText, @reportTemplateSource, @reportTemplateId, @reportTemplateVersionId,
+             @tumorSite, @procedureType, @specimenLaterality);
+            SELECT last_insert_rowid();
+        ";
+
+        cmd.Parameters.AddWithValue("@templateName", template_name);
+        cmd.Parameters.AddWithValue("@templateVersion", template_version);
+        cmd.Parameters.AddWithValue("@templateInstanceGuid", template_instance_guid);
+        cmd.Parameters.AddWithValue("@personId", person_id ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue(
+            "@visitOccurrenceId",
+            visit_occurrence_id ?? (object)DBNull.Value
+        );
+        cmd.Parameters.AddWithValue("@providerId", provider_id ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue("@reportText", report_text ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue(
+            "@reportTemplateSource",
+            report_template_source ?? (object)DBNull.Value
+        );
+        cmd.Parameters.AddWithValue(
+            "@reportTemplateId",
+            report_template_id ?? (object)DBNull.Value
+        );
+        cmd.Parameters.AddWithValue(
+            "@reportTemplateVersionId",
+            report_template_version_id ?? (object)DBNull.Value
+        );
+        cmd.Parameters.AddWithValue("@tumorSite", tumor_site ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue("@procedureType", procedure_type ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue(
+            "@specimenLaterality",
+            specimen_laterality ?? (object)DBNull.Value
+        );
+
+        var result = cmd.ExecuteScalar();
+        return result != null ? Convert.ToInt64(result) : -1;
+    }
+
+    public long WriteMeasurementWithSdcData(
+        long person_id,
+        long measurement_concept_id,
+        DateTime measurement_date,
+        long measurement_type_concept_id,
+        double? value_as_number = null,
+        string? value_as_string = null,
+        string? unit_source_value = null,
+        string? measurement_source_value = null,
+        // SDC-specific fields
+        string? sdc_template_instance_guid = null,
+        string? sdc_question_identifier = null,
+        string? sdc_response_value = null,
+        string? sdc_response_type = null,
+        string? sdc_template_version = null,
+        string? sdc_question_text = null,
+        string? sdc_section_identifier = null,
+        string? sdc_list_item_id = null,
+        string? sdc_list_item_text = null,
+        string? sdc_units = null,
+        string? sdc_datatype = null,
+        int? sdc_order = null,
+        int? sdc_repeat_level = null,
+        string? sdc_comments = null
+    )
+    {
+        using var cmd = connection.CreateCommand();
+        cmd.CommandText =
+            @"
+                    INSERT INTO main.measurement
+                    (person_id, measurement_concept_id, measurement_date, measurement_type_concept_id,
+                     value_as_number, value_source_value, unit_source_value, measurement_source_value,
+                     sdc_template_instance_guid, sdc_question_identifier, sdc_response_value, sdc_response_type,
+                     sdc_template_version, sdc_question_text, sdc_section_identifier, sdc_list_item_id,
+                     sdc_list_item_text, sdc_units, sdc_datatype, sdc_order, sdc_repeat_level, sdc_comments)
+                    VALUES
+                    (@personId, @measurementConceptId, @measurementDate, @measurementTypeConceptId,
+                     @valueAsNumber, @valueAsString, @unitSourceValue, @measurementSourceValue,
+                     @sdcTemplateInstanceGuid, @sdcQuestionIdentifier, @sdcResponseValue, @sdcResponseType,
+                     @sdcTemplateVersion, @sdcQuestionText, @sdcSectionIdentifier, @sdcListItemId,
+                     @sdcListItemText, @sdcUnits, @sdcDatatype, @sdcOrder, @sdcRepeatLevel, @sdcComments);
+                    SELECT last_insert_rowid();
+                ";
+
+        cmd.Parameters.AddWithValue("@personId", person_id);
+        cmd.Parameters.AddWithValue("@measurementConceptId", measurement_concept_id);
+        cmd.Parameters.AddWithValue("@measurementDate", measurement_date);
+        cmd.Parameters.AddWithValue("@measurementTypeConceptId", measurement_type_concept_id);
+        cmd.Parameters.AddWithValue("@valueAsNumber", value_as_number ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue("@valueAsString", value_as_string ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue("@unitSourceValue", unit_source_value ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue(
+            "@measurementSourceValue",
+            measurement_source_value ?? (object)DBNull.Value
+        );
+        cmd.Parameters.AddWithValue(
+            "@sdcTemplateInstanceGuid",
+            sdc_template_instance_guid ?? (object)DBNull.Value
+        );
+        cmd.Parameters.AddWithValue(
+            "@sdcQuestionIdentifier",
+            sdc_question_identifier ?? (object)DBNull.Value
+        );
+        cmd.Parameters.AddWithValue(
+            "@sdcResponseValue",
+            sdc_response_value ?? (object)DBNull.Value
+        );
+        cmd.Parameters.AddWithValue("@sdcResponseType", sdc_response_type ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue(
+            "@sdcTemplateVersion",
+            sdc_template_version ?? (object)DBNull.Value
+        );
+        cmd.Parameters.AddWithValue("@sdcQuestionText", sdc_question_text ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue(
+            "@sdcSectionIdentifier",
+            sdc_section_identifier ?? (object)DBNull.Value
+        );
+        cmd.Parameters.AddWithValue("@sdcListItemId", sdc_list_item_id ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue("@sdcListItemText", sdc_list_item_text ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue("@sdcUnits", sdc_units ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue("@sdcDatatype", sdc_datatype ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue("@sdcOrder", sdc_order ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue("@sdcRepeatLevel", sdc_repeat_level ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue("@sdcComments", sdc_comments ?? (object)DBNull.Value);
+
+        var result = cmd.ExecuteScalar();
+        return result != null ? Convert.ToInt64(result) : -1;
+    }
+
+    public ISdcCdm.SdcTemplateInstanceEcpRecord? GetSdcTemplateInstanceEcpRecord(
+        long templateInstanceEcpPk
+    )
+    {
+        using var cmd = connection.CreateCommand();
+        cmd.CommandText =
+            @"
+            SELECT sdc_template_instance_ecp_id, template_name, template_version, template_instance_guid,
+                   person_id, visit_occurrence_id, provider_id, report_text, report_template_source,
+                   report_template_id, report_template_version_id, tumor_site, procedure_type, specimen_laterality,
+                   created_datetime, updated_datetime
+            FROM main.sdc_template_instance_ecp 
+            WHERE sdc_template_instance_ecp_id = @templateInstanceEcpPk
+        ";
+
+        cmd.Parameters.AddWithValue("@templateInstanceEcpPk", templateInstanceEcpPk);
+
+        using var reader = cmd.ExecuteReader();
+        if (reader.Read())
+        {
+            return new ISdcCdm.SdcTemplateInstanceEcpRecord(
+                Pk: reader.GetInt64(0),
+                TemplateName: reader.GetString(1),
+                TemplateVersion: reader.GetString(2),
+                TemplateInstanceGuid: reader.GetString(3),
+                PersonId: reader.IsDBNull(4) ? null : reader.GetInt64(4),
+                VisitOccurrenceId: reader.IsDBNull(5) ? null : reader.GetInt64(5),
+                ProviderId: reader.IsDBNull(6) ? null : reader.GetInt64(6),
+                ReportText: reader.IsDBNull(7) ? null : reader.GetString(7),
+                ReportTemplateSource: reader.IsDBNull(8) ? null : reader.GetString(8),
+                ReportTemplateId: reader.IsDBNull(9) ? null : reader.GetString(9),
+                ReportTemplateVersionId: reader.IsDBNull(10) ? null : reader.GetString(10),
+                TumorSite: reader.IsDBNull(11) ? null : reader.GetString(11),
+                ProcedureType: reader.IsDBNull(12) ? null : reader.GetString(12),
+                SpecimenLaterality: reader.IsDBNull(13) ? null : reader.GetString(13),
+                CreatedDatetime: reader.GetDateTime(14),
+                UpdatedDatetime: reader.GetDateTime(15)
+            );
+        }
+        return null;
+    }
+
+    public ISdcCdm.SdcTemplateInstanceEcpRecord? FindSdcTemplateInstanceEcpByGuid(
+        string templateInstanceGuid
+    )
+    {
+        using var cmd = connection.CreateCommand();
+        cmd.CommandText =
+            @"
+            SELECT sdc_template_instance_ecp_id, template_name, template_version, template_instance_guid,
+                   person_id, visit_occurrence_id, provider_id, report_text, report_template_source,
+                   report_template_id, report_template_version_id, tumor_site, procedure_type, specimen_laterality,
+                   created_datetime, updated_datetime
+            FROM main.sdc_template_instance_ecp 
+            WHERE template_instance_guid = @templateInstanceGuid
+        ";
+
+        cmd.Parameters.AddWithValue("@templateInstanceGuid", templateInstanceGuid);
+
+        using var reader = cmd.ExecuteReader();
+        if (reader.Read())
+        {
+            return new ISdcCdm.SdcTemplateInstanceEcpRecord(
+                Pk: reader.GetInt64(0),
+                TemplateName: reader.GetString(1),
+                TemplateVersion: reader.GetString(2),
+                TemplateInstanceGuid: reader.GetString(3),
+                PersonId: reader.IsDBNull(4) ? null : reader.GetInt64(4),
+                VisitOccurrenceId: reader.IsDBNull(5) ? null : reader.GetInt64(5),
+                ProviderId: reader.IsDBNull(6) ? null : reader.GetInt64(6),
+                ReportText: reader.IsDBNull(7) ? null : reader.GetString(7),
+                ReportTemplateSource: reader.IsDBNull(8) ? null : reader.GetString(8),
+                ReportTemplateId: reader.IsDBNull(9) ? null : reader.GetString(9),
+                ReportTemplateVersionId: reader.IsDBNull(10) ? null : reader.GetString(10),
+                TumorSite: reader.IsDBNull(11) ? null : reader.GetString(11),
+                ProcedureType: reader.IsDBNull(12) ? null : reader.GetString(12),
+                SpecimenLaterality: reader.IsDBNull(13) ? null : reader.GetString(13),
+                CreatedDatetime: reader.GetDateTime(14),
+                UpdatedDatetime: reader.GetDateTime(15)
+            );
+        }
+        return null;
+    }
+
+    // Method to get the database connection for testing purposes
+    public Microsoft.Data.Sqlite.SqliteConnection GetConnection()
+    {
+        return connection;
+    }
+
+    private void InsertEssentialConcepts()
+    {
+        // Insert essential concepts that are commonly referenced
+        var essentialConcepts = new[]
+        {
+            new ConceptRecord
+            {
+                ConceptId = 8507,
+                ConceptName = "MALE",
+                DomainId = "Gender",
+                VocabularyId = "Gender",
+                ConceptClassId = "Gender",
+                StandardConcept = "S",
+                ConceptCode = "M",
+                ValidStartDate = DateTime.Parse("1970-01-01"),
+                ValidEndDate = DateTime.Parse("2099-12-31"),
+                InvalidReason = null,
+            },
+            new ConceptRecord
+            {
+                ConceptId = 8532,
+                ConceptName = "FEMALE",
+                DomainId = "Gender",
+                VocabularyId = "Gender",
+                ConceptClassId = "Gender",
+                StandardConcept = "S",
+                ConceptCode = "F",
+                ValidStartDate = DateTime.Parse("1970-01-01"),
+                ValidEndDate = DateTime.Parse("2099-12-31"),
+                InvalidReason = null,
+            },
+            new ConceptRecord
+            {
+                ConceptId = 0,
+                ConceptName = "UNKNOWN",
+                DomainId = "Gender",
+                VocabularyId = "Gender",
+                ConceptClassId = "Gender",
+                StandardConcept = "S",
+                ConceptCode = "U",
+                ValidStartDate = DateTime.Parse("1970-01-01"),
+                ValidEndDate = DateTime.Parse("2099-12-31"),
+                InvalidReason = null,
+            },
+            new ConceptRecord
+            {
+                ConceptId = 32856,
+                ConceptName = "Laboratory measurement",
+                DomainId = "Measurement",
+                VocabularyId = "Measurement Type",
+                ConceptClassId = "Measurement Type",
+                StandardConcept = "S",
+                ConceptCode = "LAB",
+                ValidStartDate = DateTime.Parse("1970-01-01"),
+                ValidEndDate = DateTime.Parse("2099-12-31"),
+                InvalidReason = null,
+            },
+        };
+
+        foreach (var concept in essentialConcepts)
+        {
+            try
+            {
+                InsertConcept(concept);
+            }
+            catch (Exception ex)
+            {
+                // Concept might already exist, ignore the error
+                Logger.LogDebug(
+                    "Could not insert concept {ConceptId}: {Message}",
+                    concept.ConceptId,
+                    ex.Message
+                );
+            }
+        }
     }
 }
