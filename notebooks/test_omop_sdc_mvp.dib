@@ -248,34 +248,39 @@ Console.WriteLine($"Database created successfully: {Path.GetFullPath(dbPath)}");
 
 ## Step 2: Import Sample NAACCR V2 Data
 
-Import the sample Adrenal gland pathology report to test the ECP data import functionality.
+Import the sample Adrenal gland and additional pathology reports to test the ECP data import functionality.
 
 #!csharp
 
-// Read the sample NAACCR V2 message
-var sampleDataPath = "../sample_data/naaccr_v2/obx-Adrenal.hl7";
+// Import specific HL7 files
+var hl7Files = new[] {
+    "../sample_data/naaccr_v2/obx-Adrenal.hl7",
+    "../sample_data/naaccr_v2/24-11-000312-2.txt.hl7"
+};
 
-if (!File.Exists(sampleDataPath))
+foreach (var filePath in hl7Files)
 {
-    Console.WriteLine($"Sample data file not found: {sampleDataPath}");
-    return;
-}
+    if (!File.Exists(filePath))
+    {
+        Console.WriteLine($"Sample data file not found: {filePath}");
+        continue;
+    }
 
-var hl7Message = File.ReadAllText(sampleDataPath);
-Console.WriteLine($"Read HL7 message from: {sampleDataPath}");
-Console.WriteLine($"Message length: {hl7Message.Length} characters");
-
-try
-{
-    // Import the NAACCR V2 message
-    Console.WriteLine("\nImporting NAACCR V2 message...");
-    NAACCRVolVImporter.ImportNaaccrVolV(sdcCdm, hl7Message);
-    Console.WriteLine("Import completed successfully!");
-}
-catch (Exception ex)
-{
-    Console.WriteLine($"Error during import: {ex.Message}");
-    Console.WriteLine($"Stack trace: {ex.StackTrace}");
+    try
+    {
+        Console.WriteLine($"\nImporting: {Path.GetFileName(filePath)}");
+        var hl7Message = File.ReadAllText(filePath);
+        Console.WriteLine($"File size: {hl7Message.Length} characters");
+        
+        // Import the NAACCR V2 message
+        NAACCRVolVImporter.ImportNaaccrVolV(sdcCdm, hl7Message);
+        Console.WriteLine("Import completed successfully!");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error during import: {ex.Message}");
+        Console.WriteLine($"Stack trace: {ex.StackTrace}");
+    }
 }
 
 #!markdown

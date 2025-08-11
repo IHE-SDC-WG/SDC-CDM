@@ -95,7 +95,12 @@ public static class NAACCRVolVImporter
         }
         var obr_segment_fields = obr_segment.Split('|');
         var report_type = get_field(obr_segment_fields, 4);
-        if (report_type != "60568-3^SYNOPTIC REPORT^LN")
+        var valid_report_types = new[]
+        {
+            "60568-3^SYNOPTIC REPORT^LN",
+            "35265-8^PATH REPORT ADDENDUM^LN",
+        };
+        if (!valid_report_types.Contains(report_type))
         {
             ErrorCallback($"Unknown report type: {report_type}");
         }
