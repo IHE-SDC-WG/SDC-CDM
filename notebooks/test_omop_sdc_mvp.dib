@@ -85,10 +85,10 @@ var TABLE_CONFIG = new {
 };
 
 // Generic function to execute a query and return results as a list of objects
-List<object[]> ExecuteQueryAndCollectData(string query, Func<SqliteDataReader, object[]> rowMapper)
+List<object[]> ExecuteQueryAndCollectData(ISdcCdm sdcCdm, string query, Func<SqliteDataReader, object[]> rowMapper)
 {
     var data = new List<object[]>();
-    using var cmd = sdcCdm.GetConnection().CreateCommand();
+    using var cmd = ((SdcCdmInSqlite.SdcCdmInSqlite)sdcCdm).GetConnection().CreateCommand();
     cmd.CommandText = query;
     
     using var reader = cmd.ExecuteReader();
@@ -189,9 +189,9 @@ void PrintTableRow(int[] widths, object[] row)
 }
 
 // Utility function to get a simple count
-long GetSimpleCount(string query)
+long GetSimpleCount(ISdcCdm sdcCdm, string query)
 {
-    using var cmd = sdcCdm.GetConnection().CreateCommand();
+    using var cmd = ((SdcCdmInSqlite.SdcCdmInSqlite)sdcCdm).GetConnection().CreateCommand();
     cmd.CommandText = query;
     return Convert.ToInt64(cmd.ExecuteScalar());
 }
@@ -288,6 +288,7 @@ Let's verify that the template instance was created correctly in the `sdc_templa
 
 // Query template instances using utility function
 var templateData = ExecuteQueryAndCollectData(
+    sdcCdm,
     "SELECT sdc_template_instance_ecp_id, template_name, template_version, template_instance_guid, tumor_site, procedure_type, specimen_laterality, created_datetime FROM sdc_template_instance_ecp ORDER BY created_datetime DESC",
     reader => new object[] {
         reader.GetInt64(0),
@@ -317,7 +318,7 @@ Check how many ECP measurements were imported into the extended `measurement` ta
 #!csharp
 
 // Get measurement count using utility function
-var measurementCount = GetSimpleCount("SELECT COUNT(*) as measurement_count FROM measurement WHERE sdc_template_instance_guid IS NOT NULL");
+var measurementCount = GetSimpleCount(sdcCdm, "SELECT COUNT(*) as measurement_count FROM measurement WHERE sdc_template_instance_guid IS NOT NULL");
 Console.WriteLine($"\nTotal ECP measurements imported: {measurementCount}");
 
 #!markdown
@@ -330,6 +331,7 @@ Analyze the distribution of measurements by response type (numeric, text, list_s
 
 // Get measurements by response type using utility function
 var responseData = ExecuteQueryAndCollectData(
+    sdcCdm,
     "SELECT sdc_response_type, COUNT(*) as count FROM measurement WHERE sdc_template_instance_guid IS NOT NULL GROUP BY sdc_response_type ORDER BY count DESC",
     reader => new object[] {
         reader.GetString(0),
@@ -354,6 +356,7 @@ Display sample measurements to verify the SDC-specific columns are populated cor
 
 // Show sample measurements using utility function
 var sampleData = ExecuteQueryAndCollectData(
+    sdcCdm,
     "SELECT sdc_question_identifier, sdc_question_text, sdc_response_value, sdc_response_type, sdc_units, sdc_order FROM measurement WHERE sdc_template_instance_guid IS NOT NULL ORDER BY sdc_order LIMIT 10",
     reader => new object[] {
         reader.GetString(0),
@@ -382,6 +385,7 @@ Verify that standard OMOP fields are properly populated alongside the SDC-specif
 
 // Check that standard OMOP fields are populated using utility function
 var omopData = ExecuteQueryAndCollectData(
+    sdcCdm,
     "SELECT measurement_id, person_id, measurement_concept_id, measurement_date, measurement_type_concept_id, value_as_number, value_source_value, unit_source_value FROM measurement WHERE sdc_template_instance_guid IS NOT NULL LIMIT 5",
     reader => new object[] {
         reader.GetInt64(0),
@@ -412,6 +416,7 @@ Demonstrate more complex queries that combine standard OMOP fields with SDC-spec
 
 // Example: Find numeric measurements with their SDC context using utility function
 var numericData = ExecuteQueryAndCollectData(
+    sdcCdm,
     "SELECT m.sdc_question_identifier, m.sdc_question_text, m.value_as_number, m.sdc_units, m.sdc_response_type, ti.template_name FROM measurement m JOIN sdc_template_instance_ecp ti ON m.sdc_template_instance_guid = ti.template_instance_guid WHERE m.sdc_response_type = 'numeric' AND m.value_as_number IS NOT NULL ORDER BY m.sdc_order",
     reader => new object[] {
         reader.GetString(0),
@@ -440,6 +445,7 @@ Analyze the template metadata stored in the `sdc_template_instance_ecp` table.
 
 // Get template metadata using utility function
 var metadataData = ExecuteQueryAndCollectData(
+    sdcCdm,
     "SELECT template_name, template_version, report_template_source, report_template_id, report_template_version_id, tumor_site, procedure_type, specimen_laterality FROM sdc_template_instance_ecp",
     reader => new object[] {
         reader.GetString(0),
@@ -469,10 +475,10 @@ Provide a summary of the test results and validate that the MVP is working corre
 #!csharp
 
 // Final summary using utility functions
-var templateCount = GetSimpleCount("SELECT COUNT(*) FROM sdc_template_instance_ecp");
-var measurementCount = GetSimpleCount("SELECT COUNT(*) FROM measurement WHERE sdc_template_instance_guid IS NOT NULL");
-var personCount = GetSimpleCount("SELECT COUNT(*) FROM person");
-var conceptCount = GetSimpleCount("SELECT COUNT(*) FROM concept");
+var templateCount = GetSimpleCount(sdcCdm, "SELECT COUNT(*) FROM sdc_template_instance_ecp");
+var measurementCount = GetSimpleCount(sdcCdm, "SELECT COUNT(*) FROM measurement WHERE sdc_template_instance_guid IS NOT NULL");
+var personCount = GetSimpleCount(sdcCdm, "SELECT COUNT(*) FROM person");
+var conceptCount = GetSimpleCount(sdcCdm, "SELECT COUNT(*) FROM concept");
 
 var summaryData = new Dictionary<string, object> {
     { "Template Instances", templateCount },
