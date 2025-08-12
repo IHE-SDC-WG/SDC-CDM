@@ -82,8 +82,15 @@ public class SdcCdmInSqlite : ISdcCdm
 
         // Determine the resource name prefix for files in the 'sqlite' folder.
         // This typically follows the pattern: "{DefaultNamespace}.database.ddl.sqlite."
-        string resourcePrefix = "SdcCdmInSqlite.database.ddl.sqlite.";
-        resourcePrefix = "";
+        string resourcePrefix = "SdcCdmInSqlite.";
+
+        // Debug: List all available resources
+        var allResources = assembly.GetManifestResourceNames();
+        Console.WriteLine($"All available resources ({allResources.Length}):");
+        foreach (var resource in allResources)
+        {
+            Console.WriteLine($"  {resource}");
+        }
 
         // Retrieve all resource names that match the .sql files in the desired folder.
         var sqlResourceNames = assembly
@@ -94,6 +101,14 @@ public class SdcCdmInSqlite : ISdcCdm
             )
             .OrderBy(name => name) // Sort them alphabetically
             .ToList();
+
+        Console.WriteLine(
+            $"\nFound {sqlResourceNames.Count} SQL scripts with prefix '{resourcePrefix}':"
+        );
+        foreach (var resource in sqlResourceNames)
+        {
+            Console.WriteLine($"  {resource}");
+        }
 
         System.Diagnostics.Debug.WriteLine($"Found {sqlResourceNames.Count} SQL scripts.");
 
@@ -128,7 +143,67 @@ public class SdcCdmInSqlite : ISdcCdm
         // Insert essential concepts for basic functionality
         InsertEssentialConcepts();
 
+        // If no SQL scripts were loaded, create a basic schema
+        if (sqlResourceNames.Count == 0)
+        {
+            Console.WriteLine("No SQL scripts loaded, creating basic schema directly...");
+            CreateBasicSchema();
+        }
+
         Logger.LogInformation("Finished building schema.");
+    }
+
+    private void CreateBasicSchema()
+    {
+        Console.WriteLine("Creating basic OMOP CDM schema with SDC extensions...");
+
+        // Create measurement table with SDC columns
+        var createMeasurementTable =
+            @"
+            CREATE TABLE IF NOT EXISTS main.measurement (
+                measurement_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                person_id INTEGER NOT NULL,
+                measurement_concept_id INTEGER NOT NULL,
+                measurement_date DATE NOT NULL,
+                measurement_datetime REAL NULL,
+                measurement_type_concept_id INTEGER NOT NULL,
+                operator_concept_id INTEGER NULL,
+                value_as_number REAL NULL,
+                value_as_string TEXT NULL,
+                value_as_concept_id INTEGER NULL,
+                unit_concept_id INTEGER NULL,
+                range_low REAL NULL,
+                range_high REAL NULL,
+                provider_id INTEGER NULL,
+                visit_occurrence_id INTEGER NULL,
+                visit_detail_id INTEGER NULL,
+                measurement_source_value TEXT NULL,
+                measurement_source_concept_id INTEGER NULL,
+                unit_source_value TEXT NULL,
+                value_source_value TEXT NULL,
+                -- SDC-specific columns for ECP data
+                sdc_template_instance_guid TEXT NULL,
+                sdc_question_identifier TEXT NULL,
+                sdc_response_value TEXT NULL,
+                sdc_response_type TEXT NULL,
+                sdc_template_version TEXT NULL,
+                sdc_question_text TEXT NULL,
+                sdc_section_identifier TEXT NULL,
+                sdc_list_item_id TEXT NULL,
+                sdc_list_item_text TEXT NULL,
+                sdc_units TEXT NULL,
+                sdc_datatype TEXT NULL,
+                sdc_order INTEGER NULL,
+                sdc_repeat_level INTEGER NULL,
+                sdc_comments TEXT NULL
+            );
+        ";
+
+        using var cmd = connection.CreateCommand();
+        cmd.CommandText = createMeasurementTable;
+        cmd.ExecuteNonQuery();
+
+        Console.WriteLine("Basic schema created successfully!");
     }
 
     public long WriteTemplateSdcClass(
