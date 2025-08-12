@@ -127,6 +127,66 @@ namespace SdcCdmInSqlite
                         Console.WriteLine($"Column {i}: {columnName, -30} = '{displayValue}'");
                     }
                 }
+
+                // Check if sdc_units are being stored in the measurement table
+                Console.WriteLine("\n" + new string('=', 80));
+                Console.WriteLine("CHECKING SDC_UNITS IN MEASUREMENT TABLE");
+                Console.WriteLine(new string('=', 80));
+
+                using var unitsCmd = connection.CreateCommand();
+                unitsCmd.CommandText =
+                    "SELECT sdc_question_identifier, sdc_question_text, sdc_response_value, sdc_response_type, sdc_units, sdc_order FROM measurement WHERE sdc_template_instance_guid IS NOT NULL AND sdc_units IS NOT NULL ORDER BY sdc_order";
+
+                using var unitsReader = unitsCmd.ExecuteReader();
+                if (unitsReader.HasRows)
+                {
+                    Console.WriteLine("\nMeasurements with units found:");
+                    Console.WriteLine("Question ID | Question | Response | Type | Units | Order");
+                    Console.WriteLine("------------|----------|----------|------|-------|------");
+
+                    while (unitsReader.Read())
+                    {
+                        var questionId = unitsReader.GetString(0);
+                        var questionText = unitsReader.IsDBNull(1)
+                            ? "N/A"
+                            : unitsReader.GetString(1);
+                        var response = unitsReader.IsDBNull(2) ? "N/A" : unitsReader.GetString(2);
+                        var type = unitsReader.IsDBNull(3) ? "N/A" : unitsReader.GetString(3);
+                        var units = unitsReader.GetString(4);
+                        var order = unitsReader.IsDBNull(5) ? 0 : unitsReader.GetInt64(5);
+
+                        Console.WriteLine(
+                            $"{questionId.Substring(0, Math.Min(12, questionId.Length))}... | {questionText.Substring(0, Math.Min(10, questionText.Length))}... | {response.Substring(0, Math.Min(10, response.Length))}... | {type} | {units} | {order}"
+                        );
+                    }
+                }
+                else
+                {
+                    Console.WriteLine(
+                        "\nNo measurements with units found. Checking all measurements:"
+                    );
+
+                    using var allUnitsCmd = connection.CreateCommand();
+                    allUnitsCmd.CommandText =
+                        "SELECT sdc_question_identifier, sdc_response_type, sdc_units FROM measurement WHERE sdc_template_instance_guid IS NOT NULL ORDER BY sdc_order LIMIT 10";
+
+                    using var allUnitsReader = allUnitsCmd.ExecuteReader();
+                    Console.WriteLine("Question ID | Response Type | Units");
+                    Console.WriteLine("------------|---------------|-------");
+
+                    while (allUnitsReader.Read())
+                    {
+                        var questionId = allUnitsReader.GetString(0);
+                        var responseType = allUnitsReader.GetString(1);
+                        var units = allUnitsReader.IsDBNull(2)
+                            ? "NULL"
+                            : allUnitsReader.GetString(2);
+
+                        Console.WriteLine(
+                            $"{questionId.Substring(0, Math.Min(12, questionId.Length))}... | {responseType} | {units}"
+                        );
+                    }
+                }
             }
             catch (Exception ex)
             {
