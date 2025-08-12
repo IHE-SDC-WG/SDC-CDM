@@ -1,6 +1,8 @@
 ﻿using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using SdcCdm;
+using SdcCdmInSqlite.Entities;
 
 namespace SdcCdmInSqlite;
 
@@ -68,12 +70,16 @@ public class SdcCdmInSqlite : ISdcCdm
         this.connection = new(connectionString);
         connection.Open();
 
+        // Initialize EF Core DbContext
+        this._dbContext = new SdcCdmDbContext(connection);
+
         Logger = _loggerFactory.CreateLogger<SdcCdmInSqlite>();
     }
 
     private readonly string dbFilePath;
     private readonly SqliteConnection connection;
     private readonly bool isMemoryDb;
+    private readonly SdcCdmDbContext _dbContext;
 
     public void BuildSchema()
     {
@@ -446,49 +452,98 @@ public class SdcCdmInSqlite : ISdcCdm
         // TODO: Support searching by instanceVersionDate
     }
 
-    public long? FindPerson(long personPk)
+    /// <summary>
+    /// Gets the underlying SQLite connection for direct database access.
+    /// </summary>
+    /// <returns>The SQLite connection.</returns>
+    public SqliteConnection GetConnection() => connection;
+
+    /// <summary>
+    /// Finds a person by their primary key using Entity Framework Core.
+    /// </summary>
+    /// <param name="personPk">The person's primary key.</param>
+    /// <returns>The person ID if found, null otherwise.</returns>
+    public async Task<long?> FindPersonAsync(long personPk)
     {
-        using var cmd = connection.CreateCommand();
-        cmd.CommandText =
-            @"
-            SELECT person_id
-            FROM person
-            WHERE person_id = @personpk
-            ";
-        cmd.Parameters.AddWithValue("@personpk", personPk);
-        var reader = cmd.ExecuteReader();
-        if (reader.Read())
-        {
-            long foundPersonPk = reader.GetInt64(0);
-            reader.Close();
-            return foundPersonPk;
-        }
-        reader.Close();
-        return null;
+        var person = await _dbContext
+            .Persons.Where(p => p.PersonId == personPk)
+            .Select(p => new { p.PersonId })
+            .FirstOrDefaultAsync();
+
+        return person?.PersonId;
     }
 
+    /// <summary>
+    /// Finds a person by their primary key using Entity Framework Core.
+    /// This is the synchronous version for backward compatibility.
+    /// </summary>
+    /// <param name="personPk">The person's primary key.</param>
+    /// <returns>The person ID if found, null otherwise.</returns>
+    public long? FindPerson(long personPk)
+    {
+        return FindPersonAsync(personPk).GetAwaiter().GetResult();
+    }
+
+    /// <summary>
+    /// Finds a person by their identifier using Entity Framework Core.
+    /// </summary>
+    /// <param name="identifier">The person's identifier.</param>
+    /// <returns>The person ID if found, null otherwise.</returns>
+    public async Task<long?> FindPersonByIdentifierAsync(string identifier)
+    {
+        var person = await _dbContext
+            .Persons.Where(p => p.PersonSourceValue == identifier)
+            .Select(p => new { p.PersonId })
+            .FirstOrDefaultAsync();
+
+        return person?.PersonId;
+    }
+
+    /// <summary>
+    /// Finds a person by their identifier using Entity Framework Core.
+    /// This is the synchronous version for backward compatibility.
+    /// </summary>
+    /// <param name="identifier">The person's identifier.</param>
+    /// <returns>The person ID if found, null otherwise.</returns>
     public long? FindPersonByIdentifier(string identifier)
     {
-        using var cmd = connection.CreateCommand();
-        cmd.CommandText =
-            @"
-            SELECT
-                person.person_id, person.person_source_value
-            FROM
-                person
-            WHERE
-                person_source_value = @identifier
-            ";
-        cmd.Parameters.AddWithValue("@identifier", identifier);
-        using var reader = cmd.ExecuteReader();
-        if (reader.Read())
-        {
-            long foundPersonPk = reader.GetInt64(0);
-            reader.Close();
-            return foundPersonPk;
-        }
-        reader.Close();
-        return null;
+        return FindPersonByIdentifierAsync(identifier).GetAwaiter().GetResult();
+    }
+
+    /// <summary>
+    /// Gets a person by their primary key and projects to a DTO using Entity Framework Core.
+    /// This demonstrates how to use EF Core with DTOs to avoid exposing EF types.
+    /// </summary>
+    /// <param name="personPk">The person's primary key.</param>
+    /// <returns>The person DTO if found, null otherwise.</returns>
+    public async Task<ISdcCdm.Person?> GetPersonDtoAsync(long personPk)
+    {
+        var person = await _dbContext
+            .Persons.Where(p => p.PersonId == personPk)
+            .Select(p => new ISdcCdm.Person
+            {
+                PersonId = p.PersonId,
+                GenderConceptId = p.GenderConceptId,
+                YearOfBirth = p.YearOfBirth,
+                MonthOfBirth = p.MonthOfBirth,
+                DayOfBirth = p.DayOfBirth,
+                BirthDatetime = p.BirthDatetime,
+                RaceConceptId = p.RaceConceptId,
+                EthnicityConceptId = p.EthnicityConceptId,
+                LocationId = p.LocationId,
+                ProviderId = p.ProviderId,
+                CareSiteId = p.CareSiteId,
+                PersonSourceValue = p.PersonSourceValue,
+                GenderSourceValue = p.GenderSourceValue,
+                GenderSourceConceptId = p.GenderSourceConceptId,
+                RaceSourceValue = p.RaceSourceValue,
+                RaceSourceConceptId = p.RaceSourceConceptId,
+                EthnicitySourceValue = p.EthnicitySourceValue,
+                EthnicitySourceConceptId = p.EthnicitySourceConceptId,
+            })
+            .FirstOrDefaultAsync();
+
+        return person;
     }
 
     public ISdcCdm.TemplateInstanceRecord? GetTemplateInstanceRecord(long templateInstanceClassPk)
