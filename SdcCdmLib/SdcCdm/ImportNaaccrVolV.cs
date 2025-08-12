@@ -320,6 +320,14 @@ public static class NAACCRVolVImporter
             var obx_value = get_field(obx_fields, 5);
             var obx_units = get_field(obx_fields, 6);
 
+            // Debug logging for units extraction
+            if (!string.IsNullOrEmpty(obx_units))
+            {
+                Console.WriteLine(
+                    $"OBX[{i}] - Observation: {obx_observation_id} - Units: '{obx_units}'"
+                );
+            }
+
             // Skip narrative content (focus on structured ECP data)
             if (obx_value_type == "ST" && obx_value.Length > 200)
             {
