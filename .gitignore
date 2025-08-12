@@ -17,4 +17,7 @@ storage/
 
 .devcontainer/
 
+# macOS system files
+.DS_Store
+
 
