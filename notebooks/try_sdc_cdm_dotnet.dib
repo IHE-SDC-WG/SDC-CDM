@@ -13,6 +13,9 @@ dotnet build ../SdcCdmLib
 /** Reference any external libraries and the SDC CDM library assembly */
 
 #r "nuget:Microsoft.Data.Sqlite,9.0.0"
+#r "nuget:Microsoft.EntityFrameworkCore,8.0.0"
+#r "nuget:Microsoft.EntityFrameworkCore.Sqlite,8.0.0"
+#r "nuget:Microsoft.EntityFrameworkCore.Design,8.0.0"
 #r "nuget:Hl7.Fhir.R4,6.0.0-alpha1"
 #r "nuget:CsvHelper,33.0.1"
 #r "nuget:Microsoft.Extensions.Logging,9.0.4"
