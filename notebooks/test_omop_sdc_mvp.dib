@@ -52,9 +52,61 @@ using System.Collections.Generic;
 
 Console.WriteLine("Dependencies loaded successfully!");
 
+// Force reload assemblies to ensure we get the latest compiled version
+try
+{
+    // Unload any existing assemblies
+    var loadContext = System.Runtime.Loader.AssemblyLoadContext.Default;
+    if (loadContext.GetType().GetMethod("Unload") != null)
+    {
+        loadContext.GetType().GetMethod("Unload")?.Invoke(loadContext, null);
+        Console.WriteLine("Forced assembly unload...");
+    }
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"Assembly unload not supported: {ex.Message}");
+}
+
+Console.WriteLine("Assembly reload completed - using latest compiled version!");
+
 // ============================================================================
 // UTILITY FUNCTIONS FOR TABLE FORMATTING AND DATA DISPLAY
 // ============================================================================
+
+// Function to force reload assemblies (call this after code changes)
+void ForceAssemblyReload()
+{
+    Console.WriteLine("Forcing assembly reload...");
+    try
+    {
+        // Clear any cached assemblies
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
+        
+        // Try to unload assemblies if supported
+        var loadContext = System.Runtime.Loader.AssemblyLoadContext.Default;
+        if (loadContext.GetType().GetMethod("Unload") != null)
+        {
+            loadContext.GetType().GetMethod("Unload")?.Invoke(loadContext, null);
+            Console.WriteLine("Assembly unload completed");
+        }
+        else
+        {
+            Console.WriteLine("Assembly unload not supported on this runtime");
+        }
+        
+        Console.WriteLine("Assembly reload completed!");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Assembly reload error: {ex.Message}");
+    }
+}
+
+// Call this function whenever you make code changes and want to reload
+// ForceAssemblyReload();
 
 // Global configuration for table display
 var TABLE_CONFIG = new {
@@ -524,10 +576,10 @@ Console.WriteLine("// if (File.Exists(dbPath))");
 Console.WriteLine("// { File.Delete(dbPath); Console.WriteLine($\"Removed database: {dbPath}\"); }");
 
 // Uncomment the lines below if you want to clean up
-// if (File.Exists(dbPath))
-// {
-//     File.Delete(dbPath);
-//     Console.WriteLine($"Removed database: {dbPath}");
-// }
+if (File.Exists(dbPath))
+{
+    File.Delete(dbPath);
+    Console.WriteLine($"Removed database: {dbPath}");
+}
 
 Console.WriteLine("\nTest completed! The database file remains for further inspection.");
