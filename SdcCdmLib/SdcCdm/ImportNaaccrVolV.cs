@@ -157,35 +157,141 @@ public static class NAACCRVolVImporter
             personId = existingPersonId;
         }
 
-        // Extract template metadata from first 3 OBX segments
+        // Extract all OBX segments and look for ECP-specific ones
         var obx_segments = get_all_segments(lines, "OBX");
-        if (obx_segments.Count < 3)
+        if (obx_segments.Count < 6)
         {
-            ErrorCallback("Not enough OBX segments for template metadata");
+            ErrorCallback("Not enough OBX segments for template metadata (need at least 6)");
             return;
         }
 
-        // Parse template metadata from first 3 OBX segments
+        Console.WriteLine($"Found {obx_segments.Count} total OBX segments");
+
+        // Find ECP-specific OBX segments by looking for the Report Template Source
         var template_source = "";
         var template_id = "";
         var template_version = "";
 
-        if (obx_segments.Count > 0)
+        // Look for OBX segments with Report Template Source (60573-3)
+        for (int i = 0; i < obx_segments.Count; i++)
         {
-            var obx1_fields = obx_segments[0].Split('|');
-            template_source = get_field(obx1_fields, 5);
+            var obx_fields = obx_segments[i].Split('|');
+            var obx_observation_id = get_field(obx_fields, 3);
+
+            if (
+                obx_observation_id.Contains("60573-3")
+                && (
+                    obx_observation_id.Contains("Report Template Source")
+                    || obx_observation_id.Contains("Report template source")
+                )
+            )
+            {
+                template_source = get_field(obx_fields, 5);
+                Console.WriteLine($"Found Report Template Source at OBX[{i}]: {template_source}");
+                break;
+            }
         }
 
-        if (obx_segments.Count > 1)
+        // Look for OBX segments with Report Template ID (60572-5)
+        for (int i = 0; i < obx_segments.Count; i++)
         {
-            var obx2_fields = obx_segments[1].Split('|');
-            template_id = get_field(obx2_fields, 5);
+            var obx_fields = obx_segments[i].Split('|');
+            var obx_observation_id = get_field(obx_fields, 3);
+
+            if (
+                obx_observation_id.Contains("60572-5")
+                && (
+                    obx_observation_id.Contains("Report Template ID")
+                    || obx_observation_id.Contains("Report template ID")
+                )
+            )
+            {
+                template_id = get_field(obx_fields, 5);
+                Console.WriteLine($"Found Report Template ID at OBX[{i}]: {template_id}");
+                break;
+            }
         }
 
-        if (obx_segments.Count > 2)
+        // Look for OBX segments with Report Template Version ID (60574-1)
+        for (int i = 0; i < obx_segments.Count; i++)
         {
-            var obx3_fields = obx_segments[2].Split('|');
-            template_version = get_field(obx3_fields, 5);
+            var obx_fields = obx_segments[i].Split('|');
+            var obx_observation_id = get_field(obx_fields, 3);
+
+            if (
+                obx_observation_id.Contains("60574-1")
+                && (
+                    obx_observation_id.Contains("Report Template Version ID")
+                    || obx_observation_id.Contains("Report template version ID")
+                )
+            )
+            {
+                template_version = get_field(obx_fields, 5);
+                Console.WriteLine(
+                    $"Found Report Template Version ID at OBX[{i}]: {template_version}"
+                );
+                break;
+            }
+        }
+
+        // Parse additional metadata by looking for specific OBX segments
+        var tumor_site = "";
+        var procedure_type = "";
+        var specimen_laterality = "";
+
+        // Look for Tumor Site (usually contains "Tumor Site" in the observation ID)
+        for (int i = 0; i < obx_segments.Count; i++)
+        {
+            var obx_fields = obx_segments[i].Split('|');
+            var obx_observation_id = get_field(obx_fields, 3);
+
+            if (
+                obx_observation_id.Contains("Tumor Site")
+                || obx_observation_id.Contains("22371.100004300")
+                || obx_observation_id.Contains("2118.1000043")
+            )
+            {
+                tumor_site = get_field(obx_fields, 5);
+                Console.WriteLine($"Found Tumor Site at OBX[{i}]: {tumor_site}");
+                break;
+            }
+        }
+
+        // Look for Procedure (usually contains "Procedure" in the observation ID)
+        for (int i = 0; i < obx_segments.Count; i++)
+        {
+            var obx_fields = obx_segments[i].Split('|');
+            var obx_observation_id = get_field(obx_fields, 3);
+
+            if (
+                obx_observation_id.Contains("Procedure")
+                || obx_observation_id.Contains("51121.100004300")
+                || obx_observation_id.Contains("820603.1000043")
+            )
+            {
+                procedure_type = get_field(obx_fields, 5);
+                Console.WriteLine($"Found Procedure at OBX[{i}]: {procedure_type}");
+                break;
+            }
+        }
+
+        // Look for Specimen Laterality or Tumor Focality
+        for (int i = 0; i < obx_segments.Count; i++)
+        {
+            var obx_fields = obx_segments[i].Split('|');
+            var obx_observation_id = get_field(obx_fields, 3);
+
+            if (
+                obx_observation_id.Contains("Tumor Focality")
+                || obx_observation_id.Contains("8722.100004300")
+                || obx_observation_id.Contains("Specimen Laterality")
+                || obx_observation_id.Contains("52756.1000043")
+            )
+            {
+                specimen_laterality = get_field(obx_fields, 5);
+                Console.WriteLine($"Found Tumor Focality at OBX[{i}]: {specimen_laterality}");
+                break;
+            }
         }
 
         // Generate template instance GUID
@@ -199,7 +305,10 @@ public static class NAACCRVolVImporter
             person_id: personId,
             report_template_source: template_source,
             report_template_id: template_id,
-            report_template_version_id: template_version
+            report_template_version_id: template_version,
+            tumor_site: tumor_site,
+            procedure_type: procedure_type,
+            specimen_laterality: specimen_laterality
         );
 
         // Process OBX segments for ECP data (starting from 4th OBX)
