@@ -9,43 +9,41 @@ namespace SdcCdmInSqlite;
 public class SdcCdmInSqlite : ISdcCdm
 {
     /// <summary>
+    /// Inserts a concept record into the concept table using Entity Framework Core.
+    /// </summary>
+    /// <param name="concept">The concept record to insert.</param>
+    /// <returns>The ID of the inserted concept.</returns>
+    public async Task<long> InsertConceptAsync(ConceptRecord concept)
+    {
+        var conceptEntity = new ConceptEntity
+        {
+            ConceptId = concept.ConceptId,
+            ConceptName = concept.ConceptName,
+            DomainId = concept.DomainId,
+            VocabularyId = concept.VocabularyId,
+            ConceptClassId = concept.ConceptClassId,
+            StandardConcept = concept.StandardConcept,
+            ConceptCode = concept.ConceptCode,
+            ValidStartDate = concept.ValidStartDate,
+            ValidEndDate = concept.ValidEndDate,
+            InvalidReason = concept.InvalidReason,
+        };
+
+        _dbContext.Concepts.Add(conceptEntity);
+        await _dbContext.SaveChangesAsync();
+
+        return conceptEntity.ConceptId;
+    }
+
+    /// <summary>
     /// Inserts a concept record into the concept table.
+    /// This is the synchronous version for backward compatibility.
     /// </summary>
     /// <param name="concept">The concept record to insert.</param>
     /// <returns>The ID of the inserted concept.</returns>
     public long InsertConcept(ConceptRecord concept)
     {
-        using var cmd = connection.CreateCommand();
-        cmd.CommandText =
-            @"
-            INSERT INTO main.concept 
-            (concept_id, concept_name, domain_id, vocabulary_id, concept_class_id, 
-             standard_concept, concept_code, valid_start_date, valid_end_date, invalid_reason)
-            VALUES 
-            (@conceptId, @conceptName, @domainId, @vocabularyId, @conceptClassId, 
-             @standardConcept, @conceptCode, @validStartDate, @validEndDate, @invalidReason);
-            SELECT last_insert_rowid();
-        ";
-
-        cmd.Parameters.AddWithValue("@conceptId", concept.ConceptId);
-        cmd.Parameters.AddWithValue("@conceptName", concept.ConceptName);
-        cmd.Parameters.AddWithValue("@domainId", concept.DomainId);
-        cmd.Parameters.AddWithValue("@vocabularyId", concept.VocabularyId);
-        cmd.Parameters.AddWithValue("@conceptClassId", concept.ConceptClassId);
-        cmd.Parameters.AddWithValue(
-            "@standardConcept",
-            concept.StandardConcept ?? (object)DBNull.Value
-        );
-        cmd.Parameters.AddWithValue("@conceptCode", concept.ConceptCode);
-        cmd.Parameters.AddWithValue("@validStartDate", concept.ValidStartDate);
-        cmd.Parameters.AddWithValue("@validEndDate", concept.ValidEndDate);
-        cmd.Parameters.AddWithValue(
-            "@invalidReason",
-            concept.InvalidReason ?? (object)DBNull.Value
-        );
-
-        var result = cmd.ExecuteScalar();
-        return result != null ? Convert.ToInt64(result) : -1;
+        return InsertConceptAsync(concept).GetAwaiter().GetResult();
     }
 
     private static readonly ILoggerFactory _loggerFactory = LoggerFactory.Create(builder =>
@@ -134,6 +132,47 @@ public class SdcCdmInSqlite : ISdcCdm
         Logger.LogInformation("Finished building schema.");
     }
 
+    /// <summary>
+    /// Writes a template SDC class using Entity Framework Core.
+    /// </summary>
+    /// <param name="sdcformdesignid">The SDC form design ID.</param>
+    /// <param name="baseuri">The base URI.</param>
+    /// <param name="lineage">The lineage.</param>
+    /// <param name="version">The version.</param>
+    /// <param name="fulluri">The full URI.</param>
+    /// <param name="formtitle">The form title.</param>
+    /// <param name="sdc_xml">The SDC XML.</param>
+    /// <param name="doctype">The document type.</param>
+    /// <returns>The ID of the inserted template SDC.</returns>
+    public async Task<long> WriteTemplateSdcClassAsync(
+        string sdcformdesignid,
+        string? baseuri = null,
+        string? lineage = null,
+        string? version = null,
+        string? fulluri = null,
+        string? formtitle = null,
+        string? sdc_xml = null,
+        string? doctype = null
+    )
+    {
+        var templateSdcEntity = new TemplateSdcEntity
+        {
+            SdcFormDesignSdcid = sdcformdesignid,
+            BaseUri = baseuri,
+            Lineage = lineage,
+            Version = version,
+            FullUri = fulluri,
+            FormTitle = formtitle,
+            SdcXml = sdc_xml,
+            DocType = doctype,
+        };
+
+        _dbContext.TemplateSdcs.Add(templateSdcEntity);
+        await _dbContext.SaveChangesAsync();
+
+        return templateSdcEntity.TemplateSdcId;
+    }
+
     public long WriteTemplateSdcClass(
         string sdcformdesignid,
         string? baseuri,
@@ -145,26 +184,65 @@ public class SdcCdmInSqlite : ISdcCdm
         string? doctype
     )
     {
-        using var cmd = connection.CreateCommand();
-        cmd.CommandText =
-            @"
-                INSERT INTO main.template_sdc 
-                (sdc_form_design_sdcid, base_uri, lineage, version, full_uri, form_title, sdc_xml, doc_type)
-                VALUES (@sdcformdesignid, @baseuri, @lineage, @version, @fulluri, @formtitle, @sdc_xml, @doctype);
-                SELECT last_insert_rowid();
-            ";
+        return WriteTemplateSdcClassAsync(
+                sdcformdesignid,
+                baseuri,
+                lineage,
+                version,
+                fulluri,
+                formtitle,
+                sdc_xml,
+                doctype
+            )
+            .GetAwaiter()
+            .GetResult();
+    }
 
-        cmd.Parameters.AddWithValue("@sdcformdesignid", sdcformdesignid);
-        cmd.Parameters.AddWithValue("@baseuri", baseuri ?? (object)DBNull.Value);
-        cmd.Parameters.AddWithValue("@lineage", lineage ?? (object)DBNull.Value);
-        cmd.Parameters.AddWithValue("@version", version ?? (object)DBNull.Value);
-        cmd.Parameters.AddWithValue("@fulluri", fulluri ?? (object)DBNull.Value);
-        cmd.Parameters.AddWithValue("@formtitle", formtitle ?? (object)DBNull.Value);
-        cmd.Parameters.AddWithValue("@sdc_xml", sdc_xml ?? (object)DBNull.Value);
-        cmd.Parameters.AddWithValue("@doctype", doctype ?? (object)DBNull.Value);
+    /// <summary>
+    /// Writes a template instance class using Entity Framework Core.
+    /// </summary>
+    /// <param name="templatesdc_fk">The template SDC foreign key.</param>
+    /// <param name="template_instance_version_guid">The template instance version GUID.</param>
+    /// <param name="template_instance_version_uri">The template instance version URI.</param>
+    /// <param name="instance_version_date">The instance version date.</param>
+    /// <param name="diag_report_props">The diagnostic report properties.</param>
+    /// <param name="surg_path_id">The surgical path ID.</param>
+    /// <param name="person_fk">The person foreign key.</param>
+    /// <param name="encounter_fk">The encounter foreign key.</param>
+    /// <param name="practitioner_fk">The practitioner foreign key.</param>
+    /// <param name="report_text">The report text.</param>
+    /// <returns>The ID of the inserted template instance.</returns>
+    public async Task<long> WriteTemplateInstanceClassAsync(
+        long templatesdc_fk,
+        string? template_instance_version_guid = null,
+        string? template_instance_version_uri = null,
+        string? instance_version_date = null,
+        string? diag_report_props = null,
+        string? surg_path_id = null,
+        string? person_fk = null,
+        string? encounter_fk = null,
+        string? practitioner_fk = null,
+        string? report_text = null
+    )
+    {
+        var templateInstanceEntity = new TemplateInstanceEntity
+        {
+            TemplateSdcId = templatesdc_fk,
+            TemplateInstanceVersionGuid = template_instance_version_guid,
+            TemplateInstanceVersionUri = template_instance_version_uri,
+            InstanceVersionDate = instance_version_date,
+            DiagReportProps = diag_report_props,
+            SurgPathSdcid = surg_path_id,
+            PersonId = person_fk != null ? long.Parse(person_fk) : null,
+            VisitOccurrenceId = encounter_fk != null ? long.Parse(encounter_fk) : null,
+            ProviderId = practitioner_fk != null ? long.Parse(practitioner_fk) : null,
+            ReportText = report_text,
+        };
 
-        var pk = cmd.ExecuteScalar() ?? -1;
-        return (long)pk;
+        _dbContext.TemplateInstances.Add(templateInstanceEntity);
+        await _dbContext.SaveChangesAsync();
+
+        return templateInstanceEntity.TemplateInstanceId;
     }
 
     public long WriteTemplateInstanceClass(
@@ -180,37 +258,101 @@ public class SdcCdmInSqlite : ISdcCdm
         string? report_text
     )
     {
-        using var cmd = connection.CreateCommand();
-        cmd.CommandText =
-            @"
-                INSERT INTO template_instance 
-                (template_instance_version_guid, template_instance_version_uri, template_sdc_id, instance_version_date, diag_report_props, surg_path_sdcid, person_id, visit_occurrence_id, provider_id, report_text)
-                VALUES (@templateinstanceversionguid, @templateinstanceversionuri, @templatesdcfk, @instanceversiondate, @diagreportprops, @surgpathid, @personfk, @encounterfk, @practitionerfk, @reporttext);
-                SELECT last_insert_rowid();
-            ";
+        return WriteTemplateInstanceClassAsync(
+                templatesdc_fk,
+                template_instance_version_guid,
+                template_instance_version_uri,
+                instance_version_date,
+                diag_report_props,
+                surg_path_id,
+                person_fk,
+                encounter_fk,
+                practitioner_fk,
+                report_text
+            )
+            .GetAwaiter()
+            .GetResult();
+    }
 
-        cmd.Parameters.AddWithValue(
-            "@templateinstanceversionguid",
-            template_instance_version_guid ?? (object)DBNull.Value
-        );
-        cmd.Parameters.AddWithValue(
-            "@templateinstanceversionuri",
-            template_instance_version_uri ?? (object)DBNull.Value
-        );
-        cmd.Parameters.AddWithValue("@templatesdcfk", templatesdc_fk);
-        cmd.Parameters.AddWithValue(
-            "@instanceversiondate",
-            instance_version_date ?? (object)DBNull.Value
-        );
-        cmd.Parameters.AddWithValue("@diagreportprops", diag_report_props ?? (object)DBNull.Value);
-        cmd.Parameters.AddWithValue("@surgpathid", surg_path_id ?? (object)DBNull.Value);
-        cmd.Parameters.AddWithValue("@personfk", person_fk ?? (object)DBNull.Value);
-        cmd.Parameters.AddWithValue("@encounterfk", encounter_fk ?? (object)DBNull.Value);
-        cmd.Parameters.AddWithValue("@practitionerfk", practitioner_fk ?? (object)DBNull.Value);
-        cmd.Parameters.AddWithValue("@reporttext", report_text ?? (object)DBNull.Value);
+    /// <summary>
+    /// Writes an SDC observation class using Entity Framework Core.
+    /// </summary>
+    /// <param name="template_instance_class_fk">The template instance class foreign key.</param>
+    /// <param name="parent_observation_id">The parent observation ID.</param>
+    /// <param name="section_id">The section ID.</param>
+    /// <param name="section_guid">The section GUID.</param>
+    /// <param name="q_text">The question text.</param>
+    /// <param name="q_instance_guid">The question instance GUID.</param>
+    /// <param name="q_id">The question ID.</param>
+    /// <param name="li_text">The list item text.</param>
+    /// <param name="li_id">The list item ID.</param>
+    /// <param name="li_instance_guid">The list item instance GUID.</param>
+    /// <param name="sdc_order">The SDC order.</param>
+    /// <param name="response">The response.</param>
+    /// <param name="units">The units.</param>
+    /// <param name="units_system">The units system.</param>
+    /// <param name="datatype">The data type.</param>
+    /// <param name="response_int">The response integer.</param>
+    /// <param name="response_float">The response float.</param>
+    /// <param name="response_datetime">The response datetime.</param>
+    /// <param name="reponse_string_nvarchar">The response string.</param>
+    /// <param name="li_parent_guid">The list item parent GUID.</param>
+    /// <returns>The ID of the inserted SDC observation.</returns>
+    public async Task<long> WriteSdcObsClassAsync(
+        long template_instance_class_fk,
+        long? parent_observation_id = null,
+        string? section_id = null,
+        string? section_guid = null,
+        string? q_text = null,
+        string? q_instance_guid = null,
+        string? q_id = null,
+        string? li_text = null,
+        string? li_id = null,
+        string? li_instance_guid = null,
+        string? sdc_order = null,
+        string? response = null,
+        string? units = null,
+        string? units_system = null,
+        string? datatype = null,
+        long? response_int = null,
+        double? response_float = null,
+        DateTime? response_datetime = null,
+        string? reponse_string_nvarchar = null,
+        string? li_parent_guid = null
+    )
+    {
+        var sdcObservationEntity = new SdcObservationEntity
+        {
+            TemplateInstanceId = template_instance_class_fk,
+            ParentObservationId = parent_observation_id,
+            ParentInstanceGuid = null, // Always null as per original implementation
+            SectionSdcid = section_id,
+            SectionGuid = section_guid,
+            QuestionText = q_text,
+            QuestionInstanceGuid = q_instance_guid,
+            QuestionSdcid = q_id,
+            ListItemText = li_text,
+            ListItemId = li_id,
+            ListItemInstanceGuid = li_instance_guid,
+            ListItemParentGuid = li_parent_guid,
+            Response = response,
+            Units = units,
+            UnitsSystem = units_system,
+            Datatype = datatype,
+            ResponseInt = response_int,
+            ResponseFloat = response_float,
+            ResponseDatetime = response_datetime,
+            ReponseStringNvarchar = reponse_string_nvarchar,
+            ObsDatetime = null, // Always null as per original implementation
+            SdcOrder = sdc_order,
+            SdcRepeatLevel = null, // Always null as per original implementation
+            SdcComments = null, // Always null as per original implementation
+        };
 
-        var pk = cmd.ExecuteScalar() ?? -1L;
-        return (long)pk;
+        _dbContext.SdcObservations.Add(sdcObservationEntity);
+        await _dbContext.SaveChangesAsync();
+
+        return sdcObservationEntity.SdcObservationId;
     }
 
     public long WriteSdcObsClass(
@@ -236,51 +378,30 @@ public class SdcCdmInSqlite : ISdcCdm
         string? li_parent_guid
     )
     {
-        using var cmd = connection.CreateCommand();
-        cmd.CommandText =
-            @"
-                INSERT INTO sdc_observation 
-                (template_instance_id, parent_observation_id, parent_instance_guid, section_sdcid, section_guid, question_text, question_instance_guid, question_sdcid, list_item_text, list_item_id, list_item_instance_guid, list_item_parent_guid, response, units, units_system, datatype, response_int, response_float, response_datetime, reponse_string_nvarchar, obs_datetime, sdc_order, sdc_repeat_level, sdc_comments)
-                VALUES (@templateinstanceclassfk, @parent_observation_id, @parentinstanceguid, @section_id, @section_guid, @q_text, @q_instanceguid, @q_id, @li_text, @li_id, @li_instanceguid, @li_parentguid, @response, @units, @units_system, @datatype, @response_int, @response_float, @response_datetime, @reponse_string_nvarchar, @obsdatetime, @sdcorder, @sdcrepeatlevel, @sdccomments);
-                SELECT last_insert_rowid();
-            ";
-
-        cmd.Parameters.AddWithValue("@templateinstanceclassfk", template_instance_class_fk);
-        cmd.Parameters.AddWithValue(
-            "@parent_observation_id",
-            parent_observation_id ?? (object)DBNull.Value
-        );
-        cmd.Parameters.AddWithValue("@parentinstanceguid", DBNull.Value);
-        cmd.Parameters.AddWithValue("@section_id", section_id ?? (object)DBNull.Value);
-        cmd.Parameters.AddWithValue("@section_guid", section_guid ?? (object)DBNull.Value);
-        cmd.Parameters.AddWithValue("@q_text", q_text ?? (object)DBNull.Value);
-        cmd.Parameters.AddWithValue("@q_instanceguid", q_instance_guid ?? (object)DBNull.Value);
-        cmd.Parameters.AddWithValue("@q_id", q_id ?? (object)DBNull.Value);
-        cmd.Parameters.AddWithValue("@li_text", li_text ?? (object)DBNull.Value);
-        cmd.Parameters.AddWithValue("@li_id", li_id ?? (object)DBNull.Value);
-        cmd.Parameters.AddWithValue("@li_instanceguid", li_instance_guid ?? (object)DBNull.Value);
-        cmd.Parameters.AddWithValue("@li_parentguid", li_parent_guid ?? (object)DBNull.Value);
-        cmd.Parameters.AddWithValue("@response", response ?? (object)DBNull.Value);
-        cmd.Parameters.AddWithValue("@units", units ?? (object)DBNull.Value);
-        cmd.Parameters.AddWithValue("@units_system", units_system ?? (object)DBNull.Value);
-        cmd.Parameters.AddWithValue("@datatype", datatype ?? (object)DBNull.Value);
-        cmd.Parameters.AddWithValue("@response_int", response_int ?? (object)DBNull.Value);
-        cmd.Parameters.AddWithValue("@response_float", response_float ?? (object)DBNull.Value);
-        cmd.Parameters.AddWithValue(
-            "@response_datetime",
-            response_datetime ?? (object)DBNull.Value
-        );
-        cmd.Parameters.AddWithValue(
-            "@reponse_string_nvarchar",
-            reponse_string_nvarchar ?? (object)DBNull.Value
-        );
-        cmd.Parameters.AddWithValue("@obsdatetime", DBNull.Value);
-        cmd.Parameters.AddWithValue("@sdcorder", sdc_order ?? (object)DBNull.Value);
-        cmd.Parameters.AddWithValue("@sdcrepeatlevel", DBNull.Value);
-        cmd.Parameters.AddWithValue("@sdccomments", DBNull.Value);
-
-        var pk = cmd.ExecuteScalar() ?? -1;
-        return (long)pk;
+        return WriteSdcObsClassAsync(
+                template_instance_class_fk,
+                parent_observation_id,
+                section_id,
+                section_guid,
+                q_text,
+                q_instance_guid,
+                q_id,
+                li_text,
+                li_id,
+                li_instance_guid,
+                sdc_order,
+                response,
+                units,
+                units_system,
+                datatype,
+                response_int,
+                response_float,
+                response_datetime,
+                reponse_string_nvarchar,
+                li_parent_guid
+            )
+            .GetAwaiter()
+            .GetResult();
     }
 
     public ISdcCdm.Person? WritePerson(in ISdcCdm.PersonDTO dto)
@@ -669,75 +790,48 @@ public class SdcCdmInSqlite : ISdcCdm
         throw new NotImplementedException();
     }
 
+    /// <summary>
+    /// Writes a template item using Entity Framework Core.
+    /// </summary>
+    /// <param name="templateItem">The template item DTO.</param>
+    /// <returns>The template item if successful, null otherwise.</returns>
+    public async Task<ISdcCdm.TemplateItem?> WriteTemplateItemAsync(
+        ISdcCdm.TemplateItemDTO templateItem
+    )
+    {
+        var templateItemEntity = new TemplateItemEntity
+        {
+            TemplateSdcId = templateItem.TemplateSdcId,
+            ParentTemplateItemId = templateItem.ParentTemplateItemId,
+            TemplateItemSdcid = templateItem.TemplateItemSdcid,
+            Type = templateItem.Type,
+            VisibleText = templateItem.VisibleText,
+            InvisibleText = templateItem.InvisibleText,
+            MinCardinality = templateItem.MinCard,
+            MustImplement = templateItem.MustImplement,
+            ItemOrder = templateItem.ItemOrder,
+        };
+
+        _dbContext.TemplateItems.Add(templateItemEntity);
+        await _dbContext.SaveChangesAsync();
+
+        return new ISdcCdm.TemplateItem
+        {
+            TemplateItemId = templateItemEntity.TemplateItemId,
+            TemplateSdcId = templateItemEntity.TemplateSdcId,
+            ParentTemplateItemId = templateItemEntity.ParentTemplateItemId,
+            TemplateItemSdcid = templateItemEntity.TemplateItemSdcid,
+            Type = templateItemEntity.Type,
+            VisibleText = templateItemEntity.VisibleText,
+            InvisibleText = templateItemEntity.InvisibleText,
+            MinCard = templateItemEntity.MinCardinality,
+            MustImplement = templateItemEntity.MustImplement,
+            ItemOrder = templateItemEntity.ItemOrder,
+        };
+    }
+
     public ISdcCdm.TemplateItem? WriteTemplateItem(in ISdcCdm.TemplateItemDTO templateItem)
     {
-        using var cmd = connection.CreateCommand();
-        cmd.CommandText =
-            @"
-                INSERT INTO template_item
-                    (template_sdc_id, parent_template_item_id,
-                    template_item_sdcid, type, visible_text, invisible_text,
-                    min_cardinality, must_implement, item_order)
-                VALUES 
-                    (@templatesdcfk, @parenttemplateitemid, 
-                    @templateitem_sdcid, @type, @visibletext, @invisibletext, 
-                    @mincard, @mustimplement, @itemorder)
-                RETURNING
-                    template_item_id, template_sdc_id, parent_template_item_id, 
-                    template_item_sdcid, type, visible_text, invisible_text, 
-                    min_cardinality, must_implement, item_order;
-            ";
-
-        cmd.Parameters.AddWithValue("@templatesdcfk", templateItem.TemplateSdcId);
-        cmd.Parameters.AddWithValue(
-            "@parenttemplateitemid",
-            templateItem.ParentTemplateItemId ?? (object)DBNull.Value
-        );
-        cmd.Parameters.AddWithValue("@templateitem_sdcid", templateItem.TemplateItemSdcid);
-        cmd.Parameters.AddWithValue("@type", templateItem.Type ?? (object)DBNull.Value);
-        cmd.Parameters.AddWithValue(
-            "@visibletext",
-            templateItem.VisibleText ?? (object)DBNull.Value
-        );
-        cmd.Parameters.AddWithValue(
-            "@invisibletext",
-            templateItem.InvisibleText ?? (object)DBNull.Value
-        );
-        cmd.Parameters.AddWithValue("@mincard", templateItem.MinCard ?? (object)DBNull.Value);
-        cmd.Parameters.AddWithValue(
-            "@mustimplement",
-            templateItem.MustImplement ?? (object)DBNull.Value
-        );
-        cmd.Parameters.AddWithValue("@itemorder", templateItem.ItemOrder ?? (object)DBNull.Value);
-
-        using var reader = cmd.ExecuteReader();
-        if (!reader.Read())
-            return null;
-
-        // Reconstruct the template item record based on the data from the DB.
-        var templateItemId = reader.GetInt64(0);
-        var templateSdcId = reader.GetInt64(1);
-        long? parentTemplateItemId = reader.IsDBNull(2) ? null : reader.GetInt64(2);
-        var templateItemSdcid = reader.GetString(3);
-        var type = reader.IsDBNull(4) ? null : reader.GetString(4);
-        var visibleText = reader.IsDBNull(5) ? null : reader.GetString(5);
-        var invisibleText = reader.IsDBNull(6) ? null : reader.GetString(6);
-        var minCard = reader.IsDBNull(7) ? null : reader.GetString(7);
-        var mustImplement = reader.IsDBNull(8) ? null : reader.GetString(8);
-        var itemOrder = reader.IsDBNull(9) ? null : reader.GetString(9);
-
-        return new()
-        {
-            TemplateItemId = templateItemId,
-            TemplateSdcId = templateSdcId,
-            ParentTemplateItemId = parentTemplateItemId,
-            TemplateItemSdcid = templateItemSdcid,
-            Type = type,
-            VisibleText = visibleText,
-            InvisibleText = invisibleText,
-            MinCard = minCard,
-            MustImplement = mustImplement,
-            ItemOrder = itemOrder,
-        };
+        return WriteTemplateItemAsync(templateItem).GetAwaiter().GetResult();
     }
 }
