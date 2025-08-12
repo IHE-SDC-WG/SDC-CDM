@@ -407,30 +407,80 @@ PrintFormattedTable(
 
 ## Step 6: Sample Measurements
 
-Display sample measurements to verify the SDC-specific columns are populated correctly.
+Display sample measurements to verify the SDC-specific columns are populated correctly, showing one of each response type first.
 
 #!csharp
 
-// Show sample measurements using utility function
-var sampleData = ExecuteQueryAndCollectData(
-    sdcCdm,
-    "SELECT sdc_question_identifier, sdc_question_text, sdc_response_value, sdc_response_type, sdc_units, sdc_order FROM measurement WHERE sdc_template_instance_guid IS NOT NULL ORDER BY sdc_order LIMIT 10",
-    reader => new object[] {
-        reader.GetString(0),
-        reader.IsDBNull(1) ? "N/A" : reader.GetString(1),
-        reader.IsDBNull(2) ? "N/A" : reader.GetString(2),
-        reader.IsDBNull(3) ? "N/A" : reader.GetString(3),
-        reader.IsDBNull(4) ? "N/A" : reader.GetString(4),
-        reader.IsDBNull(5) ? 0 : reader.GetInt64(5)
+// Show sample measurements with one of each response type first
+var sampleData = new List<object[]>();
+
+// First, get one of each response type
+var availableTypes = new[] { "list_selection", "text", "numeric" };
+foreach (var responseType in availableTypes)
+{
+    var typeData = ExecuteQueryAndCollectData(
+        sdcCdm,
+        $"SELECT sdc_question_identifier, sdc_question_text, sdc_response_value, sdc_response_type, sdc_units, sdc_order FROM measurement WHERE sdc_template_instance_guid IS NOT NULL AND sdc_response_type = '{responseType}' ORDER BY sdc_order LIMIT 1",
+        reader => new object[] {
+            reader.GetString(0),
+            reader.IsDBNull(1) ? "N/A" : reader.GetString(1),
+            reader.IsDBNull(2) ? "N/A" : reader.GetString(2),
+            reader.GetString(3),
+            reader.IsDBNull(4) ? "N/A" : reader.GetString(4),
+            reader.IsDBNull(5) ? 0 : reader.GetInt64(5)
+        }
+    );
+    
+    if (typeData.Count > 0)
+    {
+        sampleData.AddRange(typeData);
     }
-);
+}
+
+// Then fill up to 10 total rows with additional measurements
+if (sampleData.Count < 10)
+{
+    var additionalData = ExecuteQueryAndCollectData(
+        sdcCdm,
+        $"SELECT sdc_question_identifier, sdc_question_text, sdc_response_value, sdc_response_type, sdc_units, sdc_order FROM measurement WHERE sdc_template_instance_guid IS NOT NULL AND (sdc_question_identifier, sdc_response_type) NOT IN ({string.Join(",", sampleData.Select((row, i) => $"('{row[0]}', '{row[3]}')"))}) ORDER BY sdc_order LIMIT {10 - sampleData.Count}",
+        reader => new object[] {
+            reader.GetString(0),
+            reader.IsDBNull(1) ? "N/A" : reader.GetString(1),
+            reader.IsDBNull(2) ? "N/A" : reader.GetString(2),
+            reader.IsDBNull(3) ? "N/A" : reader.GetString(3),
+            reader.IsDBNull(4) ? "N/A" : reader.GetString(4),
+            reader.IsDBNull(5) ? 0 : reader.GetInt64(5)
+        }
+    );
+    
+    sampleData.AddRange(additionalData);
+}
 
 PrintFormattedTable(
-    "Sample Measurements",
+    "Sample Measurements (One of Each Type + Additional)",
     sampleData,
     new string[] { "Question ID", "Question Text", "Response", "Type", "Units", "Order" },
     new int[] { 18, 25, 25, 15, 15, 8 }
 );
+
+// Show summary of response types found
+var responseTypes = sampleData.Select(row => row[3].ToString()).Distinct().ToList();
+Console.WriteLine($"\nResponse types represented: {string.Join(", ", responseTypes)}");
+
+// Check if we have measurements with units
+var measurementsWithUnits = sampleData.Where(row => !string.IsNullOrEmpty(row[4]?.ToString())).ToList();
+if (measurementsWithUnits.Count > 0)
+{
+    Console.WriteLine($"\n✅ Found {measurementsWithUnits.Count} measurements with units:");
+    foreach (var row in measurementsWithUnits)
+    {
+        Console.WriteLine($"  • {row[0]} ({row[3]}): {row[4]}");
+    }
+}
+else
+{
+    Console.WriteLine("\nℹ️  No measurements with units in this sample. This is normal for categorical data.");
+}
 
 #!markdown
 
