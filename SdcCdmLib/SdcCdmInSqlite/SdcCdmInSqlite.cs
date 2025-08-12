@@ -697,13 +697,16 @@ public class SdcCdmInSqlite : ISdcCdm
         cmd.CommandText =
             @"
             INSERT INTO main.sdc_template_instance_ecp 
-            (template_name, template_version, template_instance_guid, person_id, visit_occurrence_id, 
-             provider_id, report_text, report_template_source, report_template_id, report_template_version_id,
-             tumor_site, procedure_type, specimen_laterality)
+            (template_name, template_version, template_lineage, template_base_uri, template_instance_guid, 
+             template_instance_version_guid, template_instance_version_uri, instance_version_date,
+             person_id, visit_occurrence_id, provider_id, report_text, report_template_source, 
+             report_template_id, report_template_version_id, tumor_site, procedure_type, specimen_laterality,
+             created_datetime, updated_datetime)
             VALUES 
-            (@templateName, @templateVersion, @templateInstanceGuid, @personId, @visitOccurrenceId, 
-             @providerId, @reportText, @reportTemplateSource, @reportTemplateId, @reportTemplateVersionId,
-             @tumorSite, @procedureType, @specimenLaterality);
+            (@templateName, @templateVersion, NULL, NULL, @templateInstanceGuid, 
+             NULL, NULL, NULL, @personId, @visitOccurrenceId, @providerId, @reportText, 
+             @reportTemplateSource, @reportTemplateId, @reportTemplateVersionId, @tumorSite, 
+             @procedureType, @specimenLaterality, julianday('now'), julianday('now'));
             SELECT last_insert_rowid();
         ";
 
