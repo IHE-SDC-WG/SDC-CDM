@@ -402,6 +402,7 @@ Display sample measurements to verify the SDC-specific columns are populated cor
 #!sql
 
 #!sql-ecpdb
+-- One of each response type first, then fill up to 10 rows total
 WITH first_of_each AS (
   SELECT sdc_question_identifier,
          sdc_question_text,
@@ -419,25 +420,29 @@ WITH first_of_each AS (
   WHERE rn = 1
 ),
 remaining AS (
-  SELECT sdc_question_identifier,
-         sdc_question_text,
-         sdc_response_value,
-         sdc_response_type,
-         sdc_units,
-         "OBX4" AS OBX4,
-         sdc_order
-  FROM measurement
-  WHERE sdc_template_instance_guid IS NOT NULL
+  SELECT m.sdc_question_identifier,
+         m.sdc_question_text,
+         m.sdc_response_value,
+         m.sdc_response_type,
+         m.sdc_units,
+         m."OBX4" AS OBX4,
+         m.sdc_order
+  FROM measurement m
+  WHERE m.sdc_template_instance_guid IS NOT NULL
+    AND NOT EXISTS (
+      SELECT 1
+      FROM first_of_each f
+      WHERE f.sdc_question_identifier = m.sdc_question_identifier
+        AND f.sdc_response_type = m.sdc_response_type
+    )
 )
-SELECT * FROM (
-  SELECT * FROM first_of_each
+SELECT *
+FROM (
+  SELECT 0 AS grp, * FROM first_of_each
   UNION ALL
-  SELECT * FROM remaining
-  WHERE (sdc_question_identifier, sdc_response_type) NOT IN (
-    SELECT sdc_question_identifier, sdc_response_type FROM first_of_each
-  )
+  SELECT 1 AS grp, * FROM remaining
 )
-ORDER BY sdc_order
+ORDER BY grp, sdc_order
 
 #!markdown
 
