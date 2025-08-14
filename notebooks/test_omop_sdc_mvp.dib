@@ -420,14 +420,15 @@ foreach (var responseType in availableTypes)
 {
     var typeData = ExecuteQueryAndCollectData(
         sdcCdm,
-        $"SELECT sdc_question_identifier, sdc_question_text, sdc_response_value, sdc_response_type, sdc_units, sdc_order FROM measurement WHERE sdc_template_instance_guid IS NOT NULL AND sdc_response_type = '{responseType}' ORDER BY sdc_order LIMIT 1",
+        $"SELECT sdc_question_identifier, sdc_question_text, sdc_response_value, sdc_response_type, sdc_units, \"OBX4\", sdc_order FROM measurement WHERE sdc_template_instance_guid IS NOT NULL AND sdc_response_type = '{responseType}' ORDER BY sdc_order LIMIT 1",
         reader => new object[] {
             reader.GetString(0),
             reader.IsDBNull(1) ? "N/A" : reader.GetString(1),
             reader.IsDBNull(2) ? "N/A" : reader.GetString(2),
             reader.GetString(3),
             reader.IsDBNull(4) ? "N/A" : reader.GetString(4),
-            reader.IsDBNull(5) ? 0 : reader.GetInt64(5)
+            reader.IsDBNull(5) ? "N/A" : reader.GetString(5),
+            reader.IsDBNull(6) ? 0 : reader.GetInt64(6)
         }
     );
     
@@ -442,14 +443,15 @@ if (sampleData.Count < 10)
 {
     var additionalData = ExecuteQueryAndCollectData(
         sdcCdm,
-        $"SELECT sdc_question_identifier, sdc_question_text, sdc_response_value, sdc_response_type, sdc_units, sdc_order FROM measurement WHERE sdc_template_instance_guid IS NOT NULL AND (sdc_question_identifier, sdc_response_type) NOT IN ({string.Join(",", sampleData.Select((row, i) => $"('{row[0]}', '{row[3]}')"))}) ORDER BY sdc_order LIMIT {10 - sampleData.Count}",
+        $"SELECT sdc_question_identifier, sdc_question_text, sdc_response_value, sdc_response_type, sdc_units, \"OBX4\", sdc_order FROM measurement WHERE sdc_template_instance_guid IS NOT NULL AND (sdc_question_identifier, sdc_response_type) NOT IN ({string.Join(",", sampleData.Select((row, i) => $"('{row[0]}', '{row[3]}')"))}) ORDER BY sdc_order LIMIT {10 - sampleData.Count}",
         reader => new object[] {
             reader.GetString(0),
             reader.IsDBNull(1) ? "N/A" : reader.GetString(1),
             reader.IsDBNull(2) ? "N/A" : reader.GetString(2),
             reader.IsDBNull(3) ? "N/A" : reader.GetString(3),
             reader.IsDBNull(4) ? "N/A" : reader.GetString(4),
-            reader.IsDBNull(5) ? 0 : reader.GetInt64(5)
+            reader.IsDBNull(5) ? "N/A" : reader.GetString(5),
+            reader.IsDBNull(6) ? 0 : reader.GetInt64(6)
         }
     );
     
@@ -459,8 +461,8 @@ if (sampleData.Count < 10)
 PrintFormattedTable(
     "Sample Measurements (One of Each Type + Additional)",
     sampleData,
-    new string[] { "Question ID", "Question Text", "Response", "Type", "Units", "Order" },
-    new int[] { 18, 25, 25, 15, 15, 8 }
+    new string[] { "Question ID", "Question Text", "Response", "Type", "Units", "OBX4", "Order" },
+    new int[] { 18, 25, 25, 15, 15, 15, 8 }
 );
 
 // Show summary of response types found
@@ -496,7 +498,7 @@ var complianceData = new List<object[]>();
 // Get one measurement with numeric value and units
 var numericWithUnitsData = ExecuteQueryAndCollectData(
     sdcCdm,
-    "SELECT measurement_id, person_id, measurement_concept_id, measurement_date, measurement_type_concept_id, value_as_number, sdc_response_value, sdc_units FROM measurement WHERE sdc_template_instance_guid IS NOT NULL AND value_as_number IS NOT NULL AND sdc_units IS NOT NULL AND sdc_units != '' ORDER BY sdc_order LIMIT 1",
+    "SELECT measurement_id, person_id, measurement_concept_id, measurement_date, measurement_type_concept_id, value_as_number, sdc_response_value, sdc_units, \"OBX4\" FROM measurement WHERE sdc_template_instance_guid IS NOT NULL AND value_as_number IS NOT NULL AND sdc_units IS NOT NULL AND sdc_units != '' ORDER BY sdc_order LIMIT 1",
     reader => new object[] {
         reader.GetInt64(0),
         reader.GetInt64(1),
@@ -505,7 +507,8 @@ var numericWithUnitsData = ExecuteQueryAndCollectData(
         reader.GetInt64(4),
         reader.IsDBNull(5) ? "N/A" : reader.GetDouble(5).ToString("F2"),
         reader.IsDBNull(6) ? "N/A" : reader.GetString(6),
-        reader.IsDBNull(7) ? "N/A" : reader.GetString(7)
+        reader.IsDBNull(7) ? "N/A" : reader.GetString(7),
+        reader.IsDBNull(8) ? "N/A" : reader.GetString(8)
     }
 );
 
@@ -517,7 +520,7 @@ if (numericWithUnitsData.Count > 0)
 // Get one measurement with just numeric value (no units)
 var numericWithoutUnitsData = ExecuteQueryAndCollectData(
     sdcCdm,
-    "SELECT measurement_id, person_id, measurement_concept_id, measurement_date, measurement_type_concept_id, value_as_number, sdc_response_value, sdc_units FROM measurement WHERE sdc_template_instance_guid IS NOT NULL AND value_as_number IS NOT NULL AND (sdc_units IS NULL OR sdc_units = '') ORDER BY sdc_order LIMIT 1",
+    "SELECT measurement_id, person_id, measurement_concept_id, measurement_date, measurement_type_concept_id, value_as_number, sdc_response_value, sdc_units, \"OBX4\" FROM measurement WHERE sdc_template_instance_guid IS NOT NULL AND value_as_number IS NOT NULL AND (sdc_units IS NULL OR sdc_units = '') ORDER BY sdc_order LIMIT 1",
     reader => new object[] {
         reader.GetInt64(0),
         reader.GetInt64(1),
@@ -526,7 +529,8 @@ var numericWithoutUnitsData = ExecuteQueryAndCollectData(
         reader.GetInt64(4),
         reader.IsDBNull(5) ? "N/A" : reader.GetDouble(5).ToString("F2"),
         reader.IsDBNull(6) ? "N/A" : reader.GetString(6),
-        reader.IsDBNull(7) ? "N/A" : reader.GetString(7)
+        reader.IsDBNull(7) ? "N/A" : reader.GetString(7),
+        reader.IsDBNull(8) ? "N/A" : reader.GetString(8)
     }
 );
 
@@ -538,7 +542,7 @@ if (numericWithoutUnitsData.Count > 0)
 // Get categorical measurements to fill the rest
 var categoricalData = ExecuteQueryAndCollectData(
     sdcCdm,
-    "SELECT measurement_id, person_id, measurement_concept_id, measurement_date, measurement_type_concept_id, value_as_number, sdc_response_value, sdc_units FROM measurement WHERE sdc_template_instance_guid IS NOT NULL AND value_as_number IS NULL ORDER BY sdc_order LIMIT 8",
+    "SELECT measurement_id, person_id, measurement_concept_id, measurement_date, measurement_type_concept_id, value_as_number, sdc_response_value, sdc_units, \"OBX4\" FROM measurement WHERE sdc_template_instance_guid IS NOT NULL AND value_as_number IS NULL ORDER BY sdc_order LIMIT 8",
     reader => new object[] {
         reader.GetInt64(0),
         reader.GetInt64(1),
@@ -547,7 +551,8 @@ var categoricalData = ExecuteQueryAndCollectData(
         reader.GetInt64(4),
         reader.IsDBNull(5) ? "N/A" : reader.GetDouble(5).ToString("F2"),
         reader.IsDBNull(6) ? "N/A" : reader.GetString(6),
-        reader.IsDBNull(7) ? "N/A" : reader.GetString(7)
+        reader.IsDBNull(7) ? "N/A" : reader.GetString(7),
+        reader.IsDBNull(8) ? "N/A" : reader.GetString(8)
     }
 );
 
@@ -556,8 +561,8 @@ complianceData.AddRange(categoricalData);
 PrintFormattedTable(
     "OMOP Compliance Check - Comprehensive Validation",
     complianceData,
-    new string[] { "ID", "Person", "Concept", "Date", "Type", "OMOP Number", "SDC Value", "SDC Units" },
-    new int[] { 4, 8, 8, 12, 6, 15, 15, 15 }
+    new string[] { "ID", "Person", "Concept", "Date", "Type", "OMOP Number", "SDC Value", "SDC Units", "OBX4" },
+    new int[] { 4, 8, 8, 12, 6, 15, 15, 15, 12 }
 );
 
 // Analyze the compliance data to show what's working
@@ -577,7 +582,7 @@ if (numericWithUnits > 0)
     Console.WriteLine($"   - Standard OMOP fields are populated (person_id, measurement_date, etc.)");
     Console.WriteLine($"   - SDC-specific fields are working (sdc_response_value, sdc_units)");
     Console.WriteLine($"   - Units are properly stored for numeric measurements");
-    Console.WriteLine($"   - Data integrity maintained across all field types");
+    Console.WriteLine($"   - Data integrity maintained across all field types, including new OBX4");
 }
 else
 {
@@ -598,22 +603,23 @@ Demonstrate more complex queries that combine standard OMOP fields with SDC-spec
 // Example: Find numeric measurements with their SDC context using utility function
 var numericData = ExecuteQueryAndCollectData(
     sdcCdm,
-    "SELECT m.sdc_question_identifier, m.sdc_question_text, m.value_as_number, m.sdc_units, m.sdc_response_type, ti.template_name FROM measurement m JOIN sdc_template_instance_ecp ti ON m.sdc_template_instance_guid = ti.template_instance_guid WHERE m.sdc_response_type = 'numeric' AND m.value_as_number IS NOT NULL ORDER BY m.sdc_order",
+    "SELECT m.sdc_question_identifier, m.sdc_question_text, m.value_as_number, m.sdc_units, m.sdc_response_type, ti.template_name, m.\"OBX4\" FROM measurement m JOIN sdc_template_instance_ecp ti ON m.sdc_template_instance_guid = ti.template_instance_guid WHERE m.sdc_response_type = 'numeric' AND m.value_as_number IS NOT NULL ORDER BY m.sdc_order",
     reader => new object[] {
         reader.GetString(0),
         reader.IsDBNull(1) ? "N/A" : reader.GetString(1),
         reader.GetDouble(2).ToString("F1"),
         reader.IsDBNull(3) ? "N/A" : reader.GetString(3),
         reader.GetString(4),
-        reader.GetString(5)
+        reader.GetString(5),
+        reader.IsDBNull(6) ? "N/A" : reader.GetString(6)
     }
 );
 
 PrintFormattedTable(
     "Numeric Measurements with SDC Context",
     numericData,
-    new string[] { "Question ID", "Question", "Value", "Units", "Type", "Template" },
-    new int[] { 18, 25, 8, 15, 15, 25 }
+    new string[] { "Question ID", "Question", "Value", "Units", "Type", "Template", "OBX4" },
+    new int[] { 18, 25, 8, 15, 15, 25, 12 }
 );
 
 #!markdown
