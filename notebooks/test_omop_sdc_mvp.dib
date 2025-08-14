@@ -1,6 +1,6 @@
 #!meta
 
-{"kernelInfo":{"defaultKernelName":"csharp","items":[{"name":"csharp","languageName":"C#","aliases":["c#","cs"]},{"name":"fsharp","languageName":"F#","aliases":["f#","fs"]},{"name":"html","languageName":"HTML"},{"name":"http","languageName":"HTTP"},{"name":"javascript","languageName":"JavaScript","aliases":["js"]},{"name":"kql","languageName":"KQL"},{"name":"mermaid","languageName":"Mermaid"},{"name":"pwsh","languageName":"PowerShell","aliases":["powershell"]},{"name":"sql","languageName":"SQL"},{"name":"value"}]}}
+{"kernelInfo":{"defaultKernelName":"csharp","items":[{"name":"csharp","languageName":"C#","aliases":["c#","cs"]},{"name":"fsharp","languageName":"F#","aliases":["f#","fs"]},{"name":"html","languageName":"HTML"},{"name":"http","languageName":"HTTP"},{"name":"javascript","languageName":"JavaScript","aliases":["js"]},{"name":"kql","languageName":"KQL"},{"name":"mermaid","languageName":"Mermaid"},{"name":"pwsh","languageName":"PowerShell","aliases":["powershell"]},{"name":"sql","languageName":"SQL"},{"name":"sql-ecpdb","languageName":"SQLite"},{"name":"value"}]}}
 
 #!markdown
 
@@ -40,6 +40,8 @@ Write-Host "Build completed!" -ForegroundColor Green
 // Reference external libraries and the SDC CDM library assembly
 #r "nuget:Microsoft.Data.Sqlite,9.0.0"
 #r "nuget:Microsoft.Extensions.Logging.Console,9.0.4"
+#r "nuget:Microsoft.DotNet.Interactive.SqlServer,1.0.0-beta.25323.1"
+#r "nuget:Microsoft.DotNet.Interactive.Sqlite,1.0.0-beta.25323.1"
 #r "../SdcCdmLib/SdcCdm/bin/Debug/net8.0/SdcCdm.dll"
 #r "../SdcCdmLib/SdcCdmInSqlite/bin/Debug/net8.0/SdcCdmInSqlite.dll"
 
@@ -335,36 +337,32 @@ foreach (var filePath in hl7Files)
     }
 }
 
+#!csharp
+
+#!connect sqlite --kernel-name ecpdb "Data Source=/Users/work/repos/SDC-CDM/notebooks/test_ecp.db;Cache=Shared"
+
+// Connection established to SQLite database file test_ecp.db as kernel 'ecpdb'.
+
 #!markdown
 
 ## Step 3: Validate Import - Template Instances
 
 Let's verify that the template instance was created correctly in the `sdc_template_instance_ecp` table.
 
-#!csharp
+#!sql
 
-// Query template instances using utility function
-var templateData = ExecuteQueryAndCollectData(
-    sdcCdm,
-    "SELECT sdc_template_instance_ecp_id, template_name, template_version, template_instance_guid, tumor_site, procedure_type, specimen_laterality, created_datetime FROM sdc_template_instance_ecp ORDER BY created_datetime DESC",
-    reader => new object[] {
-        reader.GetInt64(0),
-        reader.GetString(1),
-        reader.GetString(2),
-        reader.GetString(3),
-        reader.IsDBNull(4) ? "N/A" : reader.GetString(4),
-        reader.IsDBNull(5) ? "N/A" : reader.GetString(5),
-        reader.IsDBNull(6) ? "N/A" : reader.GetString(6),
-        reader.GetDateTime(7)
-    }
-);
-
-PrintFormattedTable(
-    "Template Instances",
-    templateData,
-    new string[] { "ID", "Template Name", "Version", "GUID", "Tumor Site", "Procedure", "Laterality", "Created" },
-    new int[] { 3, 25, 25, 25, 15, 15, 15, 20 }
-);
+#!sql-ecpdb
+SELECT
+  sdc_template_instance_ecp_id AS id,
+  template_name,
+  template_version,
+  template_instance_guid AS guid,
+  COALESCE(tumor_site, 'N/A') AS tumor_site,
+  COALESCE(procedure_type, 'N/A') AS procedure,
+  COALESCE(specimen_laterality, 'N/A') AS laterality,
+  created_datetime AS created
+FROM sdc_template_instance_ecp
+ORDER BY created_datetime DESC;
 
 #!markdown
 
@@ -372,11 +370,12 @@ PrintFormattedTable(
 
 Check how many ECP measurements were imported into the extended `measurement` table.
 
-#!csharp
+#!sql
 
-// Get measurement count using utility function
-var measurementCount = GetSimpleCount(sdcCdm, "SELECT COUNT(*) as measurement_count FROM measurement WHERE sdc_template_instance_guid IS NOT NULL");
-Console.WriteLine($"\nTotal ECP measurements imported: {measurementCount}");
+#!sql-ecpdb
+SELECT COUNT(*) AS measurement_count
+FROM measurement
+WHERE sdc_template_instance_guid IS NOT NULL;
 
 #!markdown
 
@@ -384,24 +383,15 @@ Console.WriteLine($"\nTotal ECP measurements imported: {measurementCount}");
 
 Analyze the distribution of measurements by response type (numeric, text, list_selection).
 
-#!csharp
+#!sql
 
-// Get measurements by response type using utility function
-var responseData = ExecuteQueryAndCollectData(
-    sdcCdm,
-    "SELECT sdc_response_type, COUNT(*) as count FROM measurement WHERE sdc_template_instance_guid IS NOT NULL GROUP BY sdc_response_type ORDER BY count DESC",
-    reader => new object[] {
-        reader.GetString(0),
-        reader.GetInt64(1)
-    }
-);
-
-PrintFormattedTable(
-    "Measurements by Response Type",
-    responseData,
-    new string[] { "Response Type", "Count" },
-    new int[] { 15, 8 }
-);
+#!sql-ecpdb
+SELECT sdc_response_type AS response_type,
+       COUNT(*) AS count
+FROM measurement
+WHERE sdc_template_instance_guid IS NOT NULL
+GROUP BY sdc_response_type
+ORDER BY count DESC;
 
 #!markdown
 
@@ -409,80 +399,45 @@ PrintFormattedTable(
 
 Display sample measurements to verify the SDC-specific columns are populated correctly, showing one of each response type first.
 
-#!csharp
+#!sql
 
-// Show sample measurements with one of each response type first
-var sampleData = new List<object[]>();
-
-// First, get one of each response type
-var availableTypes = new[] { "list_selection", "text", "numeric" };
-foreach (var responseType in availableTypes)
-{
-    var typeData = ExecuteQueryAndCollectData(
-        sdcCdm,
-        $"SELECT sdc_question_identifier, sdc_question_text, sdc_response_value, sdc_response_type, sdc_units, \"OBX4\", sdc_order FROM measurement WHERE sdc_template_instance_guid IS NOT NULL AND sdc_response_type = '{responseType}' ORDER BY sdc_order LIMIT 1",
-        reader => new object[] {
-            reader.GetString(0),
-            reader.IsDBNull(1) ? "N/A" : reader.GetString(1),
-            reader.IsDBNull(2) ? "N/A" : reader.GetString(2),
-            reader.GetString(3),
-            reader.IsDBNull(4) ? "N/A" : reader.GetString(4),
-            reader.IsDBNull(5) ? "N/A" : reader.GetString(5),
-            reader.IsDBNull(6) ? 0 : reader.GetInt64(6)
-        }
-    );
-    
-    if (typeData.Count > 0)
-    {
-        sampleData.AddRange(typeData);
-    }
-}
-
-// Then fill up to 10 total rows with additional measurements
-if (sampleData.Count < 10)
-{
-    var additionalData = ExecuteQueryAndCollectData(
-        sdcCdm,
-        $"SELECT sdc_question_identifier, sdc_question_text, sdc_response_value, sdc_response_type, sdc_units, \"OBX4\", sdc_order FROM measurement WHERE sdc_template_instance_guid IS NOT NULL AND (sdc_question_identifier, sdc_response_type) NOT IN ({string.Join(",", sampleData.Select((row, i) => $"('{row[0]}', '{row[3]}')"))}) ORDER BY sdc_order LIMIT {10 - sampleData.Count}",
-        reader => new object[] {
-            reader.GetString(0),
-            reader.IsDBNull(1) ? "N/A" : reader.GetString(1),
-            reader.IsDBNull(2) ? "N/A" : reader.GetString(2),
-            reader.IsDBNull(3) ? "N/A" : reader.GetString(3),
-            reader.IsDBNull(4) ? "N/A" : reader.GetString(4),
-            reader.IsDBNull(5) ? "N/A" : reader.GetString(5),
-            reader.IsDBNull(6) ? 0 : reader.GetInt64(6)
-        }
-    );
-    
-    sampleData.AddRange(additionalData);
-}
-
-PrintFormattedTable(
-    "Sample Measurements (One of Each Type + Additional)",
-    sampleData,
-    new string[] { "Question ID", "Question Text", "Response", "Type", "Units", "OBX4", "Order" },
-    new int[] { 18, 25, 25, 15, 15, 15, 8 }
-);
-
-// Show summary of response types found
-var responseTypes = sampleData.Select(row => row[3].ToString()).Distinct().ToList();
-Console.WriteLine($"\nResponse types represented: {string.Join(", ", responseTypes)}");
-
-// Check if we have measurements with units
-var measurementsWithUnits = sampleData.Where(row => !string.IsNullOrEmpty(row[4]?.ToString())).ToList();
-if (measurementsWithUnits.Count > 0)
-{
-    Console.WriteLine($"\n✅ Found {measurementsWithUnits.Count} measurements with units:");
-    foreach (var row in measurementsWithUnits)
-    {
-        Console.WriteLine($"  • {row[0]} ({row[3]}): {row[4]}");
-    }
-}
-else
-{
-    Console.WriteLine("\nℹ️  No measurements with units in this sample. This is normal for categorical data.");
-}
+#!sql-ecpdb
+WITH first_of_each AS (
+  SELECT sdc_question_identifier,
+         sdc_question_text,
+         sdc_response_value,
+         sdc_response_type,
+         sdc_units,
+         "OBX4" AS OBX4,
+         sdc_order
+  FROM (
+    SELECT m.*, ROW_NUMBER() OVER (PARTITION BY sdc_response_type ORDER BY sdc_order) AS rn
+    FROM measurement m
+    WHERE m.sdc_template_instance_guid IS NOT NULL
+      AND m.sdc_response_type IN ('list_selection','text','numeric')
+  ) t
+  WHERE rn = 1
+),
+remaining AS (
+  SELECT sdc_question_identifier,
+         sdc_question_text,
+         sdc_response_value,
+         sdc_response_type,
+         sdc_units,
+         "OBX4" AS OBX4,
+         sdc_order
+  FROM measurement
+  WHERE sdc_template_instance_guid IS NOT NULL
+)
+SELECT * FROM (
+  SELECT * FROM first_of_each
+  UNION ALL
+  SELECT * FROM remaining
+  WHERE (sdc_question_identifier, sdc_response_type) NOT IN (
+    SELECT sdc_question_identifier, sdc_response_type FROM first_of_each
+  )
+)
+ORDER BY sdc_order
 
 #!markdown
 
@@ -490,107 +445,73 @@ else
 
 Verify that standard OMOP fields are properly populated alongside the SDC-specific data, ensuring every column shows at least one example with actual values.
 
-#!csharp
+#!sql
 
-// First, get a sample that ensures we see examples of all column types with actual values
-var complianceData = new List<object[]>();
+#!sql-ecpdb
+-- Numeric with units
+WITH numeric_with_units AS (
+  SELECT measurement_id AS id,
+         person_id AS person,
+         measurement_concept_id AS concept,
+         DATE(measurement_date) AS date,
+         measurement_type_concept_id AS type,
+         value_as_number AS omop_number,
+         sdc_response_value AS sdc_value,
+         sdc_units AS sdc_units,
+         COALESCE("OBX4", 'N/A') AS OBX4,
+         sdc_order
+  FROM measurement
+  WHERE sdc_template_instance_guid IS NOT NULL
+    AND value_as_number IS NOT NULL
+    AND sdc_units IS NOT NULL AND sdc_units != ''
+  ORDER BY sdc_order
+  LIMIT 1
+),
+-- Numeric without units
+numeric_without_units AS (
+  SELECT measurement_id AS id,
+         person_id AS person,
+         measurement_concept_id AS concept,
+         DATE(measurement_date) AS date,
+         measurement_type_concept_id AS type,
+         value_as_number AS omop_number,
+         sdc_response_value AS sdc_value,
+         sdc_units AS sdc_units,
+         COALESCE("OBX4", 'N/A') AS OBX4,
+         sdc_order
+  FROM measurement
+  WHERE sdc_template_instance_guid IS NOT NULL
+    AND value_as_number IS NOT NULL
+    AND (sdc_units IS NULL OR sdc_units = '')
+  ORDER BY sdc_order
+  LIMIT 1
+),
 
-// Get one measurement with numeric value and units
-var numericWithUnitsData = ExecuteQueryAndCollectData(
-    sdcCdm,
-    "SELECT measurement_id, person_id, measurement_concept_id, measurement_date, measurement_type_concept_id, value_as_number, sdc_response_value, sdc_units, \"OBX4\" FROM measurement WHERE sdc_template_instance_guid IS NOT NULL AND value_as_number IS NOT NULL AND sdc_units IS NOT NULL AND sdc_units != '' ORDER BY sdc_order LIMIT 1",
-    reader => new object[] {
-        reader.GetInt64(0),
-        reader.GetInt64(1),
-        reader.GetInt64(2),
-        reader.GetDateTime(3).ToString("yyyy-MM-dd"),
-        reader.GetInt64(4),
-        reader.IsDBNull(5) ? "N/A" : reader.GetDouble(5).ToString("F2"),
-        reader.IsDBNull(6) ? "N/A" : reader.GetString(6),
-        reader.IsDBNull(7) ? "N/A" : reader.GetString(7),
-        reader.IsDBNull(8) ? "N/A" : reader.GetString(8)
-    }
-);
-
-if (numericWithUnitsData.Count > 0)
-{
-    complianceData.AddRange(numericWithUnitsData);
-}
-
-// Get one measurement with just numeric value (no units)
-var numericWithoutUnitsData = ExecuteQueryAndCollectData(
-    sdcCdm,
-    "SELECT measurement_id, person_id, measurement_concept_id, measurement_date, measurement_type_concept_id, value_as_number, sdc_response_value, sdc_units, \"OBX4\" FROM measurement WHERE sdc_template_instance_guid IS NOT NULL AND value_as_number IS NOT NULL AND (sdc_units IS NULL OR sdc_units = '') ORDER BY sdc_order LIMIT 1",
-    reader => new object[] {
-        reader.GetInt64(0),
-        reader.GetInt64(1),
-        reader.GetInt64(2),
-        reader.GetDateTime(3).ToString("yyyy-MM-dd"),
-        reader.GetInt64(4),
-        reader.IsDBNull(5) ? "N/A" : reader.GetDouble(5).ToString("F2"),
-        reader.IsDBNull(6) ? "N/A" : reader.GetString(6),
-        reader.IsDBNull(7) ? "N/A" : reader.GetString(7),
-        reader.IsDBNull(8) ? "N/A" : reader.GetString(8)
-    }
-);
-
-if (numericWithoutUnitsData.Count > 0)
-{
-    complianceData.AddRange(numericWithoutUnitsData);
-}
-
-// Get categorical measurements to fill the rest
-var categoricalData = ExecuteQueryAndCollectData(
-    sdcCdm,
-    "SELECT measurement_id, person_id, measurement_concept_id, measurement_date, measurement_type_concept_id, value_as_number, sdc_response_value, sdc_units, \"OBX4\" FROM measurement WHERE sdc_template_instance_guid IS NOT NULL AND value_as_number IS NULL ORDER BY sdc_order LIMIT 8",
-    reader => new object[] {
-        reader.GetInt64(0),
-        reader.GetInt64(1),
-        reader.GetInt64(2),
-        reader.GetDateTime(3).ToString("yyyy-MM-dd"),
-        reader.GetInt64(4),
-        reader.IsDBNull(5) ? "N/A" : reader.GetDouble(5).ToString("F2"),
-        reader.IsDBNull(6) ? "N/A" : reader.GetString(6),
-        reader.IsDBNull(7) ? "N/A" : reader.GetString(7),
-        reader.IsDBNull(8) ? "N/A" : reader.GetString(8)
-    }
-);
-
-complianceData.AddRange(categoricalData);
-
-PrintFormattedTable(
-    "OMOP Compliance Check - Comprehensive Validation",
-    complianceData,
-    new string[] { "ID", "Person", "Concept", "Date", "Type", "OMOP Number", "SDC Value", "SDC Units", "OBX4" },
-    new int[] { 4, 8, 8, 12, 6, 15, 15, 15, 12 }
-);
-
-// Analyze the compliance data to show what's working
-var numericWithUnits = complianceData.Count(row => row[5].ToString() != "N/A" && row[7].ToString() != "N/A");
-var numericWithoutUnits = complianceData.Count(row => row[5].ToString() != "N/A" && row[7].ToString() == "N/A");
-var categoricalOnly = complianceData.Count(row => row[5].ToString() == "N/A");
-
-Console.WriteLine($"\n📊 OMOP Compliance Analysis:");
-Console.WriteLine($"  • Total measurements shown: {complianceData.Count}");
-Console.WriteLine($"  • Numeric measurements with units: {numericWithUnits}");
-Console.WriteLine($"  • Numeric measurements without units: {numericWithoutUnits}");
-Console.WriteLine($"  • Categorical measurements: {categoricalOnly}");
-
-if (numericWithUnits > 0)
-{
-    Console.WriteLine($"\n✅ OMOP Compliance: PASSED");
-    Console.WriteLine($"   - Standard OMOP fields are populated (person_id, measurement_date, etc.)");
-    Console.WriteLine($"   - SDC-specific fields are working (sdc_response_value, sdc_units)");
-    Console.WriteLine($"   - Units are properly stored for numeric measurements");
-    Console.WriteLine($"   - Data integrity maintained across all field types, including new OBX4");
-}
-else
-{
-    Console.WriteLine($"\n⚠️  OMOP Compliance: PARTIAL");
-    Console.WriteLine($"   - Standard OMOP fields are working");
-    Console.WriteLine($"   - SDC fields are working");
-    Console.WriteLine($"   - No numeric measurements with units found in this sample");
-}
+categorical AS (
+  SELECT measurement_id AS id,
+         person_id AS person,
+         measurement_concept_id AS concept,
+         DATE(measurement_date) AS date,
+         measurement_type_concept_id AS type,
+         value_as_number AS omop_number,
+         sdc_response_value AS sdc_value,
+         sdc_units AS sdc_units,
+         COALESCE("OBX4", 'N/A') AS OBX4,
+         sdc_order
+  FROM measurement
+  WHERE sdc_template_instance_guid IS NOT NULL
+    AND value_as_number IS NULL
+  ORDER BY sdc_order
+)
+SELECT id, person, concept, date, type, omop_number, sdc_value, sdc_units, OBX4
+FROM (
+  SELECT * FROM numeric_with_units
+  UNION ALL
+  SELECT * FROM numeric_without_units
+  UNION ALL
+  SELECT * FROM categorical
+)
+ORDER BY sdc_order;
 
 #!markdown
 
@@ -598,29 +519,22 @@ else
 
 Demonstrate more complex queries that combine standard OMOP fields with SDC-specific data.
 
-#!csharp
+#!sql
 
-// Example: Find numeric measurements with their SDC context using utility function
-var numericData = ExecuteQueryAndCollectData(
-    sdcCdm,
-    "SELECT m.sdc_question_identifier, m.sdc_question_text, m.value_as_number, m.sdc_units, m.sdc_response_type, ti.template_name, m.\"OBX4\" FROM measurement m JOIN sdc_template_instance_ecp ti ON m.sdc_template_instance_guid = ti.template_instance_guid WHERE m.sdc_response_type = 'numeric' AND m.value_as_number IS NOT NULL ORDER BY m.sdc_order",
-    reader => new object[] {
-        reader.GetString(0),
-        reader.IsDBNull(1) ? "N/A" : reader.GetString(1),
-        reader.GetDouble(2).ToString("F1"),
-        reader.IsDBNull(3) ? "N/A" : reader.GetString(3),
-        reader.GetString(4),
-        reader.GetString(5),
-        reader.IsDBNull(6) ? "N/A" : reader.GetString(6)
-    }
-);
-
-PrintFormattedTable(
-    "Numeric Measurements with SDC Context",
-    numericData,
-    new string[] { "Question ID", "Question", "Value", "Units", "Type", "Template", "OBX4" },
-    new int[] { 18, 25, 8, 15, 15, 25, 12 }
-);
+#!sql-ecpdb
+SELECT m.sdc_question_identifier AS question_id,
+       COALESCE(m.sdc_question_text, 'N/A') AS question_text,
+       printf('%.1f', m.value_as_number) AS value,
+       COALESCE(m.sdc_units, 'N/A') AS units,
+       m.sdc_response_type AS response_type,
+       ti.template_name AS template,
+       COALESCE(m."OBX4", 'N/A') AS OBX4
+FROM measurement m
+JOIN sdc_template_instance_ecp ti
+  ON m.sdc_template_instance_guid = ti.template_instance_guid
+WHERE m.sdc_response_type = 'numeric'
+  AND m.value_as_number IS NOT NULL
+ORDER BY m.sdc_order;
 
 #!markdown
 
@@ -628,30 +542,18 @@ PrintFormattedTable(
 
 Analyze the template metadata stored in the `sdc_template_instance_ecp` table.
 
-#!csharp
+#!sql
 
-// Get template metadata using utility function
-var metadataData = ExecuteQueryAndCollectData(
-    sdcCdm,
-    "SELECT template_name, template_version, report_template_source, report_template_id, report_template_version_id, tumor_site, procedure_type, specimen_laterality FROM sdc_template_instance_ecp",
-    reader => new object[] {
-        reader.GetString(0),
-        reader.GetString(1),
-        reader.IsDBNull(2) ? "N/A" : reader.GetString(2),
-        reader.IsDBNull(3) ? "N/A" : reader.GetString(3),
-        reader.IsDBNull(4) ? "N/A" : reader.GetString(4),
-        reader.IsDBNull(5) ? "N/A" : reader.GetString(5),
-        reader.IsDBNull(6) ? "N/A" : reader.GetString(6),
-        reader.IsDBNull(7) ? "N/A" : reader.GetString(7)
-    }
-);
-
-PrintFormattedTable(
-    "Template Metadata",
-    metadataData,
-    new string[] { "Template Name", "Version", "Source", "ID", "Version ID", "Tumor Site", "Procedure", "Laterality" },
-    new int[] { 25, 25, 15, 25, 25, 15, 15, 15 }
-);
+#!sql-ecpdb
+SELECT template_name,
+       template_version,
+       COALESCE(report_template_source, 'N/A') AS source,
+       COALESCE(report_template_id, 'N/A') AS id,
+       COALESCE(report_template_version_id, 'N/A') AS version_id,
+       COALESCE(tumor_site, 'N/A') AS tumor_site,
+       COALESCE(procedure_type, 'N/A') AS procedure,
+       COALESCE(specimen_laterality, 'N/A') AS laterality
+FROM sdc_template_instance_ecp;
 
 #!markdown
 
@@ -659,38 +561,16 @@ PrintFormattedTable(
 
 Provide a summary of the test results and validate that the MVP is working correctly.
 
-#!csharp
+#!sql
 
-// Final summary using utility functions
-var templateCount = GetSimpleCount(sdcCdm, "SELECT COUNT(*) FROM sdc_template_instance_ecp");
-var measurementCount = GetSimpleCount(sdcCdm, "SELECT COUNT(*) FROM measurement WHERE sdc_template_instance_guid IS NOT NULL");
-var personCount = GetSimpleCount(sdcCdm, "SELECT COUNT(*) FROM person");
-var conceptCount = GetSimpleCount(sdcCdm, "SELECT COUNT(*) FROM concept");
-
-var summaryData = new Dictionary<string, object> {
-    { "Template Instances", templateCount },
-    { "ECP Measurements", measurementCount },
-    { "Person Records", personCount },
-    { "Concept Records", conceptCount },
-    { "Database File", Path.GetFileName(dbPath) }
-};
-
-PrintSummaryBox("OMOP SDC MVP TEST SUMMARY", summaryData);
-
-if (templateCount > 0 && measurementCount > 0 && personCount > 0)
-{
-    Console.WriteLine(" MVP TEST PASSED! All components working correctly.");
-    Console.WriteLine(" The OMOP SDC MVP successfully:");
-    Console.WriteLine("   • Extended the measurement table with SDC-specific columns");
-    Console.WriteLine("   • Created the sdc_template_instance_ecp table");
-    Console.WriteLine("   • Imported NAACCR V2 CPR message data");
-    Console.WriteLine("   • Maintained OMOP CDM v5.4 compliance");
-    Console.WriteLine("   • Preserved data integrity and relationships");
-}
-else
-{
-    Console.WriteLine(" MVP TEST FAILED! Some components are missing.");
-}
+#!sql-ecpdb
+SELECT 'Template Instances' AS metric, COUNT(*) AS value FROM sdc_template_instance_ecp
+UNION ALL
+SELECT 'ECP Measurements', COUNT(*) FROM measurement WHERE sdc_template_instance_guid IS NOT NULL
+UNION ALL
+SELECT 'Person Records', COUNT(*) FROM person
+UNION ALL
+SELECT 'Concept Records', COUNT(*) FROM concept;
 
 #!markdown
 
