@@ -12,6 +12,7 @@ public static class NAACCRVolVImporter
 
     public static void ImportNaaccrVolV(ISdcCdm sdcCdm, string hl7_message)
     {
+        Console.WriteLine("Starting NAACCR Vol V import...");
         string get_field(string[] fields, int index)
         {
             // If fields[0] == "MSH", use index-1, else index.
@@ -30,10 +31,12 @@ public static class NAACCRVolVImporter
         {
             foreach (var segment in segments)
             {
-                var fields = segment.Split('|');
-                if (fields[0] == segment_name)
+                var seg = segment.Trim();
+                var fields = seg.Split('|');
+                var name = fields.Length > 0 ? fields[0].TrimStart('\uFEFF') : string.Empty;
+                if (name == segment_name)
                 {
-                    return segment;
+                    return seg;
                 }
             }
             return null;
@@ -44,17 +47,22 @@ public static class NAACCRVolVImporter
             var found_segments = new List<string>();
             foreach (var segment in segments)
             {
-                var fields = segment.Split('|');
-                if (fields[0] == segment_name)
+                var seg = segment.Trim();
+                var fields = seg.Split('|');
+                var name = fields.Length > 0 ? fields[0].TrimStart('\uFEFF') : string.Empty;
+                if (name == segment_name)
                 {
-                    found_segments.Add(segment);
+                    found_segments.Add(seg);
                 }
             }
             return found_segments;
         }
 
-        // Split the HL7 message into lines
-        var lines = hl7_message.Split(new char[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
+        // Split the HL7 message into lines (HL7 commonly uses CR "\r", sometimes CRLF)
+        var lines = hl7_message.Split(
+            new char[] { '\r', '\n' },
+            StringSplitOptions.RemoveEmptyEntries
+        );
 
         // MSH segment
         var msh_segment = get_first_segment(lines, "MSH");
@@ -95,12 +103,10 @@ public static class NAACCRVolVImporter
         }
         var obr_segment_fields = obr_segment.Split('|');
         var report_type = get_field(obr_segment_fields, 4);
-        var valid_report_types = new[]
-        {
-            "60568-3^SYNOPTIC REPORT^LN",
-            "35265-8^PATH REPORT ADDENDUM^LN",
-        };
-        if (!valid_report_types.Contains(report_type))
+        // Be tolerant of case and formatting differences by matching on the LOINC code (first component)
+        var report_type_code = (report_type ?? string.Empty).Split('^')[0];
+        var valid_report_type_codes = new[] { "60568-3", "35265-8" };
+        if (!valid_report_type_codes.Contains(report_type_code))
         {
             ErrorCallback($"Unknown report type: {report_type}");
         }
@@ -360,7 +366,16 @@ public static class NAACCRVolVImporter
                     response_type = "list_selection";
                     break;
                 case "ST":
-                    response_type = "text";
+                    // Some feeds encode numeric values in ST; treat as numeric when parsable
+                    if (double.TryParse(obx_value, out double num_val_st))
+                    {
+                        response_type = "numeric";
+                        numeric_value = num_val_st;
+                    }
+                    else
+                    {
+                        response_type = "text";
+                    }
                     break;
                 default:
                     response_type = "text";
@@ -391,7 +406,7 @@ public static class NAACCRVolVImporter
             );
         }
 
-        Debug.Print(
+        Console.WriteLine(
             $"Successfully imported NAACCR V2 message with {obx_segments.Count - 3} ECP data points"
         );
     }

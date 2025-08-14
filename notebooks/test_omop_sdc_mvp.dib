@@ -88,36 +88,130 @@ Import the sample Adrenal gland and additional pathology reports to test the ECP
 
 #!csharp
 
+using Microsoft.Data.Sqlite;
+
 // Import specific HL7 files
 var hl7Files = new[] {
     "../sample_data/naaccr_v2/obx-Adrenal.hl7",
-    "../sample_data/naaccr_v2/24-11-000312-2.txt.hl7"
+    "../sample_data/naaccr_v2/24-11-000312-2.txt.hl7",
+    "../sample_data/naaccr_v2/CDCECC/117.1000043/3716960.hl7"
 };
+
+// Toggle to suppress verbose importer logs (prevents output truncation)
+bool quietImporter = false;
+
+string absDbPath = Path.GetFullPath(dbPath);
+
+bool TableExists(SqliteConnection c, string name)
+{
+    using var cmd = c.CreateCommand();
+    cmd.CommandText = "SELECT 1 FROM sqlite_master WHERE type='table' AND name=$name LIMIT 1";
+    cmd.Parameters.AddWithValue("$name", name);
+    var val = cmd.ExecuteScalar();
+    return val != null;
+}
+
+int? GetCount(SqliteConnection c, string table)
+{
+    if (!TableExists(c, table)) return null;
+    using var cmd = c.CreateCommand();
+    cmd.CommandText = $"SELECT COUNT(*) FROM {table}";
+    return Convert.ToInt32(cmd.ExecuteScalar());
+}
+
+record ImportSummary(string File, int Size, bool Success, int? RowsAdded, string? Note, string? Error);
+var results = new List<ImportSummary>();
 
 foreach (var filePath in hl7Files)
 {
     if (!File.Exists(filePath))
     {
         Console.WriteLine($"Sample data file not found: {filePath}");
+        Console.Out.Flush();
+        results.Add(new ImportSummary(Path.GetFileName(filePath), 0, false, null, null, "File not found"));
         continue;
     }
 
+    SqliteConnection? conn = null;
+    string fileName = Path.GetFileName(filePath);
+    string? note = null;
+    int size = 0;
     try
     {
-        Console.WriteLine($"\nImporting: {Path.GetFileName(filePath)}");
+        Console.WriteLine($"==== BEGIN Import: {fileName} ====");
+        Console.Out.Flush();
+
         var hl7Message = File.ReadAllText(filePath);
-        Console.WriteLine($"File size: {hl7Message.Length} characters");
-        
-        // Import the NAACCR V2 message
-        NAACCRVolVImporter.ImportNaaccrVolV(sdcCdm, hl7Message);
-        Console.WriteLine("Import completed successfully!");
+        size = hl7Message.Length;
+        Console.WriteLine($"File size: {size} characters");
+        Console.Out.Flush();
+
+        conn = new SqliteConnection($"Data Source={absDbPath};Cache=Shared");
+        conn.Open();
+        var beforeCount = GetCount(conn, "measurement");
+
+        var originalOut = Console.Out;
+        if (quietImporter)
+        {
+            Console.SetOut(TextWriter.Null);
+        }
+        try
+        {
+            // Import the NAACCR V2 message (this emits its own logs)
+            NAACCRVolVImporter.ImportNaaccrVolV(sdcCdm, hl7Message);
+        }
+        finally
+        {
+            if (quietImporter)
+            {
+                Console.SetOut(originalOut);
+            }
+        }
+
+        var afterCount = GetCount(conn, "measurement");
+        if (beforeCount.HasValue && afterCount.HasValue)
+        {
+            var rowsAdded = afterCount.Value - beforeCount.Value;
+            Console.WriteLine($"Import completed successfully! Rows added: {rowsAdded}");
+            results.Add(new ImportSummary(fileName, size, true, rowsAdded, null, null));
+        }
+        else if (afterCount.HasValue)
+        {
+            Console.WriteLine($"Import completed successfully! measurement rows: {afterCount.Value}");
+            note = "Before-count unavailable (table not present before import)";
+            results.Add(new ImportSummary(fileName, size, true, null, note, null));
+        }
+        else
+        {
+            Console.WriteLine("Import completed. (measurement table not present to compute row counts)");
+            note = "measurement table missing";
+            results.Add(new ImportSummary(fileName, size, true, null, note, null));
+        }
     }
     catch (Exception ex)
     {
         Console.WriteLine($"Error during import: {ex.Message}");
         Console.WriteLine($"Stack trace: {ex.StackTrace}");
+        results.Add(new ImportSummary(fileName, size, false, null, note, ex.Message));
+    }
+    finally
+    {
+        try { conn?.Dispose(); } catch { }
+        Console.WriteLine($"==== END Import: {fileName} ====\n");
+        Console.Out.Flush();
     }
 }
+
+// Print a compact summary so results are visible even if the top is truncated
+Console.WriteLine("==== Import Summary ====");
+foreach (var r in results)
+{
+    var status = r.Success ? "OK" : "FAIL";
+    var rows = r.RowsAdded.HasValue ? r.RowsAdded.Value.ToString() : (r.Success ? (r.Note ?? "n/a") : "n/a");
+    var extra = r.Error != null ? $" | error: {r.Error}" : (r.Note != null ? $" | note: {r.Note}" : string.Empty);
+    Console.WriteLine($"- {r.File} | size: {r.Size} | status: {status} | rows: {rows}{extra}");
+}
+Console.Out.Flush();
 
 #!csharp
 
@@ -131,9 +225,8 @@ foreach (var filePath in hl7Files)
 
 Let's verify that the template instance was created correctly in the `sdc_template_instance_ecp` table.
 
-#!sql
-
 #!sql-ecpdb
+
 SELECT
   sdc_template_instance_ecp_id AS id,
   template_name,
@@ -142,6 +235,7 @@ SELECT
   COALESCE(tumor_site, 'N/A') AS tumor_site,
   COALESCE(procedure_type, 'N/A') AS procedure,
   COALESCE(specimen_laterality, 'N/A') AS laterality,
+  COALESCE(report_template_source, 'N/A') AS source,
   created_datetime AS created
 FROM sdc_template_instance_ecp
 ORDER BY created_datetime DESC;
@@ -152,9 +246,8 @@ ORDER BY created_datetime DESC;
 
 Check how many ECP measurements were imported into the extended `measurement` table.
 
-#!sql
-
 #!sql-ecpdb
+
 SELECT COUNT(*) AS measurement_count
 FROM measurement
 WHERE sdc_template_instance_guid IS NOT NULL;
@@ -165,9 +258,8 @@ WHERE sdc_template_instance_guid IS NOT NULL;
 
 Analyze the distribution of measurements by response type (numeric, text, list_selection).
 
-#!sql
-
 #!sql-ecpdb
+
 SELECT sdc_response_type AS response_type,
        COUNT(*) AS count
 FROM measurement
@@ -181,50 +273,93 @@ ORDER BY count DESC;
 
 Display sample measurements to verify the SDC-specific columns are populated correctly, showing one of each response type first.
 
-#!sql
-
 #!sql-ecpdb
--- One of each response type first, then fill up to 10 rows total
-WITH first_of_each AS (
-  SELECT sdc_question_identifier,
-         sdc_question_text,
-         sdc_response_value,
-         sdc_response_type,
-         sdc_units,
-         "OBX4" AS OBX4,
-         sdc_order
+
+-- Ensure first 10 rows include: (a) one per response type present; (b) one per imported file (template instance)
+WITH base AS (
+  SELECT m.*, ti.template_name, ti.template_version
+  FROM measurement m
+  LEFT JOIN sdc_template_instance_ecp ti
+    ON ti.template_instance_guid = m.sdc_template_instance_guid
+  WHERE m.sdc_template_instance_guid IS NOT NULL
+),
+-- First row for each response type (numeric, text, list_selection) by sdc_order
+first_per_type AS (
+  SELECT measurement_id, sdc_order, 0 AS subgrp
   FROM (
-    SELECT m.*, ROW_NUMBER() OVER (PARTITION BY sdc_response_type ORDER BY sdc_order) AS rn
-    FROM measurement m
-    WHERE m.sdc_template_instance_guid IS NOT NULL
-      AND m.sdc_response_type IN ('list_selection','text','numeric')
+    SELECT measurement_id,
+           sdc_order,
+           ROW_NUMBER() OVER (PARTITION BY sdc_response_type ORDER BY sdc_order) AS rn
+    FROM base
+    WHERE sdc_response_type IN ('list_selection','text','numeric')
   ) t
   WHERE rn = 1
 ),
-remaining AS (
-  SELECT m.sdc_question_identifier,
-         m.sdc_question_text,
-         m.sdc_response_value,
-         m.sdc_response_type,
-         m.sdc_units,
-         m."OBX4" AS OBX4,
-         m.sdc_order
-  FROM measurement m
-  WHERE m.sdc_template_instance_guid IS NOT NULL
-    AND NOT EXISTS (
-      SELECT 1
-      FROM first_of_each f
-      WHERE f.sdc_question_identifier = m.sdc_question_identifier
-        AND f.sdc_response_type = m.sdc_response_type
-    )
-)
-SELECT *
-FROM (
-  SELECT 0 AS grp, * FROM first_of_each
+-- First row for each imported file (template instance) by sdc_order
+first_per_file AS (
+  SELECT measurement_id, sdc_order, 1 AS subgrp
+  FROM (
+    SELECT measurement_id,
+           sdc_order,
+           ROW_NUMBER() OVER (PARTITION BY sdc_template_instance_guid ORDER BY sdc_order) AS rn
+    FROM base
+  ) t
+  WHERE rn = 1
+),
+-- Combine and de-duplicate priority picks (types first, then files), cap to 10
+priority_union AS (
+  SELECT measurement_id, sdc_order, subgrp FROM first_per_type
+  UNION
+  SELECT measurement_id, sdc_order, subgrp FROM first_per_file
+),
+priority_limited AS (
+  SELECT measurement_id, sdc_order, subgrp
+  FROM priority_union
+  ORDER BY subgrp, sdc_order
+  LIMIT 10
+),
+-- Compute remaining slots to fill up to 10
+slots AS (
+  SELECT CASE WHEN 10 - COUNT(*) < 0 THEN 0 ELSE 10 - COUNT(*) END AS remaining
+  FROM priority_limited
+),
+-- Fill any leftover slots (by sdc_order) excluding already chosen priority rows
+fill AS (
+  SELECT b.measurement_id, b.sdc_order, 2 AS subgrp
+  FROM base b, slots
+  WHERE b.measurement_id NOT IN (SELECT measurement_id FROM priority_limited)
+  ORDER BY b.sdc_order
+  LIMIT (SELECT remaining FROM slots)
+),
+-- Final first-10 set
+first_ten AS (
+  SELECT measurement_id, 0 AS grp, sdc_order FROM priority_limited
   UNION ALL
-  SELECT 1 AS grp, * FROM remaining
+  SELECT measurement_id, 0 AS grp, sdc_order FROM fill
+),
+-- Remaining rows after the first 10
+remaining AS (
+  SELECT b.measurement_id, 1 AS grp, b.sdc_order
+  FROM base b
+  WHERE b.measurement_id NOT IN (SELECT measurement_id FROM first_ten)
 )
-ORDER BY grp, sdc_order
+SELECT 
+  b.sdc_question_identifier,
+  b.sdc_question_text,
+  b.sdc_response_value,
+  b.sdc_response_type,
+  b.sdc_units,
+  COALESCE(b."OBX4", 'N/A') AS OBX4,
+  substr(b.sdc_template_instance_guid, 1, 8) AS instance,
+  COALESCE(b.template_name, '') AS template,
+  b.sdc_order
+FROM (
+  SELECT measurement_id, grp, sdc_order FROM first_ten
+  UNION ALL
+  SELECT measurement_id, grp, sdc_order FROM remaining
+) x
+JOIN base b ON b.measurement_id = x.measurement_id
+ORDER BY x.grp, x.sdc_order;
 
 #!markdown
 
@@ -232,9 +367,8 @@ ORDER BY grp, sdc_order
 
 Verify that standard OMOP fields are properly populated alongside the SDC-specific data, ensuring every column shows at least one example with actual values.
 
-#!sql
-
 #!sql-ecpdb
+
 -- Numeric with units
 WITH numeric_with_units AS (
   SELECT measurement_id AS id,
@@ -306,9 +440,8 @@ ORDER BY sdc_order;
 
 Demonstrate more complex queries that combine standard OMOP fields with SDC-specific data.
 
-#!sql
-
 #!sql-ecpdb
+
 SELECT m.sdc_question_identifier AS question_id,
        COALESCE(m.sdc_question_text, 'N/A') AS question_text,
        printf('%.1f', m.value_as_number) AS value,
@@ -329,9 +462,8 @@ ORDER BY m.sdc_order;
 
 Analyze the template metadata stored in the `sdc_template_instance_ecp` table.
 
-#!sql
-
 #!sql-ecpdb
+
 SELECT template_name,
        template_version,
        COALESCE(report_template_source, 'N/A') AS source,
@@ -348,9 +480,8 @@ FROM sdc_template_instance_ecp;
 
 Provide a summary of the test results and validate that the MVP is working correctly.
 
-#!sql
-
 #!sql-ecpdb
+
 SELECT 'Template Instances' AS metric, COUNT(*) AS value FROM sdc_template_instance_ecp
 UNION ALL
 SELECT 'ECP Measurements', COUNT(*) FROM measurement WHERE sdc_template_instance_guid IS NOT NULL
