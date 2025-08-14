@@ -196,6 +196,7 @@ public class SdcCdmInSqlite : ISdcCdm
                 sdc_order INTEGER NULL,
                 sdc_repeat_level INTEGER NULL,
                 sdc_comments TEXT NULL
+                , ""OBX4"" TEXT NULL
             );
         ";
 
@@ -841,7 +842,8 @@ public class SdcCdmInSqlite : ISdcCdm
         string? sdc_datatype = null,
         int? sdc_order = null,
         int? sdc_repeat_level = null,
-        string? sdc_comments = null
+        string? sdc_comments = null,
+        string? obx4 = null
     )
     {
         using var cmd = connection.CreateCommand();
@@ -852,13 +854,13 @@ public class SdcCdmInSqlite : ISdcCdm
                      value_as_number, value_source_value, unit_source_value, measurement_source_value,
                      sdc_template_instance_guid, sdc_question_identifier, sdc_response_value, sdc_response_type,
                      sdc_template_version, sdc_question_text, sdc_section_identifier, sdc_list_item_id,
-                     sdc_list_item_text, sdc_units, sdc_datatype, sdc_order, sdc_repeat_level, sdc_comments)
+                     sdc_list_item_text, sdc_units, sdc_datatype, sdc_order, sdc_repeat_level, sdc_comments, ""OBX4"")
                     VALUES
                     (@personId, @measurementConceptId, @measurementDate, @measurementTypeConceptId,
                      @valueAsNumber, @valueAsString, @unitSourceValue, @measurementSourceValue,
                      @sdcTemplateInstanceGuid, @sdcQuestionIdentifier, @sdcResponseValue, @sdcResponseType,
                      @sdcTemplateVersion, @sdcQuestionText, @sdcSectionIdentifier, @sdcListItemId,
-                     @sdcListItemText, @sdcUnits, @sdcDatatype, @sdcOrder, @sdcRepeatLevel, @sdcComments);
+                     @sdcListItemText, @sdcUnits, @sdcDatatype, @sdcOrder, @sdcRepeatLevel, @sdcComments, @OBX4);
                     SELECT last_insert_rowid();
                 ";
 
@@ -902,6 +904,7 @@ public class SdcCdmInSqlite : ISdcCdm
         cmd.Parameters.AddWithValue("@sdcOrder", sdc_order ?? (object)DBNull.Value);
         cmd.Parameters.AddWithValue("@sdcRepeatLevel", sdc_repeat_level ?? (object)DBNull.Value);
         cmd.Parameters.AddWithValue("@sdcComments", sdc_comments ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue("@OBX4", obx4 ?? (object)DBNull.Value);
 
         var result = cmd.ExecuteScalar();
         return result != null ? Convert.ToInt64(result) : -1;

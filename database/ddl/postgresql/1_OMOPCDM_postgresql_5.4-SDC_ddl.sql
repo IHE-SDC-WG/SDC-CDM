@@ -187,7 +187,8 @@ CREATE TABLE public.measurement (
 			sdc_datatype varchar(50) NULL,
 			sdc_order integer NULL,
 			sdc_repeat_level integer NULL,
-			sdc_comments TEXT NULL );
+			sdc_comments TEXT NULL,
+			"OBX4" varchar(255) NULL );
 --HINT DISTRIBUTE ON KEY (person_id)
 CREATE TABLE public.observation (
 			observation_id integer NOT NULL,

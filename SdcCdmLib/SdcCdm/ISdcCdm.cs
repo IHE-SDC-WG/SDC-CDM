@@ -225,7 +225,8 @@ public interface ISdcCdm
         string? sdc_datatype = null,
         int? sdc_order = null,
         int? sdc_repeat_level = null,
-        string? sdc_comments = null
+        string? sdc_comments = null,
+        string? obx4 = null
     );
 
     public record SdcTemplateInstanceEcpRecord(

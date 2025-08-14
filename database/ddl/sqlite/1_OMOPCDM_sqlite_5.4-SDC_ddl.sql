@@ -192,7 +192,8 @@ CREATE TABLE main.measurement (
 			sdc_datatype TEXT NULL,
 			sdc_order integer NULL,
 			sdc_repeat_level integer NULL,
-			sdc_comments TEXT NULL );
+			sdc_comments TEXT NULL,
+			"OBX4" TEXT NULL );
 --HINT DISTRIBUTE ON KEY (person_id)
 CREATE TABLE main.observation (
 			observation_id integer NOT NULL PRIMARY KEY AUTOINCREMENT,

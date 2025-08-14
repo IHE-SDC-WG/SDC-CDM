@@ -317,6 +317,8 @@ public static class NAACCRVolVImporter
             var obx_fields = obx_segments[i].Split('|');
             var obx_value_type = get_field(obx_fields, 2);
             var obx_observation_id = get_field(obx_fields, 3);
+            var obx4_value_raw = get_field(obx_fields, 4);
+            var obx4_value = string.IsNullOrWhiteSpace(obx4_value_raw) ? "N/A" : obx4_value_raw;
             var obx_value = get_field(obx_fields, 5);
             var obx_units = get_field(obx_fields, 6);
 
@@ -384,7 +386,8 @@ public static class NAACCRVolVImporter
                 sdc_question_text: question_text,
                 sdc_units: obx_units,
                 sdc_datatype: obx_value_type,
-                sdc_order: i - 2 // OBX sequence number
+                sdc_order: i - 2, // OBX sequence number
+                obx4: obx4_value
             );
         }
 
