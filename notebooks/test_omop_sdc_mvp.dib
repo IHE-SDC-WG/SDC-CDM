@@ -94,7 +94,8 @@ using Microsoft.Data.Sqlite;
 var hl7Files = new[] {
     "../sample_data/naaccr_v2/obx-Adrenal.hl7",
     "../sample_data/naaccr_v2/24-11-000312-2.txt.hl7",
-    "../sample_data/naaccr_v2/CDCECC/117.1000043/3716960.hl7"
+    "../sample_data/naaccr_v2/CDCECC/117.1000043/3716960.hl7",
+    "../sample_data/naaccr_v2/CDCECC/119.1000043/3716315.hl7"
 };
 
 // Toggle to suppress verbose importer logs (prevents output truncation)
@@ -369,70 +370,88 @@ Verify that standard OMOP fields are properly populated alongside the SDC-specif
 
 #!sql-ecpdb
 
--- Numeric with units
-WITH numeric_with_units AS (
-  SELECT measurement_id AS id,
-         person_id AS person,
-         measurement_concept_id AS concept,
-         DATE(measurement_date) AS date,
-         measurement_type_concept_id AS type,
-         value_as_number AS omop_number,
-         sdc_response_value AS sdc_value,
-         sdc_units AS sdc_units,
-         COALESCE("OBX4", 'N/A') AS OBX4,
-         sdc_order
-  FROM measurement
-  WHERE sdc_template_instance_guid IS NOT NULL
-    AND value_as_number IS NOT NULL
-    AND sdc_units IS NOT NULL AND sdc_units != ''
-  ORDER BY sdc_order
-  LIMIT 1
+-- Show at least one row per imported file (template instance) for each response type
+WITH base AS (
+  SELECT m.*, ti.template_name, ti.template_version
+  FROM measurement m
+  LEFT JOIN sdc_template_instance_ecp ti
+    ON ti.template_instance_guid = m.sdc_template_instance_guid
+  WHERE m.sdc_template_instance_guid IS NOT NULL
 ),
--- Numeric without units
-numeric_without_units AS (
-  SELECT measurement_id AS id,
-         person_id AS person,
-         measurement_concept_id AS concept,
-         DATE(measurement_date) AS date,
-         measurement_type_concept_id AS type,
-         value_as_number AS omop_number,
-         sdc_response_value AS sdc_value,
-         sdc_units AS sdc_units,
-         COALESCE("OBX4", 'N/A') AS OBX4,
-         sdc_order
-  FROM measurement
-  WHERE sdc_template_instance_guid IS NOT NULL
-    AND value_as_number IS NOT NULL
-    AND (sdc_units IS NULL OR sdc_units = '')
-  ORDER BY sdc_order
-  LIMIT 1
+first_numeric_with_units AS (
+  SELECT id, person, concept, date, type, omop_number, sdc_value, sdc_units, OBX4, sdc_order, sdc_template_instance_guid
+  FROM (
+    SELECT 
+      m.measurement_id AS id,
+      m.person_id AS person,
+      m.measurement_concept_id AS concept,
+      DATE(m.measurement_date) AS date,
+      m.measurement_type_concept_id AS type,
+      CASE WHEN m.value_as_number IS NULL THEN NULL ELSE printf('%g', m.value_as_number) END AS omop_number,
+      m.sdc_response_value AS sdc_value,
+      m.sdc_units AS sdc_units,
+      COALESCE(m."OBX4", 'N/A') AS OBX4,
+      m.sdc_order,
+      m.sdc_template_instance_guid,
+      ROW_NUMBER() OVER (PARTITION BY m.sdc_template_instance_guid ORDER BY m.sdc_order, m.measurement_id) AS rn
+    FROM base m
+    WHERE m.value_as_number IS NOT NULL
+      AND m.sdc_units IS NOT NULL AND m.sdc_units != ''
+  ) t
+  WHERE rn = 1
 ),
-
-categorical AS (
-  SELECT measurement_id AS id,
-         person_id AS person,
-         measurement_concept_id AS concept,
-         DATE(measurement_date) AS date,
-         measurement_type_concept_id AS type,
-         value_as_number AS omop_number,
-         sdc_response_value AS sdc_value,
-         sdc_units AS sdc_units,
-         COALESCE("OBX4", 'N/A') AS OBX4,
-         sdc_order
-  FROM measurement
-  WHERE sdc_template_instance_guid IS NOT NULL
-    AND value_as_number IS NULL
-  ORDER BY sdc_order
+first_numeric_without_units AS (
+  SELECT id, person, concept, date, type, omop_number, sdc_value, sdc_units, OBX4, sdc_order, sdc_template_instance_guid
+  FROM (
+    SELECT 
+      m.measurement_id AS id,
+      m.person_id AS person,
+      m.measurement_concept_id AS concept,
+      DATE(m.measurement_date) AS date,
+      m.measurement_type_concept_id AS type,
+      CASE WHEN m.value_as_number IS NULL THEN NULL ELSE printf('%g', m.value_as_number) END AS omop_number,
+      m.sdc_response_value AS sdc_value,
+      m.sdc_units AS sdc_units,
+      COALESCE(m."OBX4", 'N/A') AS OBX4,
+      m.sdc_order,
+      m.sdc_template_instance_guid,
+      ROW_NUMBER() OVER (PARTITION BY m.sdc_template_instance_guid ORDER BY m.sdc_order, m.measurement_id) AS rn
+    FROM base m
+    WHERE m.value_as_number IS NOT NULL
+      AND (m.sdc_units IS NULL OR m.sdc_units = '')
+  ) t
+  WHERE rn = 1
+),
+first_categorical AS (
+  SELECT id, person, concept, date, type, omop_number, sdc_value, sdc_units, OBX4, sdc_order, sdc_template_instance_guid
+  FROM (
+    SELECT 
+      m.measurement_id AS id,
+      m.person_id AS person,
+      m.measurement_concept_id AS concept,
+      DATE(m.measurement_date) AS date,
+      m.measurement_type_concept_id AS type,
+      CASE WHEN m.value_as_number IS NULL THEN NULL ELSE printf('%g', m.value_as_number) END AS omop_number,
+      m.sdc_response_value AS sdc_value,
+      m.sdc_units AS sdc_units,
+      COALESCE(m."OBX4", 'N/A') AS OBX4,
+      m.sdc_order,
+      m.sdc_template_instance_guid,
+      ROW_NUMBER() OVER (PARTITION BY m.sdc_template_instance_guid ORDER BY m.sdc_order, m.measurement_id) AS rn
+    FROM base m
+    WHERE m.value_as_number IS NULL
+  ) t
+  WHERE rn = 1
 )
-SELECT id, person, concept, date, type, omop_number, sdc_value, sdc_units, OBX4
+SELECT id, person, concept, date, type, COALESCE(printf('%s', omop_number), 'N/A') AS omop_number, sdc_value, sdc_units, OBX4, substr(sdc_template_instance_guid,1,8) AS instance
 FROM (
-  SELECT * FROM numeric_with_units
+  SELECT * FROM first_numeric_with_units
   UNION ALL
-  SELECT * FROM numeric_without_units
+  SELECT * FROM first_numeric_without_units
   UNION ALL
-  SELECT * FROM categorical
-)
-ORDER BY sdc_order;
+  SELECT * FROM first_categorical
+ )
+ORDER BY instance, sdc_order;
 
 #!markdown
 
@@ -504,10 +523,10 @@ Console.WriteLine("// if (File.Exists(dbPath))");
 Console.WriteLine("// { File.Delete(dbPath); Console.WriteLine($\"Removed database: {dbPath}\"); }");
 
 // Uncomment the lines below if you want to clean up
-if (File.Exists(dbPath))
-{
-    File.Delete(dbPath);
-    Console.WriteLine($"Removed database: {dbPath}");
-}
+// if (File.Exists(dbPath))
+// {
+//     File.Delete(dbPath);
+//     Console.WriteLine($"Removed database: {dbPath}");
+// }
 
 Console.WriteLine("\nTest completed! The database file remains for further inspection.");
