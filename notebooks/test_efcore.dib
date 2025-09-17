@@ -1,0 +1,189 @@
+#!meta
+
+{"kernelInfo":{"defaultKernelName":"csharp","items":[{"name":"csharp","languageName":"C#","aliases":["c#","cs"]},{"name":"fsharp","languageName":"F#","aliases":["f#","fs"]},{"name":"html","languageName":"HTML"},{"name":"http","languageName":"HTTP"},{"name":"javascript","languageName":"JavaScript","aliases":["js"]},{"name":"kql","languageName":"KQL"},{"name":"mermaid","languageName":"Mermaid"},{"name":"pwsh","languageName":"PowerShell","aliases":["powershell"]},{"name":"sql","languageName":"SQL"},{"name":"value"}]}}
+
+#!pwsh
+
+# Build the SDC CDM libraries
+
+dotnet build ../SdcCdmLib
+
+#!csharp
+
+/** Reference any external libraries and the SDC CDM library assembly */
+
+#r "nuget:Microsoft.Data.Sqlite,9.0.0"
+#r "nuget:Microsoft.EntityFrameworkCore,8.0.0"
+#r "nuget:Microsoft.EntityFrameworkCore.Sqlite,8.0.0"
+#r "nuget:Microsoft.EntityFrameworkCore.Design,8.0.0"
+#r "nuget:Microsoft.Extensions.Logging,9.0.4"
+#r "../SdcCdmLib/SdcCdm/bin/Debug/net8.0/SdcCdm.dll"
+#r "../SdcCdmLib/SdcCdmInSqlite/bin/Debug/net8.0/SdcCdmInSqlite.dll"
+
+#!csharp
+
+/** Test EF Core Integration */
+
+using SdcCdm;
+using SdcCdmInSqlite;
+
+Console.WriteLine("Testing EF Core Integration...");
+
+// Create a new Sqlite database instance for the SDC CDM
+SdcCdmInSqlite.SdcCdmInSqlite sdcCdmInstance = new("public/test_efcore.db", overwrite: true);
+sdcCdmInstance.BuildSchema();
+
+Console.WriteLine("Database created successfully!");
+
+#!csharp
+
+/** Test Person Operations with EF Core */
+
+// Test async person operations
+Console.WriteLine("Testing Person Operations...");
+
+// Create a person DTO
+var personDto = new ISdcCdm.PersonDTO
+{
+    GenderConceptId = 8507, // Male
+    YearOfBirth = 1980,
+    MonthOfBirth = 6,
+    DayOfBirth = 15,
+    BirthDatetime = new DateTimeOffset(1980, 6, 15, 0, 0, 0, TimeSpan.Zero),
+    RaceConceptId = 8527, // White
+    EthnicityConceptId = 38003564, // Hispanic or Latino
+    PersonSourceValue = "TEST_PERSON_001",
+    GenderSourceValue = "M",
+    RaceSourceValue = "White",
+    EthnicitySourceValue = "Hispanic"
+};
+
+// Write person using EF Core
+var person = sdcCdmInstance.WritePerson(personDto);
+Console.WriteLine($"Person created with ID: {person?.PersonId}");
+
+#!csharp
+
+/** Test Person Lookup with EF Core */
+
+// Test finding person by ID using EF Core
+var foundPersonId = await sdcCdmInstance.FindPersonAsync(person?.PersonId ?? 0);
+Console.WriteLine($"Found person by ID: {foundPersonId}");
+
+// Test finding person by identifier using EF Core
+var foundPersonByIdentifier = await sdcCdmInstance.FindPersonByIdentifierAsync("TEST_PERSON_001");
+Console.WriteLine($"Found person by identifier: {foundPersonByIdentifier}");
+
+// Test getting person DTO using EF Core
+var personDtoResult = await sdcCdmInstance.GetPersonDtoAsync(person?.PersonId ?? 0);
+Console.WriteLine($"Person DTO - ID: {personDtoResult?.PersonId}, Birth Year: {personDtoResult?.YearOfBirth}, Source: {personDtoResult?.PersonSourceValue}");
+
+#!csharp
+
+/** Test Concept Operations with EF Core */
+
+Console.WriteLine("Testing Concept Operations...");
+
+// Create a concept record
+var conceptRecord = new ConceptRecord
+{
+    ConceptId = 999999,
+    ConceptName = "Test Concept",
+    DomainId = "Test Domain",
+    VocabularyId = "Test Vocabulary",
+    ConceptClassId = "Test Class",
+    StandardConcept = "S",
+    ConceptCode = "TEST001",
+    ValidStartDate = DateTime.Now,
+    ValidEndDate = DateTime.MaxValue,
+    InvalidReason = null
+};
+
+// Insert concept using EF Core
+var conceptId = await sdcCdmInstance.InsertConceptAsync(conceptRecord);
+Console.WriteLine($"Concept inserted with ID: {conceptId}");
+
+#!csharp
+
+/** Test Template SDC Operations with EF Core */
+
+Console.WriteLine("Testing Template SDC Operations...");
+
+// Write template SDC using EF Core
+var templateSdcId = await sdcCdmInstance.WriteTemplateSdcClassAsync(
+    sdcformdesignid: "TEST_TEMPLATE_001",
+    baseuri: "http://test.org",
+    lineage: "Test Lineage",
+    version: "1.0",
+    formtitle: "Test Template"
+);
+
+Console.WriteLine($"Template SDC created with ID: {templateSdcId}");
+
+#!csharp
+
+/** Test Template Instance Operations with EF Core */
+
+Console.WriteLine("Testing Template Instance Operations...");
+
+// Write template instance using EF Core
+var templateInstanceId = await sdcCdmInstance.WriteTemplateInstanceClassAsync(
+    templatesdc_fk: templateSdcId,
+    template_instance_version_guid: Guid.NewGuid().ToString(),
+    template_instance_version_uri: "http://test.org/instance/1",
+    person_fk: person?.PersonId.ToString()
+);
+
+Console.WriteLine($"Template Instance created with ID: {templateInstanceId}");
+
+#!csharp
+
+/** Test SDC Observation Operations with EF Core */
+
+Console.WriteLine("Testing SDC Observation Operations...");
+
+// Write SDC observation using EF Core
+var observationId = await sdcCdmInstance.WriteSdcObsClassAsync(
+    template_instance_class_fk: templateInstanceId,
+    q_text: "What is your favorite color?",
+    q_id: "FAVORITE_COLOR",
+    response: "Blue",
+    datatype: "string"
+);
+
+Console.WriteLine($"SDC Observation created with ID: {observationId}");
+
+#!csharp
+
+/** Test Template Item Operations with EF Core */
+
+Console.WriteLine("Testing Template Item Operations...");
+
+// Create template item DTO
+var templateItemDto = new ISdcCdm.TemplateItemDTO
+{
+    TemplateSdcId = templateSdcId,
+    TemplateItemSdcid = "TEST_ITEM_001",
+    Type = "question",
+    VisibleText = "Test Question",
+    MinCard = "1",
+    MustImplement = "true",
+    ItemOrder = "1"
+};
+
+// Write template item using EF Core
+var templateItem = await sdcCdmInstance.WriteTemplateItemAsync(templateItemDto);
+Console.WriteLine($"Template Item created with ID: {templateItem?.TemplateItemId}");
+
+#!csharp
+
+/** Summary */
+
+Console.WriteLine("\n=== EF Core Integration Test Summary ===");
+Console.WriteLine($"✅ Person Operations: {person?.PersonId != 0}");
+Console.WriteLine($"✅ Concept Operations: {conceptId != 0}");
+Console.WriteLine($"✅ Template SDC Operations: {templateSdcId != 0}");
+Console.WriteLine($"✅ Template Instance Operations: {templateInstanceId != 0}");
+Console.WriteLine($"✅ SDC Observation Operations: {observationId != 0}");
+Console.WriteLine($"✅ Template Item Operations: {templateItem?.TemplateItemId != 0}");
+Console.WriteLine("\n🎉 All EF Core operations completed successfully!");

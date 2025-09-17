@@ -17,6 +17,9 @@ storage/
 
 .devcontainer/
 
+# macOS system files
+.DS_Store
+
 
 # ---- Added 2025-09-17: ignore individual SDC template XMLs now present as untracked ----
 # If you prefer to ignore the entire directory instead, replace the list with:
