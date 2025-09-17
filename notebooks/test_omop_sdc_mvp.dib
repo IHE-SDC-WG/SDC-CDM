@@ -16,7 +16,7 @@ This notebook will:
 3. **Import sample NAACCR V2 data** (Adrenal gland pathology report)
 4. **Validate the import** by querying the data
 5. **Demonstrate query capabilities** for both standard OMOP and SDC-specific fields
-6. **Provide comprehensive testing** across 11 validation steps
+6. **Provide comprehensive testing** across 13 validation steps
 
 ## Prerequisites
 
@@ -74,7 +74,7 @@ if (File.Exists(dbPath))
 // Create new database instance
 var sdcCdm = new SdcCdmInSqlite.SdcCdmInSqlite(dbPath, overwrite: true);
 
-// Build the schema (includes extended measurement table and sdc_template_instance_ecp table)
+// Build the schema (OMOP v5.4 core + SDC ancillary tables, including sdc_form_answer)
 Console.WriteLine("Building database schema...");
 sdcCdm.BuildSchema();
 
@@ -249,235 +249,170 @@ Check how many ECP measurements were imported into the extended `measurement` ta
 
 #!sql-ecpdb
 
-SELECT COUNT(*) AS measurement_count
-FROM measurement
-WHERE sdc_template_instance_guid IS NOT NULL;
+SELECT COUNT(*) AS total_answers
+FROM sdc_form_answer;
 
 #!markdown
 
 ## Step 5: Validate Import - Response Types
 
-Analyze the distribution of measurements by response type (numeric, text, list_selection).
+Analyze the distribution of answers by response type (numeric, text, list_selection). Include a catch‑all bucket for any other or future types.
 
 #!sql-ecpdb
 
-SELECT sdc_response_type AS response_type,
-       COUNT(*) AS count
-FROM measurement
-WHERE sdc_template_instance_guid IS NOT NULL
-GROUP BY sdc_response_type
-ORDER BY count DESC;
-
-#!markdown
-
-## Step 6: Sample Measurements
-
-Display sample measurements to verify the SDC-specific columns are populated correctly, showing one of each response type first.
-
-#!sql-ecpdb
-
--- Ensure first 10 rows include: (a) one per response type present; (b) one per imported file (template instance)
-WITH base AS (
-  SELECT m.*, ti.template_name, ti.template_version
-  FROM measurement m
-  LEFT JOIN sdc_template_instance_ecp ti
-    ON ti.template_instance_guid = m.sdc_template_instance_guid
-  WHERE m.sdc_template_instance_guid IS NOT NULL
-),
--- First row for each response type (numeric, text, list_selection) by sdc_order
-first_per_type AS (
-  SELECT measurement_id, sdc_order, 0 AS subgrp
-  FROM (
-    SELECT measurement_id,
-           sdc_order,
-           ROW_NUMBER() OVER (PARTITION BY sdc_response_type ORDER BY sdc_order) AS rn
-    FROM base
-    WHERE sdc_response_type IN ('list_selection','text','numeric')
-  ) t
-  WHERE rn = 1
-),
--- First row for each imported file (template instance) by sdc_order
-first_per_file AS (
-  SELECT measurement_id, sdc_order, 1 AS subgrp
-  FROM (
-    SELECT measurement_id,
-           sdc_order,
-           ROW_NUMBER() OVER (PARTITION BY sdc_template_instance_guid ORDER BY sdc_order) AS rn
-    FROM base
-  ) t
-  WHERE rn = 1
-),
--- Combine and de-duplicate priority picks (types first, then files), cap to 10
-priority_union AS (
-  SELECT measurement_id, sdc_order, subgrp FROM first_per_type
-  UNION
-  SELECT measurement_id, sdc_order, subgrp FROM first_per_file
-),
-priority_limited AS (
-  SELECT measurement_id, sdc_order, subgrp
-  FROM priority_union
-  ORDER BY subgrp, sdc_order
-  LIMIT 10
-),
--- Compute remaining slots to fill up to 10
-slots AS (
-  SELECT CASE WHEN 10 - COUNT(*) < 0 THEN 0 ELSE 10 - COUNT(*) END AS remaining
-  FROM priority_limited
-),
--- Fill any leftover slots (by sdc_order) excluding already chosen priority rows
-fill AS (
-  SELECT b.measurement_id, b.sdc_order, 2 AS subgrp
-  FROM base b, slots
-  WHERE b.measurement_id NOT IN (SELECT measurement_id FROM priority_limited)
-  ORDER BY b.sdc_order
-  LIMIT (SELECT remaining FROM slots)
-),
--- Final first-10 set
-first_ten AS (
-  SELECT measurement_id, 0 AS grp, sdc_order FROM priority_limited
-  UNION ALL
-  SELECT measurement_id, 0 AS grp, sdc_order FROM fill
-),
--- Remaining rows after the first 10
-remaining AS (
-  SELECT b.measurement_id, 1 AS grp, b.sdc_order
-  FROM base b
-  WHERE b.measurement_id NOT IN (SELECT measurement_id FROM first_ten)
+WITH typed AS (
+  SELECT sfa.sdc_form_answer_id,
+         CASE
+           WHEN EXISTS (
+             SELECT 1 FROM measurement m
+             WHERE m.sdc_form_answer_id = sfa.sdc_form_answer_id
+           ) THEN 'numeric'
+           WHEN EXISTS (
+             SELECT 1 FROM observation o
+             WHERE o.sdc_form_answer_id = sfa.sdc_form_answer_id
+           ) AND (
+             EXISTS (
+               SELECT 1 FROM observation o2
+               WHERE o2.sdc_form_answer_id = sfa.sdc_form_answer_id
+                 AND o2.value_as_concept_id IS NOT NULL
+             )
+             OR UPPER(COALESCE(sfa.datatype, '')) IN ('CWE','LIST','LIST_SELECTION','CODED')
+             OR sfa.list_item_id IS NOT NULL
+             OR sfa.list_item_text IS NOT NULL
+           ) THEN 'list_selection'
+           WHEN EXISTS (
+             SELECT 1 FROM observation o
+             WHERE o.sdc_form_answer_id = sfa.sdc_form_answer_id
+           ) THEN 'text'
+           ELSE 'other'
+         END AS response_type
+  FROM sdc_form_answer sfa
 )
-SELECT 
-  b.sdc_question_identifier,
-  b.sdc_question_text,
-  b.sdc_response_value,
-  b.sdc_response_type,
-  b.sdc_units,
-  COALESCE(b."OBX4", 'N/A') AS OBX4,
-  substr(b.sdc_template_instance_guid, 1, 8) AS instance,
-  COALESCE(b.template_name, '') AS template,
-  b.sdc_order
-FROM (
-  SELECT measurement_id, grp, sdc_order FROM first_ten
-  UNION ALL
-  SELECT measurement_id, grp, sdc_order FROM remaining
-) x
-JOIN base b ON b.measurement_id = x.measurement_id
-ORDER BY x.grp, x.sdc_order;
+SELECT response_type, COUNT(*) AS cnt
+FROM typed
+GROUP BY response_type
+ORDER BY cnt DESC, response_type;
 
 #!markdown
 
-## Step 7: OMOP Compliance Validation
+## Step 6: Retrieve list_selection Responses
+
+Show list selection answers and relevant fields (code/text where available).
+
+#!sql-ecpdb
+
+SELECT sfa.sdc_form_answer_id AS form_answer_id,
+       o.observation_id,
+       o.person_id,
+       DATE(o.observation_date) AS date,
+       sfa.question_instance_guid AS question_guid,
+       sfa.question_text,
+       sfa.list_item_id,
+       sfa.list_item_text
+FROM observation o
+JOIN sdc_form_answer sfa ON sfa.sdc_form_answer_id = o.sdc_form_answer_id
+WHERE (
+    o.value_as_concept_id IS NOT NULL
+    OR UPPER(COALESCE(sfa.datatype, '')) IN ('CWE','LIST','LIST_SELECTION','CODED')
+    OR sfa.list_item_id IS NOT NULL
+    OR sfa.list_item_text IS NOT NULL
+)
+ORDER BY o.observation_id
+LIMIT 25;
+
+#!markdown
+
+## Step 7: Retrieve Numeric Responses
+
+Show numeric answers and relevant fields (value and units where available).
+
+#!sql-ecpdb
+
+SELECT sfa.sdc_form_answer_id AS form_answer_id,
+       m.measurement_id,
+       m.person_id,
+       DATE(m.measurement_date) AS date,
+       sfa.question_instance_guid AS question_guid,
+       sfa.question_text,
+       m.value_as_number,
+       COALESCE(m.unit_source_value, 'N/A') AS unit_source_value
+FROM measurement m
+JOIN sdc_form_answer sfa ON sfa.sdc_form_answer_id = m.sdc_form_answer_id
+WHERE m.value_as_number IS NOT NULL
+ORDER BY m.measurement_id
+LIMIT 25;
+
+#!markdown
+
+## Step 8: Retrieve Text Responses
+
+Show free‑text answers and relevant fields.
+
+#!sql-ecpdb
+
+SELECT sfa.sdc_form_answer_id AS form_answer_id,
+       o.observation_id,
+       o.person_id,
+       DATE(o.observation_date) AS date,
+       sfa.question_instance_guid AS question_guid,
+       sfa.question_text,
+       COALESCE(o.value_as_string, printf('%g', o.value_as_number)) AS value_text
+FROM observation o
+JOIN sdc_form_answer sfa ON sfa.sdc_form_answer_id = o.sdc_form_answer_id
+WHERE NOT (
+    o.value_as_concept_id IS NOT NULL
+    OR UPPER(COALESCE(sfa.datatype, '')) IN ('CWE','LIST','LIST_SELECTION','CODED')
+    OR sfa.list_item_id IS NOT NULL
+    OR sfa.list_item_text IS NOT NULL
+)
+ORDER BY o.observation_id
+LIMIT 25;
+
+#!markdown
+
+## Step 9: OMOP Compliance Validation
 
 Verify that standard OMOP fields are properly populated alongside the SDC-specific data, ensuring every column shows at least one example with actual values.
 
 #!sql-ecpdb
 
--- Show at least one row per imported file (template instance) for each response type
-WITH base AS (
-  SELECT m.*, ti.template_name, ti.template_version
-  FROM measurement m
-  LEFT JOIN sdc_template_instance_ecp ti
-    ON ti.template_instance_guid = m.sdc_template_instance_guid
-  WHERE m.sdc_template_instance_guid IS NOT NULL
-),
-first_numeric_with_units AS (
-  SELECT id, person, concept, date, type, omop_number, sdc_value, sdc_units, OBX4, sdc_order, sdc_template_instance_guid
-  FROM (
-    SELECT 
-      m.measurement_id AS id,
-      m.person_id AS person,
-      m.measurement_concept_id AS concept,
-      DATE(m.measurement_date) AS date,
-      m.measurement_type_concept_id AS type,
-      CASE WHEN m.value_as_number IS NULL THEN NULL ELSE printf('%g', m.value_as_number) END AS omop_number,
-      m.sdc_response_value AS sdc_value,
-      m.sdc_units AS sdc_units,
-      COALESCE(m."OBX4", 'N/A') AS OBX4,
-      m.sdc_order,
-      m.sdc_template_instance_guid,
-      ROW_NUMBER() OVER (PARTITION BY m.sdc_template_instance_guid ORDER BY m.sdc_order, m.measurement_id) AS rn
-    FROM base m
-    WHERE m.value_as_number IS NOT NULL
-      AND m.sdc_units IS NOT NULL AND m.sdc_units != ''
-  ) t
-  WHERE rn = 1
-),
-first_numeric_without_units AS (
-  SELECT id, person, concept, date, type, omop_number, sdc_value, sdc_units, OBX4, sdc_order, sdc_template_instance_guid
-  FROM (
-    SELECT 
-      m.measurement_id AS id,
-      m.person_id AS person,
-      m.measurement_concept_id AS concept,
-      DATE(m.measurement_date) AS date,
-      m.measurement_type_concept_id AS type,
-      CASE WHEN m.value_as_number IS NULL THEN NULL ELSE printf('%g', m.value_as_number) END AS omop_number,
-      m.sdc_response_value AS sdc_value,
-      m.sdc_units AS sdc_units,
-      COALESCE(m."OBX4", 'N/A') AS OBX4,
-      m.sdc_order,
-      m.sdc_template_instance_guid,
-      ROW_NUMBER() OVER (PARTITION BY m.sdc_template_instance_guid ORDER BY m.sdc_order, m.measurement_id) AS rn
-    FROM base m
-    WHERE m.value_as_number IS NOT NULL
-      AND (m.sdc_units IS NULL OR m.sdc_units = '')
-  ) t
-  WHERE rn = 1
-),
-first_categorical AS (
-  SELECT id, person, concept, date, type, omop_number, sdc_value, sdc_units, OBX4, sdc_order, sdc_template_instance_guid
-  FROM (
-    SELECT 
-      m.measurement_id AS id,
-      m.person_id AS person,
-      m.measurement_concept_id AS concept,
-      DATE(m.measurement_date) AS date,
-      m.measurement_type_concept_id AS type,
-      CASE WHEN m.value_as_number IS NULL THEN NULL ELSE printf('%g', m.value_as_number) END AS omop_number,
-      m.sdc_response_value AS sdc_value,
-      m.sdc_units AS sdc_units,
-      COALESCE(m."OBX4", 'N/A') AS OBX4,
-      m.sdc_order,
-      m.sdc_template_instance_guid,
-      ROW_NUMBER() OVER (PARTITION BY m.sdc_template_instance_guid ORDER BY m.sdc_order, m.measurement_id) AS rn
-    FROM base m
-    WHERE m.value_as_number IS NULL
-  ) t
-  WHERE rn = 1
-)
-SELECT id, person, concept, date, type, COALESCE(printf('%s', omop_number), 'N/A') AS omop_number, sdc_value, sdc_units, OBX4, substr(sdc_template_instance_guid,1,8) AS instance
-FROM (
-  SELECT * FROM first_numeric_with_units
-  UNION ALL
-  SELECT * FROM first_numeric_without_units
-  UNION ALL
-  SELECT * FROM first_categorical
- )
-ORDER BY instance, sdc_order;
+SELECT 'measurement' AS src,
+   m.measurement_id AS id,
+   m.person_id AS person,
+    m.measurement_concept_id AS concept,
+    DATE(m.measurement_date) AS date, m.measurement_type_concept_id AS type,
+    printf('%g', m.value_as_number) AS value, sfa.question_text, sfa.question_instance_guid
+FROM measurement m
+JOIN sdc_form_answer sfa ON sfa.sdc_form_answer_id = m.sdc_form_answer_id
+UNION ALL
+SELECT 'observation' AS src, o.observation_id AS id, o.person_id AS person, o.observation_concept_id AS concept,
+       DATE(o.observation_date) AS date, o.observation_type_concept_id AS type,
+       COALESCE(o.value_as_string, printf('%g', o.value_as_number)) AS value, sfa.question_text, sfa.question_instance_guid
+FROM observation o
+JOIN sdc_form_answer sfa ON sfa.sdc_form_answer_id = o.sdc_form_answer_id
+ORDER BY src, id
+LIMIT 25;
 
 #!markdown
 
-## Step 8: Advanced Query Examples
+## Step 10: Advanced Query Examples
 
 Demonstrate more complex queries that combine standard OMOP fields with SDC-specific data.
 
 #!sql-ecpdb
 
-SELECT m.sdc_question_identifier AS question_id,
-       COALESCE(m.sdc_question_text, 'N/A') AS question_text,
+SELECT sfa.question_instance_guid AS question_id,
+       sfa.question_text,
        printf('%.1f', m.value_as_number) AS value,
-       COALESCE(m.sdc_units, 'N/A') AS units,
-       m.sdc_response_type AS response_type,
-       ti.template_name AS template,
-       COALESCE(m."OBX4", 'N/A') AS OBX4
+       COALESCE(m.unit_source_value, 'N/A') AS units
 FROM measurement m
-JOIN sdc_template_instance_ecp ti
-  ON m.sdc_template_instance_guid = ti.template_instance_guid
-WHERE m.sdc_response_type = 'numeric'
-  AND m.value_as_number IS NOT NULL
-ORDER BY m.sdc_order;
+JOIN sdc_form_answer sfa ON sfa.sdc_form_answer_id = m.sdc_form_answer_id
+WHERE m.value_as_number IS NOT NULL
+ORDER BY m.measurement_id;
 
 #!markdown
 
-## Step 9: Template Metadata Analysis
+## Step 11: Template Metadata Analysis
 
 Analyze the template metadata stored in the `sdc_template_instance_ecp` table.
 
@@ -495,23 +430,23 @@ FROM sdc_template_instance_ecp;
 
 #!markdown
 
-## Step 10: Summary and Validation
+## Step 12: Summary and Validation
 
 Provide a summary of the test results and validate that the MVP is working correctly.
 
 #!sql-ecpdb
 
-SELECT 'Template Instances' AS metric, COUNT(*) AS value FROM sdc_template_instance_ecp
+SELECT 'Template Instances (ECP)' AS metric, COUNT(*) AS value FROM sdc_template_instance_ecp
 UNION ALL
-SELECT 'ECP Measurements', COUNT(*) FROM measurement WHERE sdc_template_instance_guid IS NOT NULL
+SELECT 'SDC Form Answers' AS metric, COUNT(*) FROM sdc_form_answer
 UNION ALL
-SELECT 'Person Records', COUNT(*) FROM person
+SELECT 'Person Records' AS metric, COUNT(*) FROM person
 UNION ALL
-SELECT 'Concept Records', COUNT(*) FROM concept;
+SELECT 'Concept Records' AS metric, COUNT(*) FROM concept;
 
 #!markdown
 
-## Step 11: Cleanup (Optional)
+## Step 13: Cleanup (Optional)
 
 If you want to clean up the test database, you can run this cell. The database file is already ignored by Git.
 

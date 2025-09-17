@@ -202,6 +202,9 @@ public interface ISdcCdm
         string? specimen_laterality = null
     );
 
+    // Legacy helper used by older importers. Implementations may internally
+    // create an sdc_form_answer and write to either measurement or observation,
+    // but new code should prefer the explicit methods below.
     public long WriteMeasurementWithSdcData(
         long person_id,
         long measurement_concept_id,
@@ -227,6 +230,55 @@ public interface ISdcCdm
         int? sdc_repeat_level = null,
         string? sdc_comments = null,
         string? obx4 = null
+    );
+
+    // New explicit APIs for the OMOP+SDC design
+    // 1) Create SDC form answer (question+answer context metadata only)
+    public long WriteSdcFormAnswer(
+        long template_instance_id,
+        long? parent_form_answer_id = null,
+        string? section_sdcid = null,
+        string? section_guid = null,
+        string? question_text = null,
+        string? question_instance_guid = null,
+        string? question_sdcid = null,
+        string? list_item_id = null,
+        string? list_item_text = null,
+        string? list_item_instance_guid = null,
+        string? list_item_parent_guid = null,
+        string? units_system = null,
+        string? datatype = null,
+        string? sdc_order = null,
+        string? sdc_repeat_level = null,
+        string? sdc_comments = null
+    );
+
+    // 2) Write OMOP Measurement row linked to SDC form answer
+    public long WriteMeasurementLinkedToFormAnswer(
+        long person_id,
+        long measurement_concept_id,
+        DateTime measurement_date,
+        long measurement_type_concept_id,
+        double? value_as_number = null,
+        long? unit_concept_id = null,
+        string? unit_source_value = null,
+        string? measurement_source_value = null,
+        long sdc_form_answer_id = 0
+    );
+
+    // 3) Write OMOP Observation row linked to SDC form answer
+    public long WriteObservationLinkedToFormAnswer(
+        long person_id,
+        long observation_concept_id,
+        DateTime observation_date,
+        long observation_type_concept_id,
+        double? value_as_number = null,
+        string? value_as_string = null,
+        long? value_as_concept_id = null,
+        long? unit_concept_id = null,
+        string? unit_source_value = null,
+        string? observation_source_value = null,
+        long sdc_form_answer_id = 0
     );
 
     public record SdcTemplateInstanceEcpRecord(

@@ -177,23 +177,11 @@ CREATE TABLE main.measurement (
 			unit_source_concept_id integer NULL,
 			value_source_value TEXT NULL,
 			measurement_event_id integer NULL,
-			meas_event_field_concept_id integer NULL,
-			-- SDC-specific columns for ECP data
-			sdc_template_instance_guid TEXT NULL,
-			sdc_question_identifier TEXT NULL,
-			sdc_response_value TEXT NULL,
-			sdc_response_type TEXT NULL,
-			sdc_template_version TEXT NULL,
-			sdc_question_text TEXT NULL,
-			sdc_section_identifier TEXT NULL,
-			sdc_list_item_id TEXT NULL,
-			sdc_list_item_text TEXT NULL,
-			sdc_units TEXT NULL,
-			sdc_datatype TEXT NULL,
-			sdc_order integer NULL,
-			sdc_repeat_level integer NULL,
-			sdc_comments TEXT NULL,
-			"OBX4" TEXT NULL );
+			meas_event_field_concept_id integer NULL
+			-- SDC linkage to ancillary SDC tables (extras as FK refs only)
+			-- sdc_form_answer_id will be added after SDC tables are created to satisfy FK ordering
+			-- see ALTER TABLE at end of script
+			);
 --HINT DISTRIBUTE ON KEY (person_id)
 CREATE TABLE main.observation (
 			observation_id integer NOT NULL PRIMARY KEY AUTOINCREMENT,
@@ -547,7 +535,7 @@ CREATE TABLE main.template_item (
 			template_sdc_id integer NOT NULL REFERENCES template_sdc(template_sdc_id),
 			parent_template_item_id integer NULL,
 			template_item_sdcid TEXT NULL,
-			type TEXT NULL,
+			'type' TEXT NULL,
 			visible_text TEXT NULL,
 			invisible_text TEXT NULL,
 			min_cardinality TEXT NULL,
@@ -567,29 +555,23 @@ CREATE TABLE main.template_instance (
 			provider_id integer NULL,
 			report_text TEXT NULL );
 --HINT DISTRIBUTE ON RANDOM
-CREATE TABLE main.sdc_observation (
-			sdc_observation_id integer NOT NULL PRIMARY KEY AUTOINCREMENT,
+CREATE TABLE main.sdc_form_answer (
+			sdc_form_answer_id integer NOT NULL PRIMARY KEY AUTOINCREMENT,
 			template_instance_id integer NOT NULL REFERENCES template_instance(template_instance_id),
-			parent_observation_id integer NULL,
-			parent_instance_guid TEXT NULL,
+			parent_form_answer_id integer NULL REFERENCES sdc_form_answer(sdc_form_answer_id),
+			-- Question metadata
 			section_sdcid TEXT NULL,
 			section_guid TEXT NULL,
 			question_text TEXT NULL,
 			question_instance_guid TEXT NULL,
 			question_sdcid TEXT NULL,
-			list_item_text TEXT NULL,
+			-- Answer context (no raw values stored here)
 			list_item_id TEXT NULL,
+			list_item_text TEXT NULL,
 			list_item_instance_guid TEXT NULL,
 			list_item_parent_guid TEXT NULL,
-			response TEXT NULL,
-			units TEXT NULL,
 			units_system TEXT NULL,
 			datatype TEXT NULL,
-			response_int integer NULL,
-			response_float REAL NULL,
-			response_datetime date NULL,
-			reponse_string_nvarchar TEXT NULL,
-			obs_datetime TEXT NULL,
 			sdc_order TEXT NULL,
 			sdc_repeat_level TEXT NULL,
 			sdc_comments TEXT NULL );
@@ -630,7 +612,7 @@ CREATE TABLE main.sdc_specimen (
 --HINT DISTRIBUTE ON RANDOM
 CREATE TABLE main.observation_specimens (
 			observation_specimens_id integer NOT NULL PRIMARY KEY AUTOINCREMENT,
-			sdc_observation_id integer NOT NULL REFERENCES sdc_observation(sdc_observation_id),
+			sdc_form_answer_id integer NOT NULL REFERENCES sdc_form_answer(sdc_form_answer_id),
 			sdc_specimen_id integer NOT NULL REFERENCES sdc_specimen(sdc_specimen_id) );
 
 -- SDC Template Instance table for ECP data
@@ -659,4 +641,12 @@ CREATE TABLE main.sdc_template_instance_ecp (
 			-- Metadata fields
 			created_datetime REAL DEFAULT (julianday('now')),
 			updated_datetime REAL DEFAULT (julianday('now')) );
+-- Add SDC linkage FKs to OMOP tables after ancillary SDC table creation
+ALTER TABLE main.measurement
+	ADD COLUMN sdc_form_answer_id integer NULL REFERENCES sdc_form_answer(sdc_form_answer_id);
+CREATE INDEX IF NOT EXISTS idx_measurement_sdc_form_answer_id ON measurement(sdc_form_answer_id);
+
+ALTER TABLE main.observation
+	ADD COLUMN sdc_form_answer_id integer NULL REFERENCES sdc_form_answer(sdc_form_answer_id);
+CREATE INDEX IF NOT EXISTS idx_observation_sdc_form_answer_id ON observation(sdc_form_answer_id);
 COMMIT;

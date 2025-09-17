@@ -303,8 +303,8 @@ public static class NAACCRVolVImporter
         // Generate template instance GUID
         var template_instance_guid = Guid.NewGuid().ToString();
 
-        // Create SDC template instance for ECP data
-        var template_instance_id = sdcCdm.WriteSdcTemplateInstanceEcp(
+        // Create SDC template instance for ECP data (ECP metadata table)
+        var template_instance_ecp_id = sdcCdm.WriteSdcTemplateInstanceEcp(
             template_name: template_id,
             template_version: template_version,
             template_instance_guid: template_instance_guid,
@@ -315,6 +315,32 @@ public static class NAACCRVolVImporter
             tumor_site: tumor_site,
             procedure_type: procedure_type,
             specimen_laterality: specimen_laterality
+        );
+
+        // Also create a minimal template_instance row to satisfy sdc_form_answer FK to template_instance
+        long templatesdc_fk;
+        var foundTemplateSdc = sdcCdm.FindTemplateSdcClass(template_id);
+        if (foundTemplateSdc.HasValue)
+        {
+            templatesdc_fk = foundTemplateSdc.Value;
+        }
+        else
+        {
+            templatesdc_fk = sdcCdm.WriteTemplateSdcClass(template_id);
+        }
+
+        // Use the new GUID as template_instance_version_guid for linking
+        long template_instance_id = sdcCdm.WriteTemplateInstanceClass(
+            templatesdc_fk: templatesdc_fk,
+            template_instance_version_guid: template_instance_guid,
+            template_instance_version_uri: null,
+            instance_version_date: null,
+            diag_report_props: null,
+            surg_path_id: null,
+            person_fk: personId?.ToString(),
+            encounter_fk: null,
+            practitioner_fk: null,
+            report_text: null
         );
 
         // Process OBX segments for ECP data (starting from 4th OBX)
@@ -352,6 +378,9 @@ public static class NAACCRVolVImporter
             string response_type = "text";
             string response_value = obx_value;
             double? numeric_value = null;
+            string? cwe_code = null;
+            string? cwe_text = null;
+            string? cwe_system = null;
 
             switch (obx_value_type)
             {
@@ -364,6 +393,14 @@ public static class NAACCRVolVImporter
                     break;
                 case "CWE":
                     response_type = "list_selection";
+                    // Parse CWE: code^text^codingSystem^...
+                    if (!string.IsNullOrEmpty(obx_value))
+                    {
+                        var parts = obx_value.Split('^');
+                        cwe_code = parts.Length > 0 ? parts[0] : null;
+                        cwe_text = parts.Length > 1 ? parts[1] : null;
+                        cwe_system = parts.Length > 2 ? parts[2] : null;
+                    }
                     break;
                 case "ST":
                     // Some feeds encode numeric values in ST; treat as numeric when parsable
@@ -382,28 +419,61 @@ public static class NAACCRVolVImporter
                     break;
             }
 
-            // Create measurement record with SDC-specific data
-            var measurement_id = sdcCdm.WriteMeasurementWithSdcData(
-                person_id: personId ?? 0,
-                measurement_concept_id: 0, // Will be mapped to appropriate OMOP concept
-                measurement_date: DateTime.Now.Date,
-                measurement_type_concept_id: 32856, // Laboratory measurement
-                value_as_number: numeric_value,
-                value_as_string: response_value,
-                unit_source_value: obx_units,
-                measurement_source_value: obx_observation_id,
-                // SDC-specific fields
-                sdc_template_instance_guid: template_instance_guid,
-                sdc_question_identifier: question_identifier,
-                sdc_response_value: response_value,
-                sdc_response_type: response_type,
-                sdc_template_version: template_version,
-                sdc_question_text: question_text,
-                sdc_units: obx_units,
-                sdc_datatype: obx_value_type,
-                sdc_order: i - 2, // OBX sequence number
-                obx4: obx4_value
+            // Create SDC form-answer metadata row
+            var sdc_form_answer_id = sdcCdm.WriteSdcFormAnswer(
+                template_instance_id: template_instance_id,
+                parent_form_answer_id: null,
+                section_sdcid: null,
+                section_guid: null,
+                question_text: question_text,
+                question_instance_guid: question_identifier,
+                question_sdcid: question_identifier,
+                list_item_id: response_type == "list_selection" ? (cwe_code ?? obx_value) : null,
+                list_item_text: response_type == "list_selection" ? (cwe_text ?? obx_value) : null,
+                list_item_instance_guid: null,
+                list_item_parent_guid: null,
+                units_system: null,
+                datatype: obx_value_type,
+                sdc_order: (i - 2).ToString(),
+                sdc_repeat_level: null,
+                sdc_comments: null
             );
+
+            if (response_type == "numeric")
+            {
+                // Write a measurement linked to the SDC form answer
+                _ = sdcCdm.WriteMeasurementLinkedToFormAnswer(
+                    person_id: personId ?? 0,
+                    measurement_concept_id: 0, // TODO: map LOINC to OMOP concept
+                    measurement_date: DateTime.Now.Date,
+                    measurement_type_concept_id: 32856, // Laboratory measurement
+                    value_as_number: numeric_value,
+                    unit_concept_id: null,
+                    unit_source_value: obx_units,
+                    measurement_source_value: obx_observation_id,
+                    sdc_form_answer_id: sdc_form_answer_id
+                );
+            }
+            else
+            {
+                // Write an observation linked to the SDC form answer
+                _ = sdcCdm.WriteObservationLinkedToFormAnswer(
+                    person_id: personId ?? 0,
+                    observation_concept_id: 0, // TODO: map coded values to OMOP concept when available
+                    observation_date: DateTime.Now.Date,
+                    observation_type_concept_id: 45905771, // Observation recorded from EHR (inserted as essential concept)
+                    value_as_number: numeric_value,
+                    // For list selections, store the human-readable text in value_as_string
+                    value_as_string: response_type == "list_selection"
+                        ? (cwe_text ?? response_value)
+                        : response_value,
+                    value_as_concept_id: null, // TODO: parse CWE to concept id
+                    unit_concept_id: null,
+                    unit_source_value: obx_units,
+                    observation_source_value: obx_observation_id,
+                    sdc_form_answer_id: sdc_form_answer_id
+                );
+            }
         }
 
         Console.WriteLine(

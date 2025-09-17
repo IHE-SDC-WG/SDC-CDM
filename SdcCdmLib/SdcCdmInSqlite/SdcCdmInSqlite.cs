@@ -156,10 +156,45 @@ public class SdcCdmInSqlite : ISdcCdm
     private void CreateBasicSchema()
     {
         Console.WriteLine("Creating basic OMOP CDM schema with SDC extensions...");
-
-        // Create measurement table with SDC columns
-        var createMeasurementTable =
+        using var cmd = connection.CreateCommand();
+        cmd.CommandText =
             @"
+            PRAGMA foreign_keys = ON;
+
+            CREATE TABLE IF NOT EXISTS main.template_instance (
+                template_instance_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                template_instance_version_guid TEXT NULL,
+                template_instance_version_uri TEXT NULL,
+                template_sdc_id INTEGER NOT NULL,
+                instance_version_date TEXT NULL,
+                diag_report_props TEXT NULL,
+                surg_path_sdcid TEXT NULL,
+                person_id INTEGER NULL,
+                visit_occurrence_id INTEGER NULL,
+                provider_id INTEGER NULL,
+                report_text TEXT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS main.sdc_form_answer (
+                sdc_form_answer_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                template_instance_id INTEGER NOT NULL,
+                parent_form_answer_id INTEGER NULL,
+                section_sdcid TEXT NULL,
+                section_guid TEXT NULL,
+                question_text TEXT NULL,
+                question_instance_guid TEXT NULL,
+                question_sdcid TEXT NULL,
+                list_item_id TEXT NULL,
+                list_item_text TEXT NULL,
+                list_item_instance_guid TEXT NULL,
+                list_item_parent_guid TEXT NULL,
+                units_system TEXT NULL,
+                datatype TEXT NULL,
+                sdc_order TEXT NULL,
+                sdc_repeat_level TEXT NULL,
+                sdc_comments TEXT NULL
+            );
+
             CREATE TABLE IF NOT EXISTS main.measurement (
                 measurement_id INTEGER PRIMARY KEY AUTOINCREMENT,
                 person_id INTEGER NOT NULL,
@@ -169,7 +204,6 @@ public class SdcCdmInSqlite : ISdcCdm
                 measurement_type_concept_id INTEGER NOT NULL,
                 operator_concept_id INTEGER NULL,
                 value_as_number REAL NULL,
-                value_as_string TEXT NULL,
                 value_as_concept_id INTEGER NULL,
                 unit_concept_id INTEGER NULL,
                 range_low REAL NULL,
@@ -180,28 +214,41 @@ public class SdcCdmInSqlite : ISdcCdm
                 measurement_source_value TEXT NULL,
                 measurement_source_concept_id INTEGER NULL,
                 unit_source_value TEXT NULL,
+                unit_source_concept_id INTEGER NULL,
                 value_source_value TEXT NULL,
-                -- SDC-specific columns for ECP data
-                sdc_template_instance_guid TEXT NULL,
-                sdc_question_identifier TEXT NULL,
-                sdc_response_value TEXT NULL,
-                sdc_response_type TEXT NULL,
-                sdc_template_version TEXT NULL,
-                sdc_question_text TEXT NULL,
-                sdc_section_identifier TEXT NULL,
-                sdc_list_item_id TEXT NULL,
-                sdc_list_item_text TEXT NULL,
-                sdc_units TEXT NULL,
-                sdc_datatype TEXT NULL,
-                sdc_order INTEGER NULL,
-                sdc_repeat_level INTEGER NULL,
-                sdc_comments TEXT NULL
-                , ""OBX4"" TEXT NULL
+                measurement_event_id INTEGER NULL,
+                meas_event_field_concept_id INTEGER NULL,
+                sdc_form_answer_id INTEGER NULL REFERENCES sdc_form_answer(sdc_form_answer_id)
             );
-        ";
 
-        using var cmd = connection.CreateCommand();
-        cmd.CommandText = createMeasurementTable;
+            CREATE TABLE IF NOT EXISTS main.observation (
+                observation_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                person_id INTEGER NOT NULL,
+                observation_concept_id INTEGER NOT NULL,
+                observation_date DATE NOT NULL,
+                observation_datetime REAL NULL,
+                observation_type_concept_id INTEGER NOT NULL,
+                value_as_number REAL NULL,
+                value_as_string TEXT NULL,
+                value_as_concept_id INTEGER NULL,
+                qualifier_concept_id INTEGER NULL,
+                unit_concept_id INTEGER NULL,
+                provider_id INTEGER NULL,
+                visit_occurrence_id INTEGER NULL,
+                visit_detail_id INTEGER NULL,
+                observation_source_value TEXT NULL,
+                observation_source_concept_id INTEGER NULL,
+                unit_source_value TEXT NULL,
+                qualifier_source_value TEXT NULL,
+                value_source_value TEXT NULL,
+                observation_event_id INTEGER NULL,
+                obs_event_field_concept_id INTEGER NULL,
+                sdc_form_answer_id INTEGER NULL REFERENCES sdc_form_answer(sdc_form_answer_id)
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_measurement_sdc_form_answer_id ON measurement(sdc_form_answer_id);
+            CREATE INDEX IF NOT EXISTS idx_observation_sdc_form_answer_id ON observation(sdc_form_answer_id);
+        ";
         cmd.ExecuteNonQuery();
 
         Console.WriteLine("Basic schema created successfully!");
@@ -846,65 +893,238 @@ public class SdcCdmInSqlite : ISdcCdm
         string? obx4 = null
     )
     {
+        // Backward-compat shim: create sdc_form_answer row with provided context,
+        // then write either measurement (numeric) or observation (text/coded), linking by sdc_form_answer_id.
+        // Map template_instance from GUID (new ECP table) if provided; else leave null/0.
+        long? templateInstanceId = null;
+        if (!string.IsNullOrEmpty(sdc_template_instance_guid))
+        {
+            // Try resolving the ECP record to get a person/linkage, then its surrogate template_instance if available later.
+            var ecp = FindSdcTemplateInstanceEcpByGuid(sdc_template_instance_guid);
+            // There is no direct FK from ecp table to template_instance; leave null here.
+            // Implementers can later add mapping if needed.
+        }
+
+        var sdcFormAnswerId = WriteSdcFormAnswer(
+            template_instance_id: templateInstanceId ?? 0,
+            parent_form_answer_id: null,
+            section_sdcid: sdc_section_identifier,
+            section_guid: null,
+            question_text: sdc_question_text,
+            question_instance_guid: sdc_question_identifier,
+            question_sdcid: sdc_question_identifier,
+            list_item_id: sdc_list_item_id,
+            list_item_text: sdc_list_item_text,
+            list_item_instance_guid: null,
+            list_item_parent_guid: null,
+            units_system: null,
+            datatype: sdc_datatype,
+            sdc_order: sdc_order?.ToString(),
+            sdc_repeat_level: sdc_repeat_level?.ToString(),
+            sdc_comments: sdc_comments
+        );
+
+        if (
+            sdc_response_type != null
+            && sdc_response_type.Equals("numeric", StringComparison.OrdinalIgnoreCase)
+        )
+        {
+            return WriteMeasurementLinkedToFormAnswer(
+                person_id: person_id,
+                measurement_concept_id: measurement_concept_id,
+                measurement_date: measurement_date,
+                measurement_type_concept_id: measurement_type_concept_id,
+                value_as_number: value_as_number,
+                unit_concept_id: null,
+                unit_source_value: unit_source_value,
+                measurement_source_value: measurement_source_value,
+                sdc_form_answer_id: sdcFormAnswerId
+            );
+        }
+        else
+        {
+            // Treat as observation for coded/text
+            return WriteObservationLinkedToFormAnswer(
+                person_id: person_id,
+                observation_concept_id: measurement_concept_id, // upstream caller passes concept per item
+                observation_date: measurement_date,
+                observation_type_concept_id: 0,
+                value_as_number: value_as_number,
+                value_as_string: value_as_string,
+                value_as_concept_id: null,
+                unit_concept_id: null,
+                unit_source_value: unit_source_value,
+                observation_source_value: measurement_source_value,
+                sdc_form_answer_id: sdcFormAnswerId
+            );
+        }
+    }
+
+    public long WriteSdcFormAnswer(
+        long template_instance_id,
+        long? parent_form_answer_id = null,
+        string? section_sdcid = null,
+        string? section_guid = null,
+        string? question_text = null,
+        string? question_instance_guid = null,
+        string? question_sdcid = null,
+        string? list_item_id = null,
+        string? list_item_text = null,
+        string? list_item_instance_guid = null,
+        string? list_item_parent_guid = null,
+        string? units_system = null,
+        string? datatype = null,
+        string? sdc_order = null,
+        string? sdc_repeat_level = null,
+        string? sdc_comments = null
+    )
+    {
         using var cmd = connection.CreateCommand();
         cmd.CommandText =
             @"
-                    INSERT INTO main.measurement
-                    (person_id, measurement_concept_id, measurement_date, measurement_type_concept_id,
-                     value_as_number, value_source_value, unit_source_value, measurement_source_value,
-                     sdc_template_instance_guid, sdc_question_identifier, sdc_response_value, sdc_response_type,
-                     sdc_template_version, sdc_question_text, sdc_section_identifier, sdc_list_item_id,
-                     sdc_list_item_text, sdc_units, sdc_datatype, sdc_order, sdc_repeat_level, sdc_comments, ""OBX4"")
-                    VALUES
-                    (@personId, @measurementConceptId, @measurementDate, @measurementTypeConceptId,
-                     @valueAsNumber, @valueAsString, @unitSourceValue, @measurementSourceValue,
-                     @sdcTemplateInstanceGuid, @sdcQuestionIdentifier, @sdcResponseValue, @sdcResponseType,
-                     @sdcTemplateVersion, @sdcQuestionText, @sdcSectionIdentifier, @sdcListItemId,
-                     @sdcListItemText, @sdcUnits, @sdcDatatype, @sdcOrder, @sdcRepeatLevel, @sdcComments, @OBX4);
-                    SELECT last_insert_rowid();
-                ";
+            INSERT INTO main.sdc_form_answer (
+                template_instance_id, parent_form_answer_id,
+                section_sdcid, section_guid, question_text, question_instance_guid, question_sdcid,
+                list_item_id, list_item_text, list_item_instance_guid, list_item_parent_guid,
+                units_system, datatype, sdc_order, sdc_repeat_level, sdc_comments
+            ) VALUES (
+                @template_instance_id, @parent_form_answer_id,
+                @section_sdcid, @section_guid, @question_text, @question_instance_guid, @question_sdcid,
+                @list_item_id, @list_item_text, @list_item_instance_guid, @list_item_parent_guid,
+                @units_system, @datatype, @sdc_order, @sdc_repeat_level, @sdc_comments
+            );
+            SELECT last_insert_rowid();
+        ";
 
-        cmd.Parameters.AddWithValue("@personId", person_id);
-        cmd.Parameters.AddWithValue("@measurementConceptId", measurement_concept_id);
-        cmd.Parameters.AddWithValue("@measurementDate", measurement_date);
-        cmd.Parameters.AddWithValue("@measurementTypeConceptId", measurement_type_concept_id);
-        cmd.Parameters.AddWithValue("@valueAsNumber", value_as_number ?? (object)DBNull.Value);
-        cmd.Parameters.AddWithValue("@valueAsString", value_as_string ?? (object)DBNull.Value);
-        cmd.Parameters.AddWithValue("@unitSourceValue", unit_source_value ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue("@template_instance_id", template_instance_id);
         cmd.Parameters.AddWithValue(
-            "@measurementSourceValue",
+            "@parent_form_answer_id",
+            parent_form_answer_id ?? (object)DBNull.Value
+        );
+        cmd.Parameters.AddWithValue("@section_sdcid", section_sdcid ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue("@section_guid", section_guid ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue("@question_text", question_text ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue(
+            "@question_instance_guid",
+            question_instance_guid ?? (object)DBNull.Value
+        );
+        cmd.Parameters.AddWithValue("@question_sdcid", question_sdcid ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue("@list_item_id", list_item_id ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue("@list_item_text", list_item_text ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue(
+            "@list_item_instance_guid",
+            list_item_instance_guid ?? (object)DBNull.Value
+        );
+        cmd.Parameters.AddWithValue(
+            "@list_item_parent_guid",
+            list_item_parent_guid ?? (object)DBNull.Value
+        );
+        cmd.Parameters.AddWithValue("@units_system", units_system ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue("@datatype", datatype ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue("@sdc_order", sdc_order ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue("@sdc_repeat_level", sdc_repeat_level ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue("@sdc_comments", sdc_comments ?? (object)DBNull.Value);
+
+        var result = cmd.ExecuteScalar();
+        return result != null ? Convert.ToInt64(result) : -1;
+    }
+
+    public long WriteMeasurementLinkedToFormAnswer(
+        long person_id,
+        long measurement_concept_id,
+        DateTime measurement_date,
+        long measurement_type_concept_id,
+        double? value_as_number = null,
+        long? unit_concept_id = null,
+        string? unit_source_value = null,
+        string? measurement_source_value = null,
+        long sdc_form_answer_id = 0
+    )
+    {
+        using var cmd = connection.CreateCommand();
+        cmd.CommandText =
+            @"
+            INSERT INTO main.measurement (
+                person_id, measurement_concept_id, measurement_date, measurement_type_concept_id,
+                value_as_number, unit_concept_id, unit_source_value, measurement_source_value,
+                sdc_form_answer_id
+            ) VALUES (
+                @person_id, @measurement_concept_id, @measurement_date, @measurement_type_concept_id,
+                @value_as_number, @unit_concept_id, @unit_source_value, @measurement_source_value,
+                @sdc_form_answer_id
+            );
+            SELECT last_insert_rowid();
+        ";
+
+        cmd.Parameters.AddWithValue("@person_id", person_id);
+        cmd.Parameters.AddWithValue("@measurement_concept_id", measurement_concept_id);
+        cmd.Parameters.AddWithValue("@measurement_date", measurement_date);
+        cmd.Parameters.AddWithValue("@measurement_type_concept_id", measurement_type_concept_id);
+        cmd.Parameters.AddWithValue("@value_as_number", value_as_number ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue("@unit_concept_id", unit_concept_id ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue(
+            "@unit_source_value",
+            unit_source_value ?? (object)DBNull.Value
+        );
+        cmd.Parameters.AddWithValue(
+            "@measurement_source_value",
             measurement_source_value ?? (object)DBNull.Value
         );
+        cmd.Parameters.AddWithValue("@sdc_form_answer_id", sdc_form_answer_id);
+
+        var result = cmd.ExecuteScalar();
+        return result != null ? Convert.ToInt64(result) : -1;
+    }
+
+    public long WriteObservationLinkedToFormAnswer(
+        long person_id,
+        long observation_concept_id,
+        DateTime observation_date,
+        long observation_type_concept_id,
+        double? value_as_number = null,
+        string? value_as_string = null,
+        long? value_as_concept_id = null,
+        long? unit_concept_id = null,
+        string? unit_source_value = null,
+        string? observation_source_value = null,
+        long sdc_form_answer_id = 0
+    )
+    {
+        using var cmd = connection.CreateCommand();
+        cmd.CommandText =
+            @"
+            INSERT INTO main.observation (
+                person_id, observation_concept_id, observation_date, observation_type_concept_id,
+                value_as_number, value_as_string, value_as_concept_id, unit_concept_id, unit_source_value,
+                observation_source_value, sdc_form_answer_id
+            ) VALUES (
+                @person_id, @observation_concept_id, @observation_date, @observation_type_concept_id,
+                @value_as_number, @value_as_string, @value_as_concept_id, @unit_concept_id, @unit_source_value,
+                @observation_source_value, @sdc_form_answer_id
+            );
+            SELECT last_insert_rowid();
+        ";
+
+        cmd.Parameters.AddWithValue("@person_id", person_id);
+        cmd.Parameters.AddWithValue("@observation_concept_id", observation_concept_id);
+        cmd.Parameters.AddWithValue("@observation_date", observation_date);
+        cmd.Parameters.AddWithValue("@observation_type_concept_id", observation_type_concept_id);
+        cmd.Parameters.AddWithValue("@value_as_number", value_as_number ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue("@value_as_string", value_as_string ?? (object)DBNull.Value);
         cmd.Parameters.AddWithValue(
-            "@sdcTemplateInstanceGuid",
-            sdc_template_instance_guid ?? (object)DBNull.Value
+            "@value_as_concept_id",
+            value_as_concept_id ?? (object)DBNull.Value
+        );
+        cmd.Parameters.AddWithValue("@unit_concept_id", unit_concept_id ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue(
+            "@unit_source_value",
+            unit_source_value ?? (object)DBNull.Value
         );
         cmd.Parameters.AddWithValue(
-            "@sdcQuestionIdentifier",
-            sdc_question_identifier ?? (object)DBNull.Value
+            "@observation_source_value",
+            observation_source_value ?? (object)DBNull.Value
         );
-        cmd.Parameters.AddWithValue(
-            "@sdcResponseValue",
-            sdc_response_value ?? (object)DBNull.Value
-        );
-        cmd.Parameters.AddWithValue("@sdcResponseType", sdc_response_type ?? (object)DBNull.Value);
-        cmd.Parameters.AddWithValue(
-            "@sdcTemplateVersion",
-            sdc_template_version ?? (object)DBNull.Value
-        );
-        cmd.Parameters.AddWithValue("@sdcQuestionText", sdc_question_text ?? (object)DBNull.Value);
-        cmd.Parameters.AddWithValue(
-            "@sdcSectionIdentifier",
-            sdc_section_identifier ?? (object)DBNull.Value
-        );
-        cmd.Parameters.AddWithValue("@sdcListItemId", sdc_list_item_id ?? (object)DBNull.Value);
-        cmd.Parameters.AddWithValue("@sdcListItemText", sdc_list_item_text ?? (object)DBNull.Value);
-        cmd.Parameters.AddWithValue("@sdcUnits", sdc_units ?? (object)DBNull.Value);
-        cmd.Parameters.AddWithValue("@sdcDatatype", sdc_datatype ?? (object)DBNull.Value);
-        cmd.Parameters.AddWithValue("@sdcOrder", sdc_order ?? (object)DBNull.Value);
-        cmd.Parameters.AddWithValue("@sdcRepeatLevel", sdc_repeat_level ?? (object)DBNull.Value);
-        cmd.Parameters.AddWithValue("@sdcComments", sdc_comments ?? (object)DBNull.Value);
-        cmd.Parameters.AddWithValue("@OBX4", obx4 ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue("@sdc_form_answer_id", sdc_form_answer_id);
 
         var result = cmd.ExecuteScalar();
         return result != null ? Convert.ToInt64(result) : -1;
@@ -1053,6 +1273,19 @@ public class SdcCdmInSqlite : ISdcCdm
                 ConceptClassId = "Measurement Type",
                 StandardConcept = "S",
                 ConceptCode = "LAB",
+                ValidStartDate = DateTime.Parse("1970-01-01"),
+                ValidEndDate = DateTime.Parse("2099-12-31"),
+                InvalidReason = null,
+            },
+            new ConceptRecord
+            {
+                ConceptId = 45905771,
+                ConceptName = "Observation recorded from EHR",
+                DomainId = "Type Concept",
+                VocabularyId = "Type Concept",
+                ConceptClassId = "Type Concept",
+                StandardConcept = "S",
+                ConceptCode = "EHR_obs",
                 ValidStartDate = DateTime.Parse("1970-01-01"),
                 ValidEndDate = DateTime.Parse("2099-12-31"),
                 InvalidReason = null,
