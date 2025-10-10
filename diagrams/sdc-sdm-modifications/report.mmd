@@ -1,0 +1,43 @@
+erDiagram
+
+    OBSERVATION ["OBSERVATION (Report)"]
+    OBSERVATION_OTHER ["OBSERVATION (Form Response in Report)"]
+    MEASUREMENT ["MEASUREMENT (Form Response in Report)"]
+    PERSON
+    PROVIDER
+    CONCEPT ["CONCEPT (Report Type)"]
+    FACT_RELATIONSHIP_OBS ["FACT_RELATIONSHIP (Report to Observation)"]
+    %%  {
+    %%   INT domain_concept_id_1 FK "Observation (Report)"
+    %%   INT fact_id_1  "observation_id_1"
+    %%   INT domain_concept_id_2 FK "Observation (Contained in Report)"
+    %%   INT fact_id_2 "observation_id_2"
+    %%   VARCHAR relationship_concept_id FK "Observation that is contained within a Report"
+    %% }
+    FACT_RELATIONSHIP_MEAS ["FACT_RELATIONSHIP (Report to Measurement)"] 
+    %% {
+    %%   INT domain_concept_id_1 FK "Observation (Report)"
+    %%   INT fact_id_1  "observation_id_1"
+    %%   INT domain_concept_id_2 FK "Measurement (Contained in Report)"
+    %%   INT fact_id_2 "measurement_id_1"
+    %%   VARCHAR relationship_concept_id FK "Measurement that is contained within a Report"
+    %% }
+    VISIT_OCCURRENCE   
+    VISIT_DETAIL 
+    SDCTemplateInstance
+
+    OBSERVATION }o--|| PERSON : aboutPatient
+    OBSERVATION }o--|| PROVIDER : authoredBy
+    OBSERVATION_OTHER }o--o| VISIT_OCCURRENCE : occurredDuring
+    OBSERVATION_OTHER |o--o{  VISIT_DETAIL : occuredDuring
+    FACT_RELATIONSHIP_MEAS }o--|| MEASUREMENT : "isContainedIn"
+    FACT_RELATIONSHIP_OBS }o--|| OBSERVATION_OTHER : "isContainedIn"
+    %% MEASUREMENT }o--o| VISIT_OCCURRENCE : occurredDuring
+    VISIT_OCCURRENCE |o--o{  MEASUREMENT : occuredDuring
+    %% MEASUREMENT |o--o{  VISIT_DETAIL : occuredDuring
+    VISIT_DETAIL |o--o{  MEASUREMENT : occuredDuring
+    OBSERVATION }o--|| CONCEPT : "isConceptualizedAs"
+    OBSERVATION }o--|| FACT_RELATIONSHIP_OBS : "contains"
+    OBSERVATION }o--|| FACT_RELATIONSHIP_MEAS : "contains"
+    SDCTemplateInstance ||--|| OBSERVATION : "isRealizedAs"
+

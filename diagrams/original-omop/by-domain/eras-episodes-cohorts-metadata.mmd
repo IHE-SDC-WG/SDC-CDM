@@ -1,0 +1,114 @@
+erDiagram
+  PERSON { INT person_id PK }
+  CONCEPT { INT concept_id PK }
+
+  CONDITION_ERA {
+    INT condition_era_id PK
+    INT person_id FK
+    INT condition_concept_id FK
+    DATE condition_era_start_date
+    DATE condition_era_end_date
+    INT condition_occurrence_count
+  }
+
+  DRUG_ERA {
+    INT drug_era_id PK
+    INT person_id FK
+    INT drug_concept_id FK
+    DATE drug_era_start_date
+    DATE drug_era_end_date
+    INT drug_exposure_count
+    FLOAT gap_days
+  }
+
+  DOSE_ERA {
+    INT dose_era_id PK
+    INT person_id FK
+    INT drug_concept_id FK
+    INT unit_concept_id FK
+    FLOAT dose_value
+    DATE dose_era_start_date
+    DATE dose_era_end_date
+  }
+
+  EPISODE {
+    INT episode_id PK
+    INT person_id FK
+    INT episode_concept_id FK
+    DATE episode_start_date
+    DATE episode_end_date
+    INT episode_parent_id FK
+    INT episode_number
+    INT episode_object_concept_id FK
+    INT episode_type_concept_id FK
+    VARCHAR episode_source_value
+    INT episode_source_concept_id FK
+  }
+
+  EPISODE_EVENT {
+    INT episode_id FK
+    INT event_id
+    INT episode_event_field_concept_id FK
+  }
+
+  COHORT_DEFINITION {
+    INT cohort_definition_id PK
+    VARCHAR cohort_definition_name
+    TEXT cohort_definition_description
+    INT definition_type_concept_id FK
+    TEXT cohort_definition_syntax
+    INT subject_concept_id FK
+    DATE cohort_initiation_date
+  }
+
+  COHORT {
+    INT cohort_definition_id FK
+    INT subject_id
+    DATE cohort_start_date
+    DATE cohort_end_date
+  }
+
+  METADATA {
+    INT metadata_id PK
+    INT metadata_concept_id FK
+    INT metadata_type_concept_id FK
+    VARCHAR name
+    TEXT value_as_string
+    INT value_as_concept_id FK
+    DATE metadata_date
+    DATETIME metadata_datetime
+  }
+
+  CDM_SOURCE {
+    VARCHAR cdm_source_name
+    VARCHAR cdm_source_abbreviation
+    VARCHAR cdm_holder
+    VARCHAR source_description
+    VARCHAR source_documentation_reference
+    VARCHAR cdm_etl_reference
+    DATE source_release_date
+    DATE cdm_release_date
+    VARCHAR cdm_version
+    VARCHAR vocabulary_version
+  }
+
+  %% Relationships
+  PERSON ||--o{ CONDITION_ERA : "person_id"
+  CONCEPT ||--o{ CONDITION_ERA : "condition_concept_id"
+
+  PERSON ||--o{ DRUG_ERA : "person_id"
+  CONCEPT ||--o{ DRUG_ERA : "drug_concept_id"
+
+  PERSON ||--o{ DOSE_ERA : "person_id"
+  CONCEPT ||--o{ DOSE_ERA : "drug/unit"
+
+  PERSON ||--o{ EPISODE : "person_id"
+  EPISODE ||--o{ EPISODE : "parent-child"
+  EPISODE ||--o{ EPISODE_EVENT : "episode_id"
+  CONCEPT ||--o{ EPISODE : "episode/object/type/source"
+  CONCEPT ||--o{ EPISODE_EVENT : "event_field_concept_id"
+
+  COHORT_DEFINITION ||--o{ COHORT : "cohort_definition_id"
+  CONCEPT ||--o{ COHORT_DEFINITION : "definition/subject"
+
+  CONCEPT ||--o{ METADATA : "metadata/type/value"

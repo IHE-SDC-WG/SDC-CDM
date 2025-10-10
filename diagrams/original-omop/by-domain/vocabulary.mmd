@@ -1,0 +1,96 @@
+erDiagram
+  %% ===== Vocabulary =====
+  CONCEPT {
+    INT concept_id PK
+    VARCHAR concept_name
+    VARCHAR domain_id FK
+    VARCHAR vocabulary_id FK
+    VARCHAR concept_class_id FK
+    VARCHAR standard_concept
+    VARCHAR concept_code
+    DATE valid_start_date
+    DATE valid_end_date
+    VARCHAR invalid_reason
+  }
+
+  VOCABULARY {
+    VARCHAR vocabulary_id PK
+    VARCHAR vocabulary_name
+    VARCHAR vocabulary_reference
+    VARCHAR vocabulary_version
+    INT vocabulary_concept_id FK
+  }
+
+  DOMAIN {
+    VARCHAR domain_id PK
+    VARCHAR domain_name
+    INT domain_concept_id FK
+  }
+
+  CONCEPT_CLASS {
+    VARCHAR concept_class_id PK
+    VARCHAR concept_class_name
+    INT concept_class_concept_id FK
+  }
+
+  RELATIONSHIP {
+    VARCHAR relationship_id PK
+    VARCHAR relationship_name
+    VARCHAR is_hierarchical
+    VARCHAR defines_ancestry
+    INT relationship_concept_id FK
+  }
+
+  CONCEPT_RELATIONSHIP {
+    INT concept_id_1 FK
+    INT concept_id_2 FK
+    VARCHAR relationship_id FK
+    DATE valid_start_date
+    DATE valid_end_date
+    VARCHAR invalid_reason
+  }
+
+  CONCEPT_SYNONYM {
+    INT concept_id FK
+    VARCHAR concept_synonym_name
+    INT language_concept_id FK
+  }
+
+  SOURCE_TO_CONCEPT_MAP {
+    VARCHAR source_code
+    INT source_concept_id FK
+    VARCHAR source_vocabulary_id FK
+    VARCHAR source_code_description
+    INT target_concept_id FK
+    VARCHAR target_vocabulary_id FK
+    VARCHAR mapping_type
+    DATE valid_start_date
+    DATE valid_end_date
+    VARCHAR invalid_reason
+  }
+
+  DRUG_STRENGTH {
+    INT drug_concept_id FK
+    INT ingredient_concept_id FK
+    FLOAT amount_value
+    INT amount_unit_concept_id FK
+    FLOAT numerator_value
+    INT numerator_unit_concept_id FK
+    FLOAT denominator_value
+    INT denominator_unit_concept_id FK
+    FLOAT box_size
+    DATE valid_start_date
+    DATE valid_end_date
+    VARCHAR invalid_reason
+  }
+
+  %% Relationships
+  VOCABULARY ||--o{ CONCEPT : "vocabulary_id"
+  DOMAIN ||--o{ CONCEPT : "domain_id"
+  CONCEPT_CLASS ||--o{ CONCEPT : "concept_class_id"
+  RELATIONSHIP ||--o{ CONCEPT_RELATIONSHIP : "relationship_id"
+  CONCEPT ||--o{ CONCEPT_RELATIONSHIP : "concept_id_1/2"
+  CONCEPT ||--o{ CONCEPT_SYNONYM : "concept_id"
+  VOCABULARY ||--o{ SOURCE_TO_CONCEPT_MAP : "source/target vocabs"
+  CONCEPT ||--o{ SOURCE_TO_CONCEPT_MAP : "source/target concepts"
+  CONCEPT ||--o{ DRUG_STRENGTH : "drug/ingredient/unit"

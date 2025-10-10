@@ -1,0 +1,42 @@
+erDiagram
+  PERSON { INT person_id PK }
+  CONCEPT { INT concept_id PK }
+
+  PAYER_PLAN_PERIOD {
+    INT payer_plan_period_id PK
+    INT person_id FK
+    DATE payer_plan_period_start_date
+    DATE payer_plan_period_end_date
+    VARCHAR payer_source_value
+    VARCHAR plan_source_value
+    VARCHAR sponsor_source_value
+    VARCHAR family_source_value
+  }
+
+  COST {
+    INT cost_id PK
+    INT cost_event_id
+    INT cost_domain_id FK
+    INT cost_type_concept_id FK
+    INT currency_concept_id FK
+    FLOAT total_charge
+    FLOAT total_cost
+    FLOAT total_paid
+    FLOAT paid_by_payer
+    FLOAT paid_by_patient
+    FLOAT paid_patient_copay
+    FLOAT paid_patient_coinsurance
+    FLOAT paid_patient_deductible
+    FLOAT paid_by_primary
+    FLOAT paid_ingredient_cost
+    FLOAT paid_dispensing_fee
+    INT payer_plan_period_id FK
+    DATE cost_date
+    INT cost_source_concept_id FK
+    VARCHAR cost_source_value
+  }
+
+  %% Relationships
+  PERSON ||--o{ PAYER_PLAN_PERIOD : "person_id"
+  PAYER_PLAN_PERIOD ||--o{ COST : "payer_plan_period_id"
+  CONCEPT ||--o{ COST : "domain/type/currency"
