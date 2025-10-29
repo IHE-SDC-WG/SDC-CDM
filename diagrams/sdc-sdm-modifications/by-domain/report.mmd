@@ -31,7 +31,7 @@ erDiagram
     OBSERVATION_OTHER }o--o| VISIT_OCCURRENCE : occurredDuring
     OBSERVATION_OTHER |o--o{  VISIT_DETAIL : occuredDuring
     OBSERVATION }o--o| VISIT_OCCURRENCE : occurredDuring
-    OBSERVATION|o--o{  VISIT_DETAIL : occuredDuring
+    OBSERVATION |o--o{  VISIT_DETAIL : occuredDuring
     FACT_RELATIONSHIP_MEAS }o--|| MEASUREMENT : "isContainedIn"
     FACT_RELATIONSHIP_OBS }o--|| OBSERVATION_OTHER : "isContainedIn"
     %% MEASUREMENT }o--o| VISIT_OCCURRENCE : occurredDuring

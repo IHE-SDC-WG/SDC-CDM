@@ -1,0 +1,66 @@
+erDiagram 
+
+%% direction LR
+
+OBSERVATION ["OBSERVATION (Report)"]
+OBSERVATION_OTHER ["OBSERVATION (Form Response in Report)"] {
+  int observation_id PK
+  int person_id FK "PERSON"
+  int provider_id FK "PROVIDER"
+  int observation_type_concept_id FK "CONCEPT (e.g., Report Observation Type)"
+  int observation_concept_id FK "CONCEPT (concept that the OBSERVATION_SOURCE_CONCEPT_ID maps to)"
+  int observation_source_concept_id FK "CONCEPT (I think, concept ID for report 'question' or report 'section')"
+  varchar observation_source_value  "I think this the text for 'question' or the name of the 'section'"
+  varchar TYPE_source_value  "source value TYPE is qualifier|value|unit"
+  int qualifier_concept_id FK "CONCEPT (e.g., degrees, severity, etc.)"
+  int unit_concept_id FK "CONCEPT"
+  int visit_occurrence_id FK "VISIT OCCURRENCE"
+  int visit_detail_id FK "VISIT DETAIL"
+  TYPE value_as_TYPE  "TYPE is string|number|date|conceptId"
+
+}
+
+MEASUREMENT ["MEASUREMENT (Form Response in Report)"] {
+  int measurement_id PK
+  int person_id FK "PERSON"
+  int provider_id FK "PROVIDER"
+  int measurement_type_concept_id FK "CONCEPT (e.g., Report Measurement Type)"
+  int measurement_concept_id FK "CONCEPT (concept that the MEASUREMENT_SOURCE_CONCEPT_ID maps to)"
+  int measurement_source_concept_id FK "CONCEPT (I think, concept ID for report 'question')"
+  varchar measurement_source_value  "I think this the text for 'question'"
+  int unit_concept_id FK "CONCEPT (NULL if absent, 0 if unmapped)"
+  int unit_source_concept_id FK "CONCEPT (Possibly non-standard concept ID from source data.)"
+  int unit_source_value  "exact unit value from source data"
+  int operator_concept_id FK "CONCEPT (=,>,<...)"
+  int visit_occurrence_id FK "VISIT OCCURRENCE"
+  int visit_detail_id FK "VISIT DETAIL"
+  TYPE value_as_TYPE  "TYPE is number|conceptId"
+  varchar value_source_value  "exact value from source data for measurement itself)"
+  varchar TYPE_source_value  "source value TYPE is qualifier|value|unit"
+}
+
+OBSERVATION_OTHER }o--|| PERSON : aboutPatient
+PERSON ||--o{ MEASUREMENT : "aboutPatient"
+
+OBSERVATION_OTHER }o--|| PROVIDER : authoredBy
+PROVIDER ||--o{ MEASUREMENT : authoredBy
+
+CONCEPT ||--o{ OBSERVATION_OTHER : "conceptualizes"
+MEASUREMENT }o--|| CONCEPT : "conceptualizes"
+%% CONCEPT ||--o{ MEASUREMENT : "conceptualizes"
+
+FACT_RELATIONSHIP_OBS ["FACT_RELATIONSHIP (Report to Observation)"]
+FACT_RELATIONSHIP_MEAS ["FACT_RELATIONSHIP (Report to Measurement)"] 
+
+OBSERVATION_OTHER ||--o{ FACT_RELATIONSHIP_OBS : "isContainedIn"
+MEASUREMENT ||--o{ FACT_RELATIONSHIP_MEAS : "isContainedIn"
+
+OBSERVATION_OTHER }o--o| VISIT_OCCURRENCE : occurredDuring
+
+OBSERVATION_OTHER }o--o{ VISIT_DETAIL : occuredDuring
+
+VISIT_OCCURRENCE |o--o{  MEASUREMENT : occuredDuring
+VISIT_DETAIL |o--o{  MEASUREMENT : occuredDuring
+
+FACT_RELATIONSHIP_OBS ||--o{ OBSERVATION : "contains"
+FACT_RELATIONSHIP_MEAS ||--o{ OBSERVATION : "contains"
