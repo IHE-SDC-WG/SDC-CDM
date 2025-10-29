@@ -1,0 +1,109 @@
+erDiagram
+
+  PERSON
+
+  %% ========= Episode as Cancer Case =========
+  EPISODE {
+    bigint episode_id PK
+    bigint person_id FK 
+    int episode_concept_id FK "e.g., Primary cancer episode"
+    int episode_type_concept_id FK "e.g., Disease episode"
+    date episode_start_date
+    date episode_end_date
+    bigint episode_parent_id "optional: for sub-episodes (recurrence, treatment)"
+  }
+
+  EPISODE_EVENT {
+    bigint episode_id FK "-> EPISODE.episode_id"
+    bigint event_id "ID of linked fact"
+    int event_field_concept_id FK "identifies target table (Condition, Observation, Procedure etc.)"
+  }
+
+  %% ========= Clinical Facts linked to the episode =========
+  CONDITION_OCCURRENCE {
+    bigint condition_occurrence_id PK "Represents specific cancer diagnoses or recurrences"
+    bigint person_id FK 
+    int condition_concept_id FK "SNOMED/ICD cancer dx"
+    date condition_start_date
+    date condition_end_date
+  }
+
+  OBSERVATION {
+    bigint observation_id PK
+    bigint person_id FK 
+    int observation_concept_id FK "Stage/grade/histology codes"
+    string value_as_string
+    int value_as_concept_id
+    date observation_date
+  }
+
+  MEASUREMENT {
+    bigint measurement_id PK
+    bigint person_id FK 
+    int measurement_concept_id FK "Biomarkers/genomics/labs"
+    float value_as_number
+    int unit_concept_id
+    date measurement_date
+  }
+
+  PROCEDURE_OCCURRENCE {
+    bigint procedure_occurrence_id PK
+    bigint person_id FK 
+    int procedure_concept_id FK "Surgery, chemo, radiation"
+    date procedure_date
+  }
+
+  %% ========= Optional: Specimen / Pathology linkage =========
+  SPECIMEN {
+    bigint specimen_id PK
+    bigint person_id FK "-> PERSON.person_id"
+    int specimen_type_concept_id
+    date specimen_date
+  }
+
+  DRUG_EXPOSURE {
+    bigint drug_exposure_id PK
+    bigint person_id FK 
+    int drug_concept_id FK "Cancer treatments (chemo, hormonal)"
+    date drug_exposure_start_date
+    date drug_exposure_end_date
+  }
+
+  %% ========= Relationships =========
+
+  %% Person to facts
+  %% PERSON ||--o{ EPISODE : has
+  EPISODE }o--|| PERSON : belongs_to
+  %% PERSON ||--o{ MEASUREMENT : has
+  MEASUREMENT }o--|| PERSON : has
+  %% PERSON ||--o{ PROCEDURE_OCCURRENCE : has
+  PROCEDURE_OCCURRENCE }o--|| PERSON : has
+  %% PERSON ||--o{ CONDITION_OCCURRENCE : has
+  CONDITION_OCCURRENCE }o--|| PERSON : has
+  %% PERSON ||--o{ OBSERVATION : has
+  OBSERVATION }o--|| PERSON : has
+  %% PERSON ||--o{ SPECIMEN : has
+  SPECIMEN }o--|| PERSON : has
+
+  %% Episode to EpisodeEvent
+  EPISODE ||--o{ EPISODE_EVENT : groups
+
+  EPISODE_EVENT }o--|| CONDITION_OCCURRENCE : links_to
+  %% CONDITION_OCCURRENCE ||--o{ EPISODE_EVENT : links_to
+  EPISODE_EVENT }o--|| OBSERVATION : links_to
+  %% OBSERVATION ||--o{ EPISODE_EVENT : links_to
+  EPISODE_EVENT }o--|| MEASUREMENT : links_to
+  %% MEASUREMENT ||--o{ EPISODE_EVENT : links_to
+  EPISODE_EVENT }o--|| PROCEDURE_OCCURRENCE : links_to
+  %% PROCEDURE_OCCURRENCE ||--o{ EPISODE_EVENT : links_to
+
+  EPISODE_EVENT }o--|| DRUG_EXPOSURE : links_to
+
+  %% Optional: sub-episodes (e.g., recurrence, treatment courses)
+  EPISODE ||--o{ EPISODE : "parent-child via episode_parent_id"
+
+  %% Optional: facts tied to a specimen (e.g., pathology/genomics)
+  SPECIMEN ||--o{ MEASUREMENT : source_of
+  %% MEASUREMENT }o--|| SPECIMEN : source_of
+  %% SPECIMEN ||--o{ OBSERVATION : source_of
+  OBSERVATION }o--|| SPECIMEN : source_of
