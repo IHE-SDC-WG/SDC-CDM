@@ -1,0 +1,48 @@
+erDiagram
+
+SDCTemplate:::SDC {
+      bigint template_id  PK
+      varchar template_name  
+      varchar template_version
+      varchar publisher
+      varchar sdc_uri
+      char(64) xml_sha256
+    }
+SDCTemplateItem:::SDC {
+      bigint template_item_id  PK
+      bigint template_id  FK "SDCTemplate"
+      bigint parent_template_item_id FK "SDCTemplateItem"
+      int allowed_answer_concept_id  FK "OMOP_CONCEPT if_standardized"
+      int question_concept_id  FK "OMOP_CONCEPT if_standardized"
+      varchar sdc_id  "ID of section/question/item in SDC XML"
+      varchar item_type  "section | question | answer"
+      varchar data_type  "text|number|coded|date..."
+      int ordinal
+  }
+SDCTemplateInstance:::SDC {
+      bigint template_instance_id  PK
+      bigint template_id  FK "SDCTemplate"
+      varchar instance_uid  "source GUID/UID"
+      datetime report_datetime
+      varchar source_system
+      varchar raw_message_pointer  "where XML/HL7 lives (object store, etc.)"
+  }
+SDCObservation:::SDC {
+    sdc_observation_id bigint PK
+    template_instance_id bigint FK
+    question_text varchar
+    question_sdc_id varchar "ID of question in SDC XML"
+    list_item varchar
+    list_item_sdc_id varchar "ID of list item in SDC XML"
+    data_type varchar
+    units varchar
+    unit_system varchar
+    response_string varchar
+    response_int bigint
+    response_datetime datetime
+  }
+
+SDCTemplate ||--o{ SDCTemplateItem : madeUpOf
+SDCTemplateInstance }o--|| SDCTemplate : basedOn
+SDCTemplateItem ||--o{ SDCTemplateItem : hasParent
+SDCTemplateInstance ||--o{ SDCObservation : has
