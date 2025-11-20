@@ -2,6 +2,18 @@ erDiagram
 
 classDef SDC fill:blue,stroke:#grey,stroke-width:4px
 
+
+OBSERVATION ["OBSERVATION (Report)"]
+%% OBSERVATION_OTHER ["OBSERVATION (Form Response in Report)"]
+PERSON
+PROVIDER
+CONCEPT ["CONCEPT (Report Type)"]
+FACT_RELATIONSHIP_MEAS ["FACT_RELATIONSHIP (Report to Measurement)"] 
+VISIT_DETAIL 
+MEASUREMENT ["MEASUREMENT (Form Response in Report)"]
+%% FACT_RELATIONSHIP_OBS ["FACT_RELATIONSHIP (Report to Observation)"]
+VISIT_OCCURRENCE   
+SDCTemplateInstance
 SDCTemplate:::SDC 
 SDCTemplateItem:::SDC 
 SDCTemplateInstance:::SDC 
@@ -12,30 +24,18 @@ SDCTemplateInstance }o--|| SDCTemplate : basedOn
 SDCTemplateItem ||--o{ SDCTemplateItem : hasParent
 SDCTemplateInstance ||--o{ SDCObservation : has
 
-OBSERVATION ["OBSERVATION (Report)"]
-%% OBSERVATION_OTHER ["OBSERVATION (Form Response in Report)"]
-MEASUREMENT ["MEASUREMENT (Form Response in Report)"]
-PERSON
-PROVIDER
-CONCEPT ["CONCEPT (Report Type)"]
-%% FACT_RELATIONSHIP_OBS ["FACT_RELATIONSHIP (Report to Observation)"]
-FACT_RELATIONSHIP_MEAS ["FACT_RELATIONSHIP (Report to Measurement)"] 
-VISIT_OCCURRENCE   
-VISIT_DETAIL 
-SDCTemplateInstance
-
+OBSERVATION }o--|| FACT_RELATIONSHIP_MEAS : "contains"
 OBSERVATION }o--|| PERSON : aboutPatient
 OBSERVATION }o--|| PROVIDER : authoredBy
 OBSERVATION }o--o| VISIT_OCCURRENCE : occurredDuring
+VISIT_OCCURRENCE |o--o{  MEASUREMENT : occuredDuring
+VISIT_DETAIL |o--o{  MEASUREMENT : occuredDuring
+FACT_RELATIONSHIP_MEAS }o--|| MEASUREMENT : "isContainedIn"
 %% OBSERVATION_OTHER }o--o| VISIT_OCCURRENCE : occurredDuring
 %% OBSERVATION_OTHER |o--o{  VISIT_DETAIL : occuredDuring
 OBSERVATION|o--o{  VISIT_DETAIL : occuredDuring
-FACT_RELATIONSHIP_MEAS }o--|| MEASUREMENT : "isContainedIn"
 %% FACT_RELATIONSHIP_OBS }o--|| OBSERVATION_OTHER : "isContainedIn"
-VISIT_OCCURRENCE |o--o{  MEASUREMENT : occuredDuring
-VISIT_DETAIL |o--o{  MEASUREMENT : occuredDuring
 OBSERVATION }o--|| CONCEPT : "isConceptualizedAs"
 %% OBSERVATION }o--|| FACT_RELATIONSHIP_OBS : "contains"
-OBSERVATION }o--|| FACT_RELATIONSHIP_MEAS : "contains"
 SDCTemplateInstance ||--|| OBSERVATION : "isRealizedAs"
 
