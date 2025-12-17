@@ -41021,6 +41021,18 @@ INSERT INTO dbo.VOCABULARY (vocabulary_id, vocabulary_name, vocabulary_reference
 SELECT n.vocabulary_id, n.vocabulary_name, NULL, NULL, @maxMetaConceptId + n.rn
 FROM numbered n;
 
+;WITH desired AS (
+  SELECT DISTINCT
+    d.vocabulary_id,
+    vocabulary_name = LEFT(CONCAT('Derived from section: ', d.vocabulary_id), 255)
+  FROM #derived d
+)
+UPDATE v
+SET v.vocabulary_name = d.vocabulary_name
+FROM dbo.VOCABULARY v
+JOIN desired d ON d.vocabulary_id = v.vocabulary_id
+WHERE ISNULL(v.vocabulary_name, N'') <> d.vocabulary_name;
+
 SELECT @maxMetaConceptId = @maxMetaConceptId + ISNULL((SELECT COUNT(*) FROM #missing_vocab), 0);
 
 ;WITH numbered AS (
@@ -41031,6 +41043,18 @@ INSERT INTO dbo.DOMAIN (domain_id, domain_name, domain_concept_id)
 SELECT n.domain_id, n.domain_name, @maxMetaConceptId + n.rn
 FROM numbered n;
 
+;WITH desired AS (
+  SELECT DISTINCT
+    d.domain_id,
+    domain_name = LEFT(CONCAT('Derived from type: ', d.domain_id), 255)
+  FROM #derived d
+)
+UPDATE x
+SET x.domain_name = d.domain_name
+FROM dbo.DOMAIN x
+JOIN desired d ON d.domain_id = x.domain_id
+WHERE ISNULL(x.domain_name, N'') <> d.domain_name;
+
 SELECT @maxMetaConceptId = @maxMetaConceptId + ISNULL((SELECT COUNT(*) FROM #missing_domain), 0);
 
 ;WITH numbered AS (
@@ -41040,6 +41064,18 @@ SELECT @maxMetaConceptId = @maxMetaConceptId + ISNULL((SELECT COUNT(*) FROM #mis
 INSERT INTO dbo.CONCEPT_CLASS (concept_class_id, concept_class_name, concept_class_concept_id)
 SELECT n.concept_class_id, n.concept_class_name, @maxMetaConceptId + n.rn
 FROM numbered n;
+
+;WITH desired AS (
+  SELECT DISTINCT
+    d.concept_class_id,
+    concept_class_name = LEFT(CONCAT('Derived: ', d.concept_class_id), 255)
+  FROM #derived d
+)
+UPDATE c
+SET c.concept_class_name = d.concept_class_name
+FROM dbo.CONCEPT_CLASS c
+JOIN desired d ON d.concept_class_id = c.concept_class_id
+WHERE ISNULL(c.concept_class_name, N'') <> d.concept_class_name;
 
 DECLARE @baseConceptId INT;
 SELECT @baseConceptId = ISNULL(MAX(concept_id), 0)
