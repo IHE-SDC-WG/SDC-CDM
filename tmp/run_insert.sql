@@ -40876,7 +40876,8 @@ CREATE TABLE #items (
 	xml_naaccr_id      NVARCHAR(100) NULL,
 	xml_parent_id      NVARCHAR(100) NULL,
 	date_created       NVARCHAR(50)  NULL,
-	date_modified      NVARCHAR(50)  NULL
+  date_modified      NVARCHAR(50)  NULL,
+  year_retired       NVARCHAR(50)  NULL
 );
 
 DECLARE @placeholder_item_name NVARCHAR(255) = N'UNKNOWN_ITEM_NAME';
@@ -40891,7 +40892,8 @@ INSERT INTO #items (
 	xml_naaccr_id,
 	xml_parent_id,
 	date_created,
-	date_modified
+  date_modified,
+  year_retired
 )
 SELECT
 	JSON_VALUE(j.[value], '$.item_number') AS item_number,
@@ -40901,7 +40903,8 @@ SELECT
 	JSON_VALUE(j.[value], '$.xml_naaccr_id') AS xml_naaccr_id,
 	JSON_VALUE(j.[value], '$.xml_parent_id') AS xml_parent_id,
 	JSON_VALUE(j.[value], '$.date_created') AS date_created,
-	JSON_VALUE(j.[value], '$.date_modified') AS date_modified
+  JSON_VALUE(j.[value], '$.date_modified') AS date_modified,
+  JSON_VALUE(j.[value], '$.year_retired') AS year_retired
 FROM OPENJSON(@itemsJson) AS j;
 
 DECLARE @placeholderCount INT = (
@@ -40929,12 +40932,13 @@ CREATE TABLE #derived (
 	xml_parent_id     NVARCHAR(100) NULL,
 	date_created      NVARCHAR(50)  NULL,
 	date_modified     NVARCHAR(50)  NULL,
+  year_retired      NVARCHAR(50)  NULL,
 	vocabulary_id     VARCHAR(20)   NOT NULL,
 	domain_id         VARCHAR(20)   NOT NULL,
 	concept_class_id  VARCHAR(20)   NOT NULL,
 	concept_code      VARCHAR(50)   NOT NULL,
-	valid_start_date  DATE          NOT NULL,
-	valid_end_date    DATE          NOT NULL
+  valid_start_date  DATE          NULL,
+  valid_end_date    DATE          NOT NULL
 );
 
 INSERT INTO #derived (
@@ -40946,6 +40950,7 @@ INSERT INTO #derived (
 	xml_parent_id,
 	date_created,
 	date_modified,
+  year_retired,
 	vocabulary_id,
 	domain_id,
 	concept_class_id,
@@ -40962,12 +40967,16 @@ SELECT
 	i.xml_parent_id,
 	i.date_created,
 	i.date_modified,
+  i.year_retired,
 	LEFT(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(i.section), ' ', '_'), '-', '_'), '/', '_'), '.', '_'), 20) AS vocabulary_id,
 	LEFT(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(i.item_data_type), ' ', '_'), '-', '_'), '/', '_'), '.', '_'), 20) AS domain_id,
 	LEFT(REPLACE(REPLACE(REPLACE(REPLACE(UPPER(CONCAT(i.section, '_', COALESCE(NULLIF(i.xml_parent_id, N''), N'PARENT'))), ' ', '_'), '-', '_'), '/', '_'), '.', '_'), 20) AS concept_class_id,
 	LEFT(COALESCE(NULLIF(i.xml_naaccr_id, N''), NULLIF(i.item_number, N'')), 50) AS concept_code,
-	COALESCE(TRY_CONVERT(DATE, i.date_created), CONVERT(DATE, GETDATE())) AS valid_start_date,
-	COALESCE(TRY_CONVERT(DATE, i.date_modified), TRY_CONVERT(DATE, i.date_created), CONVERT(DATE, GETDATE())) AS valid_end_date
+  TRY_CONVERT(DATE, i.date_created) AS valid_start_date,
+  CASE
+    WHEN TRY_CONVERT(INT, i.year_retired) IS NULL THEN CONVERT(DATE, '2099-12-31')
+    ELSE DATEFROMPARTS(TRY_CONVERT(INT, i.year_retired), 12, 31)
+  END AS valid_end_date
 FROM #items AS i;
 
 IF EXISTS (SELECT 1 FROM #derived WHERE LTRIM(RTRIM(concept_code)) = N'')
@@ -41089,8 +41098,8 @@ CREATE TABLE #concept_stage (
 	concept_name       VARCHAR(255) NOT NULL,
 	domain_id          VARCHAR(20)  NOT NULL,
 	concept_class_id   VARCHAR(20)  NOT NULL,
-	valid_start_date   DATE         NOT NULL,
-	valid_end_date     DATE         NOT NULL
+  valid_start_date   DATE         NULL,
+  valid_end_date     DATE         NULL
 );
 
 ;WITH candidates AS (
@@ -41124,7 +41133,12 @@ assigned AS (
 		domain_id = n.domain_id,
 		concept_class_id = n.concept_class_id,
 		valid_start_date = n.valid_start_date,
-		valid_end_date = CASE WHEN n.valid_end_date < n.valid_start_date THEN n.valid_start_date ELSE n.valid_end_date END
+    valid_end_date = CASE
+      WHEN n.valid_end_date IS NOT NULL
+       AND n.valid_start_date IS NOT NULL
+       AND n.valid_end_date < n.valid_start_date THEN n.valid_start_date
+      ELSE n.valid_end_date
+    END
 	FROM new_only n
 )
 INSERT INTO #concept_stage (
