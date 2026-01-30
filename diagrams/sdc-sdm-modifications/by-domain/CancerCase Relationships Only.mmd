@@ -1,0 +1,52 @@
+---
+config:
+  layout: elk
+  elk:
+    nodePlacementStrategy: BRANDES_KOEPF 
+---
+
+erDiagram
+
+  PERSON
+
+  %% ========= Episode as Cancer Case =========
+
+
+  %% ========= Relationships =========
+
+  %% Person to facts
+  %% PERSON ||--o{ EPISODE : has
+  EPISODE }o--|| PERSON : belongs_to
+  %% PERSON ||--o{ MEASUREMENT : has
+  MEASUREMENT }o--|| PERSON : has
+  %% PERSON ||--o{ PROCEDURE_OCCURRENCE : has
+  PROCEDURE_OCCURRENCE }o--|| PERSON : has
+  %% PERSON ||--o{ CONDITION_OCCURRENCE : has
+  CONDITION_OCCURRENCE }o--|| PERSON : has
+  %% PERSON ||--o{ OBSERVATION : has
+  OBSERVATION }o--|| PERSON : has
+  %% PERSON ||--o{ SPECIMEN : has
+  SPECIMEN }o--|| PERSON : has
+
+  %% Episode to EpisodeEvent
+  EPISODE ||--o{ EPISODE_EVENT : groups
+
+  EPISODE_EVENT }o--|| CONDITION_OCCURRENCE : links_to
+  %% CONDITION_OCCURRENCE ||--o{ EPISODE_EVENT : links_to
+  EPISODE_EVENT }o--|| OBSERVATION : links_to
+  %% OBSERVATION ||--o{ EPISODE_EVENT : links_to
+  EPISODE_EVENT }o--|| MEASUREMENT : links_to
+  %% MEASUREMENT ||--o{ EPISODE_EVENT : links_to
+  EPISODE_EVENT }o--|| PROCEDURE_OCCURRENCE : links_to
+  %% PROCEDURE_OCCURRENCE ||--o{ EPISODE_EVENT : links_to
+
+  EPISODE_EVENT }o--|| DRUG_EXPOSURE : links_to
+
+  %% Optional: sub-episodes (e.g., recurrence, treatment courses)
+  EPISODE ||--o{ EPISODE : "parent-child via episode_parent_id"
+
+  %% Optional: facts tied to a specimen (e.g., pathology/genomics)
+  SPECIMEN ||--o{ MEASUREMENT : source_of
+  %% MEASUREMENT }o--|| SPECIMEN : source_of
+  %% SPECIMEN ||--o{ OBSERVATION : source_of
+  OBSERVATION }o--|| SPECIMEN : source_of

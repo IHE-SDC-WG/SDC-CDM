@@ -1,0 +1,86 @@
+---
+config:
+  layout: elk
+  elk:
+    nodePlacementStrategy: NETWORK_SIMPLEX 
+---
+
+erDiagram
+
+  PERSON
+
+  %% ========= Episode as Cancer Case =========
+  EPISODE {
+    bigint episode_id PK
+    bigint person_id FK 
+    int episode_concept_id FK "e.g., Primary cancer episode"
+    date episode_start_date
+    date episode_end_date
+    bigint episode_parent_id "optional: for sub-episodes (recurrence, treatment)"
+    int episode_number "episode order"
+    int episode_object_concept_id FK "disease phase, outcome, or other abstraction"
+    int episode_type_concept_id FK "the provenance of the Episode record"
+    string episode_source_value "The source code for the Episode as it appears in the source data."
+    int episode_source_concept_id FK "A foreign key to a Episode Concept that refers to above"
+  }
+
+  EPISODE_EVENT {
+    bigint episode_id FK "-> EPISODE.episode_id"
+    bigint event_id "ID of linked fact"
+    int event_field_concept_id FK "identifies target table (Condition, Observation, Procedure etc.)"
+  }
+
+  %% ========= Clinical Facts linked to the episode =========
+  CONDITION_OCCURRENCE {
+    bigint condition_occurrence_id PK "Represents specific cancer diagnoses or recurrences"
+    bigint person_id FK 
+    int condition_concept_id FK "SNOMED/ICD cancer dx"
+    date condition_start_date
+    date condition_end_date
+  }
+
+  OBSERVATION {
+    bigint observation_id PK
+    bigint person_id FK 
+    int observation_concept_id FK "Stage/grade/histology codes"
+    int observation_type_concept_id FK "used to determine the provenance of the Observation record,"
+    string value_as_string
+    int value_as_concept_id
+    date observation_date
+  }
+
+  MEASUREMENT {
+    bigint measurement_id PK
+    bigint person_id FK 
+    int measurement_concept_id FK "Biomarkers/genomics/labs"
+    float value_as_number
+    int unit_concept_id
+    date measurement_date
+    int measurement_type_concept_id FK "used to determine the provenance of the Measurement record"
+  }
+
+  PROCEDURE_OCCURRENCE {
+    bigint procedure_occurrence_id PK
+    bigint person_id FK 
+    int procedure_concept_id FK "Surgery, chemo, radiation"
+    int procedure_type_concept_id FK "used to determine the provenance of the Procedure record"
+    date procedure_date
+  }
+
+  %% ========= Optional: Specimen / Pathology linkage =========
+  SPECIMEN {
+    bigint specimen_id PK
+    bigint person_id FK "-> PERSON.person_id"
+    int specimen_concept_id FK "The standard CONCEPT_ID that the SPECIMEN_SOURCE_VALUE maps to in the specimen domain."
+    int specimen_type_concept_id FK "Put the source of the specimen record, as in an EHR system. Accepted Concepts."
+    date specimen_date
+  }
+
+  DRUG_EXPOSURE {
+    bigint drug_exposure_id PK
+    bigint person_id FK 
+    int drug_concept_id FK "Cancer treatments (chemo, hormonal)"
+    date drug_exposure_start_date
+    date drug_exposure_end_date
+    int drug_type_concept_id FK "Use the TYPE_CONCEPT_ID to delineate between prescriptions written vs. prescriptions dispensed..."
+  }
