@@ -7,7 +7,6 @@ erDiagram
     bigint episode_id PK
     bigint person_id FK 
     int episode_concept_id FK "e.g., Primary cancer episode"
-    int episode_type_concept_id FK "e.g., Disease episode"
     date episode_start_date
     date episode_end_date
     bigint episode_parent_id "optional: for sub-episodes (recurrence, treatment)"
