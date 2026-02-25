@@ -28,6 +28,8 @@ erDiagram
   %% PERSON ||--o{ SPECIMEN : has
   SPECIMEN }o--|| PERSON : has
 
+  %% DEATH }o--|| PERSON : has
+
   %% Episode to EpisodeEvent
   EPISODE ||--o{ EPISODE_EVENT : groups
 
@@ -39,6 +41,10 @@ erDiagram
   %% MEASUREMENT ||--o{ EPISODE_EVENT : links_to
   EPISODE_EVENT }o--|| PROCEDURE_OCCURRENCE : links_to
   %% PROCEDURE_OCCURRENCE ||--o{ EPISODE_EVENT : links_to
+  EPISODE_EVENT }o--|| DEATH : links_to
+
+
+  %% EPISODE_EVENT }o--|| LOCATION : links_to
 
   EPISODE_EVENT }o--|| DRUG_EXPOSURE : links_to
 
