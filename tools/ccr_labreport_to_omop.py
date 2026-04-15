@@ -362,7 +362,7 @@ def classify_obx(obx: ParsedOBX) -> str:
 
     # Coded or string types from CAP eCC / LOINC → Observation
     # (histologic type, grade, stage, margins, etc.)
-    return "observation"
+    return "measurement"
 
 
 # ---------------------------------------------------------------------------
