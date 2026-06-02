@@ -1,0 +1,14 @@
+[project]
+name = "naaccr-omop-phenoml-workflows"
+version = "0.1.0"
+description = "PhenoML workflow harness for NAACCR to OMOP CDM 5.4 mapping."
+requires-python = ">=3.10"
+dependencies = [
+  "phenoml>=10.0.0,<11.0.0"
+]
+
+[project.scripts]
+naaccr-omop-workflow = "phenoml_workflows.run_workflow:main"
+
+[tool.setuptools]
+packages = ["phenoml_workflows"]

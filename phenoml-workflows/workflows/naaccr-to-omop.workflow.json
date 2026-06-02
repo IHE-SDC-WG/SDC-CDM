@@ -1,0 +1,56 @@
+{
+  "schema_version": "0.1.0",
+  "name": "NAACCR to OMOP CDM 5.4",
+  "description": "JSON workflow definition for deterministic NAACCR case mapping into OMOP row groups.",
+  "target_model": "OMOP_CDM_5_4",
+  "mapping_spec": "../database/naaccr_omop/naaccr_omop_extension_mapping_spec.json",
+  "constants": {
+    "episode_concept_id": 0,
+    "episode_object_concept_id": 0,
+    "episode_type_concept_id": 0,
+    "measurement_type_concept_id": 0,
+    "observation_type_concept_id": 0,
+    "field_measurement_id": 1147138,
+    "field_observation_id": 1147165
+  },
+  "rules": {
+    "default_naaccr_target": "measurement",
+    "extension_fk_side": "naaccr_extension_table",
+    "do_not_add_non_fk_fields_to_omop_core": true
+  },
+  "steps": [
+    {
+      "id": "load_naaccr_case_json",
+      "type": "input",
+      "format": "NAACCR_CASE_JSON"
+    },
+    {
+      "id": "load_mapping_spec",
+      "type": "reference",
+      "path": "../database/naaccr_omop/naaccr_omop_extension_mapping_spec.json"
+    },
+    {
+      "id": "build_episode",
+      "type": "emit",
+      "table": "episode"
+    },
+    {
+      "id": "map_case_items",
+      "type": "map_items",
+      "item_key": "concept_code",
+      "default_target": "measurement"
+    },
+    {
+      "id": "link_episode_events",
+      "type": "emit_links",
+      "table": "episode_event"
+    }
+  ],
+  "outputs": [
+    "episode",
+    "measurement",
+    "observation",
+    "episode_event",
+    "extension_tables"
+  ]
+}

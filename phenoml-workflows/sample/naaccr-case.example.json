@@ -1,0 +1,45 @@
+{
+  "case_id": "sample-adrenal-001",
+  "person": {
+    "person_id": 1001,
+    "person_source_value": "CAP-SAMPLE-1001"
+  },
+  "episode": {
+    "episode_id": 9001,
+    "episode_key": "sample-adrenal-001",
+    "episode_start_date": "2024-01-15",
+    "episode_end_date": null
+  },
+  "observation_date": "2024-01-15",
+  "items": [
+    {
+      "concept_code": "primarySite",
+      "value_code": "C740",
+      "value": "Adrenal gland",
+      "observation_date": "2024-01-15"
+    },
+    {
+      "concept_code": "behaviorCodeIcdO3",
+      "value_code": "3",
+      "value": "Malignant",
+      "observation_date": "2024-01-15"
+    },
+    {
+      "concept_code": "gradeClinical",
+      "value_code": "2",
+      "value": "Grade 2",
+      "observation_date": "2024-01-15"
+    },
+    {
+      "concept_code": "tumorSizeClinical",
+      "value_num": 42,
+      "unit_source_value": "mm",
+      "observation_date": "2024-01-15"
+    },
+    {
+      "concept_code": "sex",
+      "value_code": "2",
+      "value": "Female"
+    }
+  ]
+}

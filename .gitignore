@@ -3,6 +3,7 @@ db-utils/samples
 
 venv
 .venv
+phenoml-workflows/.venv/
 __pycache__
 
 temp
@@ -24,6 +25,8 @@ storage/
 
 node_modules/
 out-egs
+
+phenoml-workflows/output/
 
 .fake
 # ---- Added 2025-09-17: ignore individual SDC template XMLs now present as untracked ----
@@ -129,5 +132,3 @@ sample_data/sdc_templates/Vagina.Bx.185_2.004.001.REL_sdcFDF.xml
 sample_data/sdc_templates/Vagina.Res.186_3.006.031.REL_sdcFDF.xml
 sample_data/sdc_templates/Vulva.Res.187_4.000.001.REL_sdcFDF.xml
 sample_data/sdc_templates/sdctemplate.xslt
-
-

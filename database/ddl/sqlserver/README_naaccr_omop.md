@@ -23,6 +23,11 @@ This folder contains SQL Server scripts to seed a local NAACCR 2026 vocabulary a
     - Numeric items → `measurement` (value_as_number; carries `unit_source_value`).
   - Links Observations and Measurements to Episodes via `episode_event` using the field concepts.
 
+- `../../naaccr_omop/naaccr_omop_extension_mapping_spec.json`
+  - JSON mapping specification generated from the NAACCR extension-table workbooks in `NAACRToOMOPmaps/`.
+  - Captures concept-class extension tables, table grain, foreign-key expectations, item-level storage targets, and the `NAACCR_PERSON` proposal.
+  - This is the neutral JSON input consumed by the in-repo `phenoml-workflows/` package without adding a PhenoML dependency to the SQL Server ETL scripts.
+
 - `report_naaccr_omop_vocab_ingestion.sql`
   - Generates a comprehensive report of NAACCR → OMOP vocabulary ingestion with no patient data required.
   - Summarizes: vocabulary presence, concept classes/domains, NAACCR Item/Value mappings (`cap.NAACCR_CONCEPT_MAP`, `cap.NAACCR_VALUE_CONCEPT_MAP`), OMOP concept counts and ranges, item↔value relationships (`Has value` / `Value of`), `source_to_concept_map` entries, special seed concepts (Episode Type, Field, Type), and integrity checks for missing concepts/relationships.
