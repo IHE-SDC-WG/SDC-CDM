@@ -48,6 +48,56 @@ PYTHONPATH=phenoml-workflows python3 -m phenoml_workflows.run_workflow \
   --input phenoml-workflows/sample/naaccr-case.example.json
 ```
 
+## Mapping Review UI
+
+Start the local review UI from the repository root:
+
+```bash
+PYTHONPATH=phenoml-workflows python3 -m phenoml_workflows.review_app
+```
+
+Open `http://127.0.0.1:5057/`. The dashboard includes:
+
+- a **Download Excel** button wired to `GET /excel/export`;
+- an **Upload Excel** file picker wired to `POST /excel/import`;
+- a staged diff panel for reviewing workbook imports;
+- an **Apply Import** button wired to `POST /excel/apply`;
+- a **Download Diff Report** link wired to `GET /excel/diff`.
+
+The UI writes only review fields into the canonical JSON spec. The mapping
+fields generated from source workbooks remain unchanged.
+
+## Excel CLI
+
+Export the human-readable review workbook:
+
+```bash
+PYTHONPATH=phenoml-workflows python3 -m phenoml_workflows.review_excel export \
+  --output phenoml-workflows/output/naaccr_omop_mapping_review.xlsx
+```
+
+Stage an import diff from a reviewed workbook:
+
+```bash
+PYTHONPATH=phenoml-workflows python3 -m phenoml_workflows.review_excel import \
+  --input reviewed.xlsx \
+  --patch-report phenoml-workflows/output/review_diff.json
+```
+
+Apply valid review-field changes after inspection:
+
+```bash
+PYTHONPATH=phenoml-workflows python3 -m phenoml_workflows.review_excel import \
+  --input reviewed.xlsx \
+  --patch-report phenoml-workflows/output/review_diff.json \
+  --apply
+```
+
+Excel import matches rows by `concept_class_id + concept_code`, rejects invalid
+review statuses, ignores source-column edits, and reports ignored edits in the
+diff. Valid statuses are `unreviewed`, `needs_review`, `approved`, `rejected`,
+and `deferred`.
+
 The harness reads:
 
 - `../database/naaccr_omop/naaccr_omop_extension_mapping_spec.json`

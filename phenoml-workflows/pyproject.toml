@@ -4,11 +4,15 @@ version = "0.1.0"
 description = "PhenoML workflow harness for NAACCR to OMOP CDM 5.4 mapping."
 requires-python = ">=3.10"
 dependencies = [
-  "phenoml>=10.0.0,<11.0.0"
+  "phenoml>=10.0.0,<11.0.0",
+  "Flask>=3.0.0,<4.0.0",
+  "openpyxl>=3.1.0,<4.0.0"
 ]
 
 [project.scripts]
 naaccr-omop-workflow = "phenoml_workflows.run_workflow:main"
+naaccr-omop-review = "phenoml_workflows.review_app:main"
+naaccr-omop-review-excel = "phenoml_workflows.review_excel:main"
 
 [tool.setuptools]
 packages = ["phenoml_workflows"]

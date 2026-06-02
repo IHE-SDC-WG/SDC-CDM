@@ -32,6 +32,28 @@ REQUIRED_WORKBOOKS = {
     "naaccr_person": "NAACCR_PERSON_proposed.xlsx",
 }
 
+REVIEW_FIELDS = (
+    "review_status",
+    "reviewer",
+    "reviewed_at",
+    "review_notes",
+    "rationale",
+    "target_override_table",
+    "target_override_field",
+    "needs_wg_decision",
+)
+
+REVIEW_DEFAULTS = {
+    "review_status": "unreviewed",
+    "reviewer": None,
+    "reviewed_at": None,
+    "review_notes": None,
+    "rationale": None,
+    "target_override_table": None,
+    "target_override_field": None,
+    "needs_wg_decision": False,
+}
+
 
 def col_index(cell_ref: str) -> int:
     match = re.match(r"([A-Z]+)", cell_ref)
@@ -234,7 +256,35 @@ def storage_kind(row: dict[str, Any]) -> str:
     return normalized
 
 
-def build_spec(input_dir: Path) -> dict[str, Any]:
+def mapping_key(mapping: dict[str, Any]) -> str:
+    return f"{mapping.get('concept_class_id') or ''}::{mapping.get('concept_code') or ''}"
+
+
+def existing_review_metadata(existing_spec: dict[str, Any] | None) -> dict[str, dict[str, Any]]:
+    if not existing_spec:
+        return {}
+
+    preserved: dict[str, dict[str, Any]] = {}
+    for mapping in existing_spec.get("workflow_input", {}).get("item_mappings", []):
+        key = mapping_key(mapping)
+        if key == "::":
+            continue
+        preserved[key] = {
+            field: mapping.get(field, REVIEW_DEFAULTS[field])
+            for field in REVIEW_FIELDS
+        }
+    return preserved
+
+
+def review_metadata_for(
+    mapping: dict[str, Any],
+    preserved: dict[str, dict[str, Any]],
+) -> dict[str, Any]:
+    return dict(REVIEW_DEFAULTS, **preserved.get(mapping_key(mapping), {}))
+
+
+def build_spec(input_dir: Path, existing_spec: dict[str, Any] | None = None) -> dict[str, Any]:
+    preserved_review = existing_review_metadata(existing_spec)
     workbook_paths = {
         key: input_dir / filename for key, filename in REQUIRED_WORKBOOKS.items()
     }
@@ -290,6 +340,7 @@ def build_spec(input_dir: Path) -> dict[str, Any]:
                 "mapping_kind": storage_kind(concept),
                 **concept,
             }
+            flattened.update(review_metadata_for(flattened, preserved_review))
             flattened_items.append(flattened)
 
     naaccr_person = {
@@ -393,7 +444,10 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
 
 def main(argv: list[str]) -> int:
     args = parse_args(argv)
-    spec = build_spec(args.input_dir)
+    existing_spec = None
+    if args.output.as_posix() != "-" and args.output.exists():
+        existing_spec = json.loads(args.output.read_text(encoding="utf-8"))
+    spec = build_spec(args.input_dir, existing_spec=existing_spec)
 
     json_text = json.dumps(
         spec,

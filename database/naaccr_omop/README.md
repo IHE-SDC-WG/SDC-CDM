@@ -74,6 +74,44 @@ and writes:
 Use `--output -` to inspect the JSON on stdout, or `--compact` for a compact
 artifact.
 
+Regeneration preserves mapping review metadata already present in
+`workflow_input.item_mappings`, matched by `concept_class_id + concept_code`.
+The workbook-derived fields are refreshed from the source XLSX files, while the
+following review fields remain canonical in the JSON:
+
+- `review_status`
+- `reviewer`
+- `reviewed_at`
+- `review_notes`
+- `rationale`
+- `target_override_table`
+- `target_override_field`
+- `needs_wg_decision`
+
+Valid review statuses are `unreviewed`, `needs_review`, `approved`, `rejected`,
+and `deferred`. Target override fields are advisory in v1 and do not affect
+workflow execution.
+
+## Human Review
+
+The in-repo `phenoml-workflows/` package provides both a web review UI and Excel
+export/import helpers. The JSON spec remains canonical; Excel is a generated
+review artifact.
+
+The web UI exposes:
+
+- `GET /` for the dashboard.
+- `GET /api/mappings` for filtered mapping rows.
+- `PATCH /api/mappings/<concept_class_id>/<concept_code>/review` for review
+  field edits.
+- `GET /excel/export` to download the review workbook.
+- `POST /excel/import` to upload an `.xlsx` workbook and stage a diff.
+- `POST /excel/apply` to apply the current valid staged diff.
+- `GET /excel/diff` to download the staged diff report.
+
+Excel import only accepts review/governance fields. Edits to source mapping
+columns are ignored and reported in the import diff.
+
 ## PhenoML Package
 
 The in-repo `phenoml-workflows/` package references this JSON spec as an input
