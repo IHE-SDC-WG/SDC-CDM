@@ -34,12 +34,17 @@ SOURCE_COLUMNS = (
     "concept_name",
     "domain_id",
     "is_mappable",
+    "person_mapping_applied",
     "mapping_kind",
     "storage",
+    "suggested_storage",
+    "omop_target",
     "omop_table",
     "omop_field",
+    "naaccr_person_column",
     "proposed_extension_table",
     "proposed_extension_column",
+    "person_mapping_notes",
     "grain",
 )
 

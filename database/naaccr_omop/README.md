@@ -88,6 +88,12 @@ following review fields remain canonical in the JSON:
 - `target_override_field`
 - `needs_wg_decision`
 
+Rows from `NAACCR_PERSON_proposed.xlsx` are matched back into
+`workflow_input.item_mappings` by `naaccr_concept_id + field_code` to
+`concept_id + concept_code`. When a match exists, the NAACCR_PERSON proposal is
+the effective mapping used by the review UI and generated Excel review workbook,
+so patient-level fields are not replaced by generic concept-class defaults.
+
 Valid review statuses are `unreviewed`, `needs_review`, `approved`, `rejected`,
 and `deferred`. Target override fields are advisory in v1 and do not affect
 workflow execution.

@@ -11,6 +11,10 @@ def _normalize_target(mapping: dict[str, Any]) -> str:
         return "observation"
     if "measurement" in omop_table:
         return "measurement"
+    if omop_table in {"person", "location", "death"}:
+        return "omop_core"
+    if omop_table == "naaccr_person" or mapping_kind == "naaccr_person":
+        return "extension_only"
     if mapping_kind == "omop_core":
         return "omop_core"
     return "measurement"
@@ -202,7 +206,7 @@ def map_naaccr_case_to_omop(
             )
             continue
 
-        if target == "omop_core":
+        if target in {"omop_core", "extension_only"}:
             continue
 
         measurement = _measurement_row(

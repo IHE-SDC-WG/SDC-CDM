@@ -34,7 +34,21 @@ def _filter_mappings(spec: dict[str, Any], args: Any) -> list[dict[str, Any]]:
     for mapping in item_mappings(spec):
         haystack = " ".join(
             str(mapping.get(field) or "")
-            for field in ("concept_class_id", "concept_code", "concept_name", "omop_table", "proposed_extension_table")
+            for field in (
+                "concept_id",
+                "concept_class_id",
+                "concept_code",
+                "concept_name",
+                "storage",
+                "suggested_storage",
+                "omop_target",
+                "omop_table",
+                "omop_field",
+                "naaccr_person_column",
+                "proposed_extension_table",
+                "proposed_extension_column",
+                "person_mapping_notes",
+            )
         ).lower()
         if q and q not in haystack:
             continue
@@ -186,7 +200,7 @@ DASHBOARD_HTML = """<!doctype html>
     <section class="table-wrap">
       <table>
         <thead>
-          <tr><th>Class</th><th>Code</th><th>Name</th><th>Target</th><th>Status</th><th>Reviewer Notes</th><th>Action</th></tr>
+          <tr><th>Class</th><th>Item #</th><th>Code</th><th>Name</th><th>Storage</th><th>Target</th><th>Field</th><th>Extension</th><th>Status</th><th>Reviewer Notes</th><th>Action</th></tr>
         </thead>
         <tbody id="rows"></tbody>
       </table>
@@ -204,9 +218,13 @@ DASHBOARD_HTML = """<!doctype html>
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td>${row.concept_class_id || ''}</td>
+          <td>${row.concept_id || ''}</td>
           <td>${row.concept_code || ''}</td>
           <td>${row.concept_name || ''}</td>
+          <td>${row.storage || row.mapping_kind || ''}</td>
           <td>${row.omop_table || row.mapping_kind || ''}</td>
+          <td>${row.omop_field || row.omop_target || row.naaccr_person_column || ''}</td>
+          <td>${[row.proposed_extension_table, row.proposed_extension_column].filter(Boolean).join('.')}</td>
           <td>
             <select class="review_status">
               ${['unreviewed','needs_review','approved','rejected','deferred'].map(s => `<option ${row.review_status === s ? 'selected' : ''}>${s}</option>`).join('')}

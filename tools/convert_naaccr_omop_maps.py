@@ -256,6 +256,123 @@ def storage_kind(row: dict[str, Any]) -> str:
     return normalized
 
 
+def normalized_storage(value: Any) -> str:
+    if value is None:
+        return ""
+    return str(value).strip().upper().replace("_", " ")
+
+
+def person_mapping_key(row: dict[str, Any]) -> str:
+    concept_id = row.get("naaccr_concept_id")
+    concept_code = row.get("field_code")
+    if concept_id is None or concept_code is None:
+        return "::"
+    return f"{concept_id}::{concept_code}"
+
+
+def item_person_mapping_key(mapping: dict[str, Any]) -> str:
+    concept_id = mapping.get("concept_id")
+    concept_code = mapping.get("concept_code")
+    if concept_id is None or concept_code is None:
+        return "::"
+    return f"{concept_id}::{concept_code}"
+
+
+def person_mapping_index(rows: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    index: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        key = person_mapping_key(row)
+        if key == "::":
+            continue
+        if key in index:
+            raise ValueError(f"Duplicate NAACCR_PERSON mapping key: {key}")
+        index[key] = row
+    return index
+
+
+def person_target_table(row: dict[str, Any]) -> str | None:
+    storage = normalized_storage(row.get("suggested_storage"))
+    storage_tables = {
+        "OMOP PERSON": "PERSON",
+        "OMOP LOCATION": "LOCATION",
+        "OMOP DEATH": "DEATH",
+        "OMOP OBSERVATION": "OBSERVATION",
+        "NAACCR PERSON": "NAACCR_PERSON",
+    }
+    if storage in storage_tables:
+        return storage_tables[storage]
+
+    target = str(row.get("omop_target") or "").strip().lower()
+    for table in ("person", "location", "death", "observation", "naaccr_person"):
+        if target.startswith(table):
+            return table.upper()
+    return None
+
+
+def person_mapping_kind(row: dict[str, Any]) -> str:
+    storage = normalized_storage(row.get("suggested_storage"))
+    if storage == "OMOP OBSERVATION":
+        return "OMOP_OBSERVATION"
+    if storage.startswith("OMOP "):
+        return "OMOP_CORE"
+    if storage == "NAACCR PERSON":
+        return "NAACCR_PERSON"
+    return storage.replace(" ", "_") or "UNSPECIFIED"
+
+
+def clean_person_column(value: Any) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    if not text:
+        return None
+    return text.split("(", 1)[0].strip() or text
+
+
+def person_omop_field(row: dict[str, Any], table: str | None) -> str | None:
+    target = row.get("omop_target")
+    if target is None:
+        return None
+    target_text = str(target).strip()
+    if not target_text:
+        return None
+
+    if table:
+        prefix = f"{table.lower()}."
+        if target_text.lower().startswith(prefix):
+            return target_text[len(prefix) :]
+    return target_text
+
+
+def apply_person_mapping_override(
+    mapping: dict[str, Any],
+    person_mapping: dict[str, Any],
+) -> dict[str, Any]:
+    """Use the NAACCR_PERSON proposal as the effective mapping for patient rows."""
+    table = person_target_table(person_mapping)
+    storage = person_mapping.get("suggested_storage")
+    person_column = clean_person_column(person_mapping.get("naaccr_person_column"))
+    direct_person_column = normalized_storage(storage) == "NAACCR PERSON"
+
+    mapping.update(
+        {
+            "person_mapping_applied": True,
+            "person_mapping_source": person_mapping.get("source"),
+            "suggested_storage": storage,
+            "omop_target": person_mapping.get("omop_target"),
+            "naaccr_person_column": person_column,
+            "person_mapping_notes": person_mapping.get("notes"),
+            "storage": storage,
+            "mapping_kind": person_mapping_kind(person_mapping),
+            "omop_table": table,
+            "omop_field": person_omop_field(person_mapping, table),
+            "proposed_extension_table": "NAACCR_PERSON" if direct_person_column else None,
+            "proposed_extension_column": person_column if direct_person_column else None,
+        }
+    )
+    return mapping
+
+
 def mapping_key(mapping: dict[str, Any]) -> str:
     return f"{mapping.get('concept_class_id') or ''}::{mapping.get('concept_code') or ''}"
 
@@ -306,6 +423,18 @@ def build_spec(input_dir: Path, existing_spec: dict[str, Any] | None = None) -> 
     summary_rows = rows_to_dicts(extension_table_sheets["Summary_Tables"], header_row=0)
     summary_by_class = index_by(summary_rows, "concept_class_id")
     foreign_keys = rows_to_dicts(extension_table_sheets["FK_Relationships"], header_row=0)
+    naaccr_person = {
+        "mapping": rows_to_dicts(person_sheets["NAACCR_PERSON_Mapping"], header_row=0),
+        "ddl": rows_to_dicts(person_sheets["NAACCR_PERSON_DDL"], header_row=0),
+        "storage_summary": rows_to_dicts(person_sheets["Summary"], header_row=2),
+        "csv_inventory_notes": rows_to_notes(person_sheets["CSV_Inventory"]),
+        "readme_notes": rows_to_notes(person_sheets["README"]),
+        "omop_cdm_5_4_reference": rows_to_dicts(
+            person_sheets["OMOP_CDM_5_4_Reference"], header_row=0
+        ),
+    }
+    person_mappings = person_mapping_index(naaccr_person["mapping"])
+    matched_person_keys: set[str] = set()
 
     concept_classes: dict[str, Any] = {}
     flattened_items: list[dict[str, Any]] = []
@@ -340,19 +469,19 @@ def build_spec(input_dir: Path, existing_spec: dict[str, Any] | None = None) -> 
                 "mapping_kind": storage_kind(concept),
                 **concept,
             }
+            person_mapping = person_mappings.get(item_person_mapping_key(flattened))
+            if person_mapping is not None:
+                apply_person_mapping_override(flattened, person_mapping)
+                matched_person_keys.add(person_mapping_key(person_mapping))
             flattened.update(review_metadata_for(flattened, preserved_review))
             flattened_items.append(flattened)
 
-    naaccr_person = {
-        "mapping": rows_to_dicts(person_sheets["NAACCR_PERSON_Mapping"], header_row=0),
-        "ddl": rows_to_dicts(person_sheets["NAACCR_PERSON_DDL"], header_row=0),
-        "storage_summary": rows_to_dicts(person_sheets["Summary"], header_row=2),
-        "csv_inventory_notes": rows_to_notes(person_sheets["CSV_Inventory"]),
-        "readme_notes": rows_to_notes(person_sheets["README"]),
-        "omop_cdm_5_4_reference": rows_to_dicts(
-            person_sheets["OMOP_CDM_5_4_Reference"], header_row=0
-        ),
-    }
+    unmatched_person_keys = sorted(set(person_mappings) - matched_person_keys)
+    if unmatched_person_keys:
+        raise ValueError(
+            "NAACCR_PERSON mappings did not match concept-class rows: "
+            + ", ".join(unmatched_person_keys[:10])
+        )
 
     return {
         "schema_version": "0.1.0",
@@ -413,6 +542,16 @@ def build_spec(input_dir: Path, existing_spec: dict[str, Any] | None = None) -> 
         "workflow_input": {
             "item_mappings": flattened_items,
             "naaccr_person_mapping": naaccr_person["mapping"],
+            "naaccr_person_merge": {
+                "matching_key": "concept_id + concept_code",
+                "matched_rows": len(matched_person_keys),
+                "unmatched_rows": len(unmatched_person_keys),
+                "effective_mapping_rule": (
+                    "Rows from NAACCR_PERSON_proposed.xlsx override generic "
+                    "concept-class mappings when naaccr_concept_id + field_code "
+                    "matches concept_id + concept_code."
+                ),
+            },
         },
         "naaccr_person": naaccr_person,
     }
