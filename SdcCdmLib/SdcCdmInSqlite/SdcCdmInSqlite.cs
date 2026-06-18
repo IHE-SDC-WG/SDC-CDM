@@ -813,23 +813,29 @@ public class SdcCdmInSqlite : ISdcCdm
         string? report_template_version_id = null,
         string? tumor_site = null,
         string? procedure_type = null,
-        string? specimen_laterality = null
+        string? specimen_laterality = null,
+        string? report_accession = null,
+        string? report_loinc = null,
+        bool is_duplicate_accession = false,
+        long? first_seen_ecp_id = null
     )
     {
         using var cmd = connection.CreateCommand();
         cmd.CommandText =
             @"
-            INSERT INTO main.sdc_template_instance_ecp 
-            (template_name, template_version, template_lineage, template_base_uri, template_instance_guid, 
+            INSERT INTO main.sdc_template_instance_ecp
+            (template_name, template_version, template_lineage, template_base_uri, template_instance_guid,
              template_instance_version_guid, template_instance_version_uri, instance_version_date,
-             person_id, visit_occurrence_id, provider_id, report_text, report_template_source, 
+             person_id, visit_occurrence_id, provider_id, report_text, report_template_source,
              report_template_id, report_template_version_id, tumor_site, procedure_type, specimen_laterality,
+             report_accession, report_loinc, is_duplicate_accession, first_seen_ecp_id,
              created_datetime, updated_datetime)
-            VALUES 
-            (@templateName, @templateVersion, NULL, NULL, @templateInstanceGuid, 
-             NULL, NULL, NULL, @personId, @visitOccurrenceId, @providerId, @reportText, 
-             @reportTemplateSource, @reportTemplateId, @reportTemplateVersionId, @tumorSite, 
-             @procedureType, @specimenLaterality, julianday('now'), julianday('now'));
+            VALUES
+            (@templateName, @templateVersion, NULL, NULL, @templateInstanceGuid,
+             NULL, NULL, NULL, @personId, @visitOccurrenceId, @providerId, @reportText,
+             @reportTemplateSource, @reportTemplateId, @reportTemplateVersionId, @tumorSite,
+             @procedureType, @specimenLaterality, @reportAccession, @reportLoinc, @isDuplicateAccession,
+             @firstSeenEcpId, julianday('now'), julianday('now'));
             SELECT last_insert_rowid();
         ";
 
@@ -861,9 +867,27 @@ public class SdcCdmInSqlite : ISdcCdm
             "@specimenLaterality",
             specimen_laterality ?? (object)DBNull.Value
         );
+        cmd.Parameters.AddWithValue("@reportAccession", report_accession ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue("@reportLoinc", report_loinc ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue("@isDuplicateAccession", is_duplicate_accession ? 1 : 0);
+        cmd.Parameters.AddWithValue("@firstSeenEcpId", first_seen_ecp_id ?? (object)DBNull.Value);
 
         var result = cmd.ExecuteScalar();
         return result != null ? Convert.ToInt64(result) : -1;
+    }
+
+    public long? FindFirstSdcTemplateInstanceEcpByAccession(string report_accession)
+    {
+        using var cmd = connection.CreateCommand();
+        cmd.CommandText =
+            @"
+            SELECT MIN(sdc_template_instance_ecp_id)
+            FROM main.sdc_template_instance_ecp
+            WHERE report_accession = @reportAccession;
+        ";
+        cmd.Parameters.AddWithValue("@reportAccession", report_accession);
+        var result = cmd.ExecuteScalar();
+        return result == null || result == DBNull.Value ? null : Convert.ToInt64(result);
     }
 
     public long WriteMeasurementWithSdcData(
@@ -924,40 +948,22 @@ public class SdcCdmInSqlite : ISdcCdm
             sdc_comments: sdc_comments
         );
 
-        if (
-            sdc_response_type != null
-            && sdc_response_type.Equals("numeric", StringComparison.OrdinalIgnoreCase)
-        )
-        {
-            return WriteMeasurementLinkedToFormAnswer(
-                person_id: person_id,
-                measurement_concept_id: measurement_concept_id,
-                measurement_date: measurement_date,
-                measurement_type_concept_id: measurement_type_concept_id,
-                value_as_number: value_as_number,
-                unit_concept_id: null,
-                unit_source_value: unit_source_value,
-                measurement_source_value: measurement_source_value,
-                sdc_form_answer_id: sdcFormAnswerId
-            );
-        }
-        else
-        {
-            // Treat as observation for coded/text
-            return WriteObservationLinkedToFormAnswer(
-                person_id: person_id,
-                observation_concept_id: measurement_concept_id, // upstream caller passes concept per item
-                observation_date: measurement_date,
-                observation_type_concept_id: 0,
-                value_as_number: value_as_number,
-                value_as_string: value_as_string,
-                value_as_concept_id: null,
-                unit_concept_id: null,
-                unit_source_value: unit_source_value,
-                observation_source_value: measurement_source_value,
-                sdc_form_answer_id: sdcFormAnswerId
-            );
-        }
+        // eCP synoptic Q&A defaults to MEASUREMENT (qualitatively/quantitatively derived
+        // from a standardized pathology activity). Numeric -> value_as_number; the
+        // human-readable answer is preserved in value_source_value. See ECP_OMOP_MAPPING.md.
+        return WriteMeasurementLinkedToFormAnswer(
+            person_id: person_id,
+            measurement_concept_id: measurement_concept_id, // upstream caller passes concept per item
+            measurement_date: measurement_date,
+            measurement_type_concept_id: measurement_type_concept_id,
+            value_as_number: value_as_number,
+            value_as_concept_id: null,
+            value_source_value: value_as_string,
+            unit_concept_id: null,
+            unit_source_value: unit_source_value,
+            measurement_source_value: measurement_source_value,
+            sdc_form_answer_id: sdcFormAnswerId
+        );
     }
 
     public long WriteSdcFormAnswer(
@@ -1035,10 +1041,14 @@ public class SdcCdmInSqlite : ISdcCdm
         DateTime measurement_date,
         long measurement_type_concept_id,
         double? value_as_number = null,
+        long? value_as_concept_id = null,
+        string? value_source_value = null,
         long? unit_concept_id = null,
         string? unit_source_value = null,
         string? measurement_source_value = null,
-        long sdc_form_answer_id = 0
+        long sdc_form_answer_id = 0,
+        long? measurement_event_id = null,
+        long? meas_event_field_concept_id = null
     )
     {
         using var cmd = connection.CreateCommand();
@@ -1046,12 +1056,12 @@ public class SdcCdmInSqlite : ISdcCdm
             @"
             INSERT INTO main.measurement (
                 person_id, measurement_concept_id, measurement_date, measurement_type_concept_id,
-                value_as_number, unit_concept_id, unit_source_value, measurement_source_value,
-                sdc_form_answer_id
+                value_as_number, value_as_concept_id, value_source_value, unit_concept_id, unit_source_value,
+                measurement_source_value, measurement_event_id, meas_event_field_concept_id, sdc_form_answer_id
             ) VALUES (
                 @person_id, @measurement_concept_id, @measurement_date, @measurement_type_concept_id,
-                @value_as_number, @unit_concept_id, @unit_source_value, @measurement_source_value,
-                @sdc_form_answer_id
+                @value_as_number, @value_as_concept_id, @value_source_value, @unit_concept_id, @unit_source_value,
+                @measurement_source_value, @measurement_event_id, @meas_event_field_concept_id, @sdc_form_answer_id
             );
             SELECT last_insert_rowid();
         ";
@@ -1061,6 +1071,14 @@ public class SdcCdmInSqlite : ISdcCdm
         cmd.Parameters.AddWithValue("@measurement_date", measurement_date);
         cmd.Parameters.AddWithValue("@measurement_type_concept_id", measurement_type_concept_id);
         cmd.Parameters.AddWithValue("@value_as_number", value_as_number ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue(
+            "@value_as_concept_id",
+            value_as_concept_id ?? (object)DBNull.Value
+        );
+        cmd.Parameters.AddWithValue(
+            "@value_source_value",
+            value_source_value ?? (object)DBNull.Value
+        );
         cmd.Parameters.AddWithValue("@unit_concept_id", unit_concept_id ?? (object)DBNull.Value);
         cmd.Parameters.AddWithValue(
             "@unit_source_value",
@@ -1069,6 +1087,14 @@ public class SdcCdmInSqlite : ISdcCdm
         cmd.Parameters.AddWithValue(
             "@measurement_source_value",
             measurement_source_value ?? (object)DBNull.Value
+        );
+        cmd.Parameters.AddWithValue(
+            "@measurement_event_id",
+            measurement_event_id ?? (object)DBNull.Value
+        );
+        cmd.Parameters.AddWithValue(
+            "@meas_event_field_concept_id",
+            meas_event_field_concept_id ?? (object)DBNull.Value
         );
         cmd.Parameters.AddWithValue("@sdc_form_answer_id", sdc_form_answer_id);
 
@@ -1087,7 +1113,9 @@ public class SdcCdmInSqlite : ISdcCdm
         long? unit_concept_id = null,
         string? unit_source_value = null,
         string? observation_source_value = null,
-        long sdc_form_answer_id = 0
+        long sdc_form_answer_id = 0,
+        long? observation_event_id = null,
+        long? obs_event_field_concept_id = null
     )
     {
         using var cmd = connection.CreateCommand();
@@ -1096,11 +1124,11 @@ public class SdcCdmInSqlite : ISdcCdm
             INSERT INTO main.observation (
                 person_id, observation_concept_id, observation_date, observation_type_concept_id,
                 value_as_number, value_as_string, value_as_concept_id, unit_concept_id, unit_source_value,
-                observation_source_value, sdc_form_answer_id
+                observation_source_value, observation_event_id, obs_event_field_concept_id, sdc_form_answer_id
             ) VALUES (
                 @person_id, @observation_concept_id, @observation_date, @observation_type_concept_id,
                 @value_as_number, @value_as_string, @value_as_concept_id, @unit_concept_id, @unit_source_value,
-                @observation_source_value, @sdc_form_answer_id
+                @observation_source_value, @observation_event_id, @obs_event_field_concept_id, @sdc_form_answer_id
             );
             SELECT last_insert_rowid();
         ";
@@ -1124,7 +1152,75 @@ public class SdcCdmInSqlite : ISdcCdm
             "@observation_source_value",
             observation_source_value ?? (object)DBNull.Value
         );
+        cmd.Parameters.AddWithValue(
+            "@observation_event_id",
+            observation_event_id ?? (object)DBNull.Value
+        );
+        cmd.Parameters.AddWithValue(
+            "@obs_event_field_concept_id",
+            obs_event_field_concept_id ?? (object)DBNull.Value
+        );
         cmd.Parameters.AddWithValue("@sdc_form_answer_id", sdc_form_answer_id);
+
+        var result = cmd.ExecuteScalar();
+        return result != null ? Convert.ToInt64(result) : -1;
+    }
+
+    public long WriteNote(
+        long person_id,
+        DateTime note_date,
+        long note_type_concept_id,
+        long note_class_concept_id,
+        string note_text,
+        string? note_title = null,
+        long encoding_concept_id = 0,
+        long language_concept_id = 0,
+        long? provider_id = null,
+        long? visit_occurrence_id = null,
+        string? note_source_value = null,
+        long? note_event_id = null,
+        long? note_event_field_concept_id = null
+    )
+    {
+        using var cmd = connection.CreateCommand();
+        cmd.CommandText =
+            @"
+            INSERT INTO main.note (
+                person_id, note_date, note_type_concept_id, note_class_concept_id,
+                note_title, note_text, encoding_concept_id, language_concept_id,
+                provider_id, visit_occurrence_id, note_source_value,
+                note_event_id, note_event_field_concept_id
+            ) VALUES (
+                @person_id, @note_date, @note_type_concept_id, @note_class_concept_id,
+                @note_title, @note_text, @encoding_concept_id, @language_concept_id,
+                @provider_id, @visit_occurrence_id, @note_source_value,
+                @note_event_id, @note_event_field_concept_id
+            );
+            SELECT last_insert_rowid();
+        ";
+
+        cmd.Parameters.AddWithValue("@person_id", person_id);
+        cmd.Parameters.AddWithValue("@note_date", note_date);
+        cmd.Parameters.AddWithValue("@note_type_concept_id", note_type_concept_id);
+        cmd.Parameters.AddWithValue("@note_class_concept_id", note_class_concept_id);
+        cmd.Parameters.AddWithValue("@note_title", note_title ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue("@note_text", note_text ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue("@encoding_concept_id", encoding_concept_id);
+        cmd.Parameters.AddWithValue("@language_concept_id", language_concept_id);
+        cmd.Parameters.AddWithValue("@provider_id", provider_id ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue(
+            "@visit_occurrence_id",
+            visit_occurrence_id ?? (object)DBNull.Value
+        );
+        cmd.Parameters.AddWithValue(
+            "@note_source_value",
+            note_source_value ?? (object)DBNull.Value
+        );
+        cmd.Parameters.AddWithValue("@note_event_id", note_event_id ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue(
+            "@note_event_field_concept_id",
+            note_event_field_concept_id ?? (object)DBNull.Value
+        );
 
         var result = cmd.ExecuteScalar();
         return result != null ? Convert.ToInt64(result) : -1;
@@ -1286,6 +1382,36 @@ public class SdcCdmInSqlite : ISdcCdm
                 ConceptClassId = "Type Concept",
                 StandardConcept = "S",
                 ConceptCode = "EHR_obs",
+                ValidStartDate = DateTime.Parse("1970-01-01"),
+                ValidEndDate = DateTime.Parse("2099-12-31"),
+                InvalidReason = null,
+            },
+            // Note type for the synoptic-report NOTE row (one per eCP report)
+            new ConceptRecord
+            {
+                ConceptId = 32817,
+                ConceptName = "EHR",
+                DomainId = "Type Concept",
+                VocabularyId = "Type Concept",
+                ConceptClassId = "Type Concept",
+                StandardConcept = "S",
+                ConceptCode = "EHR",
+                ValidStartDate = DateTime.Parse("1970-01-01"),
+                ValidEndDate = DateTime.Parse("2099-12-31"),
+                InvalidReason = null,
+            },
+            // CDM field concept for note.note_id, used as observation.obs_event_field_concept_id
+            // when observation_event_id references the synoptic-report NOTE row.
+            // TODO: confirm the exact field concept_id against the loaded OMOP vocabulary.
+            new ConceptRecord
+            {
+                ConceptId = 1147289,
+                ConceptName = "note.note_id",
+                DomainId = "Metadata",
+                VocabularyId = "CDM",
+                ConceptClassId = "Field",
+                StandardConcept = "S",
+                ConceptCode = "note.note_id",
                 ValidStartDate = DateTime.Parse("1970-01-01"),
                 ValidEndDate = DateTime.Parse("2099-12-31"),
                 InvalidReason = null,

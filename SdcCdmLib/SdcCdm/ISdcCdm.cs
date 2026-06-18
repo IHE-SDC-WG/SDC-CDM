@@ -199,8 +199,17 @@ public interface ISdcCdm
         string? report_template_version_id = null,
         string? tumor_site = null,
         string? procedure_type = null,
-        string? specimen_laterality = null
+        string? specimen_laterality = null,
+        // Synoptic report identifiers (OBR segment) + re-import collision flagging
+        string? report_accession = null,
+        string? report_loinc = null,
+        bool is_duplicate_accession = false,
+        long? first_seen_ecp_id = null
     );
+
+    // Returns the earliest sdc_template_instance_ecp_id that already has this
+    // OBR accession, or null if none. Used to flag (not dedup) re-imports.
+    public long? FindFirstSdcTemplateInstanceEcpByAccession(string report_accession);
 
     // Legacy helper used by older importers. Implementations may internally
     // create an sdc_form_answer and write to either measurement or observation,
@@ -253,20 +262,30 @@ public interface ISdcCdm
         string? sdc_comments = null
     );
 
-    // 2) Write OMOP Measurement row linked to SDC form answer
+    // 2) Write OMOP Measurement row linked to SDC form answer.
+    // eCP synoptic Q&A defaults to MEASUREMENT — each item is a qualitative or
+    // quantitative result of a standardized pathology activity. See ECP_OMOP_MAPPING.md.
+    // Coded answers -> value_as_concept_id (+ human text in value_source_value);
+    // numeric -> value_as_number; text -> value_source_value. measurement_event_id /
+    // meas_event_field_concept_id link the row back to its synoptic-report NOTE row.
     public long WriteMeasurementLinkedToFormAnswer(
         long person_id,
         long measurement_concept_id,
         DateTime measurement_date,
         long measurement_type_concept_id,
         double? value_as_number = null,
+        long? value_as_concept_id = null,
+        string? value_source_value = null,
         long? unit_concept_id = null,
         string? unit_source_value = null,
         string? measurement_source_value = null,
-        long sdc_form_answer_id = 0
+        long sdc_form_answer_id = 0,
+        long? measurement_event_id = null,
+        long? meas_event_field_concept_id = null
     );
 
-    // 3) Write OMOP Observation row linked to SDC form answer
+    // 3) Write OMOP Observation row linked to SDC form answer. Used for the (future,
+    // domain-driven) minority of eCP items whose mapped concept is Observation-domain.
     public long WriteObservationLinkedToFormAnswer(
         long person_id,
         long observation_concept_id,
@@ -278,7 +297,27 @@ public interface ISdcCdm
         long? unit_concept_id = null,
         string? unit_source_value = null,
         string? observation_source_value = null,
-        long sdc_form_answer_id = 0
+        long sdc_form_answer_id = 0,
+        long? observation_event_id = null,
+        long? obs_event_field_concept_id = null
+    );
+
+    // 3) Write an OMOP Note row (one per synoptic report) used as the
+    // single-report anchor that observations reference via observation_event_id.
+    public long WriteNote(
+        long person_id,
+        DateTime note_date,
+        long note_type_concept_id,
+        long note_class_concept_id,
+        string note_text,
+        string? note_title = null,
+        long encoding_concept_id = 0,
+        long language_concept_id = 0,
+        long? provider_id = null,
+        long? visit_occurrence_id = null,
+        string? note_source_value = null,
+        long? note_event_id = null,
+        long? note_event_field_concept_id = null
     );
 
     public record SdcTemplateInstanceEcpRecord(

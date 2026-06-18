@@ -502,8 +502,12 @@ def build_spec(input_dir: Path, existing_spec: dict[str, Any] | None = None) -> 
         },
         "working_group_rules": {
             "default_target": (
-                "Pathology and measurement-like NAACCR items, including SSDIs, "
-                "grades, staging, and constrained pick lists, default to MEASUREMENT."
+                "eCP synoptic Q&A (pathology items, SSDIs, grades, staging, and "
+                "constrained pick lists) defaults to MEASUREMENT — each item is a "
+                "qualitative or quantitative result of a standardized pathology "
+                "activity (coded answers use value_as_concept_id, numeric uses "
+                "value_as_number). Domain-driven routing (read the mapped concept's "
+                "domain_id) is the future refinement. See ECP_OMOP_MAPPING.md."
             ),
             "extension_table_use": (
                 "Demographic, registry-management, confidential, and other "

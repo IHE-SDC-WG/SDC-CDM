@@ -9,7 +9,7 @@
     "workflows_repo_boundary": "PhenoML auth, workflow definitions, and execution harness live under phenoml-workflows/ in this repo. Credentials stay outside committed files."
   },
   "working_group_rules": {
-    "default_target": "Pathology and measurement-like NAACCR items, including SSDIs, grades, staging, and constrained pick lists, default to MEASUREMENT.",
+    "default_target": "eCP synoptic Q&A (pathology items, SSDIs, grades, staging, and constrained pick lists) defaults to MEASUREMENT \u2014 each item is a qualitative or quantitative result of a standardized pathology activity (coded answers use value_as_concept_id, numeric uses value_as_number). Domain-driven routing (read the mapped concept's domain_id) is the future refinement. See ECP_OMOP_MAPPING.md.",
     "extension_table_use": "Demographic, registry-management, confidential, and other NAACCR-specific fields remain in extension tables unless they map cleanly into OMOP core.",
     "foreign_key_policy": "Foreign keys live on the NAACCR extension-table side and point to OMOP records.",
     "omop_core_policy": "Do not add non-FK NAACCR fields to OMOP core tables.",
@@ -11864,11 +11864,11 @@
         "review_status": "unreviewed",
         "reviewer": null,
         "reviewed_at": null,
-        "review_notes": null,
+        "review_notes": "MEASUREMENT+CONDITION_OCCURRENCE combo: confirm OBSERVATION vs CONDITION_OCCURRENCE for the measurement portion (eCP Q&A is OBSERVATION-only).",
         "rationale": null,
         "target_override_table": null,
         "target_override_field": null,
-        "needs_wg_decision": false
+        "needs_wg_decision": true
       },
       {
         "concept_class_id": "CANCER_IDENTIFICATIO",
@@ -12114,11 +12114,11 @@
         "review_status": "unreviewed",
         "reviewer": null,
         "reviewed_at": null,
-        "review_notes": null,
+        "review_notes": "MEASUREMENT+CONDITION_OCCURRENCE combo: confirm OBSERVATION vs CONDITION_OCCURRENCE for the measurement portion (eCP Q&A is OBSERVATION-only).",
         "rationale": null,
         "target_override_table": null,
         "target_override_field": null,
-        "needs_wg_decision": false
+        "needs_wg_decision": true
       },
       {
         "concept_class_id": "CANCER_IDENTIFICATIO",
@@ -12164,11 +12164,11 @@
         "review_status": "unreviewed",
         "reviewer": null,
         "reviewed_at": null,
-        "review_notes": null,
+        "review_notes": "MEASUREMENT+CONDITION_OCCURRENCE combo: confirm OBSERVATION vs CONDITION_OCCURRENCE for the measurement portion (eCP Q&A is OBSERVATION-only).",
         "rationale": null,
         "target_override_table": null,
         "target_override_field": null,
-        "needs_wg_decision": false
+        "needs_wg_decision": true
       },
       {
         "concept_class_id": "CANCER_IDENTIFICATIO",
@@ -12289,11 +12289,11 @@
         "review_status": "unreviewed",
         "reviewer": null,
         "reviewed_at": null,
-        "review_notes": null,
+        "review_notes": "MEASUREMENT+CONDITION_OCCURRENCE combo: confirm OBSERVATION vs CONDITION_OCCURRENCE for the measurement portion (eCP Q&A is OBSERVATION-only).",
         "rationale": null,
         "target_override_table": null,
         "target_override_field": null,
-        "needs_wg_decision": false
+        "needs_wg_decision": true
       },
       {
         "concept_class_id": "CANCER_IDENTIFICATIO",

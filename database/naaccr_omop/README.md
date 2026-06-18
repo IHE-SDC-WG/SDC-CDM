@@ -16,7 +16,7 @@ The `omop` branch of this SDC-CDM repo currently implements the working-group
 SQL Server path:
 
 ```text
-dbo.naaccr_staging -> EPISODE -> OBSERVATION / MEASUREMENT -> EPISODE_EVENT
+dbo.naaccr_staging -> EPISODE + NOTE -> MEASUREMENT -> EPISODE_EVENT
 ```
 
 That path is represented by `database/ddl/sqlserver/naaccr_to_omop_etl.sql`
@@ -42,13 +42,16 @@ of committed files.
 The generated spec encodes the rules confirmed in SDC-CDM discussion #77
 from May 27, 2026:
 
-- Pathology and measurement-like NAACCR items, including SSDIs, grades, staging,
-  and constrained pick lists, default to `MEASUREMENT`.
+- eCP synoptic Q&A — pathology items, SSDIs, grades, staging, and constrained
+  pick lists — defaults to `MEASUREMENT`. Each item is a qualitative or quantitative
+  result of a standardized pathology activity (coded answers use `value_as_concept_id`,
+  numeric uses `value_as_number`). Domain-driven routing (read the mapped concept's
+  `domain_id`) is the future refinement. See `ECP_OMOP_MAPPING.md` at the repo root.
 - Demographic, registry-management, confidential, and otherwise NAACCR-specific
   data remains in extension tables unless it maps cleanly to OMOP core.
 - Foreign keys live on the NAACCR extension-table side and point to OMOP records.
 - Do not add non-FK NAACCR fields to OMOP core tables.
-- The preferred direction is CAP to NAACCR to MEASUREMENT.
+- The preferred direction is CAP to NAACCR to OBSERVATION.
 
 Discussion #78 is dated June 3, 2026 and is a future agenda as of June 1, 2026,
 so it is referenced as a planning input rather than as a final decision record.
@@ -128,7 +131,7 @@ and implements:
   `phenoml` SDK;
 - a workflow runner that loads JSON workflow definitions and this mapping spec;
 - a NAACCR XML or V2 to JSON preprocessor;
-- sample execution that emits OMOP 5.4-compatible `episode`,
+- sample execution that emits OMOP 5.4-compatible `episode`, `note`,
   `episode_event`, `measurement`, `observation`, and extension-table rows.
 
 Credentials must not be committed. The PhenoML package should fail loudly with a

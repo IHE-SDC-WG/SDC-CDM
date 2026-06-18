@@ -133,25 +133,26 @@ namespace SdcCdmInSqlite
                 Console.WriteLine("CHECKING OMOP ROWS LINKED TO SDC_FORM_ANSWER");
                 Console.WriteLine(new string('=', 80));
 
+                // eCP Q&A defaults to MEASUREMENT. Each measurement links to its
+                // synoptic-report NOTE via measurement_event_id.
                 using var qaCmd = connection.CreateCommand();
                 qaCmd.CommandText =
                     @"
                     SELECT sfa.sdc_form_answer_id, sfa.question_instance_guid, sfa.question_text,
-                           m.measurement_id, m.value_as_number, m.unit_source_value,
-                           o.observation_id, o.value_as_string
+                           m.measurement_id, m.value_as_number, m.value_source_value,
+                           m.unit_source_value, m.measurement_event_id
                     FROM sdc_form_answer sfa
                     LEFT JOIN measurement m ON m.sdc_form_answer_id = sfa.sdc_form_answer_id
-                    LEFT JOIN observation o ON o.sdc_form_answer_id = sfa.sdc_form_answer_id
                     ORDER BY sfa.sdc_form_answer_id
                     LIMIT 20;
                 ";
 
                 using var qaReader = qaCmd.ExecuteReader();
                 Console.WriteLine(
-                    "AnsId | Q GUID | Q Text | MeasID | MeasVal | Units | ObsID | ObsVal"
+                    "AnsId | Q GUID | Q Text | MeasID | MeasNum | MeasVal | Units | NoteId"
                 );
                 Console.WriteLine(
-                    "------+--------+--------+--------+---------+-------+-------+-------"
+                    "------+--------+--------+--------+---------+---------+-------+-------"
                 );
                 while (qaReader.Read())
                 {
@@ -159,12 +160,12 @@ namespace SdcCdmInSqlite
                     var qGuid = qaReader.IsDBNull(1) ? "" : qaReader.GetString(1);
                     var qText = qaReader.IsDBNull(2) ? "" : qaReader.GetString(2);
                     var measId = qaReader.IsDBNull(3) ? (long?)null : qaReader.GetInt64(3);
-                    var measVal = qaReader.IsDBNull(4) ? (double?)null : qaReader.GetDouble(4);
-                    var units = qaReader.IsDBNull(5) ? "" : qaReader.GetString(5);
-                    var obsId = qaReader.IsDBNull(6) ? (long?)null : qaReader.GetInt64(6);
-                    var obsVal = qaReader.IsDBNull(7) ? "" : qaReader.GetString(7);
+                    var measNum = qaReader.IsDBNull(4) ? (double?)null : qaReader.GetDouble(4);
+                    var measVal = qaReader.IsDBNull(5) ? "" : qaReader.GetString(5);
+                    var units = qaReader.IsDBNull(6) ? "" : qaReader.GetString(6);
+                    var noteId = qaReader.IsDBNull(7) ? (long?)null : qaReader.GetInt64(7);
                     Console.WriteLine(
-                        $"{ansId} | {qGuid} | {qText} | {measId?.ToString() ?? ""} | {measVal?.ToString() ?? ""} | {units} | {obsId?.ToString() ?? ""} | {obsVal}"
+                        $"{ansId} | {qGuid} | {qText} | {measId?.ToString() ?? ""} | {measNum?.ToString() ?? ""} | {measVal} | {units} | {noteId?.ToString() ?? ""}"
                     );
                 }
             }

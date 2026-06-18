@@ -10,6 +10,12 @@
     "episode_start_date": "2024-01-15",
     "episode_end_date": null
   },
+  "report": {
+    "accession": "15SL-2",
+    "loinc": "60568-3",
+    "title": "Synoptic Report ADRENAL GLAND",
+    "text": "Synoptic report for adrenal gland resection (sample)."
+  },
   "observation_date": "2024-01-15",
   "items": [
     {
