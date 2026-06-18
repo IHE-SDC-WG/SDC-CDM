@@ -10,8 +10,15 @@ This implementation provides a proof of concept for importing Elective Case Pre-
 
 **Enhanced OMOP Measurement Table**
 
+- eCP synoptic Q&A defaults to the OMOP `measurement` table — each item is a
+  qualitative or quantitative result of a standardized pathology activity.
+  Numeric answers use `value_as_number`, coded answers use `value_as_concept_id`
+  (with the human-readable text in `value_source_value`). Domain-driven routing is
+  the future refinement. See `ECP_OMOP_MAPPING.md`.
 - Extended the standard OMOP `measurement` table with SDC-specific columns
-- Added fields for template instance GUID, question identifiers, response values, and metadata
+  (PostgreSQL); SQLite links via the `sdc_form_answer` table.
+- Each synoptic report becomes one OMOP `note` row; every measurement references it
+  through `measurement_event_id` (a single-report anchor).
 - Maintains full OMOP CDM v5.4 compliance while supporting ECP data
 
 **New SDC Template Instance Table**
@@ -61,9 +68,14 @@ CREATE TABLE measurement (
     person_id integer NOT NULL,
     measurement_concept_id integer NOT NULL,
     measurement_date date NOT NULL,
+    value_as_number NUMERIC NULL,    -- numeric answers (tumor size, weight, ...)
+    value_as_concept_id integer NULL, -- coded (CWE) answer concept
+    value_source_value varchar(50) NULL, -- raw / human-readable answer
+    measurement_event_id integer NULL,        -- -> note.note_id (report anchor)
+    meas_event_field_concept_id integer NULL,
     -- ... other standard fields ...
 
-    -- SDC-specific columns for ECP data
+    -- SDC-specific columns for ECP data (PostgreSQL)
     sdc_template_instance_guid varchar(255) NULL,
     sdc_question_identifier varchar(255) NULL,
     sdc_response_value TEXT NULL,
@@ -237,7 +249,7 @@ This will:
 
 1. Create a test database
 2. Import the sample NAACCR V2 message
-3. Display template instances and measurements
+3. Display template instances and measurements (linked to the report NOTE)
 4. Show data statistics and sample records
 
 ## Support

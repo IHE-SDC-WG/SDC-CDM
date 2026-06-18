@@ -10,8 +10,13 @@
     "episode_type_concept_id": 0,
     "measurement_type_concept_id": 0,
     "observation_type_concept_id": 0,
+    "note_type_concept_id": 32817,
+    "note_class_concept_id": 0,
+    "encoding_concept_id": 0,
+    "language_concept_id": 0,
     "field_measurement_id": 1147138,
-    "field_observation_id": 1147165
+    "field_observation_id": 1147165,
+    "field_note_id": 1147289
   },
   "rules": {
     "default_naaccr_target": "measurement",
@@ -35,6 +40,11 @@
       "table": "episode"
     },
     {
+      "id": "build_report_note",
+      "type": "emit",
+      "table": "note"
+    },
+    {
       "id": "map_case_items",
       "type": "map_items",
       "item_key": "concept_code",
@@ -48,6 +58,7 @@
   ],
   "outputs": [
     "episode",
+    "note",
     "measurement",
     "observation",
     "episode_event",

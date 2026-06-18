@@ -173,7 +173,8 @@ CREATE TABLE public.measurement (
 			value_source_value varchar(50) NULL,
 			measurement_event_id integer NULL,
 			meas_event_field_concept_id integer NULL,
-			-- SDC-specific columns for ECP data
+			-- SDC-specific columns for ECP data. eCP synoptic Q&A defaults to MEASUREMENT
+			-- (qualitatively/quantitatively derived). See ECP_OMOP_MAPPING.md.
 			sdc_template_instance_guid varchar(255) NULL,
 			sdc_question_identifier varchar(255) NULL,
 			sdc_response_value TEXT NULL,
@@ -651,6 +652,12 @@ CREATE TABLE public.sdc_template_instance_ecp (
 			tumor_site varchar(255) NULL,
 			procedure_type varchar(255) NULL,
 			specimen_laterality varchar(255) NULL,
+			-- Synoptic report identifiers from the OBR segment (single-report anchor)
+			report_accession varchar(255) NULL,
+			report_loinc varchar(50) NULL,
+			-- Re-import collision flagging (no dedup: always insert, but flag duplicates)
+			is_duplicate_accession integer NOT NULL DEFAULT 0,
+			first_seen_ecp_id integer NULL,
 			-- Metadata fields
 			created_datetime TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 			updated_datetime TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

@@ -638,10 +638,19 @@ CREATE TABLE main.sdc_template_instance_ecp (
 			tumor_site TEXT NULL,
 			procedure_type TEXT NULL,
 			specimen_laterality TEXT NULL,
+			-- Synoptic report identifiers from the OBR segment (single-report anchor)
+			report_accession TEXT NULL,
+			report_loinc TEXT NULL,
+			-- Re-import collision flagging (no dedup: always insert, but flag duplicates)
+			is_duplicate_accession integer NOT NULL DEFAULT 0,
+			first_seen_ecp_id integer NULL REFERENCES sdc_template_instance_ecp(sdc_template_instance_ecp_id),
 			-- Metadata fields
 			created_datetime REAL DEFAULT (julianday('now')),
 			updated_datetime REAL DEFAULT (julianday('now')) );
--- Add SDC linkage FKs to OMOP tables after ancillary SDC table creation
+-- Add SDC linkage FKs to OMOP tables after ancillary SDC table creation.
+-- eCP synoptic Q&A defaults to MEASUREMENT (qualitatively/quantitatively derived);
+-- observation keeps the linkage too for the future domain-driven minority.
+-- See ECP_OMOP_MAPPING.md.
 ALTER TABLE main.measurement
 	ADD COLUMN sdc_form_answer_id integer NULL REFERENCES sdc_form_answer(sdc_form_answer_id);
 CREATE INDEX IF NOT EXISTS idx_measurement_sdc_form_answer_id ON measurement(sdc_form_answer_id);
@@ -649,4 +658,5 @@ CREATE INDEX IF NOT EXISTS idx_measurement_sdc_form_answer_id ON measurement(sdc
 ALTER TABLE main.observation
 	ADD COLUMN sdc_form_answer_id integer NULL REFERENCES sdc_form_answer(sdc_form_answer_id);
 CREATE INDEX IF NOT EXISTS idx_observation_sdc_form_answer_id ON observation(sdc_form_answer_id);
+CREATE INDEX IF NOT EXISTS idx_ecp_report_accession ON sdc_template_instance_ecp(report_accession);
 COMMIT;

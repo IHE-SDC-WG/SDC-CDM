@@ -111,6 +111,11 @@ public static class NAACCRVolVImporter
             ErrorCallback($"Unknown report type: {report_type}");
         }
 
+        // Synoptic report identifiers from OBR: OBR-3 is the filler order number /
+        // accession (durable real-world report key); OBR-4 carries the report LOINC.
+        var report_accession = (get_field(obr_segment_fields, 3) ?? string.Empty).Split('^')[0];
+        var report_loinc = report_type_code;
+
         // Extract person data
         var person_source_value = get_field(pid_segment_fields, 3);
         var person_name = get_field(pid_segment_fields, 5);
@@ -303,19 +308,71 @@ public static class NAACCRVolVImporter
         // Generate template instance GUID
         var template_instance_guid = Guid.NewGuid().ToString();
 
+        // Re-import policy: never dedup — always insert — but flag collisions so duplicate
+        // synoptic reports (same OBR accession) are queryable. See ECP_OMOP_MAPPING.md.
+        long? first_seen_ecp_id = string.IsNullOrEmpty(report_accession)
+            ? null
+            : sdcCdm.FindFirstSdcTemplateInstanceEcpByAccession(report_accession);
+        bool is_duplicate_accession = first_seen_ecp_id != null;
+        if (is_duplicate_accession)
+        {
+            Console.WriteLine(
+                $"Duplicate synoptic report accession '{report_accession}' (first seen ECP id {first_seen_ecp_id}); inserting and flagging."
+            );
+        }
+
+        // Gather the report narrative (the CAP eCC comment item) for the synoptic-report NOTE.
+        var report_narrative = "";
+        foreach (var seg in obx_segments)
+        {
+            var f = seg.Split('|');
+            var oid = get_field(f, 3);
+            if (oid.Contains("2168.1000043") || oid.Contains("Comment"))
+            {
+                report_narrative = get_field(f, 5);
+                break;
+            }
+        }
+
         // Create SDC template instance for ECP data (ECP metadata table)
         var template_instance_ecp_id = sdcCdm.WriteSdcTemplateInstanceEcp(
             template_name: template_id,
             template_version: template_version,
             template_instance_guid: template_instance_guid,
             person_id: personId,
+            report_text: report_narrative,
             report_template_source: template_source,
             report_template_id: template_id,
             report_template_version_id: template_version,
             tumor_site: tumor_site,
             procedure_type: procedure_type,
-            specimen_laterality: specimen_laterality
+            specimen_laterality: specimen_laterality,
+            report_accession: report_accession,
+            report_loinc: report_loinc,
+            is_duplicate_accession: is_duplicate_accession,
+            first_seen_ecp_id: first_seen_ecp_id
         );
+
+        // Create one OMOP NOTE row per synoptic report. Every observation parsed below
+        // references this note via observation_event_id, giving a single-report anchor.
+        var note_text = string.IsNullOrWhiteSpace(report_narrative)
+            ? $"Synoptic report {template_id} {template_version}".Trim()
+            : report_narrative;
+        long noteId = sdcCdm.WriteNote(
+            person_id: personId ?? 0,
+            note_date: DateTime.Now.Date,
+            note_type_concept_id: 32817, // EHR
+            note_class_concept_id: 0, // TODO: map synoptic report LOINC 60568-3 to a Note Class concept
+            note_text: note_text,
+            note_title: $"Synoptic Report {template_id}",
+            note_source_value: report_accession
+        );
+        // CDM field concept for note.note_id (TODO: confirm against loaded vocabulary).
+        const long NoteNoteIdFieldConceptId = 1147289;
+
+        // Track OBX-4 sub-ids so a question's sub-answers ("specify" text, unit + value)
+        // link back to their parent form answer via parent_form_answer_id.
+        var obx4ToFormAnswerId = new Dictionary<string, long>();
 
         // Also create a minimal template_instance row to satisfy sdc_form_answer FK to template_instance
         long templatesdc_fk;
@@ -419,10 +476,23 @@ public static class NAACCRVolVImporter
                     break;
             }
 
+            // Resolve OBX-4 sub-id grouping: the first OBX with a given sub-id is the
+            // parent question; later OBX with the same sub-id (unit + value, or
+            // coded pick + "specify" text) link to it via parent_form_answer_id.
+            var obx4_key = (obx4_value_raw ?? string.Empty)
+                .TrimStart('+')
+                .Split('.')[0]
+                .Trim();
+            long? parent_form_answer_id =
+                !string.IsNullOrEmpty(obx4_key)
+                && obx4ToFormAnswerId.TryGetValue(obx4_key, out var parentId)
+                    ? parentId
+                    : null;
+
             // Create SDC form-answer metadata row
             var sdc_form_answer_id = sdcCdm.WriteSdcFormAnswer(
                 template_instance_id: template_instance_id,
-                parent_form_answer_id: null,
+                parent_form_answer_id: parent_form_answer_id,
                 section_sdcid: null,
                 section_guid: null,
                 question_text: question_text,
@@ -439,41 +509,36 @@ public static class NAACCRVolVImporter
                 sdc_comments: null
             );
 
-            if (response_type == "numeric")
+            // Register the first form answer for this OBX-4 sub-id as the parent.
+            if (!string.IsNullOrEmpty(obx4_key) && parent_form_answer_id == null)
             {
-                // Write a measurement linked to the SDC form answer
-                _ = sdcCdm.WriteMeasurementLinkedToFormAnswer(
-                    person_id: personId ?? 0,
-                    measurement_concept_id: 0, // TODO: map LOINC to OMOP concept
-                    measurement_date: DateTime.Now.Date,
-                    measurement_type_concept_id: 32856, // Laboratory measurement
-                    value_as_number: numeric_value,
-                    unit_concept_id: null,
-                    unit_source_value: obx_units,
-                    measurement_source_value: obx_observation_id,
-                    sdc_form_answer_id: sdc_form_answer_id
-                );
+                obx4ToFormAnswerId[obx4_key] = sdc_form_answer_id;
             }
-            else
-            {
-                // Write an observation linked to the SDC form answer
-                _ = sdcCdm.WriteObservationLinkedToFormAnswer(
-                    person_id: personId ?? 0,
-                    observation_concept_id: 0, // TODO: map coded values to OMOP concept when available
-                    observation_date: DateTime.Now.Date,
-                    observation_type_concept_id: 45905771, // Observation recorded from EHR (inserted as essential concept)
-                    value_as_number: numeric_value,
-                    // For list selections, store the human-readable text in value_as_string
-                    value_as_string: response_type == "list_selection"
-                        ? (cwe_text ?? response_value)
-                        : response_value,
-                    value_as_concept_id: null, // TODO: parse CWE to concept id
-                    unit_concept_id: null,
-                    unit_source_value: obx_units,
-                    observation_source_value: obx_observation_id,
-                    sdc_form_answer_id: sdc_form_answer_id
-                );
-            }
+
+            // eCP synoptic Q&A defaults to MEASUREMENT — each item is a qualitative or
+            // quantitative result of a standardized pathology activity (domain-driven
+            // routing is the future refinement; see ECP_OMOP_MAPPING.md). Numeric answers
+            // use value_as_number; coded (CWE) answers use value_as_concept_id (TODO until
+            // vocab) with the human-readable text preserved in value_source_value; free text
+            // uses value_source_value. Every measurement references the synoptic-report NOTE
+            // via measurement_event_id.
+            _ = sdcCdm.WriteMeasurementLinkedToFormAnswer(
+                person_id: personId ?? 0,
+                measurement_concept_id: 0, // TODO: map question (CAP eCC code) to OMOP concept when available
+                measurement_date: DateTime.Now.Date,
+                measurement_type_concept_id: 32856, // Laboratory measurement (inserted as essential concept)
+                value_as_number: numeric_value,
+                value_as_concept_id: null, // TODO: parse CWE answer code to concept id
+                value_source_value: response_type == "list_selection"
+                    ? (cwe_text ?? response_value)
+                    : response_value,
+                unit_concept_id: null,
+                unit_source_value: obx_units,
+                measurement_source_value: obx_observation_id,
+                sdc_form_answer_id: sdc_form_answer_id,
+                measurement_event_id: noteId,
+                meas_event_field_concept_id: NoteNoteIdFieldConceptId
+            );
         }
 
         Console.WriteLine(

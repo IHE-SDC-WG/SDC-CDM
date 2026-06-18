@@ -4,6 +4,9 @@ from typing import Any, Optional
 
 
 def _normalize_target(mapping: dict[str, Any]) -> str:
+    # eCP synoptic Q&A defaults to MEASUREMENT (qualitatively/quantitatively derived from a
+    # standardized pathology activity). Domain-driven routing sends the Observation-domain
+    # minority to observation; everything else defaults to measurement. See ECP_OMOP_MAPPING.md.
     omop_table = str(mapping.get("omop_table") or "").lower()
     mapping_kind = str(mapping.get("mapping_kind") or "").lower()
 
@@ -44,6 +47,34 @@ def _value_source_value(item: dict[str, Any]) -> Optional[str]:
     return None
 
 
+def _note_row(
+    *,
+    row_id: int,
+    source: dict[str, Any],
+    workflow: dict[str, Any],
+) -> dict[str, Any]:
+    # One NOTE per synoptic report; measurements reference it via measurement_event_id.
+    constants = workflow.get("constants", {})
+    report = source.get("report", {})
+    return {
+        "note_id": row_id,
+        "person_id": source["person"]["person_id"],
+        "note_date": _row_date({}, source),
+        "note_datetime": None,
+        "note_type_concept_id": constants.get("note_type_concept_id", 32817),  # EHR
+        "note_class_concept_id": constants.get("note_class_concept_id", 0),  # TODO: map synoptic report LOINC
+        "note_title": report.get("title") or "Synoptic Report",
+        "note_text": report.get("text") or "Synoptic report",
+        "encoding_concept_id": constants.get("encoding_concept_id", 0),
+        "language_concept_id": constants.get("language_concept_id", 0),
+        "provider_id": None,
+        "visit_occurrence_id": None,
+        "note_source_value": report.get("accession"),
+        "note_event_id": None,
+        "note_event_field_concept_id": None,
+    }
+
+
 def _measurement_row(
     *,
     row_id: int,
@@ -51,7 +82,11 @@ def _measurement_row(
     item: dict[str, Any],
     mapping: dict[str, Any],
     workflow: dict[str, Any],
+    note_id: Optional[int] = None,
 ) -> dict[str, Any]:
+    # eCP synoptic Q&A defaults to MEASUREMENT. Numeric -> value_as_number; coded ->
+    # value_as_concept_id; raw answer preserved in value_source_value. measurement_event_id
+    # anchors the row to the report NOTE.
     constants = workflow.get("constants", {})
     return {
         "measurement_id": row_id,
@@ -62,7 +97,7 @@ def _measurement_row(
         "measurement_type_concept_id": constants.get("measurement_type_concept_id", 0),
         "operator_concept_id": None,
         "value_as_number": item.get("value_num"),
-        "value_as_concept_id": None,
+        "value_as_concept_id": None,  # TODO: map coded (CWE) answer to concept id
         "unit_concept_id": None,
         "range_low": None,
         "range_high": None,
@@ -73,6 +108,10 @@ def _measurement_row(
         "measurement_source_concept_id": mapping.get("concept_id"),
         "unit_source_value": item.get("unit_source_value"),
         "value_source_value": _value_source_value(item),
+        "measurement_event_id": note_id,
+        "meas_event_field_concept_id": (
+            constants.get("field_note_id", 1147289) if note_id is not None else None
+        ),
     }
 
 
@@ -83,6 +122,7 @@ def _observation_row(
     item: dict[str, Any],
     mapping: dict[str, Any],
     workflow: dict[str, Any],
+    note_id: Optional[int] = None,
 ) -> dict[str, Any]:
     constants = workflow.get("constants", {})
     value = item.get("value")
@@ -93,9 +133,10 @@ def _observation_row(
         "observation_date": _row_date(item, source),
         "observation_datetime": None,
         "observation_type_concept_id": constants.get("observation_type_concept_id", 0),
+        # Numeric eCP answers use observation.value_as_number (no measurement table).
         "value_as_number": item.get("value_num"),
         "value_as_string": str(value) if value is not None else None,
-        "value_as_concept_id": None,
+        "value_as_concept_id": None,  # TODO: map coded (CWE) answer to concept id
         "qualifier_concept_id": None,
         "unit_concept_id": None,
         "provider_id": None,
@@ -105,6 +146,11 @@ def _observation_row(
         "observation_source_concept_id": mapping.get("concept_id"),
         "unit_source_value": item.get("unit_source_value"),
         "qualifier_source_value": item.get("value_code"),
+        # Single synoptic-report anchor: point at the report's NOTE row.
+        "observation_event_id": note_id,
+        "obs_event_field_concept_id": (
+            constants.get("field_note_id", 1147289) if note_id is not None else None
+        ),
     }
 
 
@@ -163,8 +209,12 @@ def map_naaccr_case_to_omop(
     workflow: dict[str, Any],
 ) -> dict[str, Any]:
     mappings = _index_mappings(mapping_spec)
+    # One NOTE per synoptic report; measurements (and any observations) reference it.
+    note_id = source.get("id_offsets", {}).get("note_id", 1)
+    note = _note_row(row_id=note_id, source=source, workflow=workflow)
     rows: dict[str, Any] = {
         "episode": [_episode_row(source, workflow)],
+        "note": [note],
         "measurement": [],
         "observation": [],
         "episode_event": [],
@@ -185,6 +235,12 @@ def map_naaccr_case_to_omop(
         _add_extension_value(rows=rows, source=source, mapping=mapping, item=item)
         target = _normalize_target(mapping)
 
+        # omop_core/extension items are written elsewhere.
+        if target in {"omop_core", "extension_only"}:
+            continue
+
+        # Domain-driven: Observation-domain minority -> observation; everything else
+        # (the eCP default) -> measurement. Both anchor to the report NOTE.
         if target == "observation":
             observation = _observation_row(
                 row_id=observation_id,
@@ -192,6 +248,7 @@ def map_naaccr_case_to_omop(
                 item=item,
                 mapping=mapping,
                 workflow=workflow,
+                note_id=note["note_id"],
             )
             observation_id += 1
             rows["observation"].append(observation)
@@ -206,15 +263,13 @@ def map_naaccr_case_to_omop(
             )
             continue
 
-        if target in {"omop_core", "extension_only"}:
-            continue
-
         measurement = _measurement_row(
             row_id=measurement_id,
             source=source,
             item=item,
             mapping=mapping,
             workflow=workflow,
+            note_id=note["note_id"],
         )
         measurement_id += 1
         rows["measurement"].append(measurement)
