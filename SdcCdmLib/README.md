@@ -13,7 +13,7 @@ This directory contains the SDC CDM .NET library, which provides reference imple
     - Template data
 - **SdcCdmInSqlite** - SQLite-based implementation of the SDC CDM API
   - Implements all abstract methods from `ISdcCdm`
-  - Automatically builds database schema from embedded SQL scripts
+  - Automatically builds attached `omop`, `naaccr`, and `sdc` schemas from embedded SQL scripts
   - Supports both in-memory and file-based databases
 - **SdcCdm.Tests** - Unit tests for the library functionality
 
@@ -60,4 +60,4 @@ For detailed usage examples and demonstrations of the library's capabilities, re
 
 ## Database Schema
 
-The SQLite implementation automatically creates the required database schema using embedded SQL scripts located in the `database/ddl/sqlite/` directory of the main repository.
+The SQLite implementation automatically creates the required attached schemas using embedded SQL scripts located under `database/schemas/*/ddl/sqlite/` in the main repository. Bridge SQL for `naaccr` + `sdc` to stock OMOP rows is embedded from `database/etl/sqlite/`.

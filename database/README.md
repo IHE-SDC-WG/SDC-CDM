@@ -1,20 +1,31 @@
-## SDC-CDM Schema Files
+# Database Layout
 
-The SDC tables in described in a human-readable format in `SDC CDM Requirements.xlsx`
+The canonical database design is [SCHEMA_ARCHITECTURE.md](SCHEMA_ARCHITECTURE.md).
 
-The OMOP tables are described at https://ohdsi.github.io/CommonDataModel/cdm54.html
+This repo now uses one physical database with three logical schemas:
 
-Data Definition Language (DDL) files are provided under `ddl/` for the following backends:
+- `naaccr`: NAACCR dictionary tables, raw captured values, and NAACCR to OMOP concept maps.
+- `sdc`: SDC form, report, question, section, list-item, and specimen structure. It does not store answer values.
+- `omop`: stock OMOP CDM 5.4 tables, kept unmodified.
 
-- PostgreSQL
-- SQLite
+The bridge step reads `naaccr` and `sdc`, then writes standard OMOP rows only. OMOP rows point back to the source through standard fields such as `note_source_value`, `measurement_event_id`, `observation_event_id`, and source value columns.
 
-### Guide to updating the DDLs
+## Files
 
-DDL templates are generated in our [OHDSI/CommonDataModel fork](https://github.com/IHE-SDC-WG/OHDSI-CommonDataModel-SDC). The following .csv files should be considered the source of truth for the SDC-CDM schema:
-- [OMOP_CDMv5.4-SDC_Table_Level.csv](https://github.com/IHE-SDC-WG/OHDSI-CommonDataModel-SDC/blob/add-SDC-schema/inst/csv/OMOP_CDMv5.4-SDC_Table_Level.csv)
-- [OMOP_CDMv5.4-SDC_Field_Level.csv](https://github.com/IHE-SDC-WG/OHDSI-CommonDataModel-SDC/blob/add-SDC-schema/inst/csv/OMOP_CDMv5.4-SDC_Field_Level.csv)
+```text
+database/
+  schemas/
+    naaccr/ddl/{sqlite,postgresql,sqlserver}/
+    sdc/ddl/{sqlite,postgresql,sqlserver}/
+    omop/ddl/{sqlite,postgresql,sqlserver}/
+  etl/
+    sqlite/
+    sqlserver/
+    postgresql/
+```
 
-The script `update-ddl-files.py [commit_hash]` fetches DDL templates from the fork, processes them, then writes ready-to-use files to the `ddl/` directory. The details of this process depends on the database type. See the script for details.
+SQLite uses attached databases named `naaccr`, `sdc`, and `omop`. PostgreSQL and SQL Server use real schemas.
 
-Any change to the schema should be made to the linked CSV files first. Note that all SDC additions are at the end of each CSV file.
+## Archived Model
+
+The previous combined OMOP-SDC model is archived under `archive/old-omop-extension-model/`. It is retained for reference only. Do not regenerate active DDL from the old OMOP-SDC fork.

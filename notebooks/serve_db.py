@@ -17,9 +17,16 @@ class MyHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
 
 with socketserver.TCPServer(("", PORT), MyHTTPRequestHandler) as httpd:
     print(f"Serving directory '{DIRECTORY}' at http://localhost:{PORT}")
-    print(
-        "Try https://lite.datasette.io/?url=http://localhost:8000/sdc_cdm.db for a friendlier GUI into the database"
+    # The three-schema layout produces one control DB plus three attached schema
+    # files (sdc_cdm.omop.db / sdc_cdm.naaccr.db / sdc_cdm.sdc.db). Point Datasette
+    # at each attached file so all three logical schemas are browsable.
+    datasette_url = (
+        "https://lite.datasette.io/"
+        "?url=http://localhost:8000/sdc_cdm.omop.db"
+        "&url=http://localhost:8000/sdc_cdm.naaccr.db"
+        "&url=http://localhost:8000/sdc_cdm.sdc.db"
     )
+    print(f"Try {datasette_url} for a friendlier GUI into the databases")
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:

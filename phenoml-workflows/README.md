@@ -110,7 +110,7 @@ and emits OMOP-shaped row groups for:
 - `measurement`
 - `observation`
 - `episode_event`
-- NAACCR extension tables
+- NAACCR-side storage groups
 
 ## Current Scope
 

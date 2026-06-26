@@ -1,10 +1,32 @@
 #!/usr/bin/env python3
+"""Import a NAACCR Volume V (HL7 v2 ORU) synoptic report into the three-schema
+SDC CDM.
+
+Ported from SdcCdmLib/SdcCdm/ImportNaaccrVolV.cs. Writes:
+  - omop.person          (create-or-find by source identifier)
+  - sdc.sdc_report       (one synoptic report header per message)
+  - sdc.template_instance / sdc.template_sdc (minimal rows for FK integrity)
+  - sdc.sdc_form_answer  (question/section structure per OBX, no answer value)
+  - naaccr.naaccr_value  (the captured answer values)
+
+The bridge ETL (database/etl/sqlite/1_naaccr_sdc_to_omop.sql) later turns these
+into stock omop.note / omop.measurement rows.
+"""
 
 import logging
+import uuid
+from datetime import date, datetime
+
 from python_cdm_utils.crud_sqlite import (
+    find_template_sdc_class,
     create_template_sdc_class,
     create_template_instance_class,
-    create_sdc_obs_class,
+    create_sdc_form_answer,
+    find_person_by_identifier,
+    create_person,
+    find_first_sdc_report_by_accession,
+    create_sdc_report,
+    create_naaccr_value,
 )
 
 logging.basicConfig(
@@ -12,174 +34,295 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+VALID_REPORT_TYPE_CODES = {"60568-3", "35265-8"}
+
 
 def import_data_from_hl7(cursor, hl7_message, exit_on_error=True):
-    def print_extracted_var(string):
-        print(f"! {string}")
-
     def hl7_error(message):
-        print(f"Error: {message}")
-        if exit_on_error:
-            exit()
+        raise Exception(message)
 
     def get_field(fields, index):
-        if fields[0] == "MSH":
-            return fields[index - 1]
-        else:
-            return fields[index]
+        # MSH segments shift the index by one (the field separator is field 1).
+        idx = index - 1 if fields[0] == "MSH" else index
+        return fields[idx] if 0 <= idx < len(fields) else ""
 
     def get_first_segment(segments, segment_name):
         for segment in segments:
-            fields = segment.split("|")
-            if fields[0] == segment_name:
-                return segment
+            seg = segment.strip()
+            fields = seg.split("|")
+            name = fields[0].lstrip("﻿") if fields else ""
+            if name == segment_name:
+                return seg
+        return None
 
     def get_all_segments(segments, segment_name):
-        found_segments = []
+        found = []
         for segment in segments:
-            fields = segment.split("|")
-            if fields[0] == segment_name:
-                found_segments.append(segment)
-        return found_segments
+            seg = segment.strip()
+            fields = seg.split("|")
+            name = fields[0].lstrip("﻿") if fields else ""
+            if name == segment_name:
+                found.append(seg)
+        return found
 
-    # Split string into lines
-    lines = hl7_message.split("\n")
+    # HL7 commonly uses CR line endings, sometimes CRLF.
+    lines = [ln for ln in hl7_message.replace("\r", "\n").split("\n") if ln.strip()]
 
-    ## MSH segment
+    # MSH segment
     msh_segment = get_first_segment(lines, "MSH")
-    msh_segment_fields = msh_segment.split("|")
-    message_type = get_field(msh_segment_fields, 9)
+    if msh_segment is None:
+        hl7_error("No MSH segment found")
+        return
+    msh_fields = msh_segment.split("|")
+    message_type = get_field(msh_fields, 9)
     if message_type != "ORU^R01^ORU_R01":
         hl7_error(f"Unknown message type: {message_type}")
     print(f"Message type: {message_type}")
-    message_profile = get_field(msh_segment_fields, 21)
-    if message_profile != "VOL_V_40_ORU_R01^NAACCR_CP":
-        hl7_error(f"Unknown message profile: {message_profile}")
-    print(f"Message profile: {message_profile}")
+    # Message-profile validation is intentionally disabled (matches C#).
 
-    ## OBR segment
+    # PID segment -> person
+    pid_segment = get_first_segment(lines, "PID")
+    if pid_segment is None:
+        hl7_error("No PID segment found")
+        return
+    pid_fields = pid_segment.split("|")
+
+    # OBR segment -> report identity
     obr_segment = get_first_segment(lines, "OBR")
-    obr_segment_fields = obr_segment.split("|")
-    report_type = get_field(obr_segment_fields, 4)
-    if report_type != "60568-3^SYNOPTIC REPORT^LN":
+    if obr_segment is None:
+        hl7_error("No OBR segment found")
+        return
+    obr_fields = obr_segment.split("|")
+    report_type = get_field(obr_fields, 4)
+    report_type_code = (report_type or "").split("^")[0]
+    if report_type_code not in VALID_REPORT_TYPE_CODES:
         hl7_error(f"Unknown report type: {report_type}")
-    print(f"Report type: {report_type}")
 
-    ## OBX segments
-    obx_segments = get_all_segments(lines, "OBX")
+    # OBR-3 = filler order number / accession (durable report key); OBR-4 = LOINC.
+    report_accession = (get_field(obr_fields, 3) or "").split("^")[0]
+    report_loinc = report_type_code
 
-    # Process first three segments
-    first_obx = obx_segments[0]
-    first_obx_fields = first_obx.split("|")
-    observation_identifier = get_field(first_obx_fields, 3)
-    if observation_identifier != "60573-3^Report template source^LN":
-        hl7_error(f"Unexpected observation identifier: {observation_identifier}")
-    print(f"First OBX identifier: {observation_identifier}")
-    document_source_style = get_field(first_obx_fields, 5)
-    if document_source_style != "CAP eCC":
-        hl7_error(f"Unexpected document source style: {document_source_style}")
-    print(f"Document source style: {document_source_style}")
+    # Person data
+    person_source_value = get_field(pid_fields, 3)
+    person_name = get_field(pid_fields, 5)
+    birth_date = get_field(pid_fields, 7)
+    gender = get_field(pid_fields, 8)
 
-    second_obx = obx_segments[1]
-    second_obx_fields = second_obx.split("|")
-    observation_identifier = get_field(second_obx_fields, 3)
-    if observation_identifier != "60572-5^Report template ID^LN":
-        hl7_error(f"Unexpected observation identifier: {observation_identifier}")
-    template_id = get_field(second_obx_fields, 5)
-    form_title = template_id.split("^")[1]
-    print(f"Template ID: {template_id}")
-    print_extracted_var(f"Form Title: {form_title}")
-
-    third_obx = obx_segments[2]
-    third_obx_fields = third_obx.split("|")
-    observation_identifier = get_field(third_obx_fields, 3)
-    if observation_identifier != "60574-1^Report template version ID^LN":
-        hl7_error(f"Unexpected observation identifier: {observation_identifier}")
-    version_id = get_field(third_obx_fields, 5)
-    print_extracted_var(f"Version ID: {version_id}")
-
-    new_template_sdc = create_template_sdc_class(
-        cursor=cursor,
-        version=version_id,
-        formtitle=form_title,
-    )
-
-    new_template_instance_class = create_template_instance_class(
-        cursor=cursor,
-        templatesdc_fk=new_template_sdc["pk"],
-        # TODO: Fill in TemplateInstanceClass fields
-    )
-    new_template_instance_class_fk = new_template_instance_class["pk"]
-
-    # Build map of observations
-    obs_sub_id_map = {}
-
-    rest_of_obx_segments = obx_segments[3:]
-    for obx_segment in rest_of_obx_segments:
-        obx_segment_fields = obx_segment.split("|")
-        observation_data_type = get_field(obx_segment_fields, 2)
-        observation_identifier = get_field(obx_segment_fields, 3)
-        obs_id_parts = observation_identifier.split("^")
-        q_id = obs_id_parts[0]
-        q_text = obs_id_parts[1]
-        print(f"Q ID: {q_id}")
-        print(f"Q Text: {q_text}")
-
-        observation_sub_id = get_field(obx_segment_fields, 4)
-        if observation_sub_id != "":
-            observation_value = get_field(obx_segment_fields, 5)
-            obs_val_parts = observation_value.split("^")
-            if len(obs_val_parts) > 1:
-                li_text = obs_val_parts[0]
-                li_id = obs_val_parts[1]
-            observation_units = get_field(obx_segment_fields, 6)
-            if observation_units != "":
-                print(f"Observation units: {observation_units}")
-            print(f"@@@ Observation sub ID: {observation_sub_id}")
-            if observation_sub_id in obs_sub_id_map:
-                print(f"@@@@@ Observation sub ID already exists: {observation_sub_id}")
-            else:
-                obs_sub_id_map[observation_sub_id] = {
-                    "q_id": q_id,
-                    "q_text": q_text,
-                    "value": observation_value,
-                    "units": observation_units,
-                }
-        else:
-            observation_value = get_field(obx_segment_fields, 5)
-            response = None
-            if observation_data_type == "ST":
-                response = observation_value[0:99]
-            else:
-                obs_val_parts = observation_value.split("^")
-                li_text = obs_val_parts[0]
-                li_id = obs_val_parts[1]
-            create_sdc_obs_class(
-                cursor=cursor,
-                template_instance_class_fk=new_template_instance_class_fk,
-                q_text=q_text,
-                q_id=q_id,
-                li_text=li_text,
-                li_id=li_id,
-                response=response,
+    birth_datetime = None
+    if birth_date and len(birth_date) >= 8:
+        try:
+            birth_datetime = datetime(
+                int(birth_date[0:4]), int(birth_date[4:6]), int(birth_date[6:8])
             )
+        except Exception as ex:
+            print(f"Error parsing birth date: {ex}")
 
-    # # Iterate through observation map
-    # for observation_sub_id, observation_data in obs_sub_id_map.items():
-    #     create_sdc_obs_class(
-    #         session=session,
-    #         template_instance_class_fk=new_template_instance_class_fk,
-    #         q_text=observation_data["q_text"],
-    #         q_id=observation_data["q_id"],
-    #         li_text=observation_data["li_text"],
-    #         li_id=observation_data["li_id"],
-    #         response=observation_data["response"],
-    #         units=observation_data["units"],
-    #         units_system=observation_data["units_system"],
-    #         datatype=None,
-    #         response_int=None,
-    #         response_float=None,
-    #         response_datetime=None,
-    #         # reponse_string_nvarchar=response_string_val,
-    #         # sdc_order=response.get("order"),
-    #     )
+    person_id = find_person_by_identifier(cursor, person_source_value)
+    if person_id is None:
+        gender_concept_id = 8507 if gender == "M" else 8532 if gender == "F" else 0
+        person_id = create_person(
+            cursor=cursor,
+            person_source_value=person_source_value,
+            year_of_birth=birth_datetime.year if birth_datetime else 1900,
+            month_of_birth=birth_datetime.month if birth_datetime else None,
+            day_of_birth=birth_datetime.day if birth_datetime else None,
+            birth_datetime=birth_datetime.isoformat() if birth_datetime else None,
+            gender_concept_id=gender_concept_id,
+        )
+
+    # OBX segments
+    obx_segments = get_all_segments(lines, "OBX")
+    if len(obx_segments) < 6:
+        hl7_error("Not enough OBX segments for template metadata (need at least 6)")
+        return
+    print(f"Found {len(obx_segments)} total OBX segments")
+
+    def find_obx_value(predicate):
+        for seg in obx_segments:
+            fields = seg.split("|")
+            oid = get_field(fields, 3)
+            if predicate(oid):
+                return get_field(fields, 5)
+        return ""
+
+    template_source = find_obx_value(
+        lambda oid: "60573-3" in oid
+        and ("Report Template Source" in oid or "Report template source" in oid)
+    )
+    template_id = find_obx_value(
+        lambda oid: "60572-5" in oid
+        and ("Report Template ID" in oid or "Report template ID" in oid)
+    )
+    template_version = find_obx_value(
+        lambda oid: "60574-1" in oid
+        and ("Report Template Version ID" in oid or "Report template version ID" in oid)
+    )
+    tumor_site = find_obx_value(
+        lambda oid: "Tumor Site" in oid
+        or "22371.100004300" in oid
+        or "2118.1000043" in oid
+    )
+    procedure_type = find_obx_value(
+        lambda oid: "Procedure" in oid
+        or "51121.100004300" in oid
+        or "820603.1000043" in oid
+    )
+    specimen_laterality = find_obx_value(
+        lambda oid: "Tumor Focality" in oid
+        or "8722.100004300" in oid
+        or "Specimen Laterality" in oid
+        or "52756.1000043" in oid
+    )
+    report_narrative = find_obx_value(
+        lambda oid: "2168.1000043" in oid or "Comment" in oid
+    )
+
+    template_instance_guid = str(uuid.uuid4())
+
+    # Re-import policy: never dedup -- always insert -- but flag collisions so
+    # duplicate synoptic reports (same OBR accession) are queryable.
+    first_seen_report_id = (
+        find_first_sdc_report_by_accession(cursor, report_accession)
+        if report_accession
+        else None
+    )
+    is_duplicate_accession = first_seen_report_id is not None
+    if is_duplicate_accession:
+        print(
+            f"Duplicate synoptic report accession '{report_accession}' "
+            f"(first seen sdc_report_id {first_seen_report_id}); inserting and flagging."
+        )
+
+    report_id = create_sdc_report(
+        cursor=cursor,
+        template_name=template_id,
+        template_version=template_version,
+        template_instance_guid=template_instance_guid,
+        person_id=person_id,
+        report_text=report_narrative,
+        report_template_source=template_source,
+        report_template_id=template_id,
+        report_template_version_id=template_version,
+        tumor_site=tumor_site,
+        procedure_type=procedure_type,
+        specimen_laterality=specimen_laterality,
+        report_accession=report_accession,
+        report_loinc=report_loinc,
+        is_duplicate_accession=is_duplicate_accession,
+        first_seen_report_id=first_seen_report_id,
+    )
+
+    # Minimal template_sdc / template_instance rows so sdc_form_answer FKs resolve.
+    template_sdc_id = find_template_sdc_class(cursor, template_id)
+    if template_sdc_id is None:
+        template_sdc_id = create_template_sdc_class(
+            cursor=cursor, sdc_form_design_sdcid=template_id
+        )["pk"]
+
+    template_instance_id = create_template_instance_class(
+        cursor=cursor,
+        template_sdc_id=template_sdc_id,
+        template_instance_version_guid=template_instance_guid,
+        person_id=person_id,
+    )["pk"]
+
+    # Track OBX-4 sub-ids so a question's sub-answers link back to their parent.
+    obx4_to_form_answer_id = {}
+
+    observation_date = date.today().isoformat()
+
+    # Process OBX segments for ECP data (starting from the 4th OBX).
+    for i in range(3, len(obx_segments)):
+        obx_fields = obx_segments[i].split("|")
+        obx_value_type = get_field(obx_fields, 2)
+        obx_observation_id = get_field(obx_fields, 3)
+        obx4_value_raw = get_field(obx_fields, 4)
+        obx_value = get_field(obx_fields, 5)
+        obx_units = get_field(obx_fields, 6)
+
+        # Skip long narrative text (focus on structured ECP data).
+        if obx_value_type == "ST" and len(obx_value) > 200:
+            continue
+
+        question_parts = obx_observation_id.split("^")
+        question_identifier = question_parts[0] if question_parts else obx_observation_id
+        question_text = question_parts[1] if len(question_parts) > 1 else ""
+
+        response_type = "text"
+        response_value = obx_value
+        numeric_value = None
+        cwe_code = None
+        cwe_text = None
+
+        if obx_value_type == "NM":
+            response_type = "numeric"
+            try:
+                numeric_value = float(obx_value)
+            except ValueError:
+                numeric_value = None
+        elif obx_value_type == "CWE":
+            response_type = "list_selection"
+            if obx_value:
+                parts = obx_value.split("^")
+                cwe_code = parts[0] if len(parts) > 0 else None
+                cwe_text = parts[1] if len(parts) > 1 else None
+        elif obx_value_type == "ST":
+            try:
+                numeric_value = float(obx_value)
+                response_type = "numeric"
+            except ValueError:
+                response_type = "text"
+        else:
+            response_type = "text"
+
+        # OBX-4 sub-id grouping -> parent_form_answer_id.
+        obx4_key = (obx4_value_raw or "").lstrip("+").split(".")[0].strip()
+        parent_form_answer_id = (
+            obx4_to_form_answer_id.get(obx4_key) if obx4_key else None
+        )
+
+        sdc_form_answer_id = create_sdc_form_answer(
+            cursor=cursor,
+            template_instance_id=template_instance_id,
+            report_id=report_id,
+            parent_form_answer_id=parent_form_answer_id,
+            question_text=question_text,
+            question_instance_guid=question_identifier,
+            question_sdcid=question_identifier,
+            list_item_id=(cwe_code or obx_value)
+            if response_type == "list_selection"
+            else None,
+            list_item_text=(cwe_text or obx_value)
+            if response_type == "list_selection"
+            else None,
+            datatype=obx_value_type,
+            sdc_order=str(i - 2),
+        )["pk"]
+
+        # Register the first form answer for this OBX-4 sub-id as the parent.
+        if obx4_key and parent_form_answer_id is None:
+            obx4_to_form_answer_id[obx4_key] = sdc_form_answer_id
+
+        item_num_text = question_identifier.split(".")[0]
+        try:
+            item_num = int(item_num_text)
+        except ValueError:
+            continue
+
+        create_naaccr_value(
+            cursor=cursor,
+            person_id=person_id or 0,
+            episode_key=report_accession if report_accession else template_instance_guid,
+            report_accession=report_accession,
+            item_num=item_num,
+            value_code=None
+            if response_type == "numeric"
+            else (cwe_code or response_value),
+            value_num=numeric_value,
+            value_unit_source=obx_units,
+            observation_date=observation_date,
+        )
+
+    print(
+        f"Successfully imported NAACCR V2 message with {len(obx_segments) - 3} ECP data points"
+    )

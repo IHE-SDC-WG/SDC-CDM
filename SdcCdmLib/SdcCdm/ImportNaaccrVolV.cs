@@ -312,7 +312,7 @@ public static class NAACCRVolVImporter
         // synoptic reports (same OBR accession) are queryable. See ECP_OMOP_MAPPING.md.
         long? first_seen_ecp_id = string.IsNullOrEmpty(report_accession)
             ? null
-            : sdcCdm.FindFirstSdcTemplateInstanceEcpByAccession(report_accession);
+            : sdcCdm.FindFirstSdcReportByAccession(report_accession);
         bool is_duplicate_accession = first_seen_ecp_id != null;
         if (is_duplicate_accession)
         {
@@ -334,8 +334,7 @@ public static class NAACCRVolVImporter
             }
         }
 
-        // Create SDC template instance for ECP data (ECP metadata table)
-        var template_instance_ecp_id = sdcCdm.WriteSdcTemplateInstanceEcp(
+        var report_id = sdcCdm.WriteSdcReport(
             template_name: template_id,
             template_version: template_version,
             template_instance_guid: template_instance_guid,
@@ -350,25 +349,8 @@ public static class NAACCRVolVImporter
             report_accession: report_accession,
             report_loinc: report_loinc,
             is_duplicate_accession: is_duplicate_accession,
-            first_seen_ecp_id: first_seen_ecp_id
+            first_seen_report_id: first_seen_ecp_id
         );
-
-        // Create one OMOP NOTE row per synoptic report. Every observation parsed below
-        // references this note via observation_event_id, giving a single-report anchor.
-        var note_text = string.IsNullOrWhiteSpace(report_narrative)
-            ? $"Synoptic report {template_id} {template_version}".Trim()
-            : report_narrative;
-        long noteId = sdcCdm.WriteNote(
-            person_id: personId ?? 0,
-            note_date: DateTime.Now.Date,
-            note_type_concept_id: 32817, // EHR
-            note_class_concept_id: 0, // TODO: map synoptic report LOINC 60568-3 to a Note Class concept
-            note_text: note_text,
-            note_title: $"Synoptic Report {template_id}",
-            note_source_value: report_accession
-        );
-        // CDM field concept for note.note_id (TODO: confirm against loaded vocabulary).
-        const long NoteNoteIdFieldConceptId = 1147289;
 
         // Track OBX-4 sub-ids so a question's sub-answers ("specify" text, unit + value)
         // link back to their parent form answer via parent_form_answer_id.
@@ -492,6 +474,7 @@ public static class NAACCRVolVImporter
             // Create SDC form-answer metadata row
             var sdc_form_answer_id = sdcCdm.WriteSdcFormAnswer(
                 template_instance_id: template_instance_id,
+                report_id: report_id,
                 parent_form_answer_id: parent_form_answer_id,
                 section_sdcid: null,
                 section_guid: null,
@@ -515,29 +498,23 @@ public static class NAACCRVolVImporter
                 obx4ToFormAnswerId[obx4_key] = sdc_form_answer_id;
             }
 
-            // eCP synoptic Q&A defaults to MEASUREMENT — each item is a qualitative or
-            // quantitative result of a standardized pathology activity (domain-driven
-            // routing is the future refinement; see ECP_OMOP_MAPPING.md). Numeric answers
-            // use value_as_number; coded (CWE) answers use value_as_concept_id (TODO until
-            // vocab) with the human-readable text preserved in value_source_value; free text
-            // uses value_source_value. Every measurement references the synoptic-report NOTE
-            // via measurement_event_id.
-            _ = sdcCdm.WriteMeasurementLinkedToFormAnswer(
+            var itemNumText = question_identifier.Split('.')[0];
+            if (!int.TryParse(itemNumText, out var itemNum))
+            {
+                continue;
+            }
+
+            _ = sdcCdm.WriteNaaccrValue(
                 person_id: personId ?? 0,
-                measurement_concept_id: 0, // TODO: map question (CAP eCC code) to OMOP concept when available
-                measurement_date: DateTime.Now.Date,
-                measurement_type_concept_id: 32856, // Laboratory measurement (inserted as essential concept)
-                value_as_number: numeric_value,
-                value_as_concept_id: null, // TODO: parse CWE answer code to concept id
-                value_source_value: response_type == "list_selection"
-                    ? (cwe_text ?? response_value)
-                    : response_value,
-                unit_concept_id: null,
-                unit_source_value: obx_units,
-                measurement_source_value: obx_observation_id,
-                sdc_form_answer_id: sdc_form_answer_id,
-                measurement_event_id: noteId,
-                meas_event_field_concept_id: NoteNoteIdFieldConceptId
+                episode_key: string.IsNullOrWhiteSpace(report_accession)
+                    ? template_instance_guid
+                    : report_accession,
+                report_accession: report_accession,
+                item_num: itemNum,
+                value_code: response_type == "numeric" ? null : (cwe_code ?? response_value),
+                value_num: numeric_value,
+                value_unit_source: obx_units,
+                observation_date: DateTime.Now.Date
             );
         }
 

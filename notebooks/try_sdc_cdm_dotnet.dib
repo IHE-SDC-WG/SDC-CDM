@@ -95,6 +95,15 @@ foreach (var message in v2_messages)
 
 #!csharp
 
+/** Bridge NAACCR + SDC into stock OMOP rows (omop.note + omop.measurement).
+    OMOP rows point back to source via standard columns only -- note_source_value
+    holds the report accession and measurement_event_id holds the note id. */
+
+int affectedRows = sdcCdmInstance.BridgeNaaccrSdcToOmop();
+Console.WriteLine($"Bridged {affectedRows} rows from NAACCR/SDC to OMOP");
+
+#!csharp
+
 /** Convert form instance to FHIR CPDS Bundle */
 
 using Hl7.Fhir.Model;

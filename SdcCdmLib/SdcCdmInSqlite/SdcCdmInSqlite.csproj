@@ -8,7 +8,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="..\..\database\ddl\sqlite\*.sql" />
+    <EmbeddedResource Include="..\..\database\schemas\**\ddl\sqlite\*.sql" Link="database\schemas\%(RecursiveDir)%(Filename)%(Extension)" />
+    <EmbeddedResource Include="..\..\database\etl\sqlite\*.sql" Link="database\etl\sqlite\%(Filename)%(Extension)" />
   </ItemGroup>
 
   <ItemGroup>

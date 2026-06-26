@@ -488,7 +488,7 @@ def build_spec(input_dir: Path, existing_spec: dict[str, Any] | None = None) -> 
         "name": "NAACCR to OMOP extension mapping specification",
         "omop_cdm_version": "5.4",
         "purpose": (
-            "Vendor-neutral JSON representation of the NAACCR extension-table "
+            "Vendor-neutral JSON representation of the NAACCR storage mapping "
             "workbooks for downstream ETL and PhenoML Workflows consumption."
         ),
         "pipeline_position": {
@@ -511,12 +511,12 @@ def build_spec(input_dir: Path, existing_spec: dict[str, Any] | None = None) -> 
             ),
             "extension_table_use": (
                 "Demographic, registry-management, confidential, and other "
-                "NAACCR-specific fields remain in extension tables unless they "
-                "map cleanly into OMOP core."
+                "NAACCR-specific fields remain in the naaccr schema unless "
+                "they map cleanly into OMOP core."
             ),
             "foreign_key_policy": (
-                "Foreign keys live on the NAACCR extension-table side and point "
-                "to OMOP records."
+                "Cross-record references live on the NAACCR-side storage model "
+                "and point to OMOP records after bridge execution."
             ),
             "omop_core_policy": "Do not add non-FK NAACCR fields to OMOP core tables.",
             "mapping_direction": "CAP_TO_NAACCR_TO_MEASUREMENT",
@@ -525,7 +525,7 @@ def build_spec(input_dir: Path, existing_spec: dict[str, Any] | None = None) -> 
             "local_diagrams": [
                 "diagrams/original-omop/by-domain/clinical-events.mmd",
                 "diagrams/original-omop/by-domain/eras-episodes-cohorts-metadata.mmd",
-                "diagrams/sdc-sdm-modifications/by-domain/CancerCase.mmd",
+                "archive/old-omop-extension-model/diagrams/sdc-sdm-modifications/by-domain/CancerCase.mmd",
             ],
             "ohdsi_cdm_v5_4": "https://ohdsi.github.io/CommonDataModel/cdm54.html",
             "ohdsi_legacy_cdm_wiki": "https://www.ohdsi.org/web/wiki/doku.php?id=documentation:cdm:common_data_model",
@@ -607,7 +607,7 @@ def main(argv: list[str]) -> int:
 
     print(
         "Converted "
-        f"{len(spec['extension_table_inventory'])} extension-table inventory rows, "
+        f"{len(spec['extension_table_inventory'])} NAACCR storage inventory rows, "
         f"{len(spec['extension_tables']['concept_classes'])} concept-class sheets, "
         f"{len(spec['workflow_input']['item_mappings'])} item mappings, and "
         f"{len(spec['naaccr_person']['mapping'])} NAACCR_PERSON mappings.",

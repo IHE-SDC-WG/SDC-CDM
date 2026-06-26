@@ -101,7 +101,7 @@ public static class FhirCPDSExporter
             cpdsBundle.Entry.Add(CreateEntryComponentForPost(observation));
         }
 
-        // TODO: Gather all specimens by observation_specimens.sdc_observation_id
+        // TODO: Gather all specimens by observation_specimens.sdc_form_answer_id
         Specimen specimen = GenerateSpecimen(sdcCdm, null);
         cpdsBundle.Entry.Add(CreateEntryComponentForPost(specimen));
 

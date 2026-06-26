@@ -13,17 +13,17 @@ not exist in the repo yet; today we default everything to `measurement` with `co
   holds the **NAACCR data type** (`DIGITS`/`TEXT`/`DATE`…), not the OMOP domain.
 - The C# importer / PhenoML mapper write `measurement_concept_id = 0` and `value_as_concept_id =
   null` (TODO markers in code).
-- The SQL Server ETL already *assumes* `cap.NAACCR_CONCEPT_MAP` (item→concept) and
-  `cap.NAACCR_VALUE_CONCEPT_MAP` (answer code→value concept) exist — those maps are the shape we need
+- The SQL Server ETL already *assumes* `naaccr.NAACCR_CONCEPT_MAP` (item→concept) and
+  `naaccr.NAACCR_VALUE_CONCEPT_MAP` (answer code→value concept) exist — those maps are the shape we need
   everywhere.
 
 ## Deliverables
 
 1. **Item → standard concept map**: `(CAP eCC code | NAACCR item_num) → standard concept_id +
    domain_id + standard_concept`. Sourced from the OHDSI NAACCR vocabulary (Athena) and CAP eCC ↔
-   LOINC/SNOMED crosswalks. Mirrors `cap.NAACCR_CONCEPT_MAP`.
+   LOINC/SNOMED crosswalks. Mirrors `naaccr.NAACCR_CONCEPT_MAP`.
 2. **Answer-value → concept map**: `(item, answer code) → value concept_id`. Mirrors
-   `cap.NAACCR_VALUE_CONCEPT_MAP`. Drives `value_as_concept_id` for coded answers.
+   `naaccr.NAACCR_VALUE_CONCEPT_MAP`. Drives `value_as_concept_id` for coded answers.
 3. **Real OMOP domain in the spec**: add an `omop_domain_id` field (distinct from the NAACCR data
    type) to `naaccr_omop_extension_mapping_spec.json` via `convert_naaccr_omop_maps.py`; consider
    renaming the existing `domain_id` field to `naaccr_data_type` to end the confusion.
@@ -36,7 +36,7 @@ not exist in the repo yet; today we default everything to `measurement` with `co
 ## Sources / dependencies
 - OHDSI **NAACCR vocabulary** (Athena) — NAACCR variable + value concepts, with domains.
 - CAP **eCC**/eCP code system ↔ LOINC/SNOMED crosswalk (CAP-provided where available).
-- Existing SQL Server `cap.NAACCR_CONCEPT_MAP` / `cap.NAACCR_VALUE_CONCEPT_MAP` table shapes and
+- Existing SQL Server `naaccr.NAACCR_CONCEPT_MAP` / `naaccr.NAACCR_VALUE_CONCEPT_MAP` table shapes and
   `ssdi_3nf.sql` dictionary as the data model to reuse.
 
 ## Phasing

@@ -22,13 +22,13 @@ const config: sql.config = {
 const CSV_DIR = process.env.CSV_DIR || path.join(process.cwd(), 'out-egs');
 
 const TABLES = [
-  { file: 'staging_schema.csv', table: 'cap.STAGING_SCHEMA', columns: ['schema_id_number', 'schema_id', 'schema_name'] },
-  { file: 'naaccr_item.csv', table: 'cap.NAACCR_ITEM', columns: ['item_num', 'name', 'xml_id'] },
-  { file: 'registry.csv', table: 'cap.REGISTRY', columns: ['code', 'name'] },
-  { file: 'schema_selection_rule.csv', table: 'cap.SCHEMA_SELECTION_RULE', columns: ['schema_id_number', 'site', 'histology', 'behavior', 'sex_at_birth', 'discriminator_1', 'discriminator_2', 'year_dx'] },
-  { file: 'schema_item.csv', table: 'cap.SCHEMA_ITEM', columns: ['schema_id_number', 'item_num', 'used_for_staging', 'default_value', 'description', 'rationale', 'additional_info', 'table_notes', 'coding_guidelines'] },
-  { file: 'schema_item_requirement.csv', table: 'cap.SCHEMA_ITEM_REQUIREMENT', columns: ['schema_id_number', 'item_num', 'registry_code', 'is_required'] },
-  { file: 'schema_item_code.csv', table: 'cap.SCHEMA_ITEM_CODE', columns: ['schema_id_number', 'item_num', 'code', 'description'] },
+  { file: 'staging_schema.csv', table: 'naaccr.STAGING_SCHEMA', columns: ['schema_id_number', 'schema_id', 'schema_name'] },
+  { file: 'naaccr_item.csv', table: 'naaccr.NAACCR_ITEM', columns: ['item_num', 'name', 'xml_id'] },
+  { file: 'registry.csv', table: 'naaccr.REGISTRY', columns: ['code', 'name'] },
+  { file: 'schema_selection_rule.csv', table: 'naaccr.SCHEMA_SELECTION_RULE', columns: ['schema_id_number', 'site', 'histology', 'behavior', 'sex_at_birth', 'discriminator_1', 'discriminator_2', 'year_dx'] },
+  { file: 'schema_item.csv', table: 'naaccr.SCHEMA_ITEM', columns: ['schema_id_number', 'item_num', 'used_for_staging', 'default_value', 'description', 'rationale', 'additional_info', 'table_notes', 'coding_guidelines'] },
+  { file: 'schema_item_requirement.csv', table: 'naaccr.SCHEMA_ITEM_REQUIREMENT', columns: ['schema_id_number', 'item_num', 'registry_code', 'is_required'] },
+  { file: 'schema_item_code.csv', table: 'naaccr.SCHEMA_ITEM_CODE', columns: ['schema_id_number', 'item_num', 'code', 'description'] },
 ];
 
 async function loadCsvToTable(filePath: string, table: string, columns: string[], pool: sql.ConnectionPool) {
@@ -41,21 +41,21 @@ async function loadCsvToTable(filePath: string, table: string, columns: string[]
       .on('end', async () => {
         if (rows.length === 0) return resolve();
         // For registry, handle id auto-increment
-        if (table === 'cap.REGISTRY') {
+        if (table === 'naaccr.REGISTRY') {
           for (const row of rows) {
             await pool.request()
               .input('code', sql.NVarChar(50), row.code)
               .input('name', sql.NVarChar(255), row.name)
-              .query(`INSERT INTO cap.REGISTRY (code, name) VALUES (@code, @name)`);
+              .query(`INSERT INTO naaccr.REGISTRY (code, name) VALUES (@code, @name)`);
           }
           return resolve();
         }
         // For schema_item_requirement, lookup registry_id from code
-        if (table === 'cap.SCHEMA_ITEM_REQUIREMENT') {
+        if (table === 'naaccr.SCHEMA_ITEM_REQUIREMENT') {
           for (const row of rows) {
             const regRes = await pool.request()
               .input('code', sql.NVarChar(50), row.registry_code)
-              .query('SELECT id FROM cap.REGISTRY WHERE code = @code');
+              .query('SELECT id FROM naaccr.REGISTRY WHERE code = @code');
             if (!regRes.recordset[0]) throw new Error(`Registry code not found: ${row.registry_code}`);
             const registry_id = regRes.recordset[0].id;
             await pool.request()
@@ -63,7 +63,7 @@ async function loadCsvToTable(filePath: string, table: string, columns: string[]
               .input('item_num', sql.Int, row.item_num)
               .input('registry_id', sql.SmallInt, registry_id)
               .input('is_required', sql.Bit, row.is_required === 'true' || row.is_required === '1')
-              .query(`INSERT INTO cap.SCHEMA_ITEM_REQUIREMENT (schema_id_number, item_num, registry_id, is_required) VALUES (@schema_id_number, @item_num, @registry_id, @is_required)`);
+              .query(`INSERT INTO naaccr.SCHEMA_ITEM_REQUIREMENT (schema_id_number, item_num, registry_id, is_required) VALUES (@schema_id_number, @item_num, @registry_id, @is_required)`);
           }
           return resolve();
         }

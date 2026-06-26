@@ -2,7 +2,7 @@
   "schema_version": "0.1.0",
   "name": "NAACCR to OMOP extension mapping specification",
   "omop_cdm_version": "5.4",
-  "purpose": "Vendor-neutral JSON representation of the NAACCR extension-table workbooks for downstream ETL and PhenoML Workflows consumption.",
+  "purpose": "Vendor-neutral JSON representation of the NAACCR storage mapping workbooks for downstream ETL and PhenoML Workflows consumption.",
   "pipeline_position": {
     "sdc_cdm_repo_path": "SQL_SERVER_DIRECT_STAGING_TO_OMOP",
     "workflow_handoff_path": "NAACCR_XML_OR_V2_TO_JSON_TO_PHENOML_WORKFLOW_TO_OMOP_ROWS",
@@ -10,8 +10,8 @@
   },
   "working_group_rules": {
     "default_target": "eCP synoptic Q&A (pathology items, SSDIs, grades, staging, and constrained pick lists) defaults to MEASUREMENT \u2014 each item is a qualitative or quantitative result of a standardized pathology activity (coded answers use value_as_concept_id, numeric uses value_as_number). Domain-driven routing (read the mapped concept's domain_id) is the future refinement. See ECP_OMOP_MAPPING.md.",
-    "extension_table_use": "Demographic, registry-management, confidential, and other NAACCR-specific fields remain in extension tables unless they map cleanly into OMOP core.",
-    "foreign_key_policy": "Foreign keys live on the NAACCR extension-table side and point to OMOP records.",
+    "extension_table_use": "Demographic, registry-management, confidential, and other NAACCR-specific fields remain in the naaccr schema unless they map cleanly into OMOP core.",
+    "foreign_key_policy": "Cross-record references live on the NAACCR-side storage model and point to OMOP records after bridge execution.",
     "omop_core_policy": "Do not add non-FK NAACCR fields to OMOP core tables.",
     "mapping_direction": "CAP_TO_NAACCR_TO_MEASUREMENT"
   },
@@ -19,7 +19,7 @@
     "local_diagrams": [
       "diagrams/original-omop/by-domain/clinical-events.mmd",
       "diagrams/original-omop/by-domain/eras-episodes-cohorts-metadata.mmd",
-      "diagrams/sdc-sdm-modifications/by-domain/CancerCase.mmd"
+      "archive/old-omop-extension-model/diagrams/sdc-sdm-modifications/by-domain/CancerCase.mmd"
     ],
     "ohdsi_cdm_v5_4": "https://ohdsi.github.io/CommonDataModel/cdm54.html",
     "ohdsi_legacy_cdm_wiki": "https://www.ohdsi.org/web/wiki/doku.php?id=documentation:cdm:common_data_model",
@@ -178,7 +178,7 @@
         "grain": "EPISODE",
         "row_key": "naaccr_cancer_identificatio_id (PK)",
         "required_foreign_keys": "episode_id \u2192 EPISODE.episode_id; person_id \u2192 PERSON.person_id",
-        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this extension table."
+        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this naaccr schema storage group."
       },
       {
         "concept_class_id": "DEMOGRAPHIC_PATIENT",
@@ -186,7 +186,7 @@
         "grain": "EPISODE",
         "row_key": "naaccr_demographic_patient_id (PK)",
         "required_foreign_keys": "episode_id \u2192 EPISODE.episode_id; person_id \u2192 PERSON.person_id",
-        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this extension table."
+        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this naaccr schema storage group."
       },
       {
         "concept_class_id": "DEMOGRAPHIC_TUMOR",
@@ -194,7 +194,7 @@
         "grain": "EPISODE",
         "row_key": "naaccr_demographic_tumor_id (PK)",
         "required_foreign_keys": "episode_id \u2192 EPISODE.episode_id; person_id \u2192 PERSON.person_id",
-        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this extension table."
+        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this naaccr schema storage group."
       },
       {
         "concept_class_id": "EDIT_OVERRIDES_CONVE",
@@ -202,7 +202,7 @@
         "grain": "EPISODE",
         "row_key": "naaccr_edit_overrides_conve_id (PK)",
         "required_foreign_keys": "episode_id \u2192 EPISODE.episode_id; person_id \u2192 PERSON.person_id",
-        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this extension table."
+        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this naaccr schema storage group."
       },
       {
         "concept_class_id": "FOLLOW_UP_RECURRENCE",
@@ -210,7 +210,7 @@
         "grain": "EPISODE",
         "row_key": "naaccr_follow_up_recurrence_id (PK)",
         "required_foreign_keys": "episode_id \u2192 EPISODE.episode_id; person_id \u2192 PERSON.person_id",
-        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this extension table."
+        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this naaccr schema storage group."
       },
       {
         "concept_class_id": "HOSPITAL_CONFIDENTIA",
@@ -218,7 +218,7 @@
         "grain": "CARE_SITE",
         "row_key": "naaccr_hospital_confidentia_id (PK)",
         "required_foreign_keys": "care_site_id \u2192 CARE_SITE.care_site_id; location_id \u2192 LOCATION.location_id (optional)",
-        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this extension table."
+        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this naaccr schema storage group."
       },
       {
         "concept_class_id": "HOSPITAL_SPECIFIC_TU",
@@ -226,7 +226,7 @@
         "grain": "EPISODE",
         "row_key": "naaccr_hospital_specific_tu_id (PK)",
         "required_foreign_keys": "episode_id \u2192 EPISODE.episode_id; person_id \u2192 PERSON.person_id",
-        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this extension table."
+        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this naaccr schema storage group."
       },
       {
         "concept_class_id": "OTHER_CONFIDENTIAL_T",
@@ -234,7 +234,7 @@
         "grain": "EPISODE",
         "row_key": "naaccr_other_confidential_t_id (PK)",
         "required_foreign_keys": "episode_id \u2192 EPISODE.episode_id; person_id \u2192 PERSON.person_id",
-        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this extension table."
+        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this naaccr schema storage group."
       },
       {
         "concept_class_id": "PATHOLOGY_TUMOR",
@@ -242,7 +242,7 @@
         "grain": "EPISODE",
         "row_key": "naaccr_pathology_tumor_id (PK)",
         "required_foreign_keys": "episode_id \u2192 EPISODE.episode_id; person_id \u2192 PERSON.person_id",
-        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this extension table."
+        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this naaccr schema storage group."
       },
       {
         "concept_class_id": "PATIENT_CONFIDENTIAL",
@@ -250,7 +250,7 @@
         "grain": "PERSON",
         "row_key": "naaccr_patient_confidential_id (PK)",
         "required_foreign_keys": "person_id \u2192 PERSON.person_id",
-        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this extension table."
+        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this naaccr schema storage group."
       },
       {
         "concept_class_id": "RECORD_ID_NAACCRDATA",
@@ -258,7 +258,7 @@
         "grain": "EPISODE",
         "row_key": "naaccr_record_id_naaccrdata_id (PK)",
         "required_foreign_keys": "episode_id \u2192 EPISODE.episode_id; person_id \u2192 PERSON.person_id",
-        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this extension table."
+        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this naaccr schema storage group."
       },
       {
         "concept_class_id": "RECORD_ID_PATIENT",
@@ -266,7 +266,7 @@
         "grain": "EPISODE",
         "row_key": "naaccr_record_id_patient_id (PK)",
         "required_foreign_keys": "episode_id \u2192 EPISODE.episode_id; person_id \u2192 PERSON.person_id",
-        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this extension table."
+        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this naaccr schema storage group."
       },
       {
         "concept_class_id": "RECORD_ID_TUMOR",
@@ -274,7 +274,7 @@
         "grain": "EPISODE",
         "row_key": "naaccr_record_id_tumor_id (PK)",
         "required_foreign_keys": "episode_id \u2192 EPISODE.episode_id; person_id \u2192 PERSON.person_id",
-        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this extension table."
+        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this naaccr schema storage group."
       },
       {
         "concept_class_id": "SPECIAL_USE_PATIENT",
@@ -282,7 +282,7 @@
         "grain": "EPISODE",
         "row_key": "naaccr_special_use_patient_id (PK)",
         "required_foreign_keys": "episode_id \u2192 EPISODE.episode_id; person_id \u2192 PERSON.person_id",
-        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this extension table."
+        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this naaccr schema storage group."
       },
       {
         "concept_class_id": "SPECIAL_USE_TUMOR",
@@ -290,7 +290,7 @@
         "grain": "EPISODE",
         "row_key": "naaccr_special_use_tumor_id (PK)",
         "required_foreign_keys": "episode_id \u2192 EPISODE.episode_id; person_id \u2192 PERSON.person_id",
-        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this extension table."
+        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this naaccr schema storage group."
       },
       {
         "concept_class_id": "STAGE_PROGNOSTIC_FAC",
@@ -298,7 +298,7 @@
         "grain": "EPISODE",
         "row_key": "naaccr_stage_prognostic_fac_id (PK)",
         "required_foreign_keys": "episode_id \u2192 EPISODE.episode_id; person_id \u2192 PERSON.person_id",
-        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this extension table."
+        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this naaccr schema storage group."
       },
       {
         "concept_class_id": "TEXT_DIAGNOSIS_TUMOR",
@@ -306,7 +306,7 @@
         "grain": "EPISODE",
         "row_key": "naaccr_text_diagnosis_tumor_id (PK)",
         "required_foreign_keys": "episode_id \u2192 EPISODE.episode_id; person_id \u2192 PERSON.person_id",
-        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this extension table."
+        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this naaccr schema storage group."
       },
       {
         "concept_class_id": "TEXT_MISCELLANEOUS_T",
@@ -314,7 +314,7 @@
         "grain": "EPISODE",
         "row_key": "naaccr_text_miscellaneous_t_id (PK)",
         "required_foreign_keys": "episode_id \u2192 EPISODE.episode_id; person_id \u2192 PERSON.person_id",
-        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this extension table."
+        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this naaccr schema storage group."
       },
       {
         "concept_class_id": "TEXT_TREATMENT_TUMOR",
@@ -322,7 +322,7 @@
         "grain": "EPISODE",
         "row_key": "naaccr_text_treatment_tumor_id (PK)",
         "required_foreign_keys": "episode_id \u2192 EPISODE.episode_id; person_id \u2192 PERSON.person_id",
-        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this extension table."
+        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this naaccr schema storage group."
       },
       {
         "concept_class_id": "TREATMENT_1ST_COURSE",
@@ -330,7 +330,7 @@
         "grain": "EPISODE",
         "row_key": "naaccr_treatment_1st_course_id (PK)",
         "required_foreign_keys": "episode_id \u2192 EPISODE.episode_id; person_id \u2192 PERSON.person_id",
-        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this extension table."
+        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this naaccr schema storage group."
       },
       {
         "concept_class_id": "TREATMENT_SUBSEQUENT",
@@ -338,7 +338,7 @@
         "grain": "EPISODE",
         "row_key": "naaccr_treatment_subsequent_id (PK)",
         "required_foreign_keys": "episode_id \u2192 EPISODE.episode_id; person_id \u2192 PERSON.person_id",
-        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this extension table."
+        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this naaccr schema storage group."
       }
     ],
     "foreign_keys": [
@@ -654,7 +654,7 @@
         "grain": "EPISODE",
         "row_key": "naaccr_cancer_identificatio_id (PK)",
         "required_foreign_keys": "episode_id \u2192 EPISODE.episode_id; person_id \u2192 PERSON.person_id",
-        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this extension table.",
+        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this naaccr schema storage group.",
         "concepts": [
           {
             "concept_id": 442,
@@ -966,7 +966,7 @@
         "grain": "EPISODE",
         "row_key": "naaccr_demographic_patient_id (PK)",
         "required_foreign_keys": "episode_id \u2192 EPISODE.episode_id; person_id \u2192 PERSON.person_id",
-        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this extension table.",
+        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this naaccr schema storage group.",
         "concepts": [
           {
             "concept_id": 220,
@@ -1231,7 +1231,7 @@
         "grain": "EPISODE",
         "row_key": "naaccr_demographic_tumor_id (PK)",
         "required_foreign_keys": "episode_id \u2192 EPISODE.episode_id; person_id \u2192 PERSON.person_id",
-        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this extension table.",
+        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this naaccr schema storage group.",
         "concepts": [
           {
             "concept_id": 90,
@@ -1986,7 +1986,7 @@
         "grain": "EPISODE",
         "row_key": "naaccr_edit_overrides_conve_id (PK)",
         "required_foreign_keys": "episode_id \u2192 EPISODE.episode_id; person_id \u2192 PERSON.person_id",
-        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this extension table.",
+        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this naaccr schema storage group.",
         "concepts": [
           {
             "concept_id": 2170,
@@ -2951,7 +2951,7 @@
         "grain": "EPISODE",
         "row_key": "naaccr_follow_up_recurrence_id (PK)",
         "required_foreign_keys": "episode_id \u2192 EPISODE.episode_id; person_id \u2192 PERSON.person_id",
-        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this extension table.",
+        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this naaccr schema storage group.",
         "concepts": [
           {
             "concept_id": 1840,
@@ -3440,7 +3440,7 @@
         "grain": "CARE_SITE",
         "row_key": "naaccr_hospital_confidentia_id (PK)",
         "required_foreign_keys": "care_site_id \u2192 CARE_SITE.care_site_id; location_id \u2192 LOCATION.location_id (optional)",
-        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this extension table.",
+        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this naaccr schema storage group.",
         "concepts": [
           {
             "concept_id": 2445,
@@ -3537,7 +3537,7 @@
         "grain": "EPISODE",
         "row_key": "naaccr_hospital_specific_tu_id (PK)",
         "required_foreign_keys": "episode_id \u2192 EPISODE.episode_id; person_id \u2192 PERSON.person_id",
-        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this extension table.",
+        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this naaccr schema storage group.",
         "concepts": [
           {
             "concept_id": 580,
@@ -3956,7 +3956,7 @@
         "grain": "EPISODE",
         "row_key": "naaccr_other_confidential_t_id (PK)",
         "required_foreign_keys": "episode_id \u2192 EPISODE.episode_id; person_id \u2192 PERSON.person_id",
-        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this extension table.",
+        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this naaccr schema storage group.",
         "concepts": [
           {
             "concept_id": 2495,
@@ -4123,7 +4123,7 @@
         "grain": "EPISODE",
         "row_key": "naaccr_pathology_tumor_id (PK)",
         "required_foreign_keys": "episode_id \u2192 EPISODE.episode_id; person_id \u2192 PERSON.person_id",
-        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this extension table.",
+        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this naaccr schema storage group.",
         "concepts": [
           {
             "concept_id": 7320,
@@ -4556,7 +4556,7 @@
         "grain": "PERSON",
         "row_key": "naaccr_patient_confidential_id (PK)",
         "required_foreign_keys": "person_id \u2192 PERSON.person_id",
-        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this extension table.",
+        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this naaccr schema storage group.",
         "concepts": [
           {
             "concept_id": 2354,
@@ -4877,7 +4877,7 @@
         "grain": "EPISODE",
         "row_key": "naaccr_record_id_naaccrdata_id (PK)",
         "required_foreign_keys": "episode_id \u2192 EPISODE.episode_id; person_id \u2192 PERSON.person_id",
-        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this extension table.",
+        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this naaccr schema storage group.",
         "concepts": [
           {
             "concept_id": 50,
@@ -4960,7 +4960,7 @@
         "grain": "EPISODE",
         "row_key": "naaccr_record_id_patient_id (PK)",
         "required_foreign_keys": "episode_id \u2192 EPISODE.episode_id; person_id \u2192 PERSON.person_id",
-        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this extension table.",
+        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this naaccr schema storage group.",
         "concepts": [
           {
             "concept_id": 20,
@@ -4988,7 +4988,7 @@
         "grain": "EPISODE",
         "row_key": "naaccr_record_id_tumor_id (PK)",
         "required_foreign_keys": "episode_id \u2192 EPISODE.episode_id; person_id \u2192 PERSON.person_id",
-        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this extension table.",
+        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this naaccr schema storage group.",
         "concepts": [
           {
             "concept_id": 21,
@@ -5029,7 +5029,7 @@
         "grain": "EPISODE",
         "row_key": "naaccr_special_use_patient_id (PK)",
         "required_foreign_keys": "episode_id \u2192 EPISODE.episode_id; person_id \u2192 PERSON.person_id",
-        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this extension table.",
+        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this naaccr schema storage group.",
         "concepts": [
           {
             "concept_id": 3944,
@@ -5084,7 +5084,7 @@
         "grain": "EPISODE",
         "row_key": "naaccr_special_use_tumor_id (PK)",
         "required_foreign_keys": "episode_id \u2192 EPISODE.episode_id; person_id \u2192 PERSON.person_id",
-        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this extension table.",
+        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this naaccr schema storage group.",
         "concepts": [
           {
             "concept_id": 3946,
@@ -5111,7 +5111,7 @@
         "grain": "EPISODE",
         "row_key": "naaccr_stage_prognostic_fac_id (PK)",
         "required_foreign_keys": "episode_id \u2192 EPISODE.episode_id; person_id \u2192 PERSON.person_id",
-        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this extension table.",
+        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this naaccr schema storage group.",
         "concepts": [
           {
             "concept_id": 1186,
@@ -10094,7 +10094,7 @@
         "grain": "EPISODE",
         "row_key": "naaccr_text_diagnosis_tumor_id (PK)",
         "required_foreign_keys": "episode_id \u2192 EPISODE.episode_id; person_id \u2192 PERSON.person_id",
-        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this extension table.",
+        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this naaccr schema storage group.",
         "concepts": [
           {
             "concept_id": 2550,
@@ -10233,7 +10233,7 @@
         "grain": "EPISODE",
         "row_key": "naaccr_text_miscellaneous_t_id (PK)",
         "required_foreign_keys": "episode_id \u2192 EPISODE.episode_id; person_id \u2192 PERSON.person_id",
-        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this extension table.",
+        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this naaccr schema storage group.",
         "concepts": [
           {
             "concept_id": 2680,
@@ -10274,7 +10274,7 @@
         "grain": "EPISODE",
         "row_key": "naaccr_text_treatment_tumor_id (PK)",
         "required_foreign_keys": "episode_id \u2192 EPISODE.episode_id; person_id \u2192 PERSON.person_id",
-        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this extension table.",
+        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this naaccr schema storage group.",
         "concepts": [
           {
             "concept_id": 2660,
@@ -10385,7 +10385,7 @@
         "grain": "EPISODE",
         "row_key": "naaccr_treatment_1st_course_id (PK)",
         "required_foreign_keys": "episode_id \u2192 EPISODE.episode_id; person_id \u2192 PERSON.person_id",
-        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this extension table.",
+        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this naaccr schema storage group.",
         "concepts": [
           {
             "concept_id": 1410,
@@ -11392,7 +11392,7 @@
         "grain": "EPISODE",
         "row_key": "naaccr_treatment_subsequent_id (PK)",
         "required_foreign_keys": "episode_id \u2192 EPISODE.episode_id; person_id \u2192 PERSON.person_id",
-        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this extension table.",
+        "notes": "Use core OMOP tables where appropriate; keep remaining NAACCR-specific fields in this naaccr schema storage group.",
         "concepts": [
           {
             "concept_id": 1675,
@@ -37512,7 +37512,7 @@
         "What this is:"
       ],
       [
-        "- A proposed extension table (NAACCR_PERSON) that complements OMOP CDM v5.4 PERSON."
+        "- A proposed naaccr schema storage group (NAACCR_PERSON) that complements OMOP CDM v5.4 PERSON."
       ],
       [
         "- The Mapping sheet accounts for every NAACCR patient-related field in the attached NAACCR_Patient.csv and suggests where it should live (OMOP PERSON, LOCATION, DEATH, OBSERVATION, or NAACCR_PERSON)."

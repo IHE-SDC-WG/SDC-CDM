@@ -53,6 +53,8 @@ namespace SdcCdmInSqlite
                 // Import the NAACCR V2 message
                 NAACCRVolVImporter.ImportNaaccrVolV(sdcCdm, hl7Message);
                 Console.WriteLine("Import completed successfully!");
+                sdcCdm.BridgeNaaccrSdcToOmop();
+                Console.WriteLine("Bridge completed successfully!");
 
                 // Now query the results to see what was actually stored
                 Console.WriteLine("\n" + new string('=', 80));
@@ -61,12 +63,12 @@ namespace SdcCdmInSqlite
 
                 using var connection = sdcCdm.GetConnection();
 
-                // Query template instances
+                // Query report headers
                 using var cmd = connection.CreateCommand();
                 cmd.CommandText =
                     @"
                     SELECT 
-                        sdc_template_instance_ecp_id,
+                        sdc_report_id,
                         template_name,
                         template_version,
                         template_instance_guid,
@@ -74,12 +76,12 @@ namespace SdcCdmInSqlite
                         tumor_site,
                         procedure_type,
                         specimen_laterality
-                    FROM sdc_template_instance_ecp 
+                    FROM sdc.sdc_report 
                     ORDER BY created_datetime DESC
                 ";
 
                 using var reader = cmd.ExecuteReader();
-                Console.WriteLine("\nTemplate Instances:");
+                Console.WriteLine("\nSDC Reports:");
                 Console.WriteLine(
                     "ID | Template Name | Version | GUID | Report Template Version ID | Tumor Site | Procedure | Laterality"
                 );
@@ -110,7 +112,7 @@ namespace SdcCdmInSqlite
 
                 using var detailCmd = connection.CreateCommand();
                 detailCmd.CommandText =
-                    "SELECT * FROM sdc_template_instance_ecp ORDER BY created_datetime DESC LIMIT 1";
+                    "SELECT * FROM sdc.sdc_report ORDER BY created_datetime DESC LIMIT 1";
 
                 using var detailReader = detailCmd.ExecuteReader();
                 if (detailReader.Read())
@@ -130,42 +132,51 @@ namespace SdcCdmInSqlite
 
                 // Validate new linkage via sdc_form_answer
                 Console.WriteLine("\n" + new string('=', 80));
-                Console.WriteLine("CHECKING OMOP ROWS LINKED TO SDC_FORM_ANSWER");
+                Console.WriteLine("CHECKING THREE-SCHEMA LINKAGE");
                 Console.WriteLine(new string('=', 80));
 
-                // eCP Q&A defaults to MEASUREMENT. Each measurement links to its
-                // synoptic-report NOTE via measurement_event_id.
                 using var qaCmd = connection.CreateCommand();
                 qaCmd.CommandText =
                     @"
                     SELECT sfa.sdc_form_answer_id, sfa.question_instance_guid, sfa.question_text,
+                           nv.naaccr_value_id, nv.value_code, nv.value_num,
                            m.measurement_id, m.value_as_number, m.value_source_value,
                            m.unit_source_value, m.measurement_event_id
-                    FROM sdc_form_answer sfa
-                    LEFT JOIN measurement m ON m.sdc_form_answer_id = sfa.sdc_form_answer_id
+                    FROM sdc.sdc_form_answer sfa
+                    JOIN sdc.sdc_report sr ON sr.sdc_report_id = sfa.report_id
+                    LEFT JOIN naaccr.naaccr_value nv
+                      ON nv.report_accession = sr.report_accession
+                     AND CAST(nv.item_num AS TEXT) = substr(sfa.question_sdcid, 1, instr(sfa.question_sdcid || '.', '.') - 1)
+                    LEFT JOIN omop.note n ON n.note_source_value = sr.report_accession
+                    LEFT JOIN omop.measurement m
+                      ON m.measurement_event_id = n.note_id
+                     AND m.measurement_source_value = CAST(nv.item_num AS TEXT)
                     ORDER BY sfa.sdc_form_answer_id
                     LIMIT 20;
                 ";
 
                 using var qaReader = qaCmd.ExecuteReader();
                 Console.WriteLine(
-                    "AnsId | Q GUID | Q Text | MeasID | MeasNum | MeasVal | Units | NoteId"
+                    "AnsId | Q GUID | Q Text | RawID | RawCode | RawNum | MeasID | MeasNum | MeasVal | Units | NoteId"
                 );
                 Console.WriteLine(
-                    "------+--------+--------+--------+---------+---------+-------+-------"
+                    "------+--------+--------+-------+---------+--------+--------+---------+---------+-------+-------"
                 );
                 while (qaReader.Read())
                 {
                     var ansId = qaReader.GetInt64(0);
                     var qGuid = qaReader.IsDBNull(1) ? "" : qaReader.GetString(1);
                     var qText = qaReader.IsDBNull(2) ? "" : qaReader.GetString(2);
-                    var measId = qaReader.IsDBNull(3) ? (long?)null : qaReader.GetInt64(3);
-                    var measNum = qaReader.IsDBNull(4) ? (double?)null : qaReader.GetDouble(4);
-                    var measVal = qaReader.IsDBNull(5) ? "" : qaReader.GetString(5);
-                    var units = qaReader.IsDBNull(6) ? "" : qaReader.GetString(6);
-                    var noteId = qaReader.IsDBNull(7) ? (long?)null : qaReader.GetInt64(7);
+                    var rawId = qaReader.IsDBNull(3) ? (long?)null : qaReader.GetInt64(3);
+                    var rawCode = qaReader.IsDBNull(4) ? "" : qaReader.GetString(4);
+                    var rawNum = qaReader.IsDBNull(5) ? (double?)null : qaReader.GetDouble(5);
+                    var measId = qaReader.IsDBNull(6) ? (long?)null : qaReader.GetInt64(6);
+                    var measNum = qaReader.IsDBNull(7) ? (double?)null : qaReader.GetDouble(7);
+                    var measVal = qaReader.IsDBNull(8) ? "" : qaReader.GetString(8);
+                    var units = qaReader.IsDBNull(9) ? "" : qaReader.GetString(9);
+                    var noteId = qaReader.IsDBNull(10) ? (long?)null : qaReader.GetInt64(10);
                     Console.WriteLine(
-                        $"{ansId} | {qGuid} | {qText} | {measId?.ToString() ?? ""} | {measNum?.ToString() ?? ""} | {measVal} | {units} | {noteId?.ToString() ?? ""}"
+                        $"{ansId} | {qGuid} | {qText} | {rawId?.ToString() ?? ""} | {rawCode} | {rawNum?.ToString() ?? ""} | {measId?.ToString() ?? ""} | {measNum?.ToString() ?? ""} | {measVal} | {units} | {noteId?.ToString() ?? ""}"
                     );
                 }
             }
