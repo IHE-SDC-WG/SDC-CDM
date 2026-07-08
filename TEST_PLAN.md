@@ -83,9 +83,11 @@ Fixtures: `sample_data/naaccr_v2/24-11-000312-2.txt.hl7`, `obx-Adrenal.hl7`
   an error; the database is left without a half-written report.
 - [ ] **IMP-HL7-09** Units on numeric OBX values land in `value_unit_source`.
 
-### 1.2 HL7 FHIR (CPDS bundles) — `SdcCdm.FHIR.Importers.ImportFhir`
+### 1.2 HL7 FHIR (CPDS bundles and mCODE) — `SdcCdm.FHIR.Importers.ImportFhir`
 
-Fixtures: `sample_data/fhir/Bundle-CPDSBundleA.json`, `Bundle-CPDSBundleB.json`
+Fixtures: `sample_data/fhir/Bundle-CPDSBundleA.json`, `Bundle-CPDSBundleB.json`;
+mCODE example bundles (patient + staging + tumor marker) to be added under
+`sample_data/fhir/mcode/` from the [mCODE IG](https://hl7.org/fhir/us/mcode/) examples.
 
 - [ ] **IMP-FHIR-01** Import of a CPDS bundle completes and creates one `sdc.sdc_report`
   per DiagnosticReport/Composition.
@@ -98,6 +100,28 @@ Fixtures: `sample_data/fhir/Bundle-CPDSBundleA.json`, `Bundle-CPDSBundleB.json`
 - [ ] **IMP-FHIR-05** A bundle with an unsupported resource type is skipped gracefully with
   a warning, not a crash.
 - [ ] **IMP-FHIR-06** Invalid JSON / non-Bundle input produces a clear error and no writes.
+
+mCODE IG bundles (profiles the importer should recognize by `meta.profile` and map to the
+same canonical NAACCR + SDC shape):
+
+- [ ] **IMP-FHIR-07** Import an mCODE patient bundle: `CancerPatient` maps to one `person`
+  and a `PrimaryCancerCondition` Condition produces a report/answer row carrying the
+  primary-site and histology codings (ICD-O-3 topography/morphology → the corresponding
+  NAACCR items, e.g. 400/522).
+- [ ] **IMP-FHIR-08** mCODE staging observations (`TNMStageGroup`,
+  `TNMPrimaryTumorCategory`, `TNMRegionalNodesCategory`, `TNMDistantMetastasesCategory`)
+  map to the matching NAACCR staging items in `naaccr_value`, preserving clinical vs.
+  pathologic distinction from the profile/method.
+- [ ] **IMP-FHIR-09** `TumorMarkerTest` observations import as answer rows with coded or
+  quantity values typed correctly (mirrors IMP-FHIR-03 for the mCODE profile).
+- [ ] **IMP-FHIR-10** mCODE `HumanSpecimen` resources referenced by observations land in
+  `sdc.sdc_specimen` / `observation_specimens` with the specimen linkage intact.
+- [ ] **IMP-FHIR-11** A bundle mixing mCODE-profiled and unprofiled resources imports the
+  recognized profiles and logs (not crashes on) the rest — profile detection is per
+  resource, not per bundle.
+- [ ] **IMP-FHIR-12** Equivalence: an mCODE bundle and a CPDS bundle describing the same
+  case converge to equivalent `naaccr_value` rows where their data elements overlap
+  (companion to NAACCR-02).
 
 ### 1.3 SDC XML form submissions — `XmlFormImporter.ProcessXmlForm`
 
