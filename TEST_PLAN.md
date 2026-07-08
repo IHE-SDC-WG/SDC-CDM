@@ -39,6 +39,7 @@ SdcCdmLib/SdcCdm.Tests/
   EtlToOmop/         OMOP-*
   Export/            EXP-*
   Schema/            SCHEMA-*
+  SdcObjectModel/    SDCOM-* (differential tests vs the IHE SDC.Schema OM)
 tools/tests/         PY-* (Python ports + pure-SQL tests, pytest)
 sample_data/         single source of truth for fixtures (see Cleanup)
 ```
@@ -126,6 +127,11 @@ same canonical NAACCR + SDC shape):
 ### 1.3 SDC XML form submissions — `XmlFormImporter.ProcessXmlForm`
 
 Fixtures: `sample_data/sdc_xml/ADRENAL_GLAND.xml`, templates in `sample_data/sdc_templates/`
+
+> The importer hand-parses SDC XML with `XElement` and handles only a subset of the SDC
+> item model. Section 7 tests the same fixtures against the official IHE SDC object model
+> (`SDC.Schema`) as an oracle, which is how the "did we drop anything?" assertions below
+> (IMP-SDC-03/04) get their ground-truth expected sets.
 
 - [x] **IMP-SDC-01** Import completes without error on a valid submission package (exists as smoke test).
 - [ ] **IMP-SDC-02** Template metadata (name, version, instance GUID) lands in
@@ -257,6 +263,84 @@ The Python ports must not drift from the C# importers.
 
 ---
 
+## 7. SDC Object Model conformance & differential tests — `SdcObjectModel/`
+
+Library under test as an **oracle**: [`rmoldwin/SDC_ObjectModel`](https://github.com/rmoldwin/SDC_ObjectModel/tree/Features/NET10/Net10Main),
+project `SDC.Schema` — the official IHE SDC object model. It deserializes SDC XML into a
+typed tree rooted at `FormDesignType : ITopNode`, validates it (`SdcValidate` /
+`SdcValidationReport`), navigates/retrieves nodes (`SdcUtil` — `GetSortedSubtreeList`,
+node dictionaries, get-by-name/id), and re-serializes / diffs (`TopNodeSerializer`, the
+IComparer utilities).
+
+Why this belongs in the plan: `ImportXmlForm.cs` is a hand-rolled `XElement` parser
+(namespace `urn:ihe:qrph:sdc:2016`) that recognizes only `Section → Question →
+ListField`(selected `ListItem`)`/ResponseField → Response/string@val + ResponseUnits`. It
+silently ignores everything else the SDC model allows. The OM tells us *what a form
+actually contains*, so these tests assert the pipeline is **complete against the model**,
+not merely that it "ran without throwing." The bug pinned by EXP-01 / IMP-SDC-03 (dropped
+`response`/`units` values) is exactly the class of defect a differential-vs-OM test catches
+automatically for every fixture.
+
+Fixtures: the existing `sample_data/sdc_xml/*.xml` submissions and
+`sample_data/sdc_templates/*` templates; expected sets are **derived from the OM at test
+time**, so no new golden files are needed for the core oracle tests (SDCOM-03/04).
+
+- [ ] **SDCOM-01** *(build/dependency — setup)* `SDC.Schema` is referenced from
+  `SdcCdm.Tests` and a smoke test deserializes a fixture to `FormDesignType` and reads one
+  node. Note the TFM gap: the library targets **`net10.0`** while `SdcCdm`/`SdcCdm.Tests`
+  target **`net8.0`** — this test forces the resolution (multi-target the test project, bump
+  the solution, or vendor the library) and fails loudly until it is resolved, rather than
+  the dependency being quietly unusable.
+- [ ] **SDCOM-02** *(fixture validity)* Every SDC XML fixture (`sdc_xml/` submissions and
+  `sdc_templates/` templates) deserializes into the OM and passes `SdcValidate` with zero
+  errors. Guards the whole SDC test surface against malformed / hand-edited XML so later
+  assertions are trustworthy.
+- [ ] **SDCOM-03** *(question inventory oracle → strengthens IMP-SDC-03/04)* Deserialize the
+  form with the OM, enumerate its Question/ListItem nodes via `SdcUtil`, and assert the
+  importer wrote **exactly one** `sdc_form_answer` per answered question, **none** for
+  unanswered ones, and that the `item_num.suffix` question identifiers match the OM-derived
+  set. No hand-maintained expected list — the OM is the expected list.
+- [ ] **SDCOM-04** *(answer value oracle — regression, review finding #1)* For every answered
+  `Response`/selected `ListItem`/`ResponseUnits` the OM exposes, the value that lands in
+  `sdc`/`naaccr` (and re-emerges on export) equals the OM's value. This is the executable,
+  fixture-agnostic form of EXP-01: the OM asserts the value is *X*, so the pipeline may not
+  drop it via the `WriteSdcObsClass` shim.
+- [ ] **SDCOM-05** *(multi-select lists)* For a multi-select `ListField`, the OM's count of
+  `selected="true"` `ListItem`s equals the number of answer rows; deselected items produce
+  zero rows and never leak a value.
+- [ ] **SDCOM-06** *(coded list items)* `ListItem` codings surfaced by the OM (coded
+  value / code system, not just `title`/`name`) are captured, so coded answers can map to
+  NAACCR / OMOP concepts instead of degrading to free text.
+- [ ] **SDCOM-07** *(response data types)* `ResponseField` `dataType` coverage: the OM
+  distinguishes typed responses (string, integer, decimal, date/dateTime, boolean, …). One
+  assertion per dataType a fixture exercises, that it imports with the correct value shape.
+  Directly targets the current parser reading only `Response/string@val`. *(some variants
+  blocked pending fixtures that exercise them.)*
+- [ ] **SDCOM-08** *("other, specify" — `ListItemResponseField`)* A fill-in list item (a
+  `ListItem` carrying a `ListItemResponseField`) must persist **both** the selected item and
+  the typed-in response — the OM shows both; the importer path
+  (`ProcessListField → ProcessResponseField`) must not keep one and drop the other.
+- [ ] **SDCOM-09** *(repeating sections / repeated items)* Where the OM reports a repeating
+  section or repeated question (multiple instances), the importer produces one answer row
+  per instance with distinct section/instance context — not a single collapsed row.
+- [ ] **SDCOM-10** *(item types the importer ignores — mirrors IMP-HL7-07 philosophy)*
+  Enumerate the OM item types **not** handled by `ProcessChildItem`/`ProcessQuestion`
+  (e.g. `DisplayedItem`, injected/lookup lists, blob/attachment responses). Each must be
+  either handled or logged as a warning — never silently dropped. *(blocked on fixtures that
+  contain these item types.)*
+- [ ] **SDCOM-11** *(structural parity)* The section/parent nesting the importer flattens
+  into `section_id`/`section_guid`/parent-observation context matches the OM's tree
+  parentage from `SdcUtil` navigation for the same nodes — guards the flattened hierarchy
+  against the model's actual tree.
+- [ ] **SDCOM-12** *(export re-serialization round trip — companion to EXP-03)* If/when the
+  pipeline emits SDC XML, that output deserializes and passes `SdcValidate`, and compares
+  equal to a canonical serialization via the library's compare utility for the
+  supported/documented-loss subset.
+
+> Optionality: because `SDC.Schema` is `net10.0` and a large dependency, this section can be
+> gated behind a build flag / separate test project so the core C# suite still runs on
+> `net8.0` without it. SDCOM-01 is the gate.
+
 ## Cleanup (from issue #82)
 
 - [ ] **CLEAN-01** Deduplicate fixtures: `SdcCdmLib/SdcCdm.Tests/TestData/` duplicates
@@ -278,3 +362,6 @@ The Python ports must not drift from the C# importers.
 4. **CLEAN-01/02** alongside, so new tests are written against `sample_data/` from day one.
 5. FHIR and SDC XML content tests, then schema-parity tests, then blocked items
    (NAACCR XML, CCDA) as those importers land.
+6. **SDCOM-01/02** to stand up the SDC.Schema oracle, then **SDCOM-03/04** — once the OM is
+   wired in, these subsume the hand-maintained SDC-XML expected sets and back EXP-01 with a
+   fixture-agnostic check.
