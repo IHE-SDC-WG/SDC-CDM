@@ -217,7 +217,8 @@ public interface ISdcCdm
         string? value_code = null,
         double? value_num = null,
         string? value_unit_source = null,
-        DateTime? observation_date = null
+        DateTime? observation_date = null,
+        long? sdc_report_id = null
     );
 
     public long WriteSdcFormAnswer(

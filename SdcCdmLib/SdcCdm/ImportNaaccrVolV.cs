@@ -113,7 +113,12 @@ public static class NAACCRVolVImporter
 
         // Synoptic report identifiers from OBR: OBR-3 is the filler order number /
         // accession (durable real-world report key); OBR-4 carries the report LOINC.
-        var report_accession = (get_field(obr_segment_fields, 3) ?? string.Empty).Split('^')[0];
+        var report_accession_raw = (get_field(obr_segment_fields, 3) ?? string.Empty).Split('^')[0];
+        // Normalize a missing/blank accession to NULL so accession-less reports never share
+        // an empty-string join key in the bridge.
+        string? report_accession = string.IsNullOrWhiteSpace(report_accession_raw)
+            ? null
+            : report_accession_raw;
         var report_loinc = report_type_code;
 
         // Extract person data
@@ -334,7 +339,7 @@ public static class NAACCRVolVImporter
             }
         }
 
-        sdcCdm.WriteSdcReport(
+        var sdcReportId = sdcCdm.WriteSdcReport(
             template_name: template_id,
             template_version: template_version,
             template_instance_guid: template_instance_guid,
@@ -436,7 +441,8 @@ public static class NAACCRVolVImporter
                 value_code: response_type == "numeric" ? null : (cwe_code ?? response_value),
                 value_num: numeric_value,
                 value_unit_source: obx_units,
-                observation_date: DateTime.Now.Date
+                observation_date: DateTime.Now.Date,
+                sdc_report_id: sdcReportId
             );
         }
 

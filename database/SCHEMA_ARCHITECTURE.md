@@ -17,9 +17,10 @@ Authoritative for the NAACCR data dictionary **and** the raw captured answers.
   `naaccr_item` (item_num, name, xml_id), `staging_schema`, `schema_selection_rule`,
   `schema_item`, `schema_item_code` (value sets), `schema_item_requirement`, `registry`.
 - **Captured values — staging shape** (per the chosen model, like today's `dbo.naaccr_staging`):
-  `naaccr_value` with `person_id, episode_key, report_accession, schema_id_number, item_num,
-  value_code, value_num, value_unit_source, observation_date`. One row per answered item.
-  `report_accession` ties a row to its synoptic report (OBR accession).
+  `naaccr_value` with `person_id, episode_key, sdc_report_id, report_accession, schema_id_number,
+  item_num, value_code, value_num, value_unit_source, observation_date`. One row per answered item.
+  `sdc_report_id` is a logical (non-FK) pointer to the originating `sdc.sdc_report`;
+  `report_accession` is retained as the denormalized business key (OBR accession).
 - **Concept maps**: `naaccr_concept_map` (item_num → OMOP concept), `naaccr_value_concept_map`
   (item code → value concept).
 
@@ -34,7 +35,10 @@ path uses `sdc_report` for report metadata and keeps its raw answers in `naaccr_
   `report_loinc` (60568-3), template name/version, narrative, `is_duplicate_accession`,
   `first_seen_report_id`.
 
-`sdc_report` ↔ `naaccr_value` relate by `report_accession`. No hard cross-schema FK is required.
+`naaccr_value` relates to `sdc_report` by the `naaccr_value.sdc_report_id` provenance pointer
+(the originating report), with `report_accession` kept as a denormalized business key. The bridge
+joins on `sdc_report_id` so re-imported (duplicate-flagged) reports and accession-less reports
+never fan out. No hard cross-schema FK is required.
 `sdc_form_answer` belongs to the separate SDC XML form path and is keyed to `template_instance`.
 
 ### 3. `omop` — vanilla OMOP CDM 5.4 (UNMODIFIED)
@@ -128,5 +132,10 @@ database/
 
 ## Open questions for implementation
 - SQLite: ATTACH-per-schema vs name-prefix (affects build scripts and how the C# connection attaches).
-- Exact `naaccr_value` key (is `report_accession` always present, or fall back to `episode_key`?).
 - Whether the importer writes `omop` inline (single pass) or the bridge is a separate batch step.
+
+## Resolved
+- **`naaccr_value` → report key.** Resolved: the row-to-report link is `naaccr_value.sdc_report_id`
+  (a logical pointer to the originating `sdc.sdc_report`), not `report_accession`. `report_accession`
+  can be absent (stored NULL) and is not unique across re-imports, so the bridge keys on
+  `sdc_report_id`; `episode_key` remains the intra-report grouping key.

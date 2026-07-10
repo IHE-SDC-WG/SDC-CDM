@@ -85,6 +85,8 @@ CREATE TABLE IF NOT EXISTS naaccr.naaccr_value (
     naaccr_value_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     person_id INTEGER NOT NULL,
     episode_key TEXT NOT NULL,
+    -- logical reference to sdc.sdc_report.sdc_report_id; not an enforced FK (cross-schema/attached-DB)
+    sdc_report_id INTEGER NULL,
     report_accession TEXT NULL,
     schema_id_number TEXT NULL,
     item_num INTEGER NOT NULL,
@@ -100,5 +102,7 @@ CREATE INDEX IF NOT EXISTS naaccr.idx_naaccr_value_report_item
     ON naaccr_value (report_accession, item_num);
 CREATE INDEX IF NOT EXISTS naaccr.idx_naaccr_value_item_code
     ON naaccr_value (item_num, value_code);
+CREATE INDEX IF NOT EXISTS naaccr.idx_naaccr_value_sdc_report
+    ON naaccr_value (sdc_report_id);
 
 COMMIT;

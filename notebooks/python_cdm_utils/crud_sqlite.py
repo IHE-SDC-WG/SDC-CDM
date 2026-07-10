@@ -312,17 +312,19 @@ def create_naaccr_value(
     value_unit_source: str = None,
     observation_date: str = None,
     schema_id_number: str = None,
+    sdc_report_id: int = None,
 ) -> int:
     cursor.execute(
         """
         INSERT INTO naaccr.naaccr_value (
-            person_id, episode_key, report_accession, schema_id_number,
+            person_id, episode_key, sdc_report_id, report_accession, schema_id_number,
             item_num, value_code, value_num, value_unit_source, observation_date
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             person_id,
             episode_key,
+            sdc_report_id,
             report_accession,
             schema_id_number,
             item_num,

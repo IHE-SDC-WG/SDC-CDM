@@ -60,8 +60,7 @@ JOIN sdc.sdc_report sr
  AND sr.person_id = n.person_id
  AND sr.is_duplicate_accession = 0
 JOIN naaccr.naaccr_value nv
-  ON nv.report_accession = sr.report_accession
- AND nv.person_id = n.person_id
+  ON nv.sdc_report_id = sr.sdc_report_id
  AND CAST(nv.item_num AS TEXT) = m.measurement_source_value
 LEFT JOIN naaccr.naaccr_item ni
   ON ni.item_num = nv.item_num

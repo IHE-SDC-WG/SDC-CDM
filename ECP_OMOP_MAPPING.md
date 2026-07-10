@@ -53,6 +53,9 @@ WHERE m.meas_event_field_concept_id = 1147289;
 ## Importer Boundary
 
 `ImportNaaccrVolV.cs` writes `sdc.sdc_report` and `naaccr.naaccr_value`. It does not write
-SDC XML form tables or OMOP rows directly.
+SDC XML form tables or OMOP rows directly. Each `naaccr_value` row records the `sdc_report_id`
+of the report it came from (its provenance link), and a missing OBR-3 accession is stored as
+NULL rather than an empty string. Only non-duplicate, accessioned reports bridge to OMOP, so
+re-imports and accession-less reports never produce extra notes or measurements.
 
 The SQLite implementation exposes `BridgeNaaccrSdcToOmop()` for the bridge step. Other dialects should follow the same boundary.

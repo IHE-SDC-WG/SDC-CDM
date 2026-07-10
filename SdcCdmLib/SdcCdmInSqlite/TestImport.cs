@@ -143,9 +143,11 @@ namespace SdcCdmInSqlite
                            n.note_id, m.measurement_id, m.value_as_number,
                            m.value_source_value, m.unit_source_value
                     FROM naaccr.naaccr_value nv
+                    LEFT JOIN sdc.sdc_report sr
+                      ON sr.sdc_report_id = nv.sdc_report_id
                     LEFT JOIN omop.note n
-                      ON n.note_source_value = nv.report_accession
-                     AND n.person_id = nv.person_id
+                      ON n.note_source_value = sr.report_accession
+                     AND n.person_id = sr.person_id
                     LEFT JOIN omop.measurement m
                       ON m.measurement_event_id = n.note_id
                      AND m.meas_event_field_concept_id = 1147289

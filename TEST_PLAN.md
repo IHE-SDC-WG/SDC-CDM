@@ -69,8 +69,9 @@ Fixtures: `sample_data/naaccr_v2/24-11-000312-2.txt.hl7`, `obx-Adrenal.hl7`
 - [ ] **IMP-HL7-03** OBR creates one `sdc.sdc_report` with the OBR accession as
   `report_accession` and report LOINC `60568-3`.
 - [ ] **IMP-HL7-04** Each answered OBX yields one `naaccr.naaccr_value` row with the right
-  `item_num`, `value_code`/`value_num`, and `report_accession`; count matches the OBX
-  count in the fixture.
+  `item_num`, `value_code`/`value_num`, `report_accession`, and the `sdc_report_id` of the
+  originating report; count matches the OBX count in the fixture. A missing OBR-3 accession is
+  stored as NULL (not `''`).
 - [ ] **IMP-HL7-05** The eCP path does not create `sdc.sdc_form_answer`, `template_sdc`, or
   `template_instance` rows; those tables are reserved for SDC XML form intake.
 - [ ] **IMP-HL7-06** Re-importing the same message flags the report
@@ -202,6 +203,14 @@ PostgreSQL ports). Seed via an importer or direct inserts, run the bridge, asser
   answer count, not N×M across re-imported reports sharing an accession.
 - [x] **OMOP-06** *(regression, review finding #2b)* Idempotency: running the bridge ETL
   repeatedly leaves row counts unchanged in `note` and `measurement`.
+- [x] **OMOP-06a** *(regression, pre-bridge duplicate double-counting)* When the same message is
+  imported twice **before** the bridge runs, the re-import's `naaccr_value` rows carry the
+  duplicate-flagged report's `sdc_report_id` and do **not** bridge: measurement count equals the
+  single-import count, not 2×. Values bridge only via `naaccr_value.sdc_report_id` →
+  non-duplicate `sdc_report`.
+- [x] **OMOP-06b** *(regression, empty-accession collisions)* Accession-less reports (OBR-3
+  stored as NULL, and legacy `''` covered by the ETL's `NULLIF` guard) never bridge: no `''`
+  note is created and their values do not fan out across reports.
 - [ ] **OMOP-07** Back-reference join from `SCHEMA_ARCHITECTURE.md` works: from an OMOP
   measurement you can recover the report and NAACCR item name via
   note → sdc_report and measurement_source_value → naaccr_item, with no stored cross-schema FK.

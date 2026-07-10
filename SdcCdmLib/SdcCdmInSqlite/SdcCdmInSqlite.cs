@@ -808,17 +808,18 @@ public class SdcCdmInSqlite : ISdcCdm
         string? value_code = null,
         double? value_num = null,
         string? value_unit_source = null,
-        DateTime? observation_date = null
+        DateTime? observation_date = null,
+        long? sdc_report_id = null
     )
     {
         using var cmd = connection.CreateCommand();
         cmd.CommandText =
             @"
             INSERT INTO naaccr.naaccr_value (
-                person_id, episode_key, report_accession, schema_id_number, item_num,
+                person_id, episode_key, sdc_report_id, report_accession, schema_id_number, item_num,
                 value_code, value_num, value_unit_source, observation_date
             ) VALUES (
-                @personId, @episodeKey, @reportAccession, @schemaIdNumber, @itemNum,
+                @personId, @episodeKey, @sdcReportId, @reportAccession, @schemaIdNumber, @itemNum,
                 @valueCode, @valueNum, @valueUnitSource, @observationDate
             );
             SELECT last_insert_rowid();
@@ -826,6 +827,7 @@ public class SdcCdmInSqlite : ISdcCdm
 
         cmd.Parameters.AddWithValue("@personId", person_id);
         cmd.Parameters.AddWithValue("@episodeKey", episode_key);
+        cmd.Parameters.AddWithValue("@sdcReportId", sdc_report_id ?? (object)DBNull.Value);
         cmd.Parameters.AddWithValue("@reportAccession", report_accession ?? (object)DBNull.Value);
         cmd.Parameters.AddWithValue("@schemaIdNumber", schema_id_number ?? (object)DBNull.Value);
         cmd.Parameters.AddWithValue("@itemNum", item_num);

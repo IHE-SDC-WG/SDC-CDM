@@ -33,6 +33,11 @@ def test_sqlite_three_schema_layout_and_bridge(tmp_path: Path) -> None:
     form_answer_columns = {
         row[1] for row in conn.execute("PRAGMA sdc.table_info(sdc_form_answer)")
     }
+    naaccr_value_columns = {
+        row[1] for row in conn.execute("PRAGMA naaccr.table_info(naaccr_value)")
+    }
+
+    assert "sdc_report_id" in naaccr_value_columns
 
     assert "sdc_form_answer_id" not in measurement_columns
     assert "sdc_form_answer_id" not in observation_columns
@@ -69,18 +74,31 @@ def test_sqlite_three_schema_layout_and_bridge(tmp_path: Path) -> None:
             report_accession, report_text, is_duplicate_accession, first_seen_report_id
         )
         VALUES
+            -- sdc_report_id 1: the one non-duplicate accessioned report.
             ('Adrenal', '1', 'report-guid-1', 1, 'ACC-1', 'Report text', 0, NULL),
-            ('Adrenal', '1', 'report-guid-2', 1, 'ACC-1', 'Duplicate report text', 1, 1);
+            -- sdc_report_id 2: a re-import of ACC-1, flagged duplicate (Bug 1 regression).
+            ('Adrenal', '1', 'report-guid-2', 1, 'ACC-1', 'Duplicate report text', 1, 1),
+            -- sdc_report_id 3/4: accession-less reports, NULL and '' (Bug 2 regression).
+            ('Adrenal', '1', 'report-guid-3', 1, NULL, 'No-accession report (NULL)', 0, NULL),
+            ('Adrenal', '1', 'report-guid-4', 1, '', 'No-accession report (empty)', 0, NULL);
 
         INSERT INTO sdc.sdc_form_answer (question_sdcid, question_text, response)
         VALUES ('100.1', 'Question text', 'Answer text');
 
         INSERT INTO naaccr.naaccr_value (
-            person_id, episode_key, report_accession, item_num, value_code, observation_date
+            person_id, episode_key, sdc_report_id, report_accession, item_num, value_code, observation_date
         )
         VALUES
-            (1, 'episode-1', 'ACC-1', 100, 'A', '2026-06-22'),
-            (1, 'episode-1', 'ACC-1', 100, 'A', '2026-06-22');
+            -- Values for the non-duplicate report (should bridge to 2 measurements).
+            (1, 'episode-1', 1, 'ACC-1', 100, 'A', '2026-06-22'),
+            (1, 'episode-1', 1, 'ACC-1', 100, 'A', '2026-06-22'),
+            -- Bug 1: values from the duplicate re-import, present before the first bridge.
+            -- They point at the duplicate report (id 2) so they must never bridge.
+            (1, 'episode-1', 2, 'ACC-1', 100, 'A', '2026-06-22'),
+            (1, 'episode-1', 2, 'ACC-1', 100, 'A', '2026-06-22'),
+            -- Bug 2: values on accession-less reports (NULL and '') must never bridge.
+            (1, 'episode-1', 3, NULL, 100, 'A', '2026-06-22'),
+            (1, 'episode-1', 4, '', 100, 'A', '2026-06-22');
         """
     )
 
@@ -103,6 +121,16 @@ def test_sqlite_three_schema_layout_and_bridge(tmp_path: Path) -> None:
         ("100", "A", 1, 1147289),
     ]
 
+    # Bug 1: the duplicate re-import's values were present before the first bridge, but
+    # they point at the duplicate-flagged report and must not double-count.
+    assert conn.execute("SELECT COUNT(*) FROM omop.note").fetchone()[0] == 1
+    assert conn.execute("SELECT COUNT(*) FROM omop.measurement").fetchone()[0] == 2
+
+    # Bug 2: accession-less reports (NULL and '') never bridge -- no note, no fan-out.
+    assert conn.execute(
+        "SELECT COUNT(*) FROM omop.note WHERE COALESCE(note_source_value, '') = ''"
+    ).fetchone()[0] == 0
+
     for _ in range(2):
         _exec_script(conn, "database/etl/sqlite/1_naaccr_sdc_to_omop.sql")
         assert conn.execute("SELECT COUNT(*) FROM omop.note").fetchone()[0] == 1
@@ -111,8 +139,8 @@ def test_sqlite_three_schema_layout_and_bridge(tmp_path: Path) -> None:
     conn.execute(
         """
         INSERT INTO naaccr.naaccr_value (
-            person_id, episode_key, report_accession, item_num, value_code, observation_date
-        ) VALUES (1, 'episode-1', 'ACC-1', 100, 'A', '2026-06-22')
+            person_id, episode_key, sdc_report_id, report_accession, item_num, value_code, observation_date
+        ) VALUES (1, 'episode-1', 1, 'ACC-1', 100, 'A', '2026-06-22')
         """
     )
     _exec_script(conn, "database/etl/sqlite/1_naaccr_sdc_to_omop.sql")

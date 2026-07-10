@@ -93,7 +93,9 @@ def import_data_from_hl7(cursor, hl7_message, exit_on_error=True):
         hl7_error(f"Unknown report type: {report_type}")
 
     # OBR-3 = filler order number / accession (durable report key); OBR-4 = LOINC.
-    report_accession = (get_field(obr_fields, 3) or "").split("^")[0]
+    # Normalize a missing/blank accession to None so accession-less reports never share
+    # an empty-string join key in the bridge.
+    report_accession = (get_field(obr_fields, 3) or "").split("^")[0] or None
     report_loinc = report_type_code
 
     # Person data
@@ -187,7 +189,7 @@ def import_data_from_hl7(cursor, hl7_message, exit_on_error=True):
             f"(first seen sdc_report_id {first_seen_report_id}); inserting and flagging."
         )
 
-    create_sdc_report(
+    sdc_report_id = create_sdc_report(
         cursor=cursor,
         template_name=template_id,
         template_version=template_version,
@@ -265,6 +267,7 @@ def import_data_from_hl7(cursor, hl7_message, exit_on_error=True):
             value_num=numeric_value,
             value_unit_source=obx_units,
             observation_date=observation_date,
+            sdc_report_id=sdc_report_id,
         )
 
     print(

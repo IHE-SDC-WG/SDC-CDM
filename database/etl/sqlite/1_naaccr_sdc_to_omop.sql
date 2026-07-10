@@ -3,9 +3,13 @@ PRAGMA foreign_keys = ON;
 /*
   NAACCR + SDC -> stock OMOP bridge (SQLite)
 
-  Each accession bridges exactly once. Later imports with the same accession
-  remain available in naaccr/sdc as flagged duplicates but do not create
-  additional OMOP notes or measurements.
+  Values bridge only through their originating non-duplicate report, linked by
+  naaccr.naaccr_value.sdc_report_id -> sdc.sdc_report.sdc_report_id. Because each
+  imported message writes its own report row and stamps its value rows with that
+  report id, a re-imported message's values point at a duplicate-flagged report and
+  never bridge -- so duplicate imports cannot double-count regardless of when the
+  bridge runs. Reports with a NULL/empty accession, and value rows whose
+  sdc_report_id is NULL, never bridge.
 */
 
 INSERT INTO omop.note (
@@ -30,8 +34,8 @@ SELECT
     NULL
 FROM sdc.sdc_report sr
 LEFT JOIN naaccr.naaccr_value nv
-    ON nv.report_accession = sr.report_accession
-WHERE sr.report_accession IS NOT NULL
+    ON nv.sdc_report_id = sr.sdc_report_id
+WHERE NULLIF(sr.report_accession, '') IS NOT NULL
   AND sr.is_duplicate_accession = 0
   AND sr.person_id IS NOT NULL
   AND NOT EXISTS (
@@ -75,11 +79,13 @@ SELECT
     1147289
 FROM naaccr.naaccr_value nv
 JOIN sdc.sdc_report sr
-    ON sr.report_accession = nv.report_accession
+    ON sr.sdc_report_id = nv.sdc_report_id
    AND sr.is_duplicate_accession = 0
+   AND sr.person_id = nv.person_id
+   AND NULLIF(sr.report_accession, '') IS NOT NULL
 JOIN omop.note n
-    ON n.person_id = nv.person_id
-   AND n.note_source_value = nv.report_accession
+    ON n.person_id = sr.person_id
+   AND n.note_source_value = sr.report_accession
 LEFT JOIN naaccr.naaccr_concept_map ncm
     ON ncm.item_num = nv.item_num
 LEFT JOIN naaccr.naaccr_value_concept_map nvcm
