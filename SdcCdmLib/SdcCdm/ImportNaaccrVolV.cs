@@ -334,7 +334,7 @@ public static class NAACCRVolVImporter
             }
         }
 
-        var report_id = sdcCdm.WriteSdcReport(
+        sdcCdm.WriteSdcReport(
             template_name: template_id,
             template_version: template_version,
             template_instance_guid: template_instance_guid,
@@ -352,44 +352,12 @@ public static class NAACCRVolVImporter
             first_seen_report_id: first_seen_ecp_id
         );
 
-        // Track OBX-4 sub-ids so a question's sub-answers ("specify" text, unit + value)
-        // link back to their parent form answer via parent_form_answer_id.
-        var obx4ToFormAnswerId = new Dictionary<string, long>();
-
-        // Also create a minimal template_instance row to satisfy sdc_form_answer FK to template_instance
-        long templatesdc_fk;
-        var foundTemplateSdc = sdcCdm.FindTemplateSdcClass(template_id);
-        if (foundTemplateSdc.HasValue)
-        {
-            templatesdc_fk = foundTemplateSdc.Value;
-        }
-        else
-        {
-            templatesdc_fk = sdcCdm.WriteTemplateSdcClass(template_id);
-        }
-
-        // Use the new GUID as template_instance_version_guid for linking
-        long template_instance_id = sdcCdm.WriteTemplateInstanceClass(
-            templatesdc_fk: templatesdc_fk,
-            template_instance_version_guid: template_instance_guid,
-            template_instance_version_uri: null,
-            instance_version_date: null,
-            diag_report_props: null,
-            surg_path_id: null,
-            person_fk: personId?.ToString(),
-            encounter_fk: null,
-            practitioner_fk: null,
-            report_text: null
-        );
-
         // Process OBX segments for ECP data (starting from 4th OBX)
         for (int i = 3; i < obx_segments.Count; i++)
         {
             var obx_fields = obx_segments[i].Split('|');
             var obx_value_type = get_field(obx_fields, 2);
             var obx_observation_id = get_field(obx_fields, 3);
-            var obx4_value_raw = get_field(obx_fields, 4);
-            var obx4_value = string.IsNullOrWhiteSpace(obx4_value_raw) ? "N/A" : obx4_value_raw;
             var obx_value = get_field(obx_fields, 5);
             var obx_units = get_field(obx_fields, 6);
 
@@ -411,15 +379,11 @@ public static class NAACCRVolVImporter
             var question_parts = obx_observation_id.Split('^');
             var question_identifier =
                 question_parts.Length > 0 ? question_parts[0] : obx_observation_id;
-            var question_text = question_parts.Length > 1 ? question_parts[1] : "";
-
             // Determine response type and value
             string response_type = "text";
             string response_value = obx_value;
             double? numeric_value = null;
             string? cwe_code = null;
-            string? cwe_text = null;
-            string? cwe_system = null;
 
             switch (obx_value_type)
             {
@@ -437,8 +401,6 @@ public static class NAACCRVolVImporter
                     {
                         var parts = obx_value.Split('^');
                         cwe_code = parts.Length > 0 ? parts[0] : null;
-                        cwe_text = parts.Length > 1 ? parts[1] : null;
-                        cwe_system = parts.Length > 2 ? parts[2] : null;
                     }
                     break;
                 case "ST":
@@ -456,46 +418,6 @@ public static class NAACCRVolVImporter
                 default:
                     response_type = "text";
                     break;
-            }
-
-            // Resolve OBX-4 sub-id grouping: the first OBX with a given sub-id is the
-            // parent question; later OBX with the same sub-id (unit + value, or
-            // coded pick + "specify" text) link to it via parent_form_answer_id.
-            var obx4_key = (obx4_value_raw ?? string.Empty)
-                .TrimStart('+')
-                .Split('.')[0]
-                .Trim();
-            long? parent_form_answer_id =
-                !string.IsNullOrEmpty(obx4_key)
-                && obx4ToFormAnswerId.TryGetValue(obx4_key, out var parentId)
-                    ? parentId
-                    : null;
-
-            // Create SDC form-answer metadata row
-            var sdc_form_answer_id = sdcCdm.WriteSdcFormAnswer(
-                template_instance_id: template_instance_id,
-                report_id: report_id,
-                parent_form_answer_id: parent_form_answer_id,
-                section_sdcid: null,
-                section_guid: null,
-                question_text: question_text,
-                question_instance_guid: question_identifier,
-                question_sdcid: question_identifier,
-                list_item_id: response_type == "list_selection" ? (cwe_code ?? obx_value) : null,
-                list_item_text: response_type == "list_selection" ? (cwe_text ?? obx_value) : null,
-                list_item_instance_guid: null,
-                list_item_parent_guid: null,
-                units_system: null,
-                datatype: obx_value_type,
-                sdc_order: (i - 2).ToString(),
-                sdc_repeat_level: null,
-                sdc_comments: null
-            );
-
-            // Register the first form answer for this OBX-4 sub-id as the parent.
-            if (!string.IsNullOrEmpty(obx4_key) && parent_form_answer_id == null)
-            {
-                obx4ToFormAnswerId[obx4_key] = sdc_form_answer_id;
             }
 
             var itemNumText = question_identifier.Split('.')[0];

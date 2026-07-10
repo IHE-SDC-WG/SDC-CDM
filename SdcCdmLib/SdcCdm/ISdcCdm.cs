@@ -222,7 +222,6 @@ public interface ISdcCdm
 
     public long WriteSdcFormAnswer(
         long template_instance_id,
-        long? report_id = null,
         long? parent_form_answer_id = null,
         string? section_sdcid = null,
         string? section_guid = null,
@@ -237,7 +236,13 @@ public interface ISdcCdm
         string? datatype = null,
         string? sdc_order = null,
         string? sdc_repeat_level = null,
-        string? sdc_comments = null
+        string? sdc_comments = null,
+        string? response = null,
+        string? units = null,
+        long? response_int = null,
+        double? response_float = null,
+        DateTime? response_datetime = null,
+        string? reponse_string_nvarchar = null
     );
 
     public long WriteNote(

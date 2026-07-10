@@ -1,6 +1,6 @@
 # Schema Architecture: NAACCR + SDC + OMOP (separation of concerns)
 
-**Status:** design (not yet implemented). **Goal:** stop bolting SDC/NAACCR extensions onto
+**Status:** implemented. **Goal:** keep SDC/NAACCR extensions out of
 OMOP core. Instead, one physical database with **separate schemas per concern**, an unmodified
 OMOP CDM, and a transform that bridges them. This honors the policy already in
 `naaccr_omop/README.md`: *FKs live on the NAACCR side; do not add non-FK fields to OMOP core.*
@@ -23,19 +23,19 @@ Authoritative for the NAACCR data dictionary **and** the raw captured answers.
 - **Concept maps**: `naaccr_concept_map` (item_num → OMOP concept), `naaccr_value_concept_map`
   (item code → value concept).
 
-### 2. `sdc` — Structured Data Capture (form/report structure)
-The IHE-SDC layer: what the form is and which report an answer came from. **Structure only —
-no answer values** (those live in `naaccr`).
+### 2. `sdc` — Structured Data Capture and report metadata
+The IHE-SDC XML-form layer stores form structure and submitted answer values. The eCP/HL7
+path uses `sdc_report` for report metadata and keeps its raw answers in `naaccr_value`.
 
 - `template_sdc`, `template_item`, `template_instance`, `template_term_map`, `template_map_content`
-- `sdc_form_answer` (question/section/list-item context per item), `sdc_specimen`,
+- `sdc_form_answer` (question/section/list-item context and value for SDC XML intake), `sdc_specimen`,
   `observation_specimens`
 - `sdc_report` (renamed `sdc_template_instance_ecp`): the synoptic-report header — `report_accession`,
   `report_loinc` (60568-3), template name/version, narrative, `is_duplicate_accession`,
   `first_seen_report_id`.
 
-`sdc` ↔ `naaccr` relate by shared business keys: `(report_accession | episode_key) + item_num`.
-No hard cross-schema FK required (loose coupling); add one within-DB if desired.
+`sdc_report` ↔ `naaccr_value` relate by `report_accession`. No hard cross-schema FK is required.
+`sdc_form_answer` belongs to the separate SDC XML form path and is keyed to `template_instance`.
 
 ### 3. `omop` — vanilla OMOP CDM 5.4 (UNMODIFIED)
 Stock OHDSI DDL, dropped in unchanged. **No `sdc_*` columns, no SDC tables, no `sdc_form_answer_id`
@@ -45,25 +45,27 @@ FK.** Upgradable by swapping the upstream DDL; ATLAS/Achilles/DQD work out of th
 
 OMOP rows point back to the source using **only standard OMOP columns**:
 
-- `omop.observation.observation_source_value` = the NAACCR/CAP item code (e.g. `2129.1000043`)
-- `omop.observation.observation_source_concept_id` = mapped concept
-- `omop.observation.observation_event_id` = `omop.note.note_id`; `omop.note.note_source_value`
+- `omop.measurement.measurement_source_value` = the NAACCR item number
+- `omop.measurement.measurement_source_concept_id` = mapped concept
+- `omop.measurement.measurement_event_id` = `omop.note.note_id`; `omop.note.note_source_value`
   = the report accession
 - numeric → `value_as_number` (+ `unit_source_value`); coded → `value_as_concept_id`; text →
-  `value_as_string`
+  `value_source_value`
 
-Going from an OMOP observation back to SDC context is a **key join**, not a stored FK:
+Going from an OMOP measurement back to its report and NAACCR item metadata is a **key join**,
+not a stored FK:
 
 ```sql
--- OMOP observation  ->  report  ->  SDC question context  ->  NAACCR dictionary
-SELECT o.observation_id, o.value_as_number, o.value_as_string,
-       sr.report_accession, sfa.question_text, ni.name AS naaccr_item_name
-FROM omop.observation o
-JOIN omop.note n            ON n.note_id = o.observation_event_id
-JOIN sdc.sdc_report sr      ON sr.report_accession = n.note_source_value
-JOIN sdc.sdc_form_answer sfa ON sfa.report_id = sr.sdc_report_id
-                            AND sfa.question_sdcid = o.observation_source_value
-JOIN naaccr.naaccr_item ni  ON CAST(ni.item_num AS TEXT) = SUBSTR(o.observation_source_value, 1, INSTR(o.observation_source_value,'.')-1);
+SELECT m.measurement_id, m.value_as_number, m.value_source_value,
+       sr.report_accession, ni.name AS naaccr_item_name
+FROM omop.measurement m
+JOIN omop.note n       ON n.note_id = m.measurement_event_id
+JOIN sdc.sdc_report sr ON sr.report_accession = n.note_source_value
+                      AND sr.person_id = n.person_id
+                      AND sr.is_duplicate_accession = 0
+JOIN naaccr.naaccr_item ni
+  ON CAST(ni.item_num AS TEXT) = m.measurement_source_value
+WHERE m.meas_event_field_concept_id = 1147289;
 ```
 
 ## Data flow
@@ -73,11 +75,13 @@ HL7 V2 / NAACCR XML
    │  (importer: parse once)
    ├─► naaccr.naaccr_value         (raw answers, staging shape)
    ├─► naaccr.* dictionary         (seeded/reference)
-   └─► sdc.sdc_report + sdc.sdc_form_answer + sdc.template_*   (structure + report header)
+   └─► sdc.sdc_report               (report header)
             │
             ▼  (bridge / transform — reads naaccr+sdc, writes standard OMOP only)
-   omop.note (1 per report)  +  omop.observation (1 per answer, observation_event_id→note)
-   omop.episode + omop.episode_event
+   omop.note (1 per accession) + omop.measurement (measurement_event_id→note)
+
+SDC XML form submission
+   └─► sdc.template_* + sdc.sdc_form_answer   (form structure + answer values)
 ```
 
 Two steps: (1) ingest to `naaccr`+`sdc`; (2) transform to `omop`. The transform is the only place

@@ -306,7 +306,13 @@ public class SdcCdmInSqlite : ISdcCdm
             list_item_parent_guid: li_parent_guid,
             units_system: units_system,
             datatype: datatype,
-            sdc_order: sdc_order
+            sdc_order: sdc_order,
+            response: response,
+            units: units,
+            response_int: response_int,
+            response_float: response_float,
+            response_datetime: response_datetime,
+            reponse_string_nvarchar: reponse_string_nvarchar
         );
     }
 
@@ -586,14 +592,14 @@ public class SdcCdmInSqlite : ISdcCdm
                 sdc_form_answer.list_item_id,
                 sdc_form_answer.list_item_instance_guid,
                 sdc_form_answer.list_item_parent_guid,
-                NULL AS response,
-                NULL AS units,
+                sdc_form_answer.response,
+                sdc_form_answer.units,
                 sdc_form_answer.units_system,
                 sdc_form_answer.datatype,
-                NULL AS response_int,
-                NULL AS response_float,
-                NULL AS response_datetime,
-                NULL AS reponse_string_nvarchar,
+                sdc_form_answer.response_int,
+                sdc_form_answer.response_float,
+                sdc_form_answer.response_datetime,
+                sdc_form_answer.reponse_string_nvarchar,
                 NULL AS obs_datetime,
                 sdc_form_answer.sdc_order,
                 sdc_form_answer.sdc_repeat_level,
@@ -626,7 +632,7 @@ public class SdcCdmInSqlite : ISdcCdm
                     reader.IsDBNull(13) ? null : reader.GetString(13),
                     reader.IsDBNull(14) ? null : reader.GetString(14),
                     reader.IsDBNull(15) ? null : reader.GetInt64(15),
-                    reader.IsDBNull(16) ? null : reader.GetFloat(16),
+                    reader.IsDBNull(16) ? null : reader.GetDouble(16),
                     reader.IsDBNull(17) ? null : reader.GetDateTimeOffset(17),
                     reader.IsDBNull(18) ? null : reader.GetString(18),
                     reader.IsDBNull(19) ? null : reader.GetDateTimeOffset(19),
@@ -635,11 +641,9 @@ public class SdcCdmInSqlite : ISdcCdm
                     reader.IsDBNull(22) ? null : reader.GetString(22)
                 )
             );
-            reader.Close();
-            return sdcObsClasses;
         }
         reader.Close();
-        throw new Exception("No template instance records found");
+        return sdcObsClasses;
     }
 
     public long? FindTemplateItem(string template_item_sdcid)
@@ -839,7 +843,6 @@ public class SdcCdmInSqlite : ISdcCdm
 
     public long WriteSdcFormAnswer(
         long template_instance_id,
-        long? report_id = null,
         long? parent_form_answer_id = null,
         string? section_sdcid = null,
         string? section_guid = null,
@@ -854,28 +857,35 @@ public class SdcCdmInSqlite : ISdcCdm
         string? datatype = null,
         string? sdc_order = null,
         string? sdc_repeat_level = null,
-        string? sdc_comments = null
+        string? sdc_comments = null,
+        string? response = null,
+        string? units = null,
+        long? response_int = null,
+        double? response_float = null,
+        DateTime? response_datetime = null,
+        string? reponse_string_nvarchar = null
     )
     {
         using var cmd = connection.CreateCommand();
         cmd.CommandText =
             @"
             INSERT INTO sdc.sdc_form_answer (
-                template_instance_id, report_id, parent_form_answer_id,
+                template_instance_id, parent_form_answer_id,
                 section_sdcid, section_guid, question_text, question_instance_guid, question_sdcid,
                 list_item_id, list_item_text, list_item_instance_guid, list_item_parent_guid,
-                units_system, datatype, sdc_order, sdc_repeat_level, sdc_comments
+                units_system, response, units, response_int, response_float, response_datetime,
+                reponse_string_nvarchar, datatype, sdc_order, sdc_repeat_level, sdc_comments
             ) VALUES (
-                @template_instance_id, @report_id, @parent_form_answer_id,
+                @template_instance_id, @parent_form_answer_id,
                 @section_sdcid, @section_guid, @question_text, @question_instance_guid, @question_sdcid,
                 @list_item_id, @list_item_text, @list_item_instance_guid, @list_item_parent_guid,
-                @units_system, @datatype, @sdc_order, @sdc_repeat_level, @sdc_comments
+                @units_system, @response, @units, @response_int, @response_float, @response_datetime,
+                @reponse_string_nvarchar, @datatype, @sdc_order, @sdc_repeat_level, @sdc_comments
             );
             SELECT last_insert_rowid();
         ";
 
         cmd.Parameters.AddWithValue("@template_instance_id", template_instance_id);
-        cmd.Parameters.AddWithValue("@report_id", report_id ?? (object)DBNull.Value);
         cmd.Parameters.AddWithValue(
             "@parent_form_answer_id",
             parent_form_answer_id ?? (object)DBNull.Value
@@ -899,6 +909,18 @@ public class SdcCdmInSqlite : ISdcCdm
             list_item_parent_guid ?? (object)DBNull.Value
         );
         cmd.Parameters.AddWithValue("@units_system", units_system ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue("@response", response ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue("@units", units ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue("@response_int", response_int ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue("@response_float", response_float ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue(
+            "@response_datetime",
+            response_datetime ?? (object)DBNull.Value
+        );
+        cmd.Parameters.AddWithValue(
+            "@reponse_string_nvarchar",
+            reponse_string_nvarchar ?? (object)DBNull.Value
+        );
         cmd.Parameters.AddWithValue("@datatype", datatype ?? (object)DBNull.Value);
         cmd.Parameters.AddWithValue("@sdc_order", sdc_order ?? (object)DBNull.Value);
         cmd.Parameters.AddWithValue("@sdc_repeat_level", sdc_repeat_level ?? (object)DBNull.Value);

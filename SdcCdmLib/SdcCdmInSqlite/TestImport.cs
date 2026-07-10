@@ -130,7 +130,7 @@ namespace SdcCdmInSqlite
                     }
                 }
 
-                // Validate new linkage via sdc_form_answer
+                // Validate three-schema linkage from raw NAACCR values through the note anchor.
                 Console.WriteLine("\n" + new string('=', 80));
                 Console.WriteLine("CHECKING THREE-SCHEMA LINKAGE");
                 Console.WriteLine(new string('=', 80));
@@ -138,45 +138,44 @@ namespace SdcCdmInSqlite
                 using var qaCmd = connection.CreateCommand();
                 qaCmd.CommandText =
                     @"
-                    SELECT sfa.sdc_form_answer_id, sfa.question_instance_guid, sfa.question_text,
-                           nv.naaccr_value_id, nv.value_code, nv.value_num,
-                           m.measurement_id, m.value_as_number, m.value_source_value,
-                           m.unit_source_value, m.measurement_event_id
-                    FROM sdc.sdc_form_answer sfa
-                    JOIN sdc.sdc_report sr ON sr.sdc_report_id = sfa.report_id
-                    LEFT JOIN naaccr.naaccr_value nv
-                      ON nv.report_accession = sr.report_accession
-                     AND CAST(nv.item_num AS TEXT) = substr(sfa.question_sdcid, 1, instr(sfa.question_sdcid || '.', '.') - 1)
-                    LEFT JOIN omop.note n ON n.note_source_value = sr.report_accession
+                    SELECT nv.naaccr_value_id, nv.report_accession, nv.item_num,
+                           nv.value_code, nv.value_num, nv.value_unit_source,
+                           n.note_id, m.measurement_id, m.value_as_number,
+                           m.value_source_value, m.unit_source_value
+                    FROM naaccr.naaccr_value nv
+                    LEFT JOIN omop.note n
+                      ON n.note_source_value = nv.report_accession
+                     AND n.person_id = nv.person_id
                     LEFT JOIN omop.measurement m
                       ON m.measurement_event_id = n.note_id
+                     AND m.meas_event_field_concept_id = 1147289
                      AND m.measurement_source_value = CAST(nv.item_num AS TEXT)
-                    ORDER BY sfa.sdc_form_answer_id
+                    ORDER BY nv.naaccr_value_id, m.measurement_id
                     LIMIT 20;
                 ";
 
                 using var qaReader = qaCmd.ExecuteReader();
                 Console.WriteLine(
-                    "AnsId | Q GUID | Q Text | RawID | RawCode | RawNum | MeasID | MeasNum | MeasVal | Units | NoteId"
+                    "RawID | Accession | Item | RawCode | RawNum | RawUnits | NoteId | MeasID | MeasNum | MeasVal | MeasUnits"
                 );
                 Console.WriteLine(
-                    "------+--------+--------+-------+---------+--------+--------+---------+---------+-------+-------"
+                    "------+-----------+------+---------+--------+----------+--------+--------+---------+---------+----------"
                 );
                 while (qaReader.Read())
                 {
-                    var ansId = qaReader.GetInt64(0);
-                    var qGuid = qaReader.IsDBNull(1) ? "" : qaReader.GetString(1);
-                    var qText = qaReader.IsDBNull(2) ? "" : qaReader.GetString(2);
-                    var rawId = qaReader.IsDBNull(3) ? (long?)null : qaReader.GetInt64(3);
-                    var rawCode = qaReader.IsDBNull(4) ? "" : qaReader.GetString(4);
-                    var rawNum = qaReader.IsDBNull(5) ? (double?)null : qaReader.GetDouble(5);
-                    var measId = qaReader.IsDBNull(6) ? (long?)null : qaReader.GetInt64(6);
-                    var measNum = qaReader.IsDBNull(7) ? (double?)null : qaReader.GetDouble(7);
-                    var measVal = qaReader.IsDBNull(8) ? "" : qaReader.GetString(8);
-                    var units = qaReader.IsDBNull(9) ? "" : qaReader.GetString(9);
-                    var noteId = qaReader.IsDBNull(10) ? (long?)null : qaReader.GetInt64(10);
+                    var rawId = qaReader.GetInt64(0);
+                    var accession = qaReader.IsDBNull(1) ? "" : qaReader.GetString(1);
+                    var itemNum = qaReader.GetInt64(2);
+                    var rawCode = qaReader.IsDBNull(3) ? "" : qaReader.GetString(3);
+                    var rawNum = qaReader.IsDBNull(4) ? (double?)null : qaReader.GetDouble(4);
+                    var rawUnits = qaReader.IsDBNull(5) ? "" : qaReader.GetString(5);
+                    var noteId = qaReader.IsDBNull(6) ? (long?)null : qaReader.GetInt64(6);
+                    var measId = qaReader.IsDBNull(7) ? (long?)null : qaReader.GetInt64(7);
+                    var measNum = qaReader.IsDBNull(8) ? (double?)null : qaReader.GetDouble(8);
+                    var measVal = qaReader.IsDBNull(9) ? "" : qaReader.GetString(9);
+                    var measUnits = qaReader.IsDBNull(10) ? "" : qaReader.GetString(10);
                     Console.WriteLine(
-                        $"{ansId} | {qGuid} | {qText} | {rawId?.ToString() ?? ""} | {rawCode} | {rawNum?.ToString() ?? ""} | {measId?.ToString() ?? ""} | {measNum?.ToString() ?? ""} | {measVal} | {units} | {noteId?.ToString() ?? ""}"
+                        $"{rawId} | {accession} | {itemNum} | {rawCode} | {rawNum?.ToString() ?? ""} | {rawUnits} | {noteId?.ToString() ?? ""} | {measId?.ToString() ?? ""} | {measNum?.ToString() ?? ""} | {measVal} | {measUnits}"
                     );
                 }
             }

@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
 """Import an SDCFormSubmission XML form into the three-schema SDC CDM.
 
-Ported from SdcCdmLib/SdcCdm/ImportXmlForm.cs. Writes form *structure* into
-``sdc.template_instance`` and ``sdc.sdc_form_answer`` only -- answer values are
-not stored on the SDC side (they live in ``naaccr.naaccr_value`` for NAACCR
-feeds). ``sdc_form_answer.report_id`` is left null for form submissions.
+Ported from SdcCdmLib/SdcCdm/ImportXmlForm.cs. Writes the form structure and
+answer values into ``sdc.template_instance`` and ``sdc.sdc_form_answer``.
 """
 
 from lxml import etree
@@ -203,13 +201,19 @@ def process_response_field(
     li_instance_guid=None,
     li_parent_guid=None,
 ):
+    response_units = None
     response_units_system = None
     response_units_elem = response_field.find("sdc:ResponseUnits", NAMESPACES)
     if response_units_elem is not None:
+        response_units = response_units_elem.get("val")
         response_units_system = response_units_elem.get("unitSystem")
 
     response = response_field.find("sdc:Response", NAMESPACES)
     if response is not None:
+        response_string = response.find("sdc:string", NAMESPACES)
+        response_string_val = (
+            response_string.get("val") if response_string is not None else None
+        )
         create_sdc_form_answer(
             cursor=cursor,
             template_instance_id=template_instance_id,
@@ -223,5 +227,8 @@ def process_response_field(
             list_item_instance_guid=li_instance_guid,
             list_item_parent_guid=li_parent_guid,
             units_system=response_units_system,
+            response=response.get("val"),
+            units=response_units,
+            reponse_string_nvarchar=response_string_val,
             sdc_order=response.get("order"),
         )

@@ -44,12 +44,11 @@ JOIN omop.note n
   ON n.note_id = m.measurement_event_id
 ORDER BY m.measurement_id;
 
--- 4. OMOP measurement back to SDC question text and raw NAACCR value.
+-- 4. OMOP measurement back to report metadata and raw NAACCR value.
 SELECT
   m.measurement_id,
   n.note_source_value AS report_accession,
-  sfa.question_sdcid,
-  sfa.question_text,
+  ni.name AS item_name,
   nv.value_code,
   nv.value_num,
   nv.value_unit_source
@@ -58,11 +57,14 @@ JOIN omop.note n
   ON n.note_id = m.measurement_event_id
 JOIN sdc.sdc_report sr
   ON sr.report_accession = n.note_source_value
-JOIN sdc.sdc_form_answer sfa
-  ON sfa.report_id = sr.sdc_report_id
+ AND sr.person_id = n.person_id
+ AND sr.is_duplicate_accession = 0
 JOIN naaccr.naaccr_value nv
   ON nv.report_accession = sr.report_accession
- AND CAST(nv.item_num AS TEXT) = substr(sfa.question_sdcid, 1, instr(sfa.question_sdcid || '.', '.') - 1)
+ AND nv.person_id = n.person_id
+ AND CAST(nv.item_num AS TEXT) = m.measurement_source_value
+LEFT JOIN naaccr.naaccr_item ni
+  ON ni.item_num = nv.item_num
 ORDER BY m.measurement_id;
 
 -- 5. Check OMOP remains free of direct SDC linkage columns.

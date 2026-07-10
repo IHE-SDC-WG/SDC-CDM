@@ -1,4 +1,5 @@
 import sqlite3
+import tempfile
 from pathlib import Path
 
 
@@ -29,11 +30,23 @@ def test_sqlite_three_schema_layout_and_bridge(tmp_path: Path) -> None:
     observation_columns = {
         row[1] for row in conn.execute("PRAGMA omop.table_info(observation)")
     }
+    form_answer_columns = {
+        row[1] for row in conn.execute("PRAGMA sdc.table_info(sdc_form_answer)")
+    }
 
     assert "sdc_form_answer_id" not in measurement_columns
     assert "sdc_form_answer_id" not in observation_columns
     assert not {c for c in measurement_columns if c.startswith("sdc_")}
     assert not {c for c in observation_columns if c.startswith("sdc_")}
+    assert {
+        "response",
+        "units",
+        "response_int",
+        "response_float",
+        "response_datetime",
+        "reponse_string_nvarchar",
+    } <= form_answer_columns
+    assert "report_id" not in form_answer_columns
 
     conn.executescript(
         """
@@ -52,23 +65,64 @@ def test_sqlite_three_schema_layout_and_bridge(tmp_path: Path) -> None:
         VALUES (0, 1970, 0, 0, 'patient-1');
 
         INSERT INTO sdc.sdc_report (
-            template_name, template_version, template_instance_guid, person_id, report_accession, report_text
+            template_name, template_version, template_instance_guid, person_id,
+            report_accession, report_text, is_duplicate_accession, first_seen_report_id
         )
-        VALUES ('Adrenal', '1', 'report-guid-1', 1, 'ACC-1', 'Report text');
+        VALUES
+            ('Adrenal', '1', 'report-guid-1', 1, 'ACC-1', 'Report text', 0, NULL),
+            ('Adrenal', '1', 'report-guid-2', 1, 'ACC-1', 'Duplicate report text', 1, 1);
 
-        INSERT INTO sdc.sdc_form_answer (report_id, question_sdcid, question_text)
-        VALUES (1, '100.1', 'Question text');
+        INSERT INTO sdc.sdc_form_answer (question_sdcid, question_text, response)
+        VALUES ('100.1', 'Question text', 'Answer text');
 
         INSERT INTO naaccr.naaccr_value (
             person_id, episode_key, report_accession, item_num, value_code, observation_date
         )
-        VALUES (1, 'episode-1', 'ACC-1', 100, 'A', '2026-06-22');
+        VALUES
+            (1, 'episode-1', 'ACC-1', 100, 'A', '2026-06-22'),
+            (1, 'episode-1', 'ACC-1', 100, 'A', '2026-06-22');
         """
     )
+
+    assert conn.execute(
+        "SELECT response FROM sdc.sdc_form_answer"
+    ).fetchall() == [("Answer text",)]
 
     _exec_script(conn, "database/etl/sqlite/1_naaccr_sdc_to_omop.sql")
 
     assert conn.execute("SELECT note_source_value FROM omop.note").fetchall() == [("ACC-1",)]
     assert conn.execute(
-        "SELECT measurement_source_value, value_source_value, measurement_event_id FROM omop.measurement"
-    ).fetchall() == [("100", "A", 1)]
+        """
+        SELECT measurement_source_value, value_source_value, measurement_event_id,
+               meas_event_field_concept_id
+        FROM omop.measurement
+        ORDER BY measurement_id
+        """
+    ).fetchall() == [
+        ("100", "A", 1, 1147289),
+        ("100", "A", 1, 1147289),
+    ]
+
+    for _ in range(2):
+        _exec_script(conn, "database/etl/sqlite/1_naaccr_sdc_to_omop.sql")
+        assert conn.execute("SELECT COUNT(*) FROM omop.note").fetchone()[0] == 1
+        assert conn.execute("SELECT COUNT(*) FROM omop.measurement").fetchone()[0] == 2
+
+    conn.execute(
+        """
+        INSERT INTO naaccr.naaccr_value (
+            person_id, episode_key, report_accession, item_num, value_code, observation_date
+        ) VALUES (1, 'episode-1', 'ACC-1', 100, 'A', '2026-06-22')
+        """
+    )
+    _exec_script(conn, "database/etl/sqlite/1_naaccr_sdc_to_omop.sql")
+
+    assert conn.execute("SELECT COUNT(*) FROM omop.note").fetchone()[0] == 1
+    assert conn.execute("SELECT COUNT(*) FROM omop.measurement").fetchone()[0] == 2
+    conn.close()
+
+
+if __name__ == "__main__":
+    with tempfile.TemporaryDirectory() as temp_dir:
+        test_sqlite_three_schema_layout_and_bridge(Path(temp_dir))
+    print("three-schema sqlite tests passed")

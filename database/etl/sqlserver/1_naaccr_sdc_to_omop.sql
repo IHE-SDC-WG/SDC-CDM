@@ -8,6 +8,10 @@
   Output:
   - omop.note rows keyed by note.note_source_value = report_accession
   - omop.measurement rows using standard OMOP fields only
+
+  Each accession bridges exactly once. Later imports with the same accession
+  remain available in naaccr/sdc as flagged duplicates but do not create
+  additional OMOP notes or measurements.
 */
 
 SET NOCOUNT ON;
@@ -36,6 +40,8 @@ FROM sdc.sdc_report sr
 LEFT JOIN naaccr.naaccr_value nv
     ON nv.report_accession = sr.report_accession
 WHERE sr.report_accession IS NOT NULL
+  AND sr.is_duplicate_accession = 0
+  AND sr.person_id IS NOT NULL
   AND NOT EXISTS (
       SELECT 1
       FROM omop.note n
@@ -78,6 +84,7 @@ SELECT
 FROM naaccr.naaccr_value nv
 JOIN sdc.sdc_report sr
     ON sr.report_accession = nv.report_accession
+   AND sr.is_duplicate_accession = 0
 JOIN omop.note n
     ON n.person_id = nv.person_id
    AND n.note_source_value = nv.report_accession
@@ -85,4 +92,10 @@ LEFT JOIN naaccr.naaccr_concept_map ncm
     ON ncm.item_num = nv.item_num
 LEFT JOIN naaccr.naaccr_value_concept_map nvcm
     ON nvcm.item_num = nv.item_num
-   AND nvcm.code = COALESCE(nv.value_code, '');
+   AND nvcm.code = COALESCE(nv.value_code, '')
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM omop.measurement m
+    WHERE m.measurement_event_id = n.note_id
+      AND m.meas_event_field_concept_id = 1147289
+);

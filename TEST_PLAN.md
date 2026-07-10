@@ -14,16 +14,16 @@ Data flows through three attached schemas (see `database/SCHEMA_ARCHITECTURE.md`
 HL7v2 / FHIR / SDC XML / CCDA / NAACCR XML          (Import layer)
         │
         ├─► naaccr.naaccr_value                     ("To NAACCR": raw captured answers)
-        └─► sdc.sdc_report, sdc.sdc_form_answer,
-            sdc.template_*                          (SDC structure — reference tables)
+        ├─► sdc.sdc_report                          (eCP report metadata)
+        └─► sdc.sdc_form_answer, sdc.template_*     (SDC XML forms and answers)
         │
         ▼  database/etl/{sqlite,sqlserver,postgresql}/1_naaccr_sdc_to_omop.sql
    omop.note + omop.measurement / omop.observation  ("To OMOP": vanilla CDM 5.4)
 ```
 
 "To NAACCR" tests therefore assert on `naaccr.*` + `sdc.*` after an import; "To OMOP"
-tests assert on `omop.*` after running the bridge ETL. The `sdc` tables are structural
-reference — they carry question/report context, never answer values.
+tests assert on `omop.*` after running the bridge ETL. The SDC XML form tables carry their
+own answer values; eCP answer values remain in `naaccr.naaccr_value`.
 
 ## Proposed folder layout
 
@@ -71,15 +71,14 @@ Fixtures: `sample_data/naaccr_v2/24-11-000312-2.txt.hl7`, `obx-Adrenal.hl7`
 - [ ] **IMP-HL7-04** Each answered OBX yields one `naaccr.naaccr_value` row with the right
   `item_num`, `value_code`/`value_num`, and `report_accession`; count matches the OBX
   count in the fixture.
-- [ ] **IMP-HL7-05** Each OBX also yields one `sdc.sdc_form_answer` with question text /
-  section context, and no answer value stored on the SDC side.
+- [ ] **IMP-HL7-05** The eCP path does not create `sdc.sdc_form_answer`, `template_sdc`, or
+  `template_instance` rows; those tables are reserved for SDC XML form intake.
 - [ ] **IMP-HL7-06** Re-importing the same message flags the report
   (`is_duplicate_accession = 1`, `first_seen_report_id` points at the original) instead of
   silently duplicating or erroring.
 - [ ] **IMP-HL7-07** *(regression, review finding #5)* An OBX-3 question identifier that is
   not a plain integer prefix (e.g. a LOINC code) is either imported or rejected **with a
-  logged warning** — it must not be silently skipped after the `sdc_form_answer` row was
-  already written, leaving an answer without a value.
+  logged warning** so an answer is not silently omitted from `naaccr.naaccr_value`.
 - [ ] **IMP-HL7-08** Malformed message (missing MSH / truncated segment) throws or returns
   an error; the database is left without a half-written report.
 - [ ] **IMP-HL7-09** Units on numeric OBX values land in `value_unit_source`.
@@ -135,10 +134,10 @@ Fixtures: `sample_data/sdc_xml/ADRENAL_GLAND.xml`, templates in `sample_data/sdc
 
 - [x] **IMP-SDC-01** Import completes without error on a valid submission package (exists as smoke test).
 - [ ] **IMP-SDC-02** Template metadata (name, version, instance GUID) lands in
-  `sdc.sdc_report` / `sdc.template_*`.
+  `sdc.template_*`.
 - [ ] **IMP-SDC-03** Every answered question in the XML produces a `sdc_form_answer` **and**
-  its value is retrievable (see EXP-01 round trip). *(regression, review finding #1 — the
-  current `WriteSdcObsClass` shim drops `response`, `units`, and `response_*`.)*
+  its value is retrievable (see EXP-01 round trip). *(regression guard for
+  `response`, `units`, and `response_*` persistence.)*
 - [ ] **IMP-SDC-04** Unanswered questions do not produce value rows.
 - [ ] **IMP-SDC-05** Importing a template FDF (`ImportTemplate`) then a matching submission
   links the instance to the template.
@@ -188,7 +187,7 @@ PostgreSQL ports). Seed via an importer or direct inserts, run the bridge, asser
 
 - [x] **OMOP-01** Three-schema layout + minimal bridge smoke test
   (`tools/tests/test_three_schema_sqlite.py`): OMOP tables carry **no** `sdc_*` columns;
-  a seeded report/answer produces a note + measurement.
+  a seeded report/raw value produces a note + measurement.
 - [ ] **OMOP-02** One `omop.note` per `sdc_report`, with `note_source_value` =
   `report_accession` and the report narrative as note text.
 - [ ] **OMOP-03** One `omop.measurement`/`observation` per answered item, with
@@ -198,14 +197,14 @@ PostgreSQL ports). Seed via an importer or direct inserts, run the bridge, asser
 - [ ] **OMOP-04** Value typing: coded answers → `value_as_concept_id` (via
   `naaccr_value_concept_map`), numeric → `value_as_number` + `unit_source_value`,
   text → `value_as_string` (observation) — one test per shape.
-- [ ] **OMOP-05** *(regression, review finding #2a)* Duplicate-accession reports
+- [x] **OMOP-05** *(regression, review finding #2a)* Duplicate-accession reports
   (`is_duplicate_accession = 1`) do **not** fan out: measurement count equals distinct
   answer count, not N×M across re-imported reports sharing an accession.
-- [ ] **OMOP-06** *(regression, review finding #2b)* Idempotency: running the bridge ETL
-  twice leaves row counts unchanged in `note`, `measurement`, and `observation`.
+- [x] **OMOP-06** *(regression, review finding #2b)* Idempotency: running the bridge ETL
+  repeatedly leaves row counts unchanged in `note` and `measurement`.
 - [ ] **OMOP-07** Back-reference join from `SCHEMA_ARCHITECTURE.md` works: from an OMOP
-  measurement you can recover the SDC question text and NAACCR item name via
-  note → sdc_report → sdc_form_answer → naaccr_item, with no stored cross-schema FK.
+  measurement you can recover the report and NAACCR item name via
+  note → sdc_report and measurement_source_value → naaccr_item, with no stored cross-schema FK.
 - [ ] **OMOP-08** End-to-end: HL7v2 fixture → import → bridge → expected OMOP rows
   (golden-file comparison). Repeat from the FHIR fixture and assert equivalence.
 - [ ] **OMOP-09** *(regression, review finding #3)* The SQL Server bridge ETL only

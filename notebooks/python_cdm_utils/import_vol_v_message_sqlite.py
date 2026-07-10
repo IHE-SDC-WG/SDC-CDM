@@ -5,8 +5,6 @@ SDC CDM.
 Ported from SdcCdmLib/SdcCdm/ImportNaaccrVolV.cs. Writes:
   - omop.person          (create-or-find by source identifier)
   - sdc.sdc_report       (one synoptic report header per message)
-  - sdc.template_instance / sdc.template_sdc (minimal rows for FK integrity)
-  - sdc.sdc_form_answer  (question/section structure per OBX, no answer value)
   - naaccr.naaccr_value  (the captured answer values)
 
 The bridge ETL (database/etl/sqlite/1_naaccr_sdc_to_omop.sql) later turns these
@@ -18,10 +16,6 @@ import uuid
 from datetime import date, datetime
 
 from python_cdm_utils.crud_sqlite import (
-    find_template_sdc_class,
-    create_template_sdc_class,
-    create_template_instance_class,
-    create_sdc_form_answer,
     find_person_by_identifier,
     create_person,
     find_first_sdc_report_by_accession,
@@ -193,7 +187,7 @@ def import_data_from_hl7(cursor, hl7_message, exit_on_error=True):
             f"(first seen sdc_report_id {first_seen_report_id}); inserting and flagging."
         )
 
-    report_id = create_sdc_report(
+    create_sdc_report(
         cursor=cursor,
         template_name=template_id,
         template_version=template_version,
@@ -212,23 +206,6 @@ def import_data_from_hl7(cursor, hl7_message, exit_on_error=True):
         first_seen_report_id=first_seen_report_id,
     )
 
-    # Minimal template_sdc / template_instance rows so sdc_form_answer FKs resolve.
-    template_sdc_id = find_template_sdc_class(cursor, template_id)
-    if template_sdc_id is None:
-        template_sdc_id = create_template_sdc_class(
-            cursor=cursor, sdc_form_design_sdcid=template_id
-        )["pk"]
-
-    template_instance_id = create_template_instance_class(
-        cursor=cursor,
-        template_sdc_id=template_sdc_id,
-        template_instance_version_guid=template_instance_guid,
-        person_id=person_id,
-    )["pk"]
-
-    # Track OBX-4 sub-ids so a question's sub-answers link back to their parent.
-    obx4_to_form_answer_id = {}
-
     observation_date = date.today().isoformat()
 
     # Process OBX segments for ECP data (starting from the 4th OBX).
@@ -236,7 +213,6 @@ def import_data_from_hl7(cursor, hl7_message, exit_on_error=True):
         obx_fields = obx_segments[i].split("|")
         obx_value_type = get_field(obx_fields, 2)
         obx_observation_id = get_field(obx_fields, 3)
-        obx4_value_raw = get_field(obx_fields, 4)
         obx_value = get_field(obx_fields, 5)
         obx_units = get_field(obx_fields, 6)
 
@@ -246,13 +222,10 @@ def import_data_from_hl7(cursor, hl7_message, exit_on_error=True):
 
         question_parts = obx_observation_id.split("^")
         question_identifier = question_parts[0] if question_parts else obx_observation_id
-        question_text = question_parts[1] if len(question_parts) > 1 else ""
-
         response_type = "text"
         response_value = obx_value
         numeric_value = None
         cwe_code = None
-        cwe_text = None
 
         if obx_value_type == "NM":
             response_type = "numeric"
@@ -265,7 +238,6 @@ def import_data_from_hl7(cursor, hl7_message, exit_on_error=True):
             if obx_value:
                 parts = obx_value.split("^")
                 cwe_code = parts[0] if len(parts) > 0 else None
-                cwe_text = parts[1] if len(parts) > 1 else None
         elif obx_value_type == "ST":
             try:
                 numeric_value = float(obx_value)
@@ -274,34 +246,6 @@ def import_data_from_hl7(cursor, hl7_message, exit_on_error=True):
                 response_type = "text"
         else:
             response_type = "text"
-
-        # OBX-4 sub-id grouping -> parent_form_answer_id.
-        obx4_key = (obx4_value_raw or "").lstrip("+").split(".")[0].strip()
-        parent_form_answer_id = (
-            obx4_to_form_answer_id.get(obx4_key) if obx4_key else None
-        )
-
-        sdc_form_answer_id = create_sdc_form_answer(
-            cursor=cursor,
-            template_instance_id=template_instance_id,
-            report_id=report_id,
-            parent_form_answer_id=parent_form_answer_id,
-            question_text=question_text,
-            question_instance_guid=question_identifier,
-            question_sdcid=question_identifier,
-            list_item_id=(cwe_code or obx_value)
-            if response_type == "list_selection"
-            else None,
-            list_item_text=(cwe_text or obx_value)
-            if response_type == "list_selection"
-            else None,
-            datatype=obx_value_type,
-            sdc_order=str(i - 2),
-        )["pk"]
-
-        # Register the first form answer for this OBX-4 sub-id as the parent.
-        if obx4_key and parent_form_answer_id is None:
-            obx4_to_form_answer_id[obx4_key] = sdc_form_answer_id
 
         item_num_text = question_identifier.split(".")[0]
         try:

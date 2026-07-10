@@ -67,7 +67,6 @@ CREATE TABLE IF NOT EXISTS sdc.sdc_report (
 
 CREATE TABLE IF NOT EXISTS sdc.sdc_form_answer (
     sdc_form_answer_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-    report_id INTEGER NULL REFERENCES sdc_report(sdc_report_id),
     template_instance_id INTEGER NULL REFERENCES template_instance(template_instance_id),
     parent_form_answer_id INTEGER NULL REFERENCES sdc_form_answer(sdc_form_answer_id),
     section_sdcid TEXT NULL,
@@ -80,6 +79,12 @@ CREATE TABLE IF NOT EXISTS sdc.sdc_form_answer (
     list_item_instance_guid TEXT NULL,
     list_item_parent_guid TEXT NULL,
     units_system TEXT NULL,
+    response TEXT NULL,
+    units TEXT NULL,
+    response_int INTEGER NULL,
+    response_float REAL NULL,
+    response_datetime TEXT NULL,
+    reponse_string_nvarchar TEXT NULL,
     datatype TEXT NULL,
     sdc_order TEXT NULL,
     sdc_repeat_level TEXT NULL,
@@ -119,7 +124,7 @@ CREATE TABLE IF NOT EXISTS sdc.observation_specimens (
 
 CREATE INDEX IF NOT EXISTS sdc.idx_sdc_report_accession
     ON sdc_report (report_accession);
-CREATE INDEX IF NOT EXISTS sdc.idx_sdc_form_answer_report_question
-    ON sdc_form_answer (report_id, question_sdcid);
+CREATE INDEX IF NOT EXISTS sdc.idx_sdc_form_answer_instance_question
+    ON sdc_form_answer (template_instance_id, question_sdcid);
 
 COMMIT;

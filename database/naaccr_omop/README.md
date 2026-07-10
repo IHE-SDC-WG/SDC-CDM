@@ -13,10 +13,12 @@ The active database architecture uses three schemas:
 
 ```text
 naaccr.naaccr_value + naaccr concept maps
-sdc.sdc_report + sdc.sdc_form_answer
+sdc.sdc_report
         -> bridge
-omop.note + omop.measurement/observation + omop.episode_event
+omop.note + omop.measurement
 ```
+
+`sdc.sdc_form_answer` is reserved for SDC XML form intake and is not part of the eCP bridge.
 
 The mapping spec remains canonical for review metadata and item-level storage decisions. In the new layout, workbook storage concepts should be read as NAACCR-side guidance, not as instructions to add fields to OMOP core tables.
 

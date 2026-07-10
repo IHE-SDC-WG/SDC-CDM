@@ -1,100 +1,121 @@
 /*
-  Validation: NAACCR → OMOP CDM v5.4 ETL Outputs
-  Purpose: Quick post-run checks for episodes, measurements, the report NOTE,
-           and episode_event linkages using naaccr.naaccr_value as source.
-  Note: eCP synoptic Q&A defaults to MEASUREMENT (qualitatively/quantitatively
-        derived). See ECP_OMOP_MAPPING.md.
+  Validation: NAACCR + SDC -> stock OMOP bridge outputs
+  Purpose: Confirm once-per-accession notes, source-value measurements, and
+           standard OMOP note anchors after the bridge runs.
 */
 
 SET NOCOUNT ON;
 
--- Lookup helper concepts
-DECLARE @EPISODE_TYPE_CANCER BIGINT;
-SELECT TOP 1 @EPISODE_TYPE_CANCER = concept_id
-FROM omop.concept
-WHERE vocabulary_id = 'NAACCR2026' AND concept_code = 'NAACCR_CANCER_EPISODE';
-
-DECLARE @FIELD_MEAS_ID BIGINT;
-SELECT TOP 1 @FIELD_MEAS_ID = concept_id
-FROM omop.concept
-WHERE vocabulary_id = 'NAACCR2026' AND concept_code = 'FIELD_MEASUREMENT_ID';
-
-DECLARE @TYPE_NAACCR BIGINT;
-SELECT TOP 1 @TYPE_NAACCR = concept_id
-FROM omop.concept
-WHERE vocabulary_id = 'NAACCR2026' AND concept_code = 'TYPE_NAACCR_DERIVED';
-
-DECLARE @FIELD_NOTE_ID BIGINT = 1147289; -- note.note_id field concept (TODO confirm)
+DECLARE @FIELD_NOTE_ID BIGINT = 1147289;
 
 -----------------------------
--- 1) Episode counts and coverage
+-- 1) Notes expected vs actual
 -----------------------------
-SELECT 'Episodes: expected vs actual' AS section,
-       (SELECT COUNT(*) FROM (SELECT DISTINCT person_id, episode_key FROM naaccr.naaccr_value) s) AS expected_distinct_episodes,
-       (SELECT COUNT(*) FROM omop.episode WHERE episode_concept_id = @EPISODE_TYPE_CANCER) AS actual_cancer_episodes;
-
-SELECT TOP 20 'Missing episodes (examples)' AS section, s.person_id, s.episode_key
-FROM (SELECT DISTINCT person_id, episode_key FROM naaccr.naaccr_value) s
-LEFT JOIN omop.episode e
-  ON e.person_id = s.person_id AND e.episode_source_value = s.episode_key
-WHERE e.episode_id IS NULL
-ORDER BY s.person_id, s.episode_key;
-
------------------------------
--- 2) Measurement counts (ALL staged items become measurements)
------------------------------
-SELECT 'Measurements: expected vs actual' AS section,
-       (SELECT COUNT(*) FROM naaccr.naaccr_value) AS expected_measurements,
-       (SELECT COUNT(*) FROM omop.measurement m WHERE m.measurement_type_concept_id = @TYPE_NAACCR) AS actual_measurements;
-
------------------------------
--- 3) Report NOTE checks (one per person/episode) + measurement→note linkage
------------------------------
-SELECT 'Report notes: expected vs actual' AS section,
-       (SELECT COUNT(*) FROM (SELECT DISTINCT person_id, episode_key FROM naaccr.naaccr_value) s) AS expected_notes,
+SELECT 'Notes: expected vs actual' AS section,
+       (
+         SELECT COUNT(*)
+         FROM (
+           SELECT DISTINCT sr.person_id, sr.report_accession
+           FROM sdc.sdc_report sr
+           WHERE sr.report_accession IS NOT NULL
+             AND sr.person_id IS NOT NULL
+             AND sr.is_duplicate_accession = 0
+         ) expected
+       ) AS expected_notes,
        (SELECT COUNT(*) FROM omop.note) AS actual_notes;
 
+-----------------------------
+-- 2) Missing and duplicate notes
+-----------------------------
+SELECT TOP 20 'Missing notes' AS section,
+       sr.person_id,
+       sr.report_accession
+FROM sdc.sdc_report sr
+LEFT JOIN omop.note n
+  ON n.person_id = sr.person_id
+ AND n.note_source_value = sr.report_accession
+WHERE sr.report_accession IS NOT NULL
+  AND sr.person_id IS NOT NULL
+  AND sr.is_duplicate_accession = 0
+  AND n.note_id IS NULL
+ORDER BY sr.person_id, sr.report_accession;
+
+SELECT 'Duplicate notes per accession' AS section,
+       n.person_id,
+       n.note_source_value,
+       COUNT(*) AS note_count
+FROM omop.note n
+WHERE n.note_source_value IS NOT NULL
+GROUP BY n.person_id, n.note_source_value
+HAVING COUNT(*) > 1
+ORDER BY n.person_id, n.note_source_value;
+
+-----------------------------
+-- 3) Measurements expected vs actual
+-----------------------------
+SELECT 'Measurements: expected vs actual' AS section,
+       (
+         SELECT COUNT(*)
+         FROM naaccr.naaccr_value nv
+         JOIN sdc.sdc_report sr
+           ON sr.report_accession = nv.report_accession
+          AND sr.is_duplicate_accession = 0
+         JOIN omop.note n
+           ON n.person_id = nv.person_id
+          AND n.note_source_value = nv.report_accession
+       ) AS expected_measurements,
+       (
+         SELECT COUNT(*)
+         FROM omop.measurement m
+         WHERE m.meas_event_field_concept_id = @FIELD_NOTE_ID
+       ) AS actual_measurements;
+
+-----------------------------
+-- 4) Raw rows that cannot bridge
+-----------------------------
+SELECT TOP 20 'Unbridgeable raw rows' AS section,
+       nv.naaccr_value_id,
+       nv.person_id,
+       nv.report_accession,
+       nv.item_num,
+       CASE
+         WHEN nv.report_accession IS NULL THEN 'no accession'
+         WHEN sr.sdc_report_id IS NULL THEN 'no non-duplicate report'
+         WHEN sr.person_id IS NULL THEN 'report has no person'
+         WHEN sr.person_id <> nv.person_id THEN 'person mismatch'
+         WHEN n.note_id IS NULL THEN 'no note anchor'
+       END AS reason
+FROM naaccr.naaccr_value nv
+LEFT JOIN sdc.sdc_report sr
+  ON sr.report_accession = nv.report_accession
+ AND sr.is_duplicate_accession = 0
+LEFT JOIN omop.note n
+  ON n.person_id = nv.person_id
+ AND n.note_source_value = nv.report_accession
+WHERE nv.report_accession IS NULL
+   OR sr.sdc_report_id IS NULL
+   OR sr.person_id IS NULL
+   OR sr.person_id <> nv.person_id
+   OR n.note_id IS NULL
+ORDER BY nv.naaccr_value_id;
+
+-----------------------------
+-- 5) Measurements missing their standard note anchor
+-----------------------------
 SELECT 'Measurements missing note anchor' AS section,
        COUNT(*) AS missing_note_anchor
 FROM omop.measurement m
-WHERE m.measurement_type_concept_id = @TYPE_NAACCR
-  AND (m.measurement_event_id IS NULL OR m.meas_event_field_concept_id <> @FIELD_NOTE_ID);
+LEFT JOIN omop.note n
+  ON n.note_id = m.measurement_event_id
+WHERE m.meas_event_field_concept_id = @FIELD_NOTE_ID
+  AND n.note_id IS NULL;
 
 -----------------------------
--- 4) Episode_event link checks (measurements)
------------------------------
-SELECT 'Episode_event meas links' AS section,
-       (SELECT COUNT(*) FROM omop.episode_event WHERE episode_event_field_concept_id = @FIELD_MEAS_ID) AS meas_links;
-
-SELECT 'Measurements missing episode links' AS section,
-       COUNT(*) AS missing_meas_links
-FROM omop.measurement m
-LEFT JOIN omop.episode_event ee
-  ON ee.event_id = m.measurement_id AND ee.episode_event_field_concept_id = @FIELD_MEAS_ID
-WHERE ee.event_id IS NULL;
-
------------------------------
--- 5) Per-episode summary (top 20)
------------------------------
-SELECT TOP 20 'Per episode summary' AS section,
-       x.person_id,
-       x.episode_source_value,
-       x.meas_count
-FROM (
-  SELECT e.person_id,
-         e.episode_source_value,
-         COUNT(DISTINCT CASE WHEN ee.episode_event_field_concept_id = @FIELD_MEAS_ID THEN ee.event_id END) AS meas_count
-  FROM omop.episode e
-  LEFT JOIN omop.episode_event ee ON ee.episode_id = e.episode_id
-  GROUP BY e.person_id, e.episode_source_value
-) AS x
-ORDER BY x.meas_count DESC, x.person_id;
-
------------------------------
--- 6) Spot check for units (top 20 numeric measurements with unit_source_value)
+-- 6) Spot check for units
 -----------------------------
 SELECT TOP 20 'Measurement units' AS section,
-       m.person_id, m.measurement_source_value, m.value_as_number, m.unit_source_value, m.measurement_date
+       m.person_id, m.measurement_source_value, m.value_as_number,
+       m.unit_source_value, m.measurement_date
 FROM omop.measurement m
 WHERE NULLIF(m.unit_source_value, '') IS NOT NULL
 ORDER BY m.measurement_date DESC;

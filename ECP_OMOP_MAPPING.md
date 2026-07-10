@@ -5,7 +5,7 @@
 CAP eCP / NAACCR answers are ingested in two steps:
 
 1. The importer parses the message once and writes source data to:
-   - `sdc.sdc_report` and `sdc.sdc_form_answer` for report and form structure.
+   - `sdc.sdc_report` for report metadata.
    - `naaccr.naaccr_value` for raw answer values.
 2. The bridge reads `sdc` plus `naaccr` and writes only stock OMOP rows.
 
@@ -30,29 +30,29 @@ Measurements point to that note through standard OMOP fields:
 - `measurement.measurement_event_id = note.note_id`
 - `measurement.meas_event_field_concept_id = CDM field concept for note.note_id`
 
-There is no `sdc_form_answer_id` column on OMOP tables. SDC context is recovered with a key join:
+There is no `sdc_form_answer_id` column on OMOP tables. Report and item context is recovered
+with a key join:
 
 ```sql
 SELECT
   m.measurement_id,
   n.note_source_value AS report_accession,
-  sfa.question_text,
-  nv.value_code,
-  nv.value_num
+  ni.name AS naaccr_item_name
 FROM omop.measurement m
 JOIN omop.note n
   ON n.note_id = m.measurement_event_id
 JOIN sdc.sdc_report sr
   ON sr.report_accession = n.note_source_value
-JOIN sdc.sdc_form_answer sfa
-  ON sfa.report_id = sr.sdc_report_id
-JOIN naaccr.naaccr_value nv
-  ON nv.report_accession = sr.report_accession
- AND CAST(nv.item_num AS TEXT) = substr(sfa.question_sdcid, 1, instr(sfa.question_sdcid || '.', '.') - 1);
+ AND sr.person_id = n.person_id
+ AND sr.is_duplicate_accession = 0
+JOIN naaccr.naaccr_item ni
+  ON CAST(ni.item_num AS TEXT) = m.measurement_source_value
+WHERE m.meas_event_field_concept_id = 1147289;
 ```
 
 ## Importer Boundary
 
-`ImportNaaccrVolV.cs` writes `sdc` and `naaccr` only. It does not write OMOP rows directly.
+`ImportNaaccrVolV.cs` writes `sdc.sdc_report` and `naaccr.naaccr_value`. It does not write
+SDC XML form tables or OMOP rows directly.
 
 The SQLite implementation exposes `BridgeNaaccrSdcToOmop()` for the bridge step. Other dialects should follow the same boundary.

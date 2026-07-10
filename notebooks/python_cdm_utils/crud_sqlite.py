@@ -112,7 +112,6 @@ def create_template_instance_class(
 def create_sdc_form_answer(
     cursor: sqlite3.Cursor,
     template_instance_id: int = None,
-    report_id: int = None,
     parent_form_answer_id: int = None,
     section_sdcid: str = None,
     section_guid: str = None,
@@ -124,13 +123,18 @@ def create_sdc_form_answer(
     list_item_instance_guid: str = None,
     list_item_parent_guid: str = None,
     units_system: str = None,
+    response: str = None,
+    units: str = None,
+    response_int: int = None,
+    response_float: float = None,
+    response_datetime: str = None,
+    reponse_string_nvarchar: str = None,
     datatype: str = None,
     sdc_order: str = None,
     sdc_repeat_level: str = None,
     sdc_comments: str = None,
 ) -> dict:
     new_entry = {
-        "report_id": report_id,
         "template_instance_id": template_instance_id,
         "parent_form_answer_id": parent_form_answer_id,
         "section_sdcid": section_sdcid,
@@ -143,6 +147,12 @@ def create_sdc_form_answer(
         "list_item_instance_guid": list_item_instance_guid,
         "list_item_parent_guid": list_item_parent_guid,
         "units_system": units_system,
+        "response": response,
+        "units": units,
+        "response_int": response_int,
+        "response_float": response_float,
+        "response_datetime": response_datetime,
+        "reponse_string_nvarchar": reponse_string_nvarchar,
         "datatype": datatype,
         "sdc_order": sdc_order,
         "sdc_repeat_level": sdc_repeat_level,
@@ -152,12 +162,13 @@ def create_sdc_form_answer(
         cursor.execute(
             """
             INSERT INTO sdc.sdc_form_answer (
-                report_id, template_instance_id, parent_form_answer_id,
+                template_instance_id, parent_form_answer_id,
                 section_sdcid, section_guid, question_text, question_instance_guid,
                 question_sdcid, list_item_id, list_item_text, list_item_instance_guid,
-                list_item_parent_guid, units_system, datatype, sdc_order,
-                sdc_repeat_level, sdc_comments
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                list_item_parent_guid, units_system, response, units, response_int,
+                response_float, response_datetime, reponse_string_nvarchar, datatype,
+                sdc_order, sdc_repeat_level, sdc_comments
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             tuple(new_entry.values()),
         )
