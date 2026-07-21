@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS naaccr.schema_item_requirement (
     schema_id_number TEXT NOT NULL,
     item_num INTEGER NOT NULL,
     registry_id INTEGER NOT NULL REFERENCES registry(id),
-    requirement TEXT NULL,
+    is_required INTEGER NOT NULL,
     FOREIGN KEY (schema_id_number, item_num) REFERENCES schema_item(schema_id_number, item_num)
 );
 
@@ -58,7 +58,6 @@ CREATE TABLE IF NOT EXISTS naaccr.schema_item_code (
     schema_id_number TEXT NOT NULL,
     item_num INTEGER NOT NULL,
     code TEXT NOT NULL,
-    label TEXT NULL,
     description TEXT NULL,
     PRIMARY KEY (schema_id_number, item_num, code),
     FOREIGN KEY (schema_id_number, item_num) REFERENCES schema_item(schema_id_number, item_num)
