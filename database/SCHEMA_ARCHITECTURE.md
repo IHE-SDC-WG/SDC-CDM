@@ -13,16 +13,30 @@ these. Cross-schema references use schema-qualified names within the one databas
 ### 1. `naaccr` — NAACCR-native dictionary + captured values
 Authoritative for the NAACCR data dictionary **and** the raw captured answers.
 
-- **Dictionary / metadata** (today's `cap.*`):
-  `naaccr_item` (item_num, name, xml_id), `staging_schema`, `schema_selection_rule`,
-  `schema_item`, `schema_item_code` (value sets), `schema_item_requirement`, `registry`.
-- **Captured values — staging shape** (per the chosen model, like today's `dbo.naaccr_staging`):
+- **Version dimension**: `data_dictionary_version` (`algorithm`, `version`, `naaccr_version`,
+  `source_api`, `is_current`) is the parent of the dictionary. Every dictionary row is scoped to a
+  `dd_version_id`, so multiple SEER algorithm/version generations (e.g. `eod_public`/`3.3`) coexist
+  and a captured answer records the version it was coded against.
+- **Dictionary / metadata**: `naaccr_item` (item_num, name, xml_id, plus field metadata:
+  `unit`, `decimal_places`, and — populated later from the NAACCR Data Dictionary API —
+  `data_type`, `length`, `padding`, `alignment`, `trim`, `section`, `parent_xml_element`),
+  `staging_schema`, `schema_selection_rule`, `schema_item` (with `item_role` = `input` | `output`,
+  so derived staging outputs are first-class), `schema_item_code` (value sets),
+  `schema_item_requirement`, `registry`. All are keyed by `dd_version_id`.
+- **Staging lookup-table catalog** (the SEER value-validation / staging building blocks):
+  `staging_table`, `staging_table_column`, `staging_table_row` (row `cells` stored as a JSON array
+  aligned to the columns), and `schema_involved_table` linking each schema to its tables. Enables
+  value validation and future offline stage derivation.
+- **Captured values — staging shape**:
   `naaccr_value` with `person_id, episode_key, sdc_report_id, report_accession, schema_id_number,
-  item_num, value_code, value_num, value_unit_source, observation_date`. One row per answered item.
-  `sdc_report_id` is a logical (non-FK) pointer to the originating `sdc.sdc_report`;
+  item_num, value_code, value_num, value_unit_source, observation_date, dd_version_id`. One row per
+  answered item. `dd_version_id` is a nullable stamp of the dictionary version the answer was coded
+  against. `sdc_report_id` is a logical (non-FK) pointer to the originating `sdc.sdc_report`;
   `report_accession` is retained as the denormalized business key (OBR accession).
 - **Concept maps**: `naaccr_concept_map` (item_num → OMOP concept), `naaccr_value_concept_map`
-  (item code → value concept).
+  (item code → value concept). These are **version-independent** (a NAACCR item/code maps to the
+  same OMOP concept across dictionary versions) so they are keyed on `item_num` / `(item_num, code)`
+  only and reference `naaccr_item` logically, matching how the ETL bridge joins.
 
 ### 2. `sdc` — Structured Data Capture and report metadata
 The IHE-SDC XML-form layer stores form structure and submitted answer values. The eCP/HL7
@@ -129,6 +143,10 @@ database/
 - Captured values stored in NAACCR staging shape.
 - OMOP back-reference via `observation_source_value` + `observation_event_id` only — no crosswalk table.
 - Dialects chosen at implementation time.
+- The `naaccr` dictionary is a versioned 3NF projection of the SEER Staging API (keyed by
+  `data_dictionary_version`). Additional SEER\*API reference sources (full NAACCR DD catalog, site
+  recodes, MPH, Disease DB, Rx/NDC/HCPCS, glossary) are deferred — see
+  `schemas/naaccr/FUTURE_REFERENCE_TABLES.md`.
 
 ## Open questions for implementation
 - SQLite: ATTACH-per-schema vs name-prefix (affects build scripts and how the C# connection attaches).

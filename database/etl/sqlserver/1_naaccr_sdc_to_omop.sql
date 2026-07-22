@@ -68,7 +68,7 @@ SELECT
     COALESCE(ncm.concept_id, 0),
     COALESCE(nv.observation_date, CAST(GETDATE() AS date)),
     COALESCE(CAST(nv.observation_date AS datetime), GETDATE()),
-    0,
+    32879, -- Registry OMOP Type Concept; seed the Type Concept vocabulary before bridging.
     NULL,
     nv.value_num,
     nvcm.concept_id,
@@ -104,4 +104,10 @@ WHERE NOT EXISTS (
     FROM omop.measurement m
     WHERE m.measurement_event_id = n.note_id
       AND m.meas_event_field_concept_id = 1147289
+      AND m.measurement_source_value = CAST(nv.item_num AS varchar(50))
+      AND EXISTS (
+          SELECT m.value_as_concept_id, m.value_as_number, m.value_source_value
+          INTERSECT
+          SELECT nvcm.concept_id, nv.value_num, nv.value_code
+      )
 );

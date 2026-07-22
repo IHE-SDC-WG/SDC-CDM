@@ -15,7 +15,10 @@ BEGIN
     value_code NVARCHAR(255) NULL,
     value_num FLOAT NULL,
     value_unit_source NVARCHAR(50) NULL,
-    observation_date DATE NULL
+    observation_date DATE NULL,
+    -- Gap #1: the dictionary version this answer was coded against. Nullable so existing
+    -- import paths that do not yet supply it keep working; populate going forward.
+    dd_version_id INT NULL
   );
 
   CREATE INDEX IX_naaccr_value_person_episode

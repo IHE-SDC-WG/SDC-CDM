@@ -53,9 +53,8 @@ ORDER BY n.person_id, n.note_source_value;
 -------------------------------------------------
 -- 3) Bridgeable raw values vs actual measurements
 -------------------------------------------------
--- bridgeable_raw_values is an upper bound. Values written after their note
--- has already bridged never bridge by design, so actual_measurements may be
--- legitimately lower.
+-- Every bridgeable raw value should have a corresponding measurement. A count
+-- difference is a bridge discrepancy that should be investigated.
 SELECT 'Measurements: bridgeable raw values vs actual' AS section,
        (
          SELECT COUNT(*)
@@ -76,12 +75,12 @@ SELECT 'Measurements: bridgeable raw values vs actual' AS section,
        ) AS actual_measurements;
 
 -- Attribute count differences by the value identity copied by the bridge.
--- A lower measurement count is informational; a higher count is a defect.
 ;WITH raw_value_groups AS (
     SELECT n.note_id,
            nv.item_num,
            nv.value_code,
            nv.value_num,
+           nvcm.concept_id AS value_as_concept_id,
            COUNT(*) AS raw_value_count
     FROM naaccr.naaccr_value nv
     JOIN sdc.sdc_report sr
@@ -92,12 +91,16 @@ SELECT 'Measurements: bridgeable raw values vs actual' AS section,
     JOIN omop.note n
       ON n.person_id = sr.person_id
      AND n.note_source_value = sr.report_accession
-    GROUP BY n.note_id, nv.item_num, nv.value_code, nv.value_num
+    LEFT JOIN naaccr.naaccr_value_concept_map nvcm
+      ON nvcm.item_num = nv.item_num
+     AND nvcm.code = COALESCE(nv.value_code, '')
+    GROUP BY n.note_id, nv.item_num, nv.value_code, nv.value_num, nvcm.concept_id
 ), value_group_counts AS (
     SELECT rvg.note_id,
            rvg.item_num,
            rvg.value_code,
            rvg.value_num,
+           rvg.value_as_concept_id,
            rvg.raw_value_count,
            (
              SELECT COUNT(*)
@@ -105,6 +108,8 @@ SELECT 'Measurements: bridgeable raw values vs actual' AS section,
              WHERE m.measurement_event_id = rvg.note_id
                AND m.meas_event_field_concept_id = @FIELD_NOTE_ID
                AND m.measurement_source_value = CAST(rvg.item_num AS varchar(50))
+               AND (m.value_as_concept_id = rvg.value_as_concept_id
+                    OR (m.value_as_concept_id IS NULL AND rvg.value_as_concept_id IS NULL))
                AND (m.value_source_value = rvg.value_code
                     OR (m.value_source_value IS NULL AND rvg.value_code IS NULL))
                AND (m.value_as_number = rvg.value_num
@@ -114,13 +119,14 @@ SELECT 'Measurements: bridgeable raw values vs actual' AS section,
 )
 SELECT CASE
          WHEN measurement_count < raw_value_count
-           THEN 'late-arriving values (never bridge by design)'
-         ELSE 'unexpected extra measurements (bridge defect)'
+           THEN 'missing measurements (bridge discrepancy)'
+         ELSE 'unexpected extra measurements (bridge discrepancy)'
        END AS section,
        note_id,
        item_num,
        value_code,
        value_num,
+       value_as_concept_id,
        raw_value_count,
        measurement_count
 FROM value_group_counts
@@ -130,7 +136,7 @@ ORDER BY CASE WHEN measurement_count > raw_value_count THEN 0 ELSE 1 END,
 
 --------------------------------------------------------------
 -- 4) Raw rows that cannot bridge
--- See section 3 for grouped attribution of late-arriving values.
+-- See section 3 for grouped attribution of bridge discrepancies.
 --------------------------------------------------------------
 SELECT TOP 20 'Unbridgeable raw rows' AS section,
        nv.naaccr_value_id,
@@ -181,5 +187,19 @@ SELECT TOP 20 'Measurement units' AS section,
 FROM omop.measurement m
 WHERE NULLIF(m.unit_source_value, '') IS NOT NULL
 ORDER BY m.measurement_date DESC;
+
+----------------------------------------
+-- 7) Registry measurement type validity
+----------------------------------------
+SELECT 'Measurements missing Registry type concept' AS section,
+       COUNT(*) AS invalid_measurement_type_count
+FROM omop.measurement m
+LEFT JOIN omop.concept c
+  ON c.concept_id = m.measurement_type_concept_id
+ AND c.concept_id = 32879
+ AND c.domain_id = 'Type Concept'
+ AND c.vocabulary_id = 'Type Concept'
+WHERE m.meas_event_field_concept_id = @FIELD_NOTE_ID
+  AND c.concept_id IS NULL;
 
 -- End validation script

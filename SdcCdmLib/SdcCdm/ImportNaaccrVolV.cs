@@ -428,6 +428,9 @@ public static class NAACCRVolVImporter
             var itemNumText = question_identifier.Split('.')[0];
             if (!int.TryParse(itemNumText, out var itemNum))
             {
+                Console.WriteLine(
+                    $"WARNING: skipping OBX with non-integer item number: obx_observation_id='{obx_observation_id}' (parsed '{itemNumText}')"
+                );
                 continue;
             }
 
