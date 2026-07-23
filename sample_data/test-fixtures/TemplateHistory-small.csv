@@ -1,0 +1,3 @@
+ProtocolName,Template,WebPostingDate,ReleaseKey,ProtocolVersion,AccreditationDate,Version,ParentCkey,ParentMin,ParentMI,ParentItemType,ParentQuestVisibleTxt,ParentQuestReportTxt,ParentInvisQuestion,ItemCkey,ItemType,AnswerVisTxt,AnswerReportTxt,ItemInivisibleText,MinCard,MustImplement,ItemOrder
+Adrenal Gland,Adrenal.Bx.Res,2/26/2020,120,4.1.0.0,11/1/2020,3.004.001.REL,,,,,,,,4257.100004,Section Header,CLINICAL,,,0,1,200
+Adrenal Gland,Adrenal.Bx.Res,2/26/2020,120,4.1.0.0,11/1/2020,3.004.001.REL,4257.100004,0,1,H Section Header,CLINICAL,,,50854.1,Question Single-Select,Patient Age Group,,,0,1,600

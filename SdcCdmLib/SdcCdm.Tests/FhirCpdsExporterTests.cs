@@ -49,58 +49,23 @@ public class FhirCpdsExporterTests(ITestOutputHelper output)
     }
 
     [Fact]
-    public void SampleTest()
+    public void ImportTemplateRowData_GivenTrackedFixture_ShouldCreateTemplate()
     {
         // Arrange
         SdcCdmInSqlite.SdcCdmInSqlite sdcCdm = new("SdcCdm.Tests", true);
         sdcCdm.BuildSchema();
-        string xmlPath = Path.Combine(
+        string csvPath = Path.Combine(
             AppContext.BaseDirectory,
             "TestData",
-            "Adrenal.Bx.Res.129_3.007.011.REL_sdcFDF.xml"
+            "TemplateHistory-small.csv"
         );
-        XElement sdcSubmissionPackage = XElement.Load(xmlPath);
-        XmlFormImporter.ProcessXmlForm(sdcCdm, sdcSubmissionPackage);
 
         // Act
-        SdcCdm.TemplateRowDataImporter.ImportTemplateRowData(
-            (ISdcCdm)sdcCdm,
-            Path.Combine(AppContext.BaseDirectory, "TestData", "TemplateHistory(in).csv")
-        );
+        SdcCdm.TemplateRowDataImporter.ImportTemplateRowData(sdcCdm, csvPath);
 
         // Assert
-        Assert.False(false, "Expected ExportFhirCpds to return false for the given template.");
-    }
-
-    [Fact]
-    public void ExportCPDSForHIMSS()
-    {
-        // Arrange
-        SdcCdmInSqlite.SdcCdmInSqlite sdcCdm = new(
-            "/workspaces/SDC-CDM/notebooks/public/SdcCdm.Tests.db"
+        Assert.NotNull(
+            sdcCdm.FindTemplateSdcClass("Adrenal.Bx.Res.120_3.004.001.REL_sdcFDF")
         );
-        sdcCdm.BuildSchema();
-        string xmlPath = Path.Combine(AppContext.BaseDirectory, "TestData", "freds_form.xml");
-        string templatePath = Path.Combine(
-            AppContext.BaseDirectory,
-            "TestData",
-            "STUB_RadOnc.619_1.000.000.AUTH_sdcFDF.xml"
-        );
-        XElement sdcSubmissionPackage = XElement.Load(xmlPath);
-        XElement sdcTemplate = XElement.Load(templatePath);
-        TemplateImporter.ImportTemplate(sdcCdm, sdcTemplate);
-        XmlFormImporter.ProcessXmlForm(sdcCdm, sdcSubmissionPackage);
-        string existingTemplate = "aa65c1b9-a43f-4c75-9cd6-285e774bd00c";
-
-        // Act
-        var bundle = FhirCPDSExporter.ExportFhirCpds(sdcCdm, existingTemplate);
-
-        // Assert
-        Assert.NotNull(bundle);
-
-        // Use FhirJsonSerializer to convert the bundle to a JSON string
-        var serializer = new FhirJsonSerializer(new SerializerSettings { Pretty = true });
-        string bundleJson = serializer.SerializeToString(bundle);
-        _output.WriteLine(bundleJson);
     }
 }

@@ -20,20 +20,16 @@ namespace SdcCdm.Tests
         public void ImportConceptCsv_ExecutesWithoutError()
         {
             // Arrange
-            var sdcCdm = new SdcCdmInSqlite.SdcCdmInSqlite(
-                "/workspaces/SDC-CDM/notebooks/public/SdcCdmCSV.Tests.db",
-                false,
-                true
-            );
+            var sdcCdm = new SdcCdmInSqlite.SdcCdmInSqlite("SdcCdm.Tests", true);
             sdcCdm.BuildSchema();
             string csvPath = Path.Combine(AppContext.BaseDirectory, "TestData", "CONCEPT.csv");
 
             // Act
-            int recordsImported = CsvImporter.ImportConceptCsv(sdcCdm, csvPath, batchSize: 5);
+            int recordsImported = CsvImporter.ImportConceptCsv(sdcCdm, csvPath, batchSize: 2);
 
             // Assert
             output.WriteLine($"Imported {recordsImported} concept records");
-            Assert.True(recordsImported > 0, "Expected to import at least one concept record");
+            Assert.Equal(3, recordsImported);
         }
 
         [Fact]

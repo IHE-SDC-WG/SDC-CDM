@@ -1,0 +1,4 @@
+concept_id,concept_name,domain_id,vocabulary_id,concept_class_id,standard_concept,concept_code,valid_start_date,valid_end_date,invalid_reason
+900001,Test condition,Condition,Test Vocabulary,Clinical Finding,S,TEST-COND,2020-01-01,2099-12-31,
+900002,Test procedure,Procedure,Test Vocabulary,Procedure,S,TEST-PROC,2020-01-01,2099-12-31,
+900003,Retired test observation,Observation,Test Vocabulary,Observable Entity,,TEST-OBS,2020-01-01,2024-12-31,D

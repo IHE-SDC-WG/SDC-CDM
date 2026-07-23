@@ -43,38 +43,42 @@ namespace SdcCdm.Tests
             // Arrange
             var sdcCdm = new SdcCdmInSqlite.SdcCdmInSqlite("SdcCdm.Tests", true);
             sdcCdm.BuildSchema();
-            string hl7Path = Path.Combine(AppContext.BaseDirectory, "TestData", "NAACCR_VolV.hl7");
+            string hl7Path = Path.Combine(
+                AppContext.BaseDirectory,
+                "TestData",
+                "HL7",
+                "obx-Adrenal.hl7"
+            );
             string hl7Message = File.ReadAllText(hl7Path);
 
             // Act
             NAACCRVolVImporter.ImportNaaccrVolV(sdcCdm, hl7Message);
 
             // Assert
-            Assert.True(true, "Expected ImportNaaccrVolV to execute without errors.");
+            long? reportId = sdcCdm.FindFirstSdcReportByAccession("15SL-2");
+            Assert.NotNull(reportId);
+            var report = sdcCdm.GetSdcReportRecord(reportId.Value);
+            Assert.NotNull(report);
+            Assert.Equal("15SL-2", report.ReportAccession);
+            Assert.Equal("129.1000043^ADRENAL GLAND^CAPECC", report.ReportTemplateId);
+            Assert.Equal("CAP eCC", report.ReportTemplateSource);
+            Assert.Equal("3.007.011.1000043", report.ReportTemplateVersionId);
         }
 
         [Fact]
         public void ImportAllHL7Files_ExecutesWithoutError()
         {
             // Arrange
-            var sdcCdm = new SdcCdmInSqlite.SdcCdmInSqlite(
-                "/workspaces/SDC-CDM/notebooks/public/SdcCdm.HL7Samples.Tests.db",
-                false,
-                true
-            );
+            var sdcCdm = new SdcCdmInSqlite.SdcCdmInSqlite("SdcCdm.Tests", true);
             sdcCdm.BuildSchema();
             string hl7Directory = Path.Combine(AppContext.BaseDirectory, "TestData", "HL7");
 
-            // Skip test if directory doesn't exist
-            if (!Directory.Exists(hl7Directory))
-            {
-                _output.WriteLine($"Directory not found: {hl7Directory}. Skipping test.");
-                return;
-            }
+            Assert.True(Directory.Exists(hl7Directory), $"Directory not found: {hl7Directory}");
 
             // Find all .hl7 files recursively
             var hl7Files = GetAllHL7Files(hl7Directory);
             _output.WriteLine($"Found {hl7Files.Count} HL7 files to process");
+            Assert.NotEmpty(hl7Files);
 
             // Process each file
             int processedCount = 0;
@@ -109,10 +113,11 @@ namespace SdcCdm.Tests
                 }
             }
 
-            Assert.True(
-                processedCount > 0 || hl7Files.Count == 0,
-                "Expected to process at least one HL7 file successfully if files were found"
-            );
+            Assert.Empty(failedFiles);
+            Assert.Equal(2, hl7Files.Count);
+            Assert.Equal(hl7Files.Count, processedCount);
+            Assert.NotNull(sdcCdm.FindFirstSdcReportByAccession("15SL-2"));
+            Assert.NotNull(sdcCdm.FindFirstSdcReportByAccession("24-11-000312"));
         }
 
         private static List<string> GetAllHL7Files(string directory)
