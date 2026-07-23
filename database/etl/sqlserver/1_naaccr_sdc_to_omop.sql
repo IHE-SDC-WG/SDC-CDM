@@ -16,6 +16,11 @@
   never bridge -- so duplicate imports cannot double-count regardless of when the
   bridge runs. Reports with a NULL/empty accession, and value rows whose
   sdc_report_id is NULL, never bridge.
+
+  Measurement de-duplication is occurrence-aware: for each report/item/value
+  tuple, the bridge inserts only source occurrences beyond the number already
+  present in OMOP. This preserves legitimate identical values, keeps re-runs
+  idempotent, and repairs partial loads.
 */
 
 SET NOCOUNT ON;
@@ -85,7 +90,15 @@ SELECT
     nv.value_code,
     n.note_id,
     1147289
-FROM naaccr.naaccr_value nv
+FROM (
+    SELECT
+        nv.*,
+        ROW_NUMBER() OVER (
+            PARTITION BY nv.sdc_report_id, nv.item_num, nv.value_code, nv.value_num
+            ORDER BY nv.naaccr_value_id
+        ) AS occurrence_n
+    FROM naaccr.naaccr_value nv
+) nv
 JOIN sdc.sdc_report sr
     ON sr.sdc_report_id = nv.sdc_report_id
    AND sr.is_duplicate_accession = 0
@@ -99,15 +112,22 @@ LEFT JOIN naaccr.naaccr_concept_map ncm
 LEFT JOIN naaccr.naaccr_value_concept_map nvcm
     ON nvcm.item_num = nv.item_num
    AND nvcm.code = COALESCE(nv.value_code, '')
-WHERE NOT EXISTS (
-    SELECT 1
+WHERE nv.occurrence_n > (
+    SELECT COUNT(*)
     FROM omop.measurement m
     WHERE m.measurement_event_id = n.note_id
       AND m.meas_event_field_concept_id = 1147289
       AND m.measurement_source_value = CAST(nv.item_num AS varchar(50))
-      AND EXISTS (
-          SELECT m.value_as_concept_id, m.value_as_number, m.value_source_value
-          INTERSECT
-          SELECT nvcm.concept_id, nv.value_num, nv.value_code
+      AND (
+          m.value_as_concept_id = nvcm.concept_id
+          OR (m.value_as_concept_id IS NULL AND nvcm.concept_id IS NULL)
+      )
+      AND (
+          m.value_as_number = nv.value_num
+          OR (m.value_as_number IS NULL AND nv.value_num IS NULL)
+      )
+      AND (
+          m.value_source_value = nv.value_code
+          OR (m.value_source_value IS NULL AND nv.value_code IS NULL)
       )
 );

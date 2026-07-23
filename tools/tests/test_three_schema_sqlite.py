@@ -120,9 +120,12 @@ def test_sqlite_three_schema_layout_and_bridge(tmp_path: Path) -> None:
             person_id, episode_key, sdc_report_id, report_accession, item_num, value_code, observation_date
         )
         VALUES
-            -- Distinct values for the non-duplicate report (should bridge to 2 measurements).
+            -- Distinct values for the non-duplicate report.
             (1, 'episode-1', 1, 'ACC-1', 100, 'A', '2026-06-22'),
             (1, 'episode-1', 1, 'ACC-1', 200, 'B', '2026-06-22'),
+            -- Identical values from one report are distinct source occurrences.
+            (1, 'episode-1', 1, 'ACC-1', 400, 'D', '2026-06-22'),
+            (1, 'episode-1', 1, 'ACC-1', 400, 'D', '2026-06-22'),
             -- Bug 1: values from the duplicate re-import, present before the first bridge.
             -- They point at the duplicate report (id 2) so they must never bridge.
             (1, 'episode-1', 2, 'ACC-1', 100, 'A', '2026-06-22'),
@@ -164,12 +167,14 @@ def test_sqlite_three_schema_layout_and_bridge(tmp_path: Path) -> None:
     ).fetchall() == [
         ("100", "A", 32879, 1, 1147289),
         ("200", "B", 32879, 1, 1147289),
+        ("400", "D", 32879, 1, 1147289),
+        ("400", "D", 32879, 1, 1147289),
     ]
 
     # Bug 1: the duplicate re-import's values were present before the first bridge, but
     # they point at the duplicate-flagged report and must not double-count.
     assert conn.execute("SELECT COUNT(*) FROM omop.note").fetchone()[0] == 1
-    assert conn.execute("SELECT COUNT(*) FROM omop.measurement").fetchone()[0] == 2
+    assert conn.execute("SELECT COUNT(*) FROM omop.measurement").fetchone()[0] == 4
 
     # Bug 2: accession-less reports (NULL and '') never bridge -- no note, no fan-out.
     assert conn.execute(
@@ -179,15 +184,15 @@ def test_sqlite_three_schema_layout_and_bridge(tmp_path: Path) -> None:
     for _ in range(2):
         _exec_script(conn, "database/etl/sqlite/1_naaccr_sdc_to_omop.sql")
         assert conn.execute("SELECT COUNT(*) FROM omop.note").fetchone()[0] == 1
-        assert conn.execute("SELECT COUNT(*) FROM omop.measurement").fetchone()[0] == 2
+        assert conn.execute("SELECT COUNT(*) FROM omop.measurement").fetchone()[0] == 4
 
     # A partial load is repaired per value rather than being blocked by the note-level anchor.
     conn.execute(
         "DELETE FROM omop.measurement WHERE measurement_source_value = '200'"
     )
-    assert conn.execute("SELECT COUNT(*) FROM omop.measurement").fetchone()[0] == 1
+    assert conn.execute("SELECT COUNT(*) FROM omop.measurement").fetchone()[0] == 3
     _exec_script(conn, "database/etl/sqlite/1_naaccr_sdc_to_omop.sql")
-    assert conn.execute("SELECT COUNT(*) FROM omop.measurement").fetchone()[0] == 2
+    assert conn.execute("SELECT COUNT(*) FROM omop.measurement").fetchone()[0] == 4
     assert conn.execute(
         "SELECT COUNT(*) FROM omop.measurement WHERE measurement_source_value = '200'"
     ).fetchone()[0] == 1
@@ -202,13 +207,13 @@ def test_sqlite_three_schema_layout_and_bridge(tmp_path: Path) -> None:
     _exec_script(conn, "database/etl/sqlite/1_naaccr_sdc_to_omop.sql")
 
     assert conn.execute("SELECT COUNT(*) FROM omop.note").fetchone()[0] == 1
-    assert conn.execute("SELECT COUNT(*) FROM omop.measurement").fetchone()[0] == 3
+    assert conn.execute("SELECT COUNT(*) FROM omop.measurement").fetchone()[0] == 5
     assert conn.execute(
         "SELECT COUNT(*) FROM omop.measurement WHERE measurement_source_value = '300'"
     ).fetchone()[0] == 1
 
     _exec_script(conn, "database/etl/sqlite/1_naaccr_sdc_to_omop.sql")
-    assert conn.execute("SELECT COUNT(*) FROM omop.measurement").fetchone()[0] == 3
+    assert conn.execute("SELECT COUNT(*) FROM omop.measurement").fetchone()[0] == 5
     assert conn.execute(
         "SELECT COUNT(*) FROM omop.measurement WHERE measurement_type_concept_id <> 32879"
     ).fetchone()[0] == 0

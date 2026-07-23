@@ -1207,6 +1207,20 @@ public class SdcCdmInSqlite : ISdcCdm
                 ValidEndDate = DateTime.Parse("2099-12-31"),
                 InvalidReason = null,
             },
+            // Measurement type for NAACCR registry values bridged into OMOP.
+            new ConceptRecord
+            {
+                ConceptId = 32879,
+                ConceptName = "Registry",
+                DomainId = "Type Concept",
+                VocabularyId = "Type Concept",
+                ConceptClassId = "Type Concept",
+                StandardConcept = "S",
+                ConceptCode = "Registry",
+                ValidStartDate = DateTime.Parse("1970-01-01"),
+                ValidEndDate = DateTime.Parse("2099-12-31"),
+                InvalidReason = null,
+            },
             // CDM field concept for note.note_id, used as observation.obs_event_field_concept_id
             // when observation_event_id references the synoptic-report NOTE row.
             // TODO: confirm the exact field concept_id against the loaded OMOP vocabulary.

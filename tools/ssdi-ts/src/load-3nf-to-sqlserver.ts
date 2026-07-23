@@ -107,6 +107,11 @@ async function loadCsvToTable(
           // For registry, handle id auto-increment (no version scope)
           if (table === 'naaccr.REGISTRY') {
             for (const row of rows) {
+              const existing = await pool.request()
+                .input('code', sql.NVarChar(50), row.code)
+                .query('SELECT 1 FROM naaccr.REGISTRY WHERE code = @code');
+              if (existing.recordset[0]) continue;
+
               await pool.request()
                 .input('code', sql.NVarChar(50), row.code)
                 .input('name', sql.NVarChar(255), row.name)
