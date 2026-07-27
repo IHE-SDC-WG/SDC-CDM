@@ -160,7 +160,7 @@ def workbook_sheets(path: Path) -> dict[str, list[list[Any]]]:
         }
 
         sheets: dict[str, list[list[Any]]] = {}
-        for sheet in workbook.find("a:sheets", {"a": SPREADSHEET_NS}) or []:
+        for sheet in workbook.findall("a:sheets/a:sheet", NS):
             name = sheet.attrib["name"]
             rel_id = sheet.attrib[f"{{{OFFICE_REL_NS}}}id"]
             target = targets_by_id[rel_id].lstrip("/")
