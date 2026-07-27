@@ -19,7 +19,7 @@ This directory contains the SDC CDM .NET library, which provides reference imple
 
 ## Prerequisites
 
-- .NET 8.x SDK
+- .NET 10.x SDK
 
 ## Quick Start
 

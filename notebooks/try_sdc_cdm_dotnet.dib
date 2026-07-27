@@ -12,12 +12,12 @@ dotnet build ../SdcCdmLib
 
 /** Reference any external libraries and the SDC CDM library assembly */
 
-#r "nuget:Microsoft.Data.Sqlite,9.0.0"
+#r "nuget:Microsoft.Data.Sqlite,10.0.10"
 #r "nuget:Hl7.Fhir.R4,6.0.0-alpha1"
 #r "nuget:CsvHelper,33.0.1"
-#r "nuget:Microsoft.Extensions.Logging,9.0.4"
-#r "../SdcCdmLib/SdcCdm/bin/Debug/net8.0/SdcCdm.dll"
-#r "../SdcCdmLib/SdcCdmInSqlite/bin/Debug/net8.0/SdcCdmInSqlite.dll"
+#r "nuget:Microsoft.Extensions.Logging,10.0.10"
+#r "../SdcCdmLib/SdcCdm/bin/Debug/net10.0/SdcCdm.dll"
+#r "../SdcCdmLib/SdcCdmInSqlite/bin/Debug/net10.0/SdcCdmInSqlite.dll"
 
 #!csharp
 

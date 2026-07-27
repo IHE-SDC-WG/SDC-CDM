@@ -295,10 +295,9 @@ time**, so no new golden files are needed for the core oracle tests (SDCOM-03/04
 
 - [ ] **SDCOM-01** *(build/dependency — setup)* `SDC.Schema` is referenced from
   `SdcCdm.Tests` and a smoke test deserializes a fixture to `FormDesignType` and reads one
-  node. Note the TFM gap: the library targets **`net10.0`** while `SdcCdm`/`SdcCdm.Tests`
-  target **`net8.0`** — this test forces the resolution (multi-target the test project, bump
-  the solution, or vendor the library) and fails loudly until it is resolved, rather than
-  the dependency being quietly unusable.
+  node. The TFM gap that previously blocked this is resolved: `SdcCdm`, `SdcCdmInSqlite`, and
+  `SdcCdm.Tests` all target **`net10.0`** now, matching the library, so no multi-targeting or
+  vendoring is needed.
 - [ ] **SDCOM-02** *(fixture validity)* Every SDC XML fixture (`sdc_xml/` submissions and
   `sdc_templates/` templates) deserializes into the OM and passes `SdcValidate` with zero
   errors. Guards the whole SDC test surface against malformed / hand-edited XML so later
@@ -345,9 +344,9 @@ time**, so no new golden files are needed for the core oracle tests (SDCOM-03/04
   equal to a canonical serialization via the library's compare utility for the
   supported/documented-loss subset.
 
-> Optionality: because `SDC.Schema` is `net10.0` and a large dependency, this section can be
-> gated behind a build flag / separate test project so the core C# suite still runs on
-> `net8.0` without it. SDCOM-01 is the gate.
+> Optionality: `SDC.Schema` is a large dependency, so this section can still be gated behind a
+> build flag / separate test project to keep the core C# suite lean. The TFM mismatch that
+> previously motivated the gate is gone — the solution targets `net10.0` throughout.
 
 ## Cleanup (from issue #82)
 
