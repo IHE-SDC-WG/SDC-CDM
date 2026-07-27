@@ -18,8 +18,7 @@
   "references": {
     "local_diagrams": [
       "diagrams/original-omop/by-domain/clinical-events.mmd",
-      "diagrams/original-omop/by-domain/eras-episodes-cohorts-metadata.mmd",
-      "archive/old-omop-extension-model/diagrams/sdc-sdm-modifications/by-domain/CancerCase.mmd"
+      "diagrams/original-omop/by-domain/eras-episodes-cohorts-metadata.mmd"
     ],
     "ohdsi_cdm_v5_4": "https://ohdsi.github.io/CommonDataModel/cdm54.html",
     "ohdsi_legacy_cdm_wiki": "https://www.ohdsi.org/web/wiki/doku.php?id=documentation:cdm:common_data_model",

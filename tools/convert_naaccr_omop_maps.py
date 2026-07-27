@@ -178,7 +178,9 @@ def normalize_header(value: Any) -> str:
 
 def normalize_cell(value: Any) -> Any:
     if isinstance(value, str):
-        value = clean_string(value)
+        value = clean_string(value).replace(
+            "extension table", "naaccr schema storage group"
+        )
         return value if value else None
     return value
 
@@ -525,7 +527,6 @@ def build_spec(input_dir: Path, existing_spec: dict[str, Any] | None = None) -> 
             "local_diagrams": [
                 "diagrams/original-omop/by-domain/clinical-events.mmd",
                 "diagrams/original-omop/by-domain/eras-episodes-cohorts-metadata.mmd",
-                "archive/old-omop-extension-model/diagrams/sdc-sdm-modifications/by-domain/CancerCase.mmd",
             ],
             "ohdsi_cdm_v5_4": "https://ohdsi.github.io/CommonDataModel/cdm54.html",
             "ohdsi_legacy_cdm_wiki": "https://www.ohdsi.org/web/wiki/doku.php?id=documentation:cdm:common_data_model",

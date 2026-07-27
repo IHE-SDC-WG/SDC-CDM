@@ -6,7 +6,7 @@ This repository models CAP eCP / NAACCR data with a three-schema architecture:
 - `sdc` stores SDC form and report structure.
 - `omop` stores unmodified OMOP CDM 5.4 rows.
 
-The active database guidance is in [database/SCHEMA_ARCHITECTURE.md](database/SCHEMA_ARCHITECTURE.md). Generated or historical artifacts from the old combined OMOP-SDC model live in [archive/old-omop-extension-model](archive/old-omop-extension-model).
+The active database guidance is in [database/SCHEMA_ARCHITECTURE.md](database/SCHEMA_ARCHITECTURE.md). Historical artifacts from the retired combined OMOP-SDC model are available in Git at commit [`6304b3e`](https://github.com/IHE-SDC-WG/SDC-CDM/tree/6304b3e).
 
 ## Quick Checks
 

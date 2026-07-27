@@ -13,6 +13,9 @@ spec = build_spec(REPO_ROOT / "NAACRToOMOPmaps")
 items = spec["workflow_input"]["item_mappings"]
 by_code = {mapping["concept_code"]: mapping for mapping in items}
 
+for inventory_row in spec["extension_table_inventory"]:
+    assert "extension table" not in (inventory_row.get("notes") or "").lower()
+
 merge = spec["workflow_input"]["naaccr_person_merge"]
 assert merge["matched_rows"] == 142, merge
 assert merge["unmatched_rows"] == 0, merge

@@ -26,6 +26,9 @@ database/
 
 SQLite uses attached databases named `naaccr`, `sdc`, and `omop`. PostgreSQL and SQL Server use real schemas.
 
-## Archived Model
+## Historical Model
 
-The previous combined OMOP-SDC model is archived under `archive/old-omop-extension-model/`. It is retained for reference only. Do not regenerate active DDL from the old OMOP-SDC fork.
+The previous combined OMOP-SDC model is available in Git at commit
+[`6304b3e`](https://github.com/IHE-SDC-WG/SDC-CDM/tree/6304b3e). It is retained
+in repository history for reference only. Do not regenerate active DDL from the
+old OMOP-SDC fork.
