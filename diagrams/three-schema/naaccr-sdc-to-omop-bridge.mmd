@@ -1,0 +1,107 @@
+erDiagram
+  %% The naaccr + sdc -> stock OMOP bridge.
+  %% Source of truth: database/etl/sqlite/1_naaccr_sdc_to_omop.sql
+  %% (SQL Server equivalent: database/etl/sqlserver/1_naaccr_sdc_to_omop.sql;
+  %%  no PostgreSQL bridge exists yet. Entry point: BridgeNaaccrSdcToOmop().)
+  %% Prose: database/SCHEMA_ARCHITECTURE.md "Back-reference WITHOUT a crosswalk".
+  %% Only the columns the bridge actually reads or writes are shown; entity names are
+  %% prefixed with their schema. Line style: solid (--) = enforced FK,
+  %% dotted (..) = logical pointer / key join with no enforced FK.
+  %% The bridge writes ONLY standard OMOP columns -- there is no crosswalk table, and
+  %% OMOP core gains no sdc_*/naaccr_* columns. Going from a measurement back to its
+  %% report is a key join, not a stored FK.
+  %% Two INSERTs:
+  %%   1. omop.note        -- one row per (person_id, report_accession).
+  %%   2. omop.measurement -- one row per bridgeable naaccr_value, anchored to that note.
+  %% Constants the ETL hardcodes (an ERD cannot express these). All three must exist in
+  %% omop.concept before bridging or the FKs fail -- InsertEssentialConcepts() seeds them:
+  %%   note.note_type_concept_id               = 32817   "EHR"
+  %%   measurement.measurement_type_concept_id = 32879   "Registry"
+  %%   measurement.meas_event_field_concept_id = 1147289 "note.note_id" -- marks
+  %%     measurement_event_id as pointing at note.note_id, and is the filter every
+  %%     read-back query uses.
+  %% Rows that never bridge (the four guards):
+  %%   - sdc_report.report_accession IS NULL or ''
+  %%   - sdc_report.is_duplicate_accession != 0   (re-imported message)
+  %%   - sdc_report.person_id IS NULL
+  %%   - naaccr_value.sdc_report_id IS NULL
+  %% Idempotency is occurrence-aware: for each (sdc_report_id, item_num, value_code,
+  %% value_num) tuple the bridge ROW_NUMBER()s the source rows and inserts only those
+  %% beyond the COUNT(*) already in omop.measurement. So legitimate duplicate identical
+  %% values are preserved, re-runs are no-ops, and partial loads self-repair.
+  %% Because each import stamps its value rows with its own report id, a re-imported
+  %% message's values point at a duplicate-flagged report and can never double-count.
+  SDC_REPORT {
+    INTEGER sdc_report_id PK
+    INTEGER person_id
+    INTEGER visit_occurrence_id
+    INTEGER provider_id
+    TEXT report_text
+    TEXT report_accession
+    INTEGER is_duplicate_accession
+  }
+
+  NAACCR_VALUE {
+    INTEGER naaccr_value_id PK
+    INTEGER person_id
+    INTEGER sdc_report_id
+    INTEGER item_num
+    TEXT value_code
+    REAL value_num
+    TEXT value_unit_source
+    TEXT observation_date
+  }
+
+  NAACCR_CONCEPT_MAP {
+    INTEGER item_num PK
+    INTEGER concept_id
+  }
+
+  NAACCR_VALUE_CONCEPT_MAP {
+    INTEGER item_num PK
+    TEXT code PK
+    INTEGER concept_id
+  }
+
+  %% Written by INSERT 1. note_source_value carries the report accession -- this is the
+  %% only back-reference to sdc.sdc_report.
+  OMOP_NOTE {
+    INTEGER note_id PK
+    INTEGER person_id
+    TEXT note_date
+    INTEGER note_type_concept_id
+    TEXT note_title
+    TEXT note_text
+    INTEGER provider_id
+    INTEGER visit_occurrence_id
+    TEXT note_source_value
+  }
+
+  %% Written by INSERT 2. measurement_source_value carries the NAACCR item number as
+  %% text; coded answers land in value_as_concept_id, numeric in value_as_number, and
+  %% the raw code is always kept in value_source_value.
+  OMOP_MEASUREMENT {
+    INTEGER measurement_id PK
+    INTEGER person_id
+    INTEGER measurement_concept_id
+    TEXT measurement_date
+    INTEGER measurement_type_concept_id
+    REAL value_as_number
+    INTEGER value_as_concept_id
+    INTEGER provider_id
+    INTEGER visit_occurrence_id
+    TEXT measurement_source_value
+    INTEGER measurement_source_concept_id
+    TEXT unit_source_value
+    TEXT value_source_value
+    INTEGER measurement_event_id FK
+    INTEGER meas_event_field_concept_id
+  }
+
+  %% Relationships
+  SDC_REPORT ||..o{ NAACCR_VALUE : "sdc_report_id (logical, the bridge join key)"
+  SDC_REPORT ||..o| OMOP_NOTE : "1 note per (person_id, report_accession), 0 if guarded; note_source_value = report_accession"
+  NAACCR_VALUE ||..o| OMOP_MEASUREMENT : "1 per bridgeable value; measurement_source_value = item_num"
+  OMOP_NOTE ||--o{ OMOP_MEASUREMENT : "measurement_event_id = note_id (meas_event_field_concept_id 1147289)"
+  NAACCR_CONCEPT_MAP ||..o{ OMOP_MEASUREMENT : "item_num -> measurement_concept_id, measurement_source_concept_id"
+  NAACCR_VALUE_CONCEPT_MAP ||..o{ OMOP_MEASUREMENT : "(item_num, value_code) -> value_as_concept_id"

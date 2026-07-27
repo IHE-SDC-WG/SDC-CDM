@@ -1,0 +1,190 @@
+erDiagram
+  %% Schema: naaccr -- NAACCR-native data dictionary + raw captured values.
+  %% Source of truth: database/schemas/naaccr/ddl/sqlite/1_naaccr_sqlite_ddl.sql
+  %% Prose: database/SCHEMA_ARCHITECTURE.md
+  %% Line style: solid (--) = enforced FK. Dotted (..) = logical pointer / key join
+  %% with no enforced FK. SDC_REPORT is a PK-only stub owned by sdc.mmd.
+  SDC_REPORT { INTEGER sdc_report_id PK }
+
+  %% Version dimension: every dictionary row is scoped to an (algorithm, version)
+  %% generation, so multiple SEER staging versions coexist.
+  DATA_DICTIONARY_VERSION {
+    INTEGER dd_version_id PK
+    TEXT algorithm UK
+    TEXT version UK
+    TEXT naaccr_version
+    TEXT valid_start_date
+    TEXT valid_end_date
+    INTEGER is_current
+    TEXT source_api
+    TEXT loaded_at
+  }
+
+  NAACCR_ITEM {
+    INTEGER dd_version_id PK
+    INTEGER item_num PK
+    TEXT name
+    TEXT xml_id
+    TEXT unit
+    INTEGER decimal_places
+    TEXT data_type
+    INTEGER length
+    TEXT padding
+    TEXT alignment
+    TEXT trim
+    TEXT section
+    TEXT parent_xml_element
+  }
+
+  STAGING_SCHEMA {
+    INTEGER dd_version_id PK
+    TEXT schema_id_number PK
+    TEXT schema_id
+    TEXT schema_name
+  }
+
+  SCHEMA_SELECTION_RULE {
+    INTEGER schema_selection_rule_id PK
+    INTEGER dd_version_id FK
+    TEXT schema_id_number FK
+    TEXT site
+    TEXT histology
+    TEXT behavior
+    TEXT sex_at_birth
+    TEXT discriminator_1
+    TEXT discriminator_2
+    TEXT year_dx
+  }
+
+  SCHEMA_ITEM {
+    INTEGER dd_version_id PK
+    TEXT schema_id_number PK
+    INTEGER item_num PK
+    TEXT item_role
+    TEXT used_for_staging
+    TEXT default_value
+    TEXT description
+    TEXT rationale
+    TEXT additional_info
+    TEXT table_notes
+    TEXT coding_guidelines
+  }
+
+  SCHEMA_ITEM_CODE {
+    INTEGER dd_version_id PK
+    TEXT schema_id_number PK
+    INTEGER item_num PK
+    TEXT code PK
+    TEXT description
+  }
+
+  SCHEMA_ITEM_REQUIREMENT {
+    INTEGER schema_item_requirement_id PK
+    INTEGER dd_version_id FK
+    TEXT schema_id_number FK
+    INTEGER item_num FK
+    INTEGER registry_id FK
+    INTEGER is_required
+  }
+
+  REGISTRY {
+    INTEGER id PK
+    TEXT code UK
+    TEXT name
+  }
+
+  %% SEER staging lookup-table catalog: the value-validation / staging building blocks.
+  STAGING_TABLE {
+    INTEGER dd_version_id PK
+    TEXT table_key PK
+    TEXT name
+    TEXT title
+    TEXT subtitle
+    TEXT description
+    TEXT notes
+    TEXT coding_guidelines
+  }
+
+  STAGING_TABLE_COLUMN {
+    INTEGER dd_version_id PK
+    TEXT table_key PK
+    INTEGER col_index PK
+    TEXT col_key
+    TEXT col_name
+    TEXT col_type
+    TEXT col_source
+  }
+
+  STAGING_TABLE_ROW {
+    INTEGER dd_version_id PK
+    TEXT table_key PK
+    INTEGER row_index PK
+    TEXT cells
+  }
+
+  SCHEMA_INVOLVED_TABLE {
+    INTEGER dd_version_id PK
+    TEXT schema_id_number PK
+    TEXT table_key PK
+  }
+
+  %% Concept maps are deliberately version-independent: a NAACCR item / value code maps
+  %% to the same OMOP concept across dictionary versions, so they are keyed on item_num /
+  %% (item_num, code) alone and reference NAACCR_ITEM logically -- no composite FK. This
+  %% matches how the ETL bridge joins them.
+  NAACCR_CONCEPT_MAP {
+    INTEGER item_num PK
+    INTEGER concept_id
+    TEXT concept_code
+    TEXT concept_name
+    TEXT domain_id
+  }
+
+  NAACCR_VALUE_CONCEPT_MAP {
+    INTEGER item_num PK
+    TEXT code PK
+    INTEGER concept_id
+    TEXT concept_code
+    TEXT concept_name
+  }
+
+  %% Captured answers, NAACCR staging shape: one row per answered item.
+  NAACCR_VALUE {
+    INTEGER naaccr_value_id PK
+    INTEGER person_id
+    TEXT episode_key
+    INTEGER sdc_report_id
+    TEXT report_accession
+    TEXT schema_id_number
+    INTEGER item_num
+    TEXT value_code
+    REAL value_num
+    TEXT value_unit_source
+    TEXT observation_date
+    INTEGER dd_version_id FK
+  }
+
+  %% Relationships
+  DATA_DICTIONARY_VERSION ||--o{ NAACCR_ITEM : "dd_version_id"
+  DATA_DICTIONARY_VERSION ||--o{ STAGING_SCHEMA : "dd_version_id"
+  DATA_DICTIONARY_VERSION ||--o{ STAGING_TABLE : "dd_version_id"
+  DATA_DICTIONARY_VERSION ||--o{ NAACCR_VALUE : "dd_version_id (nullable stamp)"
+
+  STAGING_SCHEMA ||--o{ SCHEMA_SELECTION_RULE : "dd_version_id, schema_id_number"
+  STAGING_SCHEMA ||--o{ SCHEMA_ITEM : "dd_version_id, schema_id_number"
+  STAGING_SCHEMA ||--o{ SCHEMA_INVOLVED_TABLE : "dd_version_id, schema_id_number"
+
+  NAACCR_ITEM ||--o{ SCHEMA_ITEM : "dd_version_id, item_num"
+  SCHEMA_ITEM ||--o{ SCHEMA_ITEM_CODE : "value set"
+  SCHEMA_ITEM ||--o{ SCHEMA_ITEM_REQUIREMENT : "per-registry requirement"
+  REGISTRY ||--o{ SCHEMA_ITEM_REQUIREMENT : "registry_id"
+
+  STAGING_TABLE ||--o{ STAGING_TABLE_COLUMN : "dd_version_id, table_key"
+  STAGING_TABLE ||--o{ STAGING_TABLE_ROW : "dd_version_id, table_key"
+  STAGING_TABLE ||--o{ SCHEMA_INVOLVED_TABLE : "dd_version_id, table_key"
+
+  NAACCR_ITEM ||..o| NAACCR_CONCEPT_MAP : "item_num (version-independent)"
+  NAACCR_ITEM ||..o{ NAACCR_VALUE_CONCEPT_MAP : "item_num (version-independent)"
+  NAACCR_ITEM ||..o{ NAACCR_VALUE : "item_num"
+  STAGING_SCHEMA ||..o{ NAACCR_VALUE : "schema_id_number (no FK)"
+  SDC_REPORT ||..o{ NAACCR_VALUE : "sdc_report_id (cross-schema, no FK)"

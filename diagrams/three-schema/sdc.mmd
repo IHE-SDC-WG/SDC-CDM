@@ -1,0 +1,167 @@
+erDiagram
+  %% Schema: sdc -- IHE Structured Data Capture form structure + report metadata.
+  %% Source of truth: database/schemas/sdc/ddl/sqlite/1_sdc_sqlite_ddl.sql
+  %% Prose: database/SCHEMA_ARCHITECTURE.md
+  %% Line style: solid (--) = enforced FK. Dotted (..) = logical pointer / key join
+  %% with no enforced FK. OMOP_* and NAACCR_VALUE are PK-only stubs owned elsewhere.
+  %% Two distinct intake paths share this schema:
+  %%   SDC XML form path -- template_sdc -> template_instance -> sdc_form_answer
+  %%     (answer values stored here).
+  %%   eCP / HL7 V2 path -- sdc_report holds the synoptic report header only; its
+  %%     answers live in naaccr.naaccr_value, not in sdc_form_answer.
+  OMOP_PERSON { INTEGER person_id PK }
+  OMOP_VISIT_OCCURRENCE { INTEGER visit_occurrence_id PK }
+  OMOP_PROVIDER { INTEGER provider_id PK }
+  NAACCR_VALUE { INTEGER naaccr_value_id PK }
+
+  %% Form design: the SDC template as authored, plus its raw XML.
+  TEMPLATE_SDC {
+    INTEGER template_sdc_id PK
+    TEXT sdc_form_design_sdcid
+    TEXT base_uri
+    TEXT lineage
+    TEXT version
+    TEXT full_uri
+    TEXT form_title
+    TEXT sdc_xml
+    TEXT doc_type
+  }
+
+  TEMPLATE_ITEM {
+    INTEGER template_item_id PK
+    INTEGER template_sdc_id FK
+    INTEGER parent_template_item_id FK
+    TEXT template_item_sdcid
+    TEXT type
+    TEXT visible_text
+    TEXT invisible_text
+    TEXT min_card
+    TEXT must_implement
+    TEXT item_order
+  }
+
+  TEMPLATE_INSTANCE {
+    INTEGER template_instance_id PK
+    TEXT template_instance_version_guid
+    TEXT template_instance_version_uri
+    INTEGER template_sdc_id FK
+    TEXT instance_version_date
+    TEXT diag_report_props
+    TEXT surg_path_sdcid
+    INTEGER person_id
+    INTEGER visit_occurrence_id
+    INTEGER provider_id
+    TEXT report_text
+  }
+
+  %% Synoptic-report header for the eCP / HL7 path (renamed from
+  %% sdc_template_instance_ecp). report_loinc is 60568-3. Re-imports of the same
+  %% accession are flagged is_duplicate_accession=1 and chained to the original via
+  %% first_seen_report_id; the ETL bridge skips those rows.
+  SDC_REPORT {
+    INTEGER sdc_report_id PK
+    INTEGER template_instance_id FK
+    TEXT template_name
+    TEXT template_version
+    TEXT template_instance_guid
+    INTEGER person_id
+    INTEGER visit_occurrence_id
+    INTEGER provider_id
+    TEXT report_text
+    TEXT report_template_source
+    TEXT report_template_id
+    TEXT report_template_version_id
+    TEXT tumor_site
+    TEXT procedure_type
+    TEXT specimen_laterality
+    TEXT report_accession
+    TEXT report_loinc
+    INTEGER is_duplicate_accession
+    INTEGER first_seen_report_id FK
+    TEXT created_datetime
+    TEXT updated_datetime
+  }
+
+  %% Answer store for the SDC XML path only. Note: reponse_string_nvarchar is
+  %% misspelled in the DDL; the name is reproduced here verbatim on purpose.
+  SDC_FORM_ANSWER {
+    INTEGER sdc_form_answer_id PK
+    INTEGER template_instance_id FK
+    INTEGER parent_form_answer_id FK
+    TEXT section_sdcid
+    TEXT section_guid
+    TEXT question_text
+    TEXT question_instance_guid
+    TEXT question_sdcid
+    TEXT list_item_id
+    TEXT list_item_text
+    TEXT list_item_instance_guid
+    TEXT list_item_parent_guid
+    TEXT units_system
+    TEXT response
+    TEXT units
+    INTEGER response_int
+    REAL response_float
+    TEXT response_datetime
+    TEXT reponse_string_nvarchar
+    TEXT datatype
+    TEXT sdc_order
+    TEXT sdc_repeat_level
+    TEXT sdc_comments
+  }
+
+  TEMPLATE_TERM_MAP {
+    INTEGER template_term_map_id PK
+    INTEGER template_sdc_id FK
+    TEXT template_item_sdcid
+    TEXT code
+    TEXT code_system
+    TEXT display
+  }
+
+  TEMPLATE_MAP_CONTENT {
+    INTEGER template_map_content_id PK
+    INTEGER template_term_map_id FK
+    TEXT map_content
+  }
+
+  SDC_SPECIMEN {
+    INTEGER sdc_specimen_id PK
+    INTEGER parent_specimen_id FK
+    INTEGER visit_occurrence_id
+    TEXT specimen_identifier
+    TEXT specimen_type
+    TEXT specimen_site
+    TEXT laterality
+  }
+
+  OBSERVATION_SPECIMENS {
+    INTEGER observation_specimens_id PK
+    INTEGER sdc_form_answer_id FK
+    INTEGER sdc_specimen_id FK
+  }
+
+  %% Relationships
+  TEMPLATE_SDC ||--o{ TEMPLATE_ITEM : "template_sdc_id"
+  TEMPLATE_ITEM ||--o{ TEMPLATE_ITEM : "parent_template_item_id (item tree)"
+  TEMPLATE_SDC ||--o{ TEMPLATE_INSTANCE : "template_sdc_id"
+  TEMPLATE_SDC ||--o{ TEMPLATE_TERM_MAP : "template_sdc_id"
+  TEMPLATE_TERM_MAP ||--o{ TEMPLATE_MAP_CONTENT : "template_term_map_id"
+
+  TEMPLATE_INSTANCE ||--o{ SDC_FORM_ANSWER : "template_instance_id (SDC XML path)"
+  SDC_FORM_ANSWER ||--o{ SDC_FORM_ANSWER : "parent_form_answer_id"
+  TEMPLATE_INSTANCE ||--o{ SDC_REPORT : "template_instance_id (nullable)"
+  SDC_REPORT ||--o{ SDC_REPORT : "first_seen_report_id (duplicate chain)"
+
+  SDC_SPECIMEN ||--o{ SDC_SPECIMEN : "parent_specimen_id"
+  SDC_FORM_ANSWER ||--o{ OBSERVATION_SPECIMENS : "sdc_form_answer_id"
+  SDC_SPECIMEN ||--o{ OBSERVATION_SPECIMENS : "sdc_specimen_id"
+
+  SDC_REPORT ||..o{ NAACCR_VALUE : "sdc_report_id (eCP answers live in naaccr)"
+  OMOP_PERSON ||..o{ TEMPLATE_INSTANCE : "person_id (no FK)"
+  OMOP_PERSON ||..o{ SDC_REPORT : "person_id (no FK)"
+  OMOP_VISIT_OCCURRENCE ||..o{ TEMPLATE_INSTANCE : "visit_occurrence_id (no FK)"
+  OMOP_VISIT_OCCURRENCE ||..o{ SDC_REPORT : "visit_occurrence_id (no FK)"
+  OMOP_VISIT_OCCURRENCE ||..o{ SDC_SPECIMEN : "visit_occurrence_id (no FK)"
+  OMOP_PROVIDER ||..o{ TEMPLATE_INSTANCE : "provider_id (no FK)"
+  OMOP_PROVIDER ||..o{ SDC_REPORT : "provider_id (no FK)"

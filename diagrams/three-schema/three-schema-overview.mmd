@@ -1,0 +1,106 @@
+erDiagram
+  %% Orientation map for the whole model: one database, three schemas.
+  %% Key tables only, minimal attributes -- see naaccr.mmd, sdc.mmd, and
+  %% naaccr-sdc-to-omop-bridge.mmd for the full detail.
+  %% Prose: database/SCHEMA_ARCHITECTURE.md
+  %% Entity names are prefixed with their owning schema. Line style:
+  %% solid (--) = enforced FK, dotted (..) = logical pointer / key join with no FK.
+  %% Every cross-schema link is dotted by design -- there is no crosswalk table and
+  %% omop stays vanilla CDM 5.4, so ATLAS/Achilles/DQD work out of the box.
+  %% Path A -- eCP / HL7 V2 / NAACCR XML intake:
+  %%   importer writes naaccr.naaccr_value (raw answers) + sdc.sdc_report (header),
+  %%   then the bridge transforms them into omop.note + omop.measurement.
+  %% Path B -- SDC XML form submission:
+  %%   sdc.template_* form structure + sdc.sdc_form_answer answer values.
+  %%   This path does not currently bridge into omop.
+  NAACCR_DATA_DICTIONARY_VERSION {
+    INTEGER dd_version_id PK
+    TEXT algorithm
+    TEXT version
+  }
+
+  NAACCR_ITEM {
+    INTEGER dd_version_id PK
+    INTEGER item_num PK
+    TEXT name
+  }
+
+  NAACCR_VALUE {
+    INTEGER naaccr_value_id PK
+    INTEGER person_id
+    INTEGER sdc_report_id
+    INTEGER item_num
+    TEXT value_code
+    REAL value_num
+  }
+
+  NAACCR_CONCEPT_MAP {
+    INTEGER item_num PK
+    INTEGER concept_id
+  }
+
+  SDC_TEMPLATE_SDC {
+    INTEGER template_sdc_id PK
+    TEXT form_title
+  }
+
+  SDC_TEMPLATE_INSTANCE {
+    INTEGER template_instance_id PK
+    INTEGER template_sdc_id FK
+  }
+
+  SDC_FORM_ANSWER {
+    INTEGER sdc_form_answer_id PK
+    INTEGER template_instance_id FK
+    TEXT response
+  }
+
+  SDC_REPORT {
+    INTEGER sdc_report_id PK
+    INTEGER person_id
+    TEXT report_accession
+    INTEGER is_duplicate_accession
+  }
+
+  OMOP_PERSON {
+    INTEGER person_id PK
+  }
+
+  OMOP_NOTE {
+    INTEGER note_id PK
+    INTEGER person_id FK
+    TEXT note_source_value
+  }
+
+  OMOP_MEASUREMENT {
+    INTEGER measurement_id PK
+    INTEGER person_id FK
+    INTEGER measurement_concept_id FK
+    TEXT measurement_source_value
+    INTEGER measurement_event_id FK
+  }
+
+  OMOP_CONCEPT {
+    INTEGER concept_id PK
+    TEXT concept_name
+  }
+
+  %% Relationships
+  NAACCR_DATA_DICTIONARY_VERSION ||--o{ NAACCR_ITEM : "dd_version_id"
+  NAACCR_DATA_DICTIONARY_VERSION ||--o{ NAACCR_VALUE : "dd_version_id (stamp)"
+  NAACCR_ITEM ||..o| NAACCR_CONCEPT_MAP : "item_num (version-independent)"
+  NAACCR_ITEM ||..o{ NAACCR_VALUE : "item_num"
+
+  SDC_TEMPLATE_SDC ||--o{ SDC_TEMPLATE_INSTANCE : "template_sdc_id"
+  SDC_TEMPLATE_INSTANCE ||--o{ SDC_FORM_ANSWER : "path B: SDC XML answers"
+  SDC_TEMPLATE_INSTANCE ||--o{ SDC_REPORT : "template_instance_id (nullable)"
+
+  SDC_REPORT ||..o{ NAACCR_VALUE : "path A: sdc_report_id (bridge join key)"
+
+  SDC_REPORT ||..o| OMOP_NOTE : "bridge: 1 note per accession"
+  NAACCR_VALUE ||..o| OMOP_MEASUREMENT : "bridge: 1 measurement per value"
+  OMOP_NOTE ||--o{ OMOP_MEASUREMENT : "measurement_event_id = note_id"
+  OMOP_PERSON ||--o{ OMOP_NOTE : "person_id"
+  OMOP_PERSON ||--o{ OMOP_MEASUREMENT : "person_id"
+  OMOP_CONCEPT ||--o{ OMOP_MEASUREMENT : "measurement_concept_id, value_as_concept_id"
+  OMOP_CONCEPT ||..o{ NAACCR_CONCEPT_MAP : "concept_id (mapping target)"

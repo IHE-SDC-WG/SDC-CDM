@@ -105,6 +105,14 @@ SDC XML form submission
 Two steps: (1) ingest to `naaccr`+`sdc`; (2) transform to `omop`. The transform is the only place
 that knows both sides, and it writes vanilla OMOP.
 
+Diagrams of the above live in [`../diagrams/three-schema/`](../diagrams/three-schema/):
+[`three-schema-overview.mmd`](../diagrams/three-schema/three-schema-overview.mmd) for both intake
+paths at a glance, [`naaccr.mmd`](../diagrams/three-schema/naaccr.mmd) and
+[`sdc.mmd`](../diagrams/three-schema/sdc.mmd) for the full per-schema detail, and
+[`naaccr-sdc-to-omop-bridge.mmd`](../diagrams/three-schema/naaccr-sdc-to-omop-bridge.mmd) for the
+transform itself (columns read/written, hardcoded concept ids, and the guards that stop a row
+bridging). They are hand-maintained — update them alongside the DDL.
+
 ## Physical model per dialect (decide at implementation)
 
 - **PostgreSQL / SQL Server**: real `CREATE SCHEMA naaccr|sdc|omop`; schema-qualified joins are free.
@@ -123,6 +131,9 @@ database/
     omop/ddl/{sqlite,postgresql,sqlserver}/      (vendored upstream OHDSI CDM 5.4, unmodified)
   etl/                                           (naaccr+sdc -> omop transform, dialect-aware)
   build.sh                                       (create schemas in order; load seeds; run etl)
+diagrams/
+  three-schema/                                  (ERDs for naaccr, sdc, and the bridge)
+  original-omop/                                 (upstream OMOP CDM 5.4 reference ERDs)
 ```
 
 ## Migration from today
