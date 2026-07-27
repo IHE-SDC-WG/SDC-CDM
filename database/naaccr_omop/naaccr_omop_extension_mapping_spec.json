@@ -1,6 +1,6 @@
 {
   "schema_version": "0.1.0",
-  "name": "NAACCR to OMOP extension mapping specification",
+  "name": "NAACCR to OMOP mapping specification",
   "omop_cdm_version": "5.4",
   "purpose": "Vendor-neutral JSON representation of the NAACCR storage mapping workbooks for downstream ETL and PhenoML Workflows consumption.",
   "pipeline_position": {

@@ -178,8 +178,17 @@ def normalize_header(value: Any) -> str:
 
 def normalize_cell(value: Any) -> Any:
     if isinstance(value, str):
-        value = clean_string(value).replace(
-            "extension table", "naaccr schema storage group"
+        value = re.sub(
+            r"\bextension tables\b",
+            "naaccr schema storage groups",
+            clean_string(value),
+            flags=re.IGNORECASE,
+        )
+        value = re.sub(
+            r"\bextension table\b",
+            "naaccr schema storage group",
+            value,
+            flags=re.IGNORECASE,
         )
         return value if value else None
     return value
@@ -487,7 +496,7 @@ def build_spec(input_dir: Path, existing_spec: dict[str, Any] | None = None) -> 
 
     return {
         "schema_version": "0.1.0",
-        "name": "NAACCR to OMOP extension mapping specification",
+        "name": "NAACCR to OMOP mapping specification",
         "omop_cdm_version": "5.4",
         "purpose": (
             "Vendor-neutral JSON representation of the NAACCR storage mapping "

@@ -5,18 +5,18 @@ Reads etl_test_output.json and prints SQL-style query result sets.
 Usage:
   python tools/simulate_sql_output.py                          # default file
   python tools/simulate_sql_output.py path/to/output.json      # custom file
-  python tools/simulate_sql_output.py --tables episode,observation
-  python tools/simulate_sql_output.py --pending-only            # just ref data
+  python tools/simulate_sql_output.py --tables sdc_report,naaccr_value
 """
+
 from __future__ import annotations
 
 import argparse
 import json
 import sys
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
-def _col_width(rows: List[Dict[str, Any]], col: str, min_w: int = 4) -> int:
+def _col_width(rows: list[dict[str, Any]], col: str, min_w: int = 4) -> int:
     """Compute display width for a column: max of header and all values."""
     widths = [len(col)]
     for r in rows:
@@ -35,8 +35,8 @@ def _fmt(val: Any) -> str:
 
 def _print_result_set(
     title: str,
-    rows: List[Dict[str, Any]],
-    columns: Optional[List[str]] = None,
+    rows: list[dict[str, Any]],
+    columns: list[str] | None = None,
 ) -> None:
     """Print rows as a SQL Server Management Studio-style result set."""
     if not rows:
@@ -49,7 +49,7 @@ def _print_result_set(
         seen = set()
         columns = []
         for r in rows:
-            for k in r.keys():
+            for k in r:
                 if k not in seen:
                     seen.add(k)
                     columns.append(k)
@@ -81,12 +81,7 @@ def main() -> None:
     parser.add_argument(
         "--tables",
         default=None,
-        help="Comma-separated list of tables to show (e.g. episode,observation)",
-    )
-    parser.add_argument(
-        "--pending-only",
-        action="store_true",
-        help="Only show pending reference data (vocabularies, concepts)",
+        help="Comma-separated list of tables to show (sdc_report,naaccr_value)",
     )
     parser.add_argument(
         "--limit", type=int, default=None, help="Max rows per result set"
@@ -102,28 +97,8 @@ def main() -> None:
 
     wanted = set(args.tables.split(",")) if args.tables else None
 
-    # ---- Pending reference data -------------------------------------------
-    pending = data.get("pending_reference_data", {})
-
-    vocabs = pending.get("vocabularies_to_create", [])
-    if vocabs and (not wanted or "vocabulary" in wanted or args.pending_only):
-        _print_result_set(
-            "SELECT * FROM dbo.vocabulary  -- (pending, to be created)",
-            vocabs[: args.limit] if args.limit else vocabs,
-        )
-
-    concepts = pending.get("concepts_to_create", [])
-    if concepts and (not wanted or "concept" in wanted or args.pending_only):
-        _print_result_set(
-            "SELECT * FROM dbo.concept  -- (pending, to be created)",
-            concepts[: args.limit] if args.limit else concepts,
-        )
-
-    if args.pending_only:
-        return
-
     # ---- Collect resources by table ---------------------------------------
-    by_table: Dict[str, List[Dict[str, Any]]] = {}
+    by_table: dict[str, list[dict[str, Any]]] = {}
     for row_block in data.get("rows", []):
         for resource in row_block.get("resources", []):
             tbl = resource.get("table", "unknown")
@@ -134,25 +109,30 @@ def main() -> None:
             )
 
     # ---- Print each table as a result set ---------------------------------
-    table_order = ["episode", "observation", "measurement", "episode_event"]
+    table_order = ["sdc_report", "naaccr_value"]
+    table_schemas = {
+        "sdc_report": "sdc",
+        "naaccr_value": "naaccr",
+    }
     printed = set()
 
-    def _non_null_columns(rows: List[Dict[str, Any]]) -> List[str]:
+    def _non_null_columns(rows: list[dict[str, Any]]) -> list[str]:
         """Return columns that have at least one non-NULL value."""
         all_cols: list[str] = []
         seen: set[str] = set()
         for r in rows:
-            for k in r.keys():
+            for k in r:
                 if k not in seen:
                     seen.add(k)
                     all_cols.append(k)
         return [c for c in all_cols if any(r.get(c) is not None for r in rows)]
 
-    def _print_table(tbl: str, rows: List[Dict[str, Any]]) -> None:
+    def _print_table(tbl: str, rows: list[dict[str, Any]]) -> None:
         display_rows = rows[: args.limit] if args.limit else rows
         cols = _non_null_columns(display_rows)
         skipped = {c for c in {k for r in display_rows for k in r} if c not in cols}
-        title = f"SELECT * FROM dbo.{tbl}"
+        schema = table_schemas.get(tbl, "dbo")
+        title = f"SELECT * FROM {schema}.{tbl}"
         if skipped:
             title += f"  -- (omitting {len(skipped)} always-NULL columns)"
         _print_result_set(title, display_rows, columns=cols)
@@ -170,7 +150,7 @@ def main() -> None:
     # ---- Summary ----------------------------------------------------------
     summary = data.get("summary", {})
     if summary:
-        print("-- ETL Test Summary")
+        print("-- CCR Import Test Summary")
         for k, v in summary.items():
             print(f"--   {k}: {v}")
         print()
