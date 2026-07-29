@@ -26,7 +26,7 @@ erDiagram
   %%   - sdc_report.person_id IS NULL
   %%   - naaccr_value.sdc_report_id IS NULL
   %% Idempotency is occurrence-aware: for each (sdc_report_id, item_num, value_code,
-  %% value_num) tuple the bridge ROW_NUMBER()s the source rows and inserts only those
+  %% value_num, value_text, value_unit_source) tuple the bridge ROW_NUMBER()s the source rows and inserts only those
   %% beyond the COUNT(*) already in omop.measurement. So legitimate duplicate identical
   %% values are preserved, re-runs are no-ops, and partial loads self-repair.
   %% Because each import stamps its value rows with its own report id, a re-imported
@@ -46,8 +46,10 @@ erDiagram
     INTEGER person_id
     INTEGER sdc_report_id
     INTEGER item_num
+    TEXT obx_sub_id
     TEXT value_code
     REAL value_num
+    TEXT value_text
     TEXT value_unit_source
     TEXT observation_date
   }
@@ -78,8 +80,9 @@ erDiagram
   }
 
   %% Written by INSERT 2. measurement_source_value carries the NAACCR item number as
-  %% text; coded answers land in value_as_concept_id, numeric in value_as_number, and
-  %% the raw code is always kept in value_source_value.
+  %% text; coded answers land in value_as_concept_id and numeric answers in
+  %% value_as_number. value_source_value carries companion text when present,
+  %% otherwise it carries the raw code.
   OMOP_MEASUREMENT {
     INTEGER measurement_id PK
     INTEGER person_id

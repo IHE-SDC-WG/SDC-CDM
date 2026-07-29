@@ -139,7 +139,8 @@ namespace SdcCdmInSqlite
                 qaCmd.CommandText =
                     @"
                     SELECT nv.naaccr_value_id, nv.report_accession, nv.item_num,
-                           nv.value_code, nv.value_num, nv.value_unit_source,
+                           nv.obx_sub_id, nv.value_code, nv.value_num, nv.value_text,
+                           nv.value_unit_source,
                            n.note_id, m.measurement_id, m.value_as_number,
                            m.value_source_value, m.unit_source_value
                     FROM naaccr.naaccr_value nv
@@ -158,26 +159,28 @@ namespace SdcCdmInSqlite
 
                 using var qaReader = qaCmd.ExecuteReader();
                 Console.WriteLine(
-                    "RawID | Accession | Item | RawCode | RawNum | RawUnits | NoteId | MeasID | MeasNum | MeasVal | MeasUnits"
+                    "RawID | Accession | Item | OBX4 | RawCode | RawNum | RawText | RawUnits | NoteId | MeasID | MeasNum | MeasVal | MeasUnits"
                 );
                 Console.WriteLine(
-                    "------+-----------+------+---------+--------+----------+--------+--------+---------+---------+----------"
+                    "------+-----------+------+------+---------+--------+---------+----------+--------+--------+---------+---------+----------"
                 );
                 while (qaReader.Read())
                 {
                     var rawId = qaReader.GetInt64(0);
                     var accession = qaReader.IsDBNull(1) ? "" : qaReader.GetString(1);
                     var itemNum = qaReader.GetInt64(2);
-                    var rawCode = qaReader.IsDBNull(3) ? "" : qaReader.GetString(3);
-                    var rawNum = qaReader.IsDBNull(4) ? (double?)null : qaReader.GetDouble(4);
-                    var rawUnits = qaReader.IsDBNull(5) ? "" : qaReader.GetString(5);
-                    var noteId = qaReader.IsDBNull(6) ? (long?)null : qaReader.GetInt64(6);
-                    var measId = qaReader.IsDBNull(7) ? (long?)null : qaReader.GetInt64(7);
-                    var measNum = qaReader.IsDBNull(8) ? (double?)null : qaReader.GetDouble(8);
-                    var measVal = qaReader.IsDBNull(9) ? "" : qaReader.GetString(9);
-                    var measUnits = qaReader.IsDBNull(10) ? "" : qaReader.GetString(10);
+                    var obxSubId = qaReader.IsDBNull(3) ? "" : qaReader.GetString(3);
+                    var rawCode = qaReader.IsDBNull(4) ? "" : qaReader.GetString(4);
+                    var rawNum = qaReader.IsDBNull(5) ? (double?)null : qaReader.GetDouble(5);
+                    var rawText = qaReader.IsDBNull(6) ? "" : qaReader.GetString(6);
+                    var rawUnits = qaReader.IsDBNull(7) ? "" : qaReader.GetString(7);
+                    var noteId = qaReader.IsDBNull(8) ? (long?)null : qaReader.GetInt64(8);
+                    var measId = qaReader.IsDBNull(9) ? (long?)null : qaReader.GetInt64(9);
+                    var measNum = qaReader.IsDBNull(10) ? (double?)null : qaReader.GetDouble(10);
+                    var measVal = qaReader.IsDBNull(11) ? "" : qaReader.GetString(11);
+                    var measUnits = qaReader.IsDBNull(12) ? "" : qaReader.GetString(12);
                     Console.WriteLine(
-                        $"{rawId} | {accession} | {itemNum} | {rawCode} | {rawNum?.ToString() ?? ""} | {rawUnits} | {noteId?.ToString() ?? ""} | {measId?.ToString() ?? ""} | {measNum?.ToString() ?? ""} | {measVal} | {measUnits}"
+                        $"{rawId} | {accession} | {itemNum} | {obxSubId} | {rawCode} | {rawNum?.ToString() ?? ""} | {rawText} | {rawUnits} | {noteId?.ToString() ?? ""} | {measId?.ToString() ?? ""} | {measNum?.ToString() ?? ""} | {measVal} | {measUnits}"
                     );
                 }
             }

@@ -68,10 +68,10 @@ Fixtures: `sample_data/naaccr_v2/24-11-000312-2.txt.hl7`, `obx-Adrenal.hl7`
   (MRN, birth date, gender mapping).
 - [ ] **IMP-HL7-03** OBR creates one `sdc.sdc_report` with the OBR accession as
   `report_accession` and report LOINC `60568-3`.
-- [ ] **IMP-HL7-04** Each answered OBX yields one `naaccr.naaccr_value` row with the right
-  `item_num`, `value_code`/`value_num`, `report_accession`, and the `sdc_report_id` of the
-  originating report; count matches the OBX count in the fixture. A missing OBR-3 accession is
-  stored as NULL (not `''`).
+- [x] **IMP-HL7-04** Each logical answer yields one `naaccr.naaccr_value` row with the right
+  `item_num`, `obx_sub_id`, `value_code`/`value_num`/`value_text`, `report_accession`, and
+  the originating `sdc_report_id`. CWE plus numeric/text OBX components sharing OBX-4 are
+  combined. A missing OBR-3 accession is stored as NULL (not `''`).
 - [ ] **IMP-HL7-05** The eCP path does not create `sdc.sdc_form_answer`, `template_sdc`, or
   `template_instance` rows; those tables are reserved for SDC XML form intake.
 - [ ] **IMP-HL7-06** Re-importing the same message flags the report
@@ -164,9 +164,9 @@ Fixtures: `sample_data/sdc_xml/ADRENAL_GLAND.xml`, templates in `sample_data/sdc
 These verify that **every import source converges to the same canonical NAACCR + SDC
 shape**, so the OMOP bridge only has to be tested once.
 
-- [ ] **NAACCR-01** *(from HL7v2)* Importing `obx-Adrenal.hl7` yields the expected
-  `naaccr_value` rows — golden-file comparison of `(item_num, value_code, value_num,
-  value_unit_source)` ordered by item_num.
+- [x] **NAACCR-01** *(from HL7v2)* Importing `obx-Adrenal.hl7` yields the expected
+  `naaccr_value` rows, including grouped code/number and code/text answers, source units,
+  OBX-14 dates, and OBX-4 sub-IDs.
 - [ ] **NAACCR-02** *(from FHIR)* Importing the CPDS bundle for the same case yields
   equivalent `naaccr_value` rows to NAACCR-01 where items overlap.
 - [ ] **NAACCR-03** *(from SDC XML)* Importing `ADRENAL_GLAND.xml` yields answers joinable

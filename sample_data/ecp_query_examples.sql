@@ -21,12 +21,20 @@ SELECT
   nv.report_accession,
   nv.item_num,
   ni.name AS item_name,
+  nv.obx_sub_id,
   nv.value_code,
   nv.value_num,
+  nv.value_text,
   nv.value_unit_source
 FROM naaccr.naaccr_value nv
 LEFT JOIN naaccr.naaccr_item ni
   ON ni.item_num = nv.item_num
+ AND ni.dd_version_id = COALESCE(
+       nv.dd_version_id,
+       (SELECT MAX(dd_version_id)
+        FROM naaccr.data_dictionary_version
+        WHERE is_current = 1)
+     )
 WHERE nv.report_accession = 'your-accession-here'
 ORDER BY nv.naaccr_value_id;
 
@@ -49,8 +57,10 @@ SELECT
   m.measurement_id,
   n.note_source_value AS report_accession,
   ni.name AS item_name,
+  nv.obx_sub_id,
   nv.value_code,
   nv.value_num,
+  nv.value_text,
   nv.value_unit_source
 FROM omop.measurement m
 JOIN omop.note n
@@ -64,6 +74,12 @@ JOIN naaccr.naaccr_value nv
  AND CAST(nv.item_num AS TEXT) = m.measurement_source_value
 LEFT JOIN naaccr.naaccr_item ni
   ON ni.item_num = nv.item_num
+ AND ni.dd_version_id = COALESCE(
+       nv.dd_version_id,
+       (SELECT MAX(dd_version_id)
+        FROM naaccr.data_dictionary_version
+        WHERE is_current = 1)
+     )
 ORDER BY m.measurement_id;
 
 -- 5. Check OMOP remains free of direct SDC linkage columns.

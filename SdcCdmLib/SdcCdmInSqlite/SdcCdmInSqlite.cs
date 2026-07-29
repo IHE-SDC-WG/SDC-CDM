@@ -600,7 +600,6 @@ public class SdcCdmInSqlite : ISdcCdm
                 sdc_form_answer.response_float,
                 sdc_form_answer.response_datetime,
                 sdc_form_answer.reponse_string_nvarchar,
-                NULL AS obs_datetime,
                 sdc_form_answer.sdc_order,
                 sdc_form_answer.sdc_repeat_level,
                 sdc_form_answer.sdc_comments
@@ -635,10 +634,9 @@ public class SdcCdmInSqlite : ISdcCdm
                     reader.IsDBNull(16) ? null : reader.GetDouble(16),
                     reader.IsDBNull(17) ? null : reader.GetDateTimeOffset(17),
                     reader.IsDBNull(18) ? null : reader.GetString(18),
-                    reader.IsDBNull(19) ? null : reader.GetDateTimeOffset(19),
+                    reader.IsDBNull(19) ? null : reader.GetString(19),
                     reader.IsDBNull(20) ? null : reader.GetString(20),
-                    reader.IsDBNull(21) ? null : reader.GetString(21),
-                    reader.IsDBNull(22) ? null : reader.GetString(22)
+                    reader.IsDBNull(21) ? null : reader.GetString(21)
                 )
             );
         }
@@ -809,7 +807,9 @@ public class SdcCdmInSqlite : ISdcCdm
         double? value_num = null,
         string? value_unit_source = null,
         DateTime? observation_date = null,
-        long? sdc_report_id = null
+        long? sdc_report_id = null,
+        string? obx_sub_id = null,
+        string? value_text = null
     )
     {
         using var cmd = connection.CreateCommand();
@@ -817,10 +817,10 @@ public class SdcCdmInSqlite : ISdcCdm
             @"
             INSERT INTO naaccr.naaccr_value (
                 person_id, episode_key, sdc_report_id, report_accession, schema_id_number, item_num,
-                value_code, value_num, value_unit_source, observation_date
+                obx_sub_id, value_code, value_num, value_text, value_unit_source, observation_date
             ) VALUES (
                 @personId, @episodeKey, @sdcReportId, @reportAccession, @schemaIdNumber, @itemNum,
-                @valueCode, @valueNum, @valueUnitSource, @observationDate
+                @obxSubId, @valueCode, @valueNum, @valueText, @valueUnitSource, @observationDate
             );
             SELECT last_insert_rowid();
         ";
@@ -831,8 +831,10 @@ public class SdcCdmInSqlite : ISdcCdm
         cmd.Parameters.AddWithValue("@reportAccession", report_accession ?? (object)DBNull.Value);
         cmd.Parameters.AddWithValue("@schemaIdNumber", schema_id_number ?? (object)DBNull.Value);
         cmd.Parameters.AddWithValue("@itemNum", item_num);
+        cmd.Parameters.AddWithValue("@obxSubId", obx_sub_id ?? (object)DBNull.Value);
         cmd.Parameters.AddWithValue("@valueCode", value_code ?? (object)DBNull.Value);
         cmd.Parameters.AddWithValue("@valueNum", value_num ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue("@valueText", value_text ?? (object)DBNull.Value);
         cmd.Parameters.AddWithValue("@valueUnitSource", value_unit_source ?? (object)DBNull.Value);
         cmd.Parameters.AddWithValue(
             "@observationDate",

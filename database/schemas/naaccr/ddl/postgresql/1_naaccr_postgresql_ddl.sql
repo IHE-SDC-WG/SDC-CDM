@@ -187,8 +187,10 @@ CREATE TABLE IF NOT EXISTS naaccr.naaccr_value (
     report_accession text NULL,
     schema_id_number text NULL,
     item_num integer NOT NULL,
+    obx_sub_id text NULL,
     value_code text NULL,
     value_num double precision NULL,
+    value_text text NULL,
     value_unit_source text NULL,
     observation_date date NULL,
     -- Gap #1: the dictionary version this answer was coded against. Nullable so existing
@@ -198,3 +200,9 @@ CREATE TABLE IF NOT EXISTS naaccr.naaccr_value (
 
 CREATE INDEX IF NOT EXISTS idx_naaccr_value_sdc_report
     ON naaccr.naaccr_value (sdc_report_id);
+CREATE INDEX IF NOT EXISTS idx_naaccr_value_person_episode
+    ON naaccr.naaccr_value (person_id, episode_key);
+CREATE INDEX IF NOT EXISTS idx_naaccr_value_report_item
+    ON naaccr.naaccr_value (report_accession, item_num);
+CREATE INDEX IF NOT EXISTS idx_naaccr_value_item_code
+    ON naaccr.naaccr_value (item_num, value_code);

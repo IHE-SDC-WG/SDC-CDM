@@ -1,9 +1,80 @@
 using System.Diagnostics;
+using System.Globalization;
 
 namespace SdcCdm;
 
 public static class NAACCRVolVImporter
 {
+    private sealed class CapturedValue
+    {
+        public required int ItemNum { get; init; }
+        public string? ObxSubId { get; init; }
+        public string? ValueCode { get; set; }
+        public double? ValueNum { get; set; }
+        public string? ValueText { get; set; }
+        public string? ValueUnitSource { get; set; }
+        public DateTime? ObservationDate { get; set; }
+    }
+
+    private static string? NullIfBlank(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    }
+
+    private static string? NormalizeObxSubId(string? value)
+    {
+        var normalized = NullIfBlank(value)?.TrimStart('+');
+        if (normalized == null)
+        {
+            return null;
+        }
+
+        return NullIfBlank(normalized.Split('.')[0]);
+    }
+
+    private static DateTime? ParseHl7Date(string? value)
+    {
+        var trimmed = NullIfBlank(value);
+        if (trimmed == null)
+        {
+            return null;
+        }
+
+        var digitCount = 0;
+        while (digitCount < trimmed.Length && char.IsDigit(trimmed[digitCount]))
+        {
+            digitCount++;
+        }
+
+        var digits = trimmed[..digitCount];
+        foreach (
+            var (width, format) in new[]
+            {
+                (14, "yyyyMMddHHmmss"),
+                (12, "yyyyMMddHHmm"),
+                (10, "yyyyMMddHH"),
+                (8, "yyyyMMdd"),
+            }
+        )
+        {
+            if (
+                digits.Length >= width
+                && DateTime.TryParseExact(
+                    digits[..width],
+                    format,
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.None,
+                    out var parsed
+                )
+            )
+            {
+                return parsed;
+            }
+        }
+
+        return null;
+    }
+
     private static void ErrorCallback(string message)
     {
         Debug.Assert(message != null, "No message provided for error callback");
@@ -120,6 +191,10 @@ public static class NAACCRVolVImporter
             ? null
             : report_accession_raw;
         var report_loinc = report_type_code;
+        var report_observation_date =
+            ParseHl7Date(get_field(obr_segment_fields, 7))
+            ?? ParseHl7Date(get_field(obr_segment_fields, 22))
+            ?? DateTime.Now.Date;
 
         // Extract person data
         var person_source_value = get_field(pid_segment_fields, 3);
@@ -251,9 +326,9 @@ public static class NAACCRVolVImporter
         }
 
         // Parse additional metadata by looking for specific OBX segments
-        var tumor_site = "";
-        var procedure_type = "";
-        var specimen_laterality = "";
+        string? tumor_site = null;
+        string? procedure_type = null;
+        string? specimen_laterality = null;
 
         // Look for Tumor Site (usually contains "Tumor Site" in the observation ID)
         for (int i = 0; i < obx_segments.Count; i++)
@@ -267,7 +342,7 @@ public static class NAACCRVolVImporter
                 || obx_observation_id.Contains("2118.1000043")
             )
             {
-                tumor_site = get_field(obx_fields, 5);
+                tumor_site = NullIfBlank(get_field(obx_fields, 5));
                 Console.WriteLine($"Found Tumor Site at OBX[{i}]: {tumor_site}");
                 break;
             }
@@ -285,7 +360,7 @@ public static class NAACCRVolVImporter
                 || obx_observation_id.Contains("820603.1000043")
             )
             {
-                procedure_type = get_field(obx_fields, 5);
+                procedure_type = NullIfBlank(get_field(obx_fields, 5));
                 Console.WriteLine($"Found Procedure at OBX[{i}]: {procedure_type}");
                 break;
             }
@@ -304,7 +379,7 @@ public static class NAACCRVolVImporter
                 || obx_observation_id.Contains("52756.1000043")
             )
             {
-                specimen_laterality = get_field(obx_fields, 5);
+                specimen_laterality = NullIfBlank(get_field(obx_fields, 5));
                 Console.WriteLine($"Found Tumor Focality at OBX[{i}]: {specimen_laterality}");
                 break;
             }
@@ -327,14 +402,14 @@ public static class NAACCRVolVImporter
         }
 
         // Gather the report narrative (the CAP eCC comment item) for the synoptic-report NOTE.
-        var report_narrative = "";
+        string? report_narrative = null;
         foreach (var seg in obx_segments)
         {
             var f = seg.Split('|');
             var oid = get_field(f, 3);
             if (oid.Contains("2168.1000043") || oid.Contains("Comment"))
             {
-                report_narrative = get_field(f, 5);
+                report_narrative = NullIfBlank(get_field(f, 5));
                 break;
             }
         }
@@ -345,9 +420,9 @@ public static class NAACCRVolVImporter
             template_instance_guid: template_instance_guid,
             person_id: personId,
             report_text: report_narrative,
-            report_template_source: template_source,
-            report_template_id: template_id,
-            report_template_version_id: template_version,
+            report_template_source: NullIfBlank(template_source),
+            report_template_id: NullIfBlank(template_id),
+            report_template_version_id: NullIfBlank(template_version),
             tumor_site: tumor_site,
             procedure_type: procedure_type,
             specimen_laterality: specimen_laterality,
@@ -357,14 +432,21 @@ public static class NAACCRVolVImporter
             first_seen_report_id: first_seen_ecp_id
         );
 
-        // Process OBX segments for ECP data (starting from 4th OBX)
+        // Process OBX segments for ECP data (starting from 4th OBX). CAP messages use
+        // OBX-4 to connect a coded selection with its numeric or text companion, so
+        // stage one logical captured value per normalized item/sub-id group.
+        var capturedValues = new List<CapturedValue>();
+        var activeGroups = new Dictionary<(int ItemNum, string SubId), CapturedValue>();
         for (int i = 3; i < obx_segments.Count; i++)
         {
             var obx_fields = obx_segments[i].Split('|');
             var obx_value_type = get_field(obx_fields, 2);
             var obx_observation_id = get_field(obx_fields, 3);
+            var obx_sub_id = NormalizeObxSubId(get_field(obx_fields, 4));
             var obx_value = get_field(obx_fields, 5);
-            var obx_units = get_field(obx_fields, 6);
+            var obx_units = NullIfBlank(get_field(obx_fields, 6));
+            var observation_date =
+                ParseHl7Date(get_field(obx_fields, 14)) ?? report_observation_date;
 
             // Debug logging for units extraction
             if (!string.IsNullOrEmpty(obx_units))
@@ -384,44 +466,71 @@ public static class NAACCRVolVImporter
             var question_parts = obx_observation_id.Split('^');
             var question_identifier =
                 question_parts.Length > 0 ? question_parts[0] : obx_observation_id;
-            // Determine response type and value
-            string response_type = "text";
-            string response_value = obx_value;
             double? numeric_value = null;
             string? cwe_code = null;
+            string? text_value = null;
+            var componentType = "text";
 
             switch (obx_value_type)
             {
                 case "NM":
-                    response_type = "numeric";
-                    if (double.TryParse(obx_value, out double num_val))
+                    if (
+                        double.TryParse(
+                            obx_value,
+                            NumberStyles.Float,
+                            CultureInfo.InvariantCulture,
+                            out double num_val
+                        )
+                    )
                     {
+                        componentType = "numeric";
                         numeric_value = num_val;
+                    }
+                    else
+                    {
+                        text_value = NullIfBlank(obx_value);
+                        Console.WriteLine(
+                            $"WARNING: preserving non-numeric NM value '{obx_value}' as text for '{obx_observation_id}'"
+                        );
                     }
                     break;
                 case "CWE":
-                    response_type = "list_selection";
                     // Parse CWE: code^text^codingSystem^...
                     if (!string.IsNullOrEmpty(obx_value))
                     {
                         var parts = obx_value.Split('^');
-                        cwe_code = parts.Length > 0 ? parts[0] : null;
+                        cwe_code = parts.Length > 0 ? NullIfBlank(parts[0]) : null;
+                        if (cwe_code == null)
+                        {
+                            text_value = NullIfBlank(obx_value);
+                        }
+                        else
+                        {
+                            componentType = "coded";
+                        }
                     }
                     break;
                 case "ST":
                     // Some feeds encode numeric values in ST; treat as numeric when parsable
-                    if (double.TryParse(obx_value, out double num_val_st))
+                    if (
+                        double.TryParse(
+                            obx_value,
+                            NumberStyles.Float,
+                            CultureInfo.InvariantCulture,
+                            out double num_val_st
+                        )
+                    )
                     {
-                        response_type = "numeric";
+                        componentType = "numeric";
                         numeric_value = num_val_st;
                     }
                     else
                     {
-                        response_type = "text";
+                        text_value = NullIfBlank(obx_value);
                     }
                     break;
                 default:
-                    response_type = "text";
+                    text_value = NullIfBlank(obx_value);
                     break;
             }
 
@@ -434,23 +543,87 @@ public static class NAACCRVolVImporter
                 continue;
             }
 
+            CapturedValue capturedValue;
+            if (obx_sub_id == null)
+            {
+                capturedValue = new CapturedValue
+                {
+                    ItemNum = itemNum,
+                    ObservationDate = observation_date,
+                };
+                capturedValues.Add(capturedValue);
+            }
+            else
+            {
+                var groupKey = (itemNum, obx_sub_id);
+                activeGroups.TryGetValue(groupKey, out var existingValue);
+                var repeatsComponent =
+                    existingValue != null
+                    && (
+                        (componentType == "coded" && existingValue.ValueCode != null)
+                        || (componentType == "numeric" && existingValue.ValueNum != null)
+                        || (componentType == "text" && existingValue.ValueText != null)
+                    );
+                if (existingValue == null || repeatsComponent)
+                {
+                    if (repeatsComponent)
+                    {
+                        Console.WriteLine(
+                            $"WARNING: repeated {componentType} component for item {itemNum}, OBX-4 '{obx_sub_id}'; starting another captured-value occurrence"
+                        );
+                    }
+                    capturedValue = new CapturedValue
+                    {
+                        ItemNum = itemNum,
+                        ObxSubId = obx_sub_id,
+                        ObservationDate = observation_date,
+                    };
+                    activeGroups[groupKey] = capturedValue;
+                    capturedValues.Add(capturedValue);
+                }
+                else
+                {
+                    capturedValue = existingValue;
+                }
+            }
+
+            capturedValue.ObservationDate ??= observation_date;
+            capturedValue.ValueUnitSource ??= obx_units;
+            if (componentType == "coded")
+            {
+                capturedValue.ValueCode = cwe_code;
+            }
+            else if (componentType == "numeric")
+            {
+                capturedValue.ValueNum = numeric_value;
+            }
+            else
+            {
+                capturedValue.ValueText = text_value;
+            }
+        }
+
+        foreach (var capturedValue in capturedValues)
+        {
             _ = sdcCdm.WriteNaaccrValue(
                 person_id: personId ?? 0,
                 episode_key: string.IsNullOrWhiteSpace(report_accession)
                     ? template_instance_guid
                     : report_accession,
                 report_accession: report_accession,
-                item_num: itemNum,
-                value_code: response_type == "numeric" ? null : (cwe_code ?? response_value),
-                value_num: numeric_value,
-                value_unit_source: obx_units,
-                observation_date: DateTime.Now.Date,
+                item_num: capturedValue.ItemNum,
+                obx_sub_id: capturedValue.ObxSubId,
+                value_code: capturedValue.ValueCode,
+                value_num: capturedValue.ValueNum,
+                value_text: capturedValue.ValueText,
+                value_unit_source: capturedValue.ValueUnitSource,
+                observation_date: capturedValue.ObservationDate,
                 sdc_report_id: sdcReportId
             );
         }
 
         Console.WriteLine(
-            $"Successfully imported NAACCR V2 message with {obx_segments.Count - 3} ECP data points"
+            $"Successfully imported NAACCR V2 message with {capturedValues.Count} logical ECP values"
         );
     }
 }

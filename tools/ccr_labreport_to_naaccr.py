@@ -82,8 +82,10 @@ _NAACCR_VALUE_COLUMNS = (
     "report_accession",
     "schema_id_number",
     "item_num",
+    "obx_sub_id",
     "value_code",
     "value_num",
+    "value_text",
     "value_unit_source",
     "observation_date",
     "dd_version_id",
@@ -358,6 +360,13 @@ def _numeric_value(obx: ParsedOBX) -> float | None:
     return parsed if math.isfinite(parsed) else None
 
 
+def _normalized_obx_sub_id(value: str | None) -> str | None:
+    if value is None:
+        return None
+    normalized = value.strip().lstrip("+").split(".", 1)[0].strip()
+    return normalized or None
+
+
 def _item_number(obx: ParsedOBX) -> int | None:
     item_text = obx.identifier_code.split(".", 1)[0]
     if not re.fullmatch(r"\d+", item_text):
@@ -424,9 +433,10 @@ def build_naaccr_value_resource(
         return None
 
     numeric_value = _numeric_value(obx)
-    value_code = None
-    if numeric_value is None:
-        value_code = obx.value_code if obx.value_type == "CWE" else obx.value
+    value_code = obx.value_code if obx.value_type == "CWE" else None
+    value_text = None
+    if numeric_value is None and value_code is None:
+        value_text = obx.value or None
 
     return {
         "person_id": row.get("PatientID"),
@@ -435,8 +445,10 @@ def build_naaccr_value_resource(
         "report_accession": _required_text(row, "record_id"),
         "schema_id_number": None,
         "item_num": item_num,
+        "obx_sub_id": _normalized_obx_sub_id(obx.observation_sub_id),
         "value_code": value_code or None,
         "value_num": numeric_value,
+        "value_text": value_text,
         "value_unit_source": obx.units,
         "observation_date": _observation_date(row, obx),
         "dd_version_id": None,
@@ -448,6 +460,7 @@ def build_import_payload(row: dict[str, Any]) -> dict[str, Any]:
     obxs = parse_obx_segments(str(row.get("OBXCAPECPSegment") or ""))
     report = build_sdc_report_resource(row, obxs)
     values: list[dict[str, Any]] = []
+    active_groups: dict[tuple[int, int, str], dict[str, Any]] = {}
     metadata_skipped = 0
     narrative_skipped = 0
     invalid_item_skipped = 0
@@ -469,7 +482,41 @@ def build_import_payload(row: dict[str, Any]) -> dict[str, Any]:
                 obx.identifier_code,
             )
             continue
-        values.append(value)
+        sub_id = value["obx_sub_id"]
+        if sub_id is None:
+            values.append(value)
+            continue
+
+        group_key = (obx.group_index, value["item_num"], sub_id)
+        component_key = (
+            "value_code"
+            if value["value_code"] is not None
+            else "value_num"
+            if value["value_num"] is not None
+            else "value_text"
+        )
+        current = active_groups.get(group_key)
+        if current is None or current[component_key] is not None:
+            if current is not None:
+                logger.warning(
+                    "record_id=%s: repeated %s component for item %s, OBX-4 %r; "
+                    "starting another captured-value occurrence",
+                    row.get("record_id"),
+                    component_key,
+                    value["item_num"],
+                    sub_id,
+                )
+            active_groups[group_key] = value
+            values.append(value)
+            continue
+
+        current[component_key] = value[component_key]
+        current["value_unit_source"] = (
+            current["value_unit_source"] or value["value_unit_source"]
+        )
+        current["observation_date"] = (
+            current["observation_date"] or value["observation_date"]
+        )
 
     return {
         "report": report,

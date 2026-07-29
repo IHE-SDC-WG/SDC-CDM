@@ -29,8 +29,9 @@ Authoritative for the NAACCR data dictionary **and** the raw captured answers.
   value validation and future offline stage derivation.
 - **Captured values — staging shape**:
   `naaccr_value` with `person_id, episode_key, sdc_report_id, report_accession, schema_id_number,
-  item_num, value_code, value_num, value_unit_source, observation_date, dd_version_id`. One row per
-  answered item. `dd_version_id` is a nullable stamp of the dictionary version the answer was coded
+  item_num, obx_sub_id, value_code, value_num, value_text, value_unit_source, observation_date,
+  dd_version_id`. One row per logical answered item. CWE and numeric/text OBX components sharing
+  an OBX-4 sub-ID are combined in that row. `dd_version_id` is a nullable stamp of the dictionary version the answer was coded
   against. `sdc_report_id` is a logical (non-FK) pointer to the originating `sdc.sdc_report`;
   `report_accession` is retained as the denormalized business key (OBR accession).
 - **Concept maps**: `naaccr_concept_map` (item_num → OMOP concept), `naaccr_value_concept_map`
@@ -83,6 +84,11 @@ JOIN sdc.sdc_report sr ON sr.report_accession = n.note_source_value
                       AND sr.is_duplicate_accession = 0
 JOIN naaccr.naaccr_item ni
   ON CAST(ni.item_num AS TEXT) = m.measurement_source_value
+ AND ni.dd_version_id = (
+       SELECT MAX(dd_version_id)
+       FROM naaccr.data_dictionary_version
+       WHERE is_current = 1
+     )
 WHERE m.meas_event_field_concept_id = 1147289;
 ```
 

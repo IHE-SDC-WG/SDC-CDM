@@ -17,6 +17,11 @@ PRAGMA foreign_keys = ON;
   idempotent, and repairs partial loads.
 */
 
+WITH report_dates AS (
+    SELECT sdc_report_id, MIN(observation_date) AS observation_date
+    FROM naaccr.naaccr_value
+    GROUP BY sdc_report_id
+)
 INSERT INTO omop.note (
     person_id, note_date, note_datetime, note_type_concept_id, note_class_concept_id,
     note_title, note_text, encoding_concept_id, language_concept_id,
@@ -24,12 +29,12 @@ INSERT INTO omop.note (
 )
 SELECT
     sr.person_id,
-    COALESCE(MIN(nv.observation_date), DATE('now')),
-    COALESCE(MIN(nv.observation_date), DATE('now')),
+    COALESCE(rd.observation_date, DATE('now')),
+    COALESCE(rd.observation_date, DATE('now')),
     32817,
     0,
     'Synoptic Report',
-    COALESCE(sr.report_text, 'Synoptic report'),
+    COALESCE(NULLIF(TRIM(sr.report_text), ''), 'Synoptic report'),
     0,
     0,
     sr.provider_id,
@@ -38,8 +43,8 @@ SELECT
     NULL,
     NULL
 FROM sdc.sdc_report sr
-LEFT JOIN naaccr.naaccr_value nv
-    ON nv.sdc_report_id = sr.sdc_report_id
+LEFT JOIN report_dates rd
+    ON rd.sdc_report_id = sr.sdc_report_id
 WHERE NULLIF(sr.report_accession, '') IS NOT NULL
   AND sr.is_duplicate_accession = 0
   AND sr.person_id IS NOT NULL
@@ -48,10 +53,7 @@ WHERE NULLIF(sr.report_accession, '') IS NOT NULL
       FROM omop.note n
       WHERE n.person_id = sr.person_id
         AND n.note_source_value = sr.report_accession
-  )
-GROUP BY
-    sr.sdc_report_id, sr.person_id, sr.report_text, sr.provider_id,
-    sr.visit_occurrence_id, sr.report_accession;
+  );
 
 INSERT INTO omop.measurement (
     person_id, measurement_concept_id, measurement_date, measurement_datetime,
@@ -79,14 +81,16 @@ SELECT
     ncm.concept_id,
     nv.value_unit_source,
     NULL,
-    nv.value_code,
+    COALESCE(NULLIF(nv.value_text, ''), nv.value_code),
     n.note_id,
     1147289
 FROM (
     SELECT
         nv.*,
         ROW_NUMBER() OVER (
-            PARTITION BY nv.sdc_report_id, nv.item_num, nv.value_code, nv.value_num
+            PARTITION BY
+                nv.sdc_report_id, nv.item_num, nv.value_code, nv.value_num,
+                nv.value_text, nv.value_unit_source
             ORDER BY nv.naaccr_value_id
         ) AS occurrence_n
     FROM naaccr.naaccr_value nv
@@ -112,5 +116,6 @@ WHERE nv.occurrence_n > (
       AND m.measurement_source_value = CAST(nv.item_num AS TEXT)
       AND m.value_as_concept_id IS nvcm.concept_id
       AND m.value_as_number IS nv.value_num
-      AND m.value_source_value IS nv.value_code
+      AND m.value_source_value IS COALESCE(NULLIF(nv.value_text, ''), nv.value_code)
+      AND m.unit_source_value IS nv.value_unit_source
 );

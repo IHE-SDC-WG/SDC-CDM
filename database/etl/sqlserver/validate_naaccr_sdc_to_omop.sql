@@ -75,13 +75,18 @@ SELECT 'Measurements: bridgeable raw values vs actual' AS section,
        ) AS actual_measurements;
 
 -- Attribute count differences by the value identity copied by the bridge.
-;WITH raw_value_groups AS (
+;WITH bridge_values AS (
     SELECT n.note_id,
            nv.item_num,
            nv.value_code,
            nv.value_num,
-           nvcm.concept_id AS value_as_concept_id,
-           COUNT(*) AS raw_value_count
+           COALESCE(NULLIF(nv.value_text, ''), nv.value_code) AS value_source_value,
+           HASHBYTES(
+             'SHA2_256',
+             COALESCE(NULLIF(nv.value_text, ''), nv.value_code, NCHAR(0))
+           ) AS value_source_hash,
+           nv.value_unit_source,
+           nvcm.concept_id AS value_as_concept_id
     FROM naaccr.naaccr_value nv
     JOIN sdc.sdc_report sr
       ON sr.sdc_report_id = nv.sdc_report_id
@@ -94,12 +99,27 @@ SELECT 'Measurements: bridgeable raw values vs actual' AS section,
     LEFT JOIN naaccr.naaccr_value_concept_map nvcm
       ON nvcm.item_num = nv.item_num
      AND nvcm.code = COALESCE(nv.value_code, '')
-    GROUP BY n.note_id, nv.item_num, nv.value_code, nv.value_num, nvcm.concept_id
+), raw_value_groups AS (
+    SELECT note_id,
+           item_num,
+           value_code,
+           value_num,
+           MIN(CONVERT(nvarchar(4000), value_source_value)) AS value_source_value,
+           value_source_hash,
+           value_unit_source,
+           value_as_concept_id,
+           COUNT(*) AS raw_value_count
+    FROM bridge_values
+    GROUP BY
+        note_id, item_num, value_code, value_num,
+        value_source_hash, value_unit_source, value_as_concept_id
 ), value_group_counts AS (
     SELECT rvg.note_id,
            rvg.item_num,
            rvg.value_code,
            rvg.value_num,
+           rvg.value_source_value,
+           rvg.value_unit_source,
            rvg.value_as_concept_id,
            rvg.raw_value_count,
            (
@@ -110,10 +130,14 @@ SELECT 'Measurements: bridgeable raw values vs actual' AS section,
                AND m.measurement_source_value = CAST(rvg.item_num AS varchar(50))
                AND (m.value_as_concept_id = rvg.value_as_concept_id
                     OR (m.value_as_concept_id IS NULL AND rvg.value_as_concept_id IS NULL))
-               AND (m.value_source_value = rvg.value_code
-                    OR (m.value_source_value IS NULL AND rvg.value_code IS NULL))
+               AND HASHBYTES(
+                     'SHA2_256',
+                     COALESCE(m.value_source_value, NCHAR(0))
+                   ) = rvg.value_source_hash
                AND (m.value_as_number = rvg.value_num
                     OR (m.value_as_number IS NULL AND rvg.value_num IS NULL))
+               AND (m.unit_source_value = rvg.value_unit_source
+                    OR (m.unit_source_value IS NULL AND rvg.value_unit_source IS NULL))
            ) AS measurement_count
     FROM raw_value_groups rvg
 )
@@ -126,13 +150,15 @@ SELECT CASE
        item_num,
        value_code,
        value_num,
+       value_source_value,
+       value_unit_source,
        value_as_concept_id,
        raw_value_count,
        measurement_count
 FROM value_group_counts
 WHERE measurement_count <> raw_value_count
 ORDER BY CASE WHEN measurement_count > raw_value_count THEN 0 ELSE 1 END,
-         note_id, item_num, value_code, value_num;
+         note_id, item_num, value_code, value_num, value_source_value, value_unit_source;
 
 --------------------------------------------------------------
 -- 4) Raw rows that cannot bridge

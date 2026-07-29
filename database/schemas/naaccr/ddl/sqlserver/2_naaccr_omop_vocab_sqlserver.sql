@@ -25,6 +25,14 @@
 -- Note: In this environment, concept_id is an INT. We must assign IDs below INT max.
 ------------------------------------------------------------
 
+-- Upgrade mapping tables created by an earlier revision before the main batch is compiled.
+IF OBJECT_ID('naaccr.NAACCR_CONCEPT_MAP', 'U') IS NOT NULL
+   AND COL_LENGTH('naaccr.NAACCR_CONCEPT_MAP', 'domain_id') IS NULL
+BEGIN
+  ALTER TABLE naaccr.NAACCR_CONCEPT_MAP ADD domain_id NVARCHAR(20) NULL;
+END;
+GO
+
 -- Vocabulary entry for NAACCR 2026
 IF NOT EXISTS (SELECT 1
 FROM omop.vocabulary
@@ -234,9 +242,16 @@ BEGIN
     concept_id BIGINT NOT NULL,
     concept_code NVARCHAR(50) NOT NULL,
     concept_name NVARCHAR(255) NOT NULL,
+    domain_id NVARCHAR(20) NULL,
     created_utc DATETIME2(3) NOT NULL DEFAULT SYSUTCDATETIME()
   );
 END;
+
+UPDATE m
+SET domain_id = COALESCE(c.domain_id, N'Observation')
+FROM naaccr.NAACCR_CONCEPT_MAP m
+LEFT JOIN omop.concept c ON c.concept_id = m.concept_id
+WHERE m.domain_id IS NULL;
 
 IF OBJECT_ID('naaccr.NAACCR_VALUE_CONCEPT_MAP', 'U') IS NULL
 BEGIN
@@ -281,8 +296,8 @@ WHERE c.concept_id BETWEEN @customLow AND @customHigh;
     FROM missing_items
   )
 INSERT INTO naaccr.NAACCR_CONCEPT_MAP
-  (item_num, concept_id, concept_code, concept_name)
-SELECT item_num, concept_id, concept_code, name
+  (item_num, concept_id, concept_code, concept_name, domain_id)
+SELECT item_num, concept_id, concept_code, name, N'Observation'
 FROM numbered;
 
 -- Upsert item concepts into OMOP concept table
@@ -293,7 +308,7 @@ INSERT INTO omop.concept
 )
 SELECT m.concept_id,
   LEFT(REPLACE(REPLACE(m.concept_name, CHAR(13), N' '), CHAR(10), N' '), 255) AS concept_name,
-  'Observation' AS domain_id,
+  COALESCE(m.domain_id, N'Observation') AS domain_id,
   'NAACCR2026'  AS vocabulary_id,
   'NAACCR Item' AS concept_class_id,
   NULL          AS standard_concept,

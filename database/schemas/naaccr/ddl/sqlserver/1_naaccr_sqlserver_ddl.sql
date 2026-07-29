@@ -12,8 +12,10 @@ BEGIN
     report_accession NVARCHAR(100) NULL,
     schema_id_number NVARCHAR(255) NULL,
     item_num INT NOT NULL,
+    obx_sub_id NVARCHAR(255) NULL,
     value_code NVARCHAR(255) NULL,
     value_num FLOAT NULL,
+    value_text NVARCHAR(MAX) NULL,
     value_unit_source NVARCHAR(50) NULL,
     observation_date DATE NULL,
     -- Gap #1: the dictionary version this answer was coded against. Nullable so existing

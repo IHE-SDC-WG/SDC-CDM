@@ -17,10 +17,12 @@ def test_converter_merges_person_mappings_and_normalizes_storage_language() -> N
     by_code = {mapping["concept_code"]: mapping for mapping in items}
 
     assert spec["name"] == "NAACCR to OMOP mapping specification"
-    assert not any(
-        path.startswith("archive/old-omop-extension-model/")
-        for path in spec["references"]["local_diagrams"]
-    )
+    local_diagrams = spec["references"]["local_diagrams"]
+    assert local_diagrams == [
+        "diagrams/original-omop/by-domain/clinical-events.mmd",
+        "diagrams/original-omop/by-domain/eras-episodes-cohorts-metadata.mmd",
+    ]
+    assert all((REPO_ROOT / path).is_file() for path in local_diagrams)
     for inventory_row in spec["extension_table_inventory"]:
         assert "extension table" not in (
             inventory_row.get("notes") or ""

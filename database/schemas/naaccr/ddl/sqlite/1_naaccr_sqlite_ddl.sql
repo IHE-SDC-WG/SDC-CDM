@@ -189,8 +189,10 @@ CREATE TABLE IF NOT EXISTS naaccr.naaccr_value (
     report_accession TEXT NULL,
     schema_id_number TEXT NULL,
     item_num INTEGER NOT NULL,
+    obx_sub_id TEXT NULL,
     value_code TEXT NULL,
     value_num REAL NULL,
+    value_text TEXT NULL,
     value_unit_source TEXT NULL,
     observation_date TEXT NULL,
     -- Gap #1: the dictionary version this answer was coded against. Nullable so existing

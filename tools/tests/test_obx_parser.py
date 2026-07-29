@@ -65,16 +65,26 @@ SAMPLE_OBX_JSON = json.dumps(
         {
             "0": "OBX",
             "1": "5",
-            "2": "ST",
+            "2": "CWE",
             "3": "30148.100004300^Tumor Size^CAPECC",
             "4": "31357",
-            "5": "45",
+            "5": "31357.100004300^Greatest dimension in Millimeters^CAPECC",
             "11": "C",
             "14": "20250918102100",
         },
         {
             "0": "OBX",
             "1": "6",
+            "2": "ST",
+            "3": "30148.100004300^Tumor Size^CAPECC",
+            "4": "+31357.100004300",
+            "5": "45",
+            "11": "C",
+            "14": "20250918102100",
+        },
+        {
+            "0": "OBX",
+            "1": "7",
             "2": "NM",
             "3": "43798.100004300^Ki-67 Percentage of Positive Nuclei^CAPECC",
             "5": "10",
@@ -84,7 +94,7 @@ SAMPLE_OBX_JSON = json.dumps(
         },
         {
             "0": "OBX",
-            "1": "7",
+            "1": "8",
             "2": "ST",
             "3": "351700.100004300^Margin Comment^CAPECC",
             "5": "All other margins >3 mm",
@@ -93,7 +103,7 @@ SAMPLE_OBX_JSON = json.dumps(
         },
         {
             "0": "OBX",
-            "1": "8",
+            "1": "9",
             "2": "ST",
             "3": "NOT-AN-ITEM^Unsupported identifier^LOCAL",
             "5": "answer",
@@ -101,7 +111,7 @@ SAMPLE_OBX_JSON = json.dumps(
         },
         {
             "0": "OBX",
-            "1": "9",
+            "1": "10",
             "2": "ST",
             "3": "2168.1000043^Comment^CAPECC",
             "5": "x" * 201,
@@ -196,13 +206,13 @@ def _value_for(payload: dict[str, Any], item_num: int) -> dict[str, Any]:
 
 def test_parser_and_naaccr_staging_transform() -> None:
     obxs = parse_obx_segments(SAMPLE_OBX_JSON)
-    assert len(obxs) == 9
+    assert len(obxs) == 10
     assert all(obx.is_metadata for obx in obxs[:3])
     assert obxs[0].performing_org == "ST JUDE MEDICAL CENTER"
     assert obxs[4].observation_sub_id == "31357"
-    assert obxs[5].units == "^^UCUM"
-    assert obxs[5].observation_datetime is not None
-    assert obxs[5].observation_datetime.date().isoformat() == "2025-09-18"
+    assert obxs[6].units == "^^UCUM"
+    assert obxs[6].observation_datetime is not None
+    assert obxs[6].observation_datetime.date().isoformat() == "2025-09-18"
 
     payload = build_import_payload(sample_row())
     report = payload["report"]
@@ -232,14 +242,16 @@ def test_parser_and_naaccr_staging_transform() -> None:
 
     tumor_size = _value_for(payload, 30148)
     assert tumor_size["value_num"] == 45.0
-    assert tumor_size["value_code"] is None
+    assert tumor_size["value_code"] == "31357.100004300"
+    assert tumor_size["obx_sub_id"] == "31357"
 
     ki67 = _value_for(payload, 43798)
     assert ki67["value_num"] == 10.0
     assert ki67["value_unit_source"] == "^^UCUM"
 
     margin_comment = _value_for(payload, 351700)
-    assert margin_comment["value_code"] == "All other margins >3 mm"
+    assert margin_comment["value_code"] is None
+    assert margin_comment["value_text"] == "All other margins >3 mm"
 
 
 def test_nested_parser_tracks_groups() -> None:

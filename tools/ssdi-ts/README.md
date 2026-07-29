@@ -52,7 +52,11 @@ SEER_API_KEY=your_key_here npm run dev
 
 Outputs are written under the given `SSDI_OUT_DIR` relative to the repository root.
 ```bash
-# Load the 3NF CSVs into SQL Server (upserts the version row, then loads every table)
+# Load the 3NF CSVs into SQL Server
 MSSQL_SERVER=… MSSQL_DATABASE=… MSSQL_USER=… MSSQL_PASSWORD=… CSV_DIR=out-egs \
   npx tsx src/load-3nf-to-sqlserver.ts
 ```
+
+The loader replaces all dictionary rows for the resolved algorithm/version inside one
+serializable transaction. Repeating a load produces the same rows, and a failed load rolls
+back without leaving a partially refreshed version.

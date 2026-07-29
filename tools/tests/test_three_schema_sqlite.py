@@ -11,6 +11,100 @@ def _exec_script(conn: sqlite3.Connection, relative_path: str) -> None:
     conn.executescript((ROOT / relative_path).read_text())
 
 
+def test_cross_dialect_schema_and_docker_bootstrap() -> None:
+    postgres_sdc = (
+        ROOT / "database/schemas/sdc/ddl/postgresql/1_sdc_postgresql_ddl.sql"
+    ).read_text()
+    expected_sdc_tables = {
+        "template_sdc",
+        "template_item",
+        "template_instance",
+        "sdc_report",
+        "sdc_form_answer",
+        "template_term_map",
+        "template_map_content",
+        "sdc_specimen",
+        "observation_specimens",
+    }
+    assert all(
+        f"CREATE TABLE IF NOT EXISTS sdc.{table}" in postgres_sdc
+        for table in expected_sdc_tables
+    )
+    assert "idx_sdc_report_accession" in postgres_sdc
+    assert "idx_sdc_form_answer_instance_question" in postgres_sdc
+
+    naaccr_ddls = [
+        ROOT / "database/schemas/naaccr/ddl/sqlite/1_naaccr_sqlite_ddl.sql",
+        ROOT / "database/schemas/naaccr/ddl/postgresql/1_naaccr_postgresql_ddl.sql",
+        ROOT / "database/schemas/naaccr/ddl/sqlserver/1_naaccr_sqlserver_ddl.sql",
+    ]
+    for ddl_path in naaccr_ddls:
+        ddl = ddl_path.read_text().lower()
+        assert "obx_sub_id" in ddl_path.read_text().lower()
+        assert "value_text" in ddl
+
+    postgres_naaccr = naaccr_ddls[1].read_text()
+    for index_name in (
+        "idx_naaccr_value_person_episode",
+        "idx_naaccr_value_report_item",
+        "idx_naaccr_value_item_code",
+        "idx_naaccr_value_sdc_report",
+    ):
+        assert index_name in postgres_naaccr
+
+    sqlserver_vocab = (
+        ROOT
+        / "database/schemas/naaccr/ddl/sqlserver/2_naaccr_omop_vocab_sqlserver.sql"
+    ).read_text()
+    assert "COL_LENGTH('naaccr.NAACCR_CONCEPT_MAP', 'domain_id')" in sqlserver_vocab
+    assert "domain_id NVARCHAR(20)" in sqlserver_vocab
+
+    sqlserver_bridge = (
+        ROOT / "database/etl/sqlserver/1_naaccr_sdc_to_omop.sql"
+    ).read_text()
+    assert ";WITH report_dates AS" in sqlserver_bridge
+    assert "GROUP BY\n    sr.sdc_report_id" not in sqlserver_bridge
+    assert "HASHBYTES('SHA2_256'" in sqlserver_bridge
+
+    dockerfile = (ROOT / "database/Dockerfile").read_text().splitlines()
+    copy_lines = [line for line in dockerfile if line.startswith("COPY ")]
+    assert [line.split()[2] for line in copy_lines] == [
+        "/docker-entrypoint-initdb.d/10_omop_ddl.sql",
+        "/docker-entrypoint-initdb.d/20_omop_primary_keys.sql",
+        "/docker-entrypoint-initdb.d/30_omop_constraints.sql",
+        "/docker-entrypoint-initdb.d/40_omop_indices.sql",
+        "/docker-entrypoint-initdb.d/50_naaccr_ddl.sql",
+        "/docker-entrypoint-initdb.d/60_sdc_ddl.sql",
+    ]
+    assert all((ROOT / "database" / line.split()[1]).is_file() for line in copy_lines)
+
+    ssdi_loader = (
+        ROOT / "tools/ssdi-ts/src/load-3nf-to-sqlserver.ts"
+    ).read_text()
+    assert "transaction.begin(sql.ISOLATION_LEVEL.SERIALIZABLE)" in ssdi_loader
+    assert "await transaction.commit()" in ssdi_loader
+    assert "await transaction.rollback()" in ssdi_loader
+    delete_order = [
+        "naaccr.SCHEMA_INVOLVED_TABLE",
+        "naaccr.SCHEMA_ITEM_CODE",
+        "naaccr.SCHEMA_ITEM_REQUIREMENT",
+        "naaccr.SCHEMA_ITEM",
+        "naaccr.SCHEMA_SELECTION_RULE",
+        "naaccr.STAGING_TABLE_ROW",
+        "naaccr.STAGING_TABLE_COLUMN",
+        "naaccr.STAGING_TABLE",
+        "naaccr.NAACCR_ITEM",
+        "naaccr.STAGING_SCHEMA",
+    ]
+    delete_block = ssdi_loader[
+        ssdi_loader.index("const VERSIONED_DELETE_ORDER"):
+        ssdi_loader.index("async function clearVersionedRows")
+    ]
+    assert [delete_block.index(f"'{table}'") for table in delete_order] == sorted(
+        delete_block.index(f"'{table}'") for table in delete_order
+    )
+
+
 def test_sqlite_three_schema_layout_and_bridge(tmp_path: Path) -> None:
     conn = sqlite3.connect(tmp_path / "control.db")
     conn.executescript(
@@ -44,7 +138,7 @@ def test_sqlite_three_schema_layout_and_bridge(tmp_path: Path) -> None:
         )
     }
 
-    assert "sdc_report_id" in naaccr_value_columns
+    assert {"sdc_report_id", "obx_sub_id", "value_text"} <= naaccr_value_columns
     # SQLite requires unqualified REFERENCES targets. For a table in an attached
     # database, these names resolve within that same attached database.
     assert {"registry", "schema_item"} <= requirement_fk_targets
@@ -280,7 +374,9 @@ def test_naaccr_dictionary_versioning_and_features(tmp_path: Path) -> None:
         -- a captured value stamped with the dictionary version it was coded against.
         INSERT INTO naaccr.naaccr_value
             (person_id, episode_key, report_accession, schema_id_number, item_num, value_code, observation_date, dd_version_id)
-        VALUES (1, 'episode-1', 'ACC-1', '00460', 3827, '000', '2026-06-22', {dd});
+        VALUES
+            (1, 'episode-1', 'ACC-1', '00460', 3827, '000', '2026-06-22', {dd}),
+            (1, 'episode-1', 'ACC-1', '00460', 3827, '999', '2026-06-22', {dd});
         """
     )
 
@@ -300,6 +396,29 @@ def test_naaccr_dictionary_versioning_and_features(tmp_path: Path) -> None:
     assert conn.execute(
         "SELECT dd_version_id FROM naaccr.naaccr_value WHERE report_accession = 'ACC-1'"
     ).fetchone()[0] == dd
+
+    cur.execute(
+        "INSERT INTO naaccr.data_dictionary_version (algorithm, version) "
+        "VALUES ('eod_public', '3.4')"
+    )
+    dd2 = cur.lastrowid
+    cur.execute(
+        "INSERT INTO naaccr.naaccr_item "
+        "(dd_version_id, item_num, name, xml_id) VALUES (?, 3827, 'Adrenal Gland SSDI vNext', 'ssdiAdrenal')",
+        (dd2,),
+    )
+    version_scoped_rows = conn.execute(
+        "SELECT COUNT(*) FROM naaccr.naaccr_value nv "
+        "JOIN naaccr.naaccr_item ni "
+        "  ON ni.item_num = nv.item_num "
+        " AND ni.dd_version_id = COALESCE("
+        "       nv.dd_version_id, "
+        "       (SELECT MAX(dd_version_id) "
+        "        FROM naaccr.data_dictionary_version WHERE is_current = 1)"
+        "     ) "
+        "WHERE nv.value_code = '000'"
+    ).fetchone()[0]
+    assert version_scoped_rows == 1
 
     # Code validation: a captured value_code validates against schema_item_code.
     def code_is_allowed(code: str) -> bool:
@@ -332,6 +451,7 @@ def test_naaccr_dictionary_versioning_and_features(tmp_path: Path) -> None:
 
 
 if __name__ == "__main__":
+    test_cross_dialect_schema_and_docker_bootstrap()
     with tempfile.TemporaryDirectory() as temp_dir:
         test_sqlite_three_schema_layout_and_bridge(Path(temp_dir))
     with tempfile.TemporaryDirectory() as temp_dir:

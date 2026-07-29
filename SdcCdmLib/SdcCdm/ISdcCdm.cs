@@ -22,7 +22,6 @@ public record SdcObsClass(
     double? ResponseFloat,
     DateTimeOffset? ResponseDatetime,
     string? ReponseStringNvarchar,
-    DateTimeOffset? ObsDateTime,
     string? SdcOrder,
     string? SdcRepeatLevel,
     string? SdcComments
@@ -218,7 +217,9 @@ public interface ISdcCdm
         double? value_num = null,
         string? value_unit_source = null,
         DateTime? observation_date = null,
-        long? sdc_report_id = null
+        long? sdc_report_id = null,
+        string? obx_sub_id = null,
+        string? value_text = null
     );
 
     public long WriteSdcFormAnswer(

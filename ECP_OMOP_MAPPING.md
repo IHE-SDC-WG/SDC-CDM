@@ -18,8 +18,12 @@ Value handling:
 | Source value | OMOP column |
 |---|---|
 | numeric | `measurement.value_as_number` plus `unit_source_value` |
-| coded | `measurement.value_as_concept_id` when mapped, with raw code in `value_source_value` |
-| text | `measurement.value_source_value` |
+| coded | `measurement.value_as_concept_id` when mapped; raw code is used in `value_source_value` when no companion text is present |
+| text | `measurement.value_source_value`; companion text takes precedence over the raw code |
+
+CAP OBX segments sharing an OBX-4 sub-ID are staged as one logical `naaccr_value`.
+The coded component populates `value_code`, the numeric component populates `value_num`,
+and a nonnumeric ST companion populates `value_text`.
 
 ## Report Back-Reference
 
@@ -47,6 +51,11 @@ JOIN sdc.sdc_report sr
  AND sr.is_duplicate_accession = 0
 JOIN naaccr.naaccr_item ni
   ON CAST(ni.item_num AS TEXT) = m.measurement_source_value
+ AND ni.dd_version_id = (
+       SELECT MAX(dd_version_id)
+       FROM naaccr.data_dictionary_version
+       WHERE is_current = 1
+     )
 WHERE m.meas_event_field_concept_id = 1147289;
 ```
 

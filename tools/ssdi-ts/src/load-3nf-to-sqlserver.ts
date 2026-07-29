@@ -53,7 +53,7 @@ function bindByName(req: sql.Request, col: string, raw: any) {
 }
 
 // Gap #1: upsert the single data_dictionary_version row for this batch and return its id.
-async function upsertVersion(pool: sql.ConnectionPool): Promise<number> {
+async function upsertVersion(transaction: sql.Transaction): Promise<number> {
   const filePath = path.join(CSV_DIR, 'data_dictionary_version.csv');
   if (!fs.existsSync(filePath)) {
     throw new Error(`Required file not found: ${filePath} (run create-ssdi with SSDI_OUTPUT_3NF=1)`);
@@ -69,13 +69,15 @@ async function upsertVersion(pool: sql.ConnectionPool): Promise<number> {
   if (rows.length === 0) throw new Error('data_dictionary_version.csv has no rows');
   const { algorithm, version, naaccr_version, source_api } = rows[0];
 
-  const existing = await pool.request()
+  const existing = await transaction.request()
     .input('algorithm', sql.NVarChar(255), algorithm)
     .input('version', sql.NVarChar(255), version)
-    .query('SELECT dd_version_id FROM naaccr.DATA_DICTIONARY_VERSION WHERE algorithm = @algorithm AND version = @version');
+    .query(`SELECT dd_version_id
+            FROM naaccr.DATA_DICTIONARY_VERSION WITH (UPDLOCK, HOLDLOCK)
+            WHERE algorithm = @algorithm AND version = @version`);
   if (existing.recordset[0]) return existing.recordset[0].dd_version_id;
 
-  const inserted = await pool.request()
+  const inserted = await transaction.request()
     .input('algorithm', sql.NVarChar(255), algorithm)
     .input('version', sql.NVarChar(255), version)
     .input('naaccr_version', sql.NVarChar(255), naaccr_version || null)
@@ -86,13 +88,37 @@ async function upsertVersion(pool: sql.ConnectionPool): Promise<number> {
   return inserted.recordset[0].dd_version_id;
 }
 
+const VERSIONED_DELETE_ORDER = [
+  'naaccr.SCHEMA_INVOLVED_TABLE',
+  'naaccr.SCHEMA_ITEM_CODE',
+  'naaccr.SCHEMA_ITEM_REQUIREMENT',
+  'naaccr.SCHEMA_ITEM',
+  'naaccr.SCHEMA_SELECTION_RULE',
+  'naaccr.STAGING_TABLE_ROW',
+  'naaccr.STAGING_TABLE_COLUMN',
+  'naaccr.STAGING_TABLE',
+  'naaccr.NAACCR_ITEM',
+  'naaccr.STAGING_SCHEMA',
+];
+
+async function clearVersionedRows(
+  transaction: sql.Transaction,
+  ddVersionId: number
+): Promise<void> {
+  for (const table of VERSIONED_DELETE_ORDER) {
+    await transaction.request()
+      .input('dd_version_id', sql.Int, ddVersionId)
+      .query(`DELETE FROM ${table} WHERE dd_version_id = @dd_version_id`);
+  }
+}
+
 async function loadCsvToTable(
   filePath: string,
   table: string,
   columns: string[],
   versioned: boolean,
   ddVersionId: number,
-  pool: sql.ConnectionPool
+  transaction: sql.Transaction
 ) {
   return new Promise<void>((resolve, reject) => {
     const rows: any[] = [];
@@ -107,12 +133,12 @@ async function loadCsvToTable(
           // For registry, handle id auto-increment (no version scope)
           if (table === 'naaccr.REGISTRY') {
             for (const row of rows) {
-              const existing = await pool.request()
+              const existing = await transaction.request()
                 .input('code', sql.NVarChar(50), row.code)
                 .query('SELECT 1 FROM naaccr.REGISTRY WHERE code = @code');
               if (existing.recordset[0]) continue;
 
-              await pool.request()
+              await transaction.request()
                 .input('code', sql.NVarChar(50), row.code)
                 .input('name', sql.NVarChar(255), row.name)
                 .query(`INSERT INTO naaccr.REGISTRY (code, name) VALUES (@code, @name)`);
@@ -123,12 +149,12 @@ async function loadCsvToTable(
           // For schema_item_requirement, lookup registry_id from code
           if (table === 'naaccr.SCHEMA_ITEM_REQUIREMENT') {
             for (const row of rows) {
-              const regRes = await pool.request()
+              const regRes = await transaction.request()
                 .input('code', sql.NVarChar(50), row.registry_code)
                 .query('SELECT id FROM naaccr.REGISTRY WHERE code = @code');
               if (!regRes.recordset[0]) throw new Error(`Registry code not found: ${row.registry_code}`);
               const registry_id = regRes.recordset[0].id;
-              await pool.request()
+              await transaction.request()
                 .input('dd_version_id', sql.Int, ddVersionId)
                 .input('schema_id_number', sql.NVarChar(255), row.schema_id_number)
                 .input('item_num', sql.Int, parseInt(row.item_num, 10))
@@ -145,7 +171,7 @@ async function loadCsvToTable(
           const colNames = insertCols.join(', ');
           const paramNames = insertCols.map(c => '@' + c).join(', ');
           for (const row of rows) {
-            const req = pool.request();
+            const req = transaction.request();
             if (versioned) req.input('dd_version_id', sql.Int, ddVersionId);
             for (const col of columns) bindByName(req, col, row[col]);
             await req.query(`INSERT INTO ${table} (${colNames}) VALUES (${paramNames})`);
@@ -160,23 +186,43 @@ async function loadCsvToTable(
 
 (async () => {
   const pool = await sql.connect(config);
+  const transaction = new sql.Transaction(pool);
+  let transactionOpen = false;
   try {
-    const ddVersionId = await upsertVersion(pool);
+    await transaction.begin(sql.ISOLATION_LEVEL.SERIALIZABLE);
+    transactionOpen = true;
+    const ddVersionId = await upsertVersion(transaction);
     console.log(`Using dd_version_id=${ddVersionId}`);
+    await clearVersionedRows(transaction, ddVersionId);
     for (const { file, table, columns, versioned } of TABLES) {
       const filePath = path.join(CSV_DIR, file);
       if (!fs.existsSync(filePath)) {
-        console.warn(`File not found: ${filePath}`);
-        continue;
+        throw new Error(`Required file not found: ${filePath}`);
       }
       console.log(`Loading ${file} into ${table}...`);
-      await loadCsvToTable(filePath, table, columns, Boolean(versioned), ddVersionId, pool);
+      await loadCsvToTable(
+        filePath,
+        table,
+        columns,
+        Boolean(versioned),
+        ddVersionId,
+        transaction
+      );
       console.log(`Loaded ${file}`);
     }
+    await transaction.commit();
+    transactionOpen = false;
     console.log('All CSVs loaded.');
   } catch (err) {
+    if (transactionOpen) {
+      try {
+        await transaction.rollback();
+      } catch {
+        // The driver may already have rolled back an aborted transaction.
+      }
+    }
     console.error('Error loading CSVs:', err);
-    process.exit(1);
+    process.exitCode = 1;
   } finally {
     await pool.close();
   }
