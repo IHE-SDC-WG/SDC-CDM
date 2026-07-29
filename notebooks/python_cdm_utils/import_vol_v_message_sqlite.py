@@ -5,15 +5,23 @@ SDC CDM.
 Ported from SdcCdmLib/SdcCdm/ImportNaaccrVolV.cs. Writes:
   - omop.person          (create-or-find by source identifier)
   - sdc.sdc_report       (one synoptic report header per message)
-  - naaccr.naaccr_value  (the captured answer values)
+  - naaccr.naaccr_value  (one row per logical captured value)
+
+CAP messages use OBX-4 to connect a coded selection with its numeric or text
+companion, so components sharing a normalized item/sub-ID are combined into one
+naaccr_value row: CWE supplies value_code, numeric components supply value_num
+and units, and non-numeric text supplies value_text.
 
 The bridge ETL (database/etl/sqlite/1_naaccr_sdc_to_omop.sql) later turns these
 into stock omop.note / omop.measurement rows.
 """
 
 import logging
+import math
+import re
 import uuid
 from datetime import date, datetime
+from typing import Any
 
 from python_cdm_utils.crud_sqlite import (
     find_person_by_identifier,
@@ -29,6 +37,68 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 VALID_REPORT_TYPE_CODES = {"60568-3", "35265-8"}
+
+# HL7 TS/DTM precisions the importer understands, longest first.
+_HL7_DATE_PRECISIONS = (
+    (14, "%Y%m%d%H%M%S"),
+    (12, "%Y%m%d%H%M"),
+    (10, "%Y%m%d%H"),
+    (8, "%Y%m%d"),
+)
+
+
+def _null_if_blank(value: str | None) -> str | None:
+    if value is None:
+        return None
+    trimmed = value.strip()
+    return trimmed or None
+
+
+def _normalize_obx_sub_id(value: str | None) -> str | None:
+    """Drop a leading '+' and the identifier suffix so '+31357.100004300' -> '31357'."""
+    normalized = _null_if_blank(value)
+    if normalized is None:
+        return None
+    return _null_if_blank(normalized.lstrip("+").split(".", 1)[0])
+
+
+def _parse_hl7_date(value: str | None) -> date | None:
+    trimmed = _null_if_blank(value)
+    if trimmed is None:
+        return None
+    digits = re.match(r"\d*", trimmed).group(0)  # \d* always matches
+    for width, date_format in _HL7_DATE_PRECISIONS:
+        if len(digits) >= width:
+            try:
+                return datetime.strptime(digits[:width], date_format).date()
+            except ValueError:
+                continue
+    return None
+
+
+def _new_captured_value(
+    item_num: int, obx_sub_id: str | None, observation_date: date | None
+) -> dict[str, Any]:
+    """One logical answered item: an OBX-4 group's code, number, and text components."""
+    return {
+        "item_num": item_num,
+        "obx_sub_id": obx_sub_id,
+        "value_code": None,
+        "value_num": None,
+        "value_text": None,
+        "value_unit_source": None,
+        "observation_date": observation_date,
+    }
+
+
+def _numeric_value(value: str | None) -> float | None:
+    if value is None:
+        return None
+    try:
+        parsed = float(value)
+    except ValueError:
+        return None
+    return parsed if math.isfinite(parsed) else None
 
 
 def import_data_from_hl7(cursor, hl7_message, exit_on_error=True):
@@ -95,8 +165,16 @@ def import_data_from_hl7(cursor, hl7_message, exit_on_error=True):
     # OBR-3 = filler order number / accession (durable report key); OBR-4 = LOINC.
     # Normalize a missing/blank accession to None so accession-less reports never share
     # an empty-string join key in the bridge.
-    report_accession = (get_field(obr_fields, 3) or "").split("^")[0] or None
+    report_accession_raw = (get_field(obr_fields, 3) or "").split("^")[0]
+    report_accession = report_accession_raw if report_accession_raw.strip() else None
     report_loinc = report_type_code
+    # OBR-7 (observation date) then OBR-22 (results change date) back the per-value
+    # dates when an OBX carries no OBX-14 of its own.
+    report_observation_date = (
+        _parse_hl7_date(get_field(obr_fields, 7))
+        or _parse_hl7_date(get_field(obr_fields, 22))
+        or date.today()
+    )
 
     # Person data
     person_source_value = get_field(pid_fields, 3)
@@ -153,24 +231,30 @@ def import_data_from_hl7(cursor, hl7_message, exit_on_error=True):
         lambda oid: "60574-1" in oid
         and ("Report Template Version ID" in oid or "Report template version ID" in oid)
     )
-    tumor_site = find_obx_value(
-        lambda oid: "Tumor Site" in oid
-        or "22371.100004300" in oid
-        or "2118.1000043" in oid
+    tumor_site = _null_if_blank(
+        find_obx_value(
+            lambda oid: "Tumor Site" in oid
+            or "22371.100004300" in oid
+            or "2118.1000043" in oid
+        )
     )
-    procedure_type = find_obx_value(
-        lambda oid: "Procedure" in oid
-        or "51121.100004300" in oid
-        or "820603.1000043" in oid
+    procedure_type = _null_if_blank(
+        find_obx_value(
+            lambda oid: "Procedure" in oid
+            or "51121.100004300" in oid
+            or "820603.1000043" in oid
+        )
     )
-    specimen_laterality = find_obx_value(
-        lambda oid: "Tumor Focality" in oid
-        or "8722.100004300" in oid
-        or "Specimen Laterality" in oid
-        or "52756.1000043" in oid
+    specimen_laterality = _null_if_blank(
+        find_obx_value(
+            lambda oid: "Tumor Focality" in oid
+            or "8722.100004300" in oid
+            or "Specimen Laterality" in oid
+            or "52756.1000043" in oid
+        )
     )
-    report_narrative = find_obx_value(
-        lambda oid: "2168.1000043" in oid or "Comment" in oid
+    report_narrative = _null_if_blank(
+        find_obx_value(lambda oid: "2168.1000043" in oid or "Comment" in oid)
     )
 
     template_instance_guid = str(uuid.uuid4())
@@ -196,9 +280,9 @@ def import_data_from_hl7(cursor, hl7_message, exit_on_error=True):
         template_instance_guid=template_instance_guid,
         person_id=person_id,
         report_text=report_narrative,
-        report_template_source=template_source,
-        report_template_id=template_id,
-        report_template_version_id=template_version,
+        report_template_source=_null_if_blank(template_source),
+        report_template_id=_null_if_blank(template_id),
+        report_template_version_id=_null_if_blank(template_version),
         tumor_site=tumor_site,
         procedure_type=procedure_type,
         specimen_laterality=specimen_laterality,
@@ -208,15 +292,21 @@ def import_data_from_hl7(cursor, hl7_message, exit_on_error=True):
         first_seen_report_id=first_seen_report_id,
     )
 
-    observation_date = date.today().isoformat()
-
-    # Process OBX segments for ECP data (starting from the 4th OBX).
+    # Process OBX segments for ECP data (starting from the 4th OBX). CAP messages use
+    # OBX-4 to connect a coded selection with its numeric or text companion, so stage
+    # one logical captured value per normalized item/sub-ID group.
+    captured_values: list[dict[str, Any]] = []
+    active_groups: dict[tuple[int, str], dict[str, Any]] = {}
     for i in range(3, len(obx_segments)):
         obx_fields = obx_segments[i].split("|")
         obx_value_type = get_field(obx_fields, 2)
         obx_observation_id = get_field(obx_fields, 3)
+        obx_sub_id = _normalize_obx_sub_id(get_field(obx_fields, 4))
         obx_value = get_field(obx_fields, 5)
-        obx_units = get_field(obx_fields, 6)
+        obx_units = _null_if_blank(get_field(obx_fields, 6))
+        observation_date = (
+            _parse_hl7_date(get_field(obx_fields, 14)) or report_observation_date
+        )
 
         # Skip long narrative text (focus on structured ECP data).
         if obx_value_type == "ST" and len(obx_value) > 200:
@@ -224,52 +314,109 @@ def import_data_from_hl7(cursor, hl7_message, exit_on_error=True):
 
         question_parts = obx_observation_id.split("^")
         question_identifier = question_parts[0] if question_parts else obx_observation_id
-        response_type = "text"
-        response_value = obx_value
         numeric_value = None
         cwe_code = None
+        text_value = None
+        component_key = "value_text"
 
         if obx_value_type == "NM":
-            response_type = "numeric"
-            try:
-                numeric_value = float(obx_value)
-            except ValueError:
-                numeric_value = None
+            numeric_value = _numeric_value(obx_value)
+            if numeric_value is not None:
+                component_key = "value_num"
+            else:
+                text_value = _null_if_blank(obx_value)
+                logger.warning(
+                    "preserving non-numeric NM value %r as text for %r",
+                    obx_value,
+                    obx_observation_id,
+                )
         elif obx_value_type == "CWE":
-            response_type = "list_selection"
+            # Parse CWE: code^text^codingSystem^...
             if obx_value:
-                parts = obx_value.split("^")
-                cwe_code = parts[0] if len(parts) > 0 else None
+                cwe_code = _null_if_blank(obx_value.split("^")[0])
+                if cwe_code is None:
+                    text_value = _null_if_blank(obx_value)
+                else:
+                    component_key = "value_code"
         elif obx_value_type == "ST":
-            try:
-                numeric_value = float(obx_value)
-                response_type = "numeric"
-            except ValueError:
-                response_type = "text"
+            # Some feeds encode numeric values in ST; treat as numeric when parsable.
+            numeric_value = _numeric_value(obx_value)
+            if numeric_value is not None:
+                component_key = "value_num"
+            else:
+                text_value = _null_if_blank(obx_value)
         else:
-            response_type = "text"
+            text_value = _null_if_blank(obx_value)
 
         item_num_text = question_identifier.split(".")[0]
         try:
             item_num = int(item_num_text)
         except ValueError:
+            logger.warning(
+                "skipping OBX with non-integer item number: "
+                "obx_observation_id=%r (parsed %r)",
+                obx_observation_id,
+                item_num_text,
+            )
             continue
 
+        if obx_sub_id is None:
+            # A blank OBX-4 cannot be grouped, so each one stands alone.
+            captured = _new_captured_value(item_num, None, observation_date)
+            captured_values.append(captured)
+        else:
+            group_key = (item_num, obx_sub_id)
+            current = active_groups.get(group_key)
+            repeats_component = (
+                current is not None and current[component_key] is not None
+            )
+            if current is None or repeats_component:
+                if repeats_component:
+                    logger.warning(
+                        "repeated %s component for item %s, OBX-4 %r; "
+                        "starting another captured-value occurrence",
+                        component_key,
+                        item_num,
+                        obx_sub_id,
+                    )
+                captured = _new_captured_value(item_num, obx_sub_id, observation_date)
+                active_groups[group_key] = captured
+                captured_values.append(captured)
+            else:
+                captured = current
+
+        if captured["observation_date"] is None:
+            captured["observation_date"] = observation_date
+        if captured["value_unit_source"] is None:
+            captured["value_unit_source"] = obx_units
+        if component_key == "value_code":
+            captured["value_code"] = cwe_code
+        elif component_key == "value_num":
+            captured["value_num"] = numeric_value
+        else:
+            captured["value_text"] = text_value
+
+    for captured in captured_values:
         create_naaccr_value(
             cursor=cursor,
             person_id=person_id or 0,
             episode_key=report_accession if report_accession else template_instance_guid,
             report_accession=report_accession,
-            item_num=item_num,
-            value_code=None
-            if response_type == "numeric"
-            else (cwe_code or response_value),
-            value_num=numeric_value,
-            value_unit_source=obx_units,
-            observation_date=observation_date,
+            item_num=captured["item_num"],
+            obx_sub_id=captured["obx_sub_id"],
+            value_code=captured["value_code"],
+            value_num=captured["value_num"],
+            value_text=captured["value_text"],
+            value_unit_source=captured["value_unit_source"],
+            observation_date=(
+                captured["observation_date"].isoformat()
+                if captured["observation_date"]
+                else None
+            ),
             sdc_report_id=sdc_report_id,
         )
 
     print(
-        f"Successfully imported NAACCR V2 message with {len(obx_segments) - 3} ECP data points"
+        f"Successfully imported NAACCR V2 message with {len(captured_values)} "
+        "logical ECP values"
     )
