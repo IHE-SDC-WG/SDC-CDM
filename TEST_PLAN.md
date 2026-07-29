@@ -59,7 +59,7 @@ sample_data/         single source of truth for fixtures (see Cleanup)
 
 ## 1. Import tests
 
-### 1.1 HL7v2 (NAACCR Vol V) — `SdcCdm.Hl7v2.Importers.ImportNaaccrVolV`
+### 1.1 HL7v2 (NAACCR Vol V) — `SdcCdm.NAACCRVolVImporter.ImportNaaccrVolV`
 
 Fixtures: `sample_data/naaccr_v2/24-11-000312-2.txt.hl7`, `obx-Adrenal.hl7`
 
@@ -72,7 +72,7 @@ Fixtures: `sample_data/naaccr_v2/24-11-000312-2.txt.hl7`, `obx-Adrenal.hl7`
   `item_num`, `obx_sub_id`, `value_code`/`value_num`/`value_text`, `report_accession`, and
   the originating `sdc_report_id`. CWE plus numeric/text OBX components sharing OBX-4 are
   combined. A missing OBR-3 accession is stored as NULL (not `''`).
-- [ ] **IMP-HL7-05** The eCP path does not create `sdc.sdc_form_answer`, `template_sdc`, or
+- [x] **IMP-HL7-05** The eCP path does not create `sdc.sdc_form_answer`, `template_sdc`, or
   `template_instance` rows; those tables are reserved for SDC XML form intake.
 - [ ] **IMP-HL7-06** Re-importing the same message flags the report
   (`is_duplicate_accession = 1`, `first_seen_report_id` points at the original) instead of

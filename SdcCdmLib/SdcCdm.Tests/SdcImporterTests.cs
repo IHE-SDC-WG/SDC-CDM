@@ -154,6 +154,37 @@ namespace SdcCdm.Tests
         }
 
         [Fact]
+        public void ImportNaaccrVolV_DoesNotWriteSdcFormTables()
+        {
+            var sdcCdm = new SdcCdmInSqlite.SdcCdmInSqlite("SdcCdm.Tests", true);
+            sdcCdm.BuildSchema();
+            string hl7Path = Path.Combine(
+                AppContext.BaseDirectory,
+                "TestData",
+                "HL7",
+                "obx-Adrenal.hl7"
+            );
+
+            NAACCRVolVImporter.ImportNaaccrVolV(sdcCdm, File.ReadAllText(hl7Path));
+
+            var connection = sdcCdm.GetConnection();
+            long CountRows(string table)
+            {
+                using var cmd = connection.CreateCommand();
+                cmd.CommandText = $"SELECT COUNT(*) FROM {table}";
+                return (long)cmd.ExecuteScalar()!;
+            }
+
+            // The eCP path stages answers in naaccr.naaccr_value. The SDC XML form tables
+            // are reserved for form intake -- see the importer boundary in
+            // ECP_OMOP_MAPPING.md.
+            Assert.True(CountRows("naaccr.naaccr_value") > 0);
+            Assert.Equal(0L, CountRows("sdc.sdc_form_answer"));
+            Assert.Equal(0L, CountRows("sdc.template_sdc"));
+            Assert.Equal(0L, CountRows("sdc.template_instance"));
+        }
+
+        [Fact]
         public void ImportNaaccrVolV_BlankNarrativeUsesBridgeFallback()
         {
             var sdcCdm = new SdcCdmInSqlite.SdcCdmInSqlite("SdcCdm.Tests", true);
