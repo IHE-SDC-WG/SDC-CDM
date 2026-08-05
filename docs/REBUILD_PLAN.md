@@ -71,114 +71,44 @@ with cross-language parity:
 
 ---
 
-## Starting point: `main` becomes trunk, phases land by fast-forward
+## Starting point: `main` is trunk, phases land by fast-forward
 
-The rebuild does **not** branch from `origin/omop`, and it is **not** a stack of PRs. Both of those
-were earlier positions in this document and both are superseded. The reason is a single measurement:
+`main` stays trunk and stays the default branch. It starts pointing at
+`three-schema-repo-reorg`, which holds all current work.
 
-```
-git rev-list --left-right --count origin/three-schema-repo-reorg...origin/omop  →  22  0
-```
-
-**`omop` is `ahead=0`.** It holds nothing that is not already in the redesign branch. So is
-`check-observation-table-mapping`, and so is `import-export-cdm`. `main` is `ahead=1` — a single
-144-line discussion-summary document (`20b443e`, Richard Moldwin, 2026-06-10) that touches no path
-the redesign touches.
-
-In other words there is no integration target to land *into*. The redesign branch already contains
-every branch that matters, and is the only one with commits after June 2026.
-
-### The one-time transition
-
-`main` stays the trunk and stays the default branch — no rename, no default-branch change. It simply
-starts pointing at the redesign:
+`main` was merged into the branch by PR #88, so `main` is now an ancestor and two steps remain:
 
 ```bash
-# 1. absorb main's lone commit (test-merged: 0 conflicts, new path, no overlap)
-git merge origin/main
-
-# 2. main is now a strict ancestor, so this is a true fast-forward
-git push origin three-schema-repo-reorg:main
-
-# 3. omop is now an ancestor of main — nothing is lost by removing it
-git push origin --delete omop
+git push origin three-schema-repo-reorg:main   # fast-forward, 86 commits
+git push origin --delete omop                  # ahead=0; a strict ancestor of main
 ```
 
-Order matters: `omop` is deleted only *after* step 2, so no commit is ever briefly unreferenced.
-Confirmed with the working group that `omop` carries no current value. The remaining stale branches
-(`sql-refactor` +8, `add-sdc-template-row-data` +13, `copilot/fix-*` +3–6 each, `update-readme` +2,
-`importFHIRIps` +1, `mvp` +1) do hold unmerged commits and are **deliberately left alone** — they are
-scoped to a cleanup project after this rebuild completes, not to this plan. This is announced to the
-working group before step 2 runs, since `main` moving 84 commits is visible to everyone.
+`omop` is deleted only after the first push, so no commit is briefly unreferenced. The other stale
+branches (`sql-refactor`, `add-sdc-template-row-data`, `copilot/fix-*`, `update-readme`,
+`importFHIRIps`, `mvp`) hold unmerged commits and are out of scope here — they belong to a cleanup
+project after this rebuild.
 
-### Per-phase branches, fast-forwarded into `main`
+### Per-phase branches
 
-Once `main` is trunk, each phase gets its **own fresh branch cut from `main`**, named
-`phase-<N>-<topic>`:
+Each phase runs on its own branch cut from `main`, and lands by fast-forward:
 
-| Phase | Branch |
-|---|---|
-| 0 | `phase-0-skeleton` |
-| 1 | `phase-1-vocab` |
-| 2 | `phase-2-maps` |
-| 3 | `phase-3-intake` |
-| 4 | `phase-4-bridge` |
-| 5 | `phase-5-export` |
-| 6 | `phase-6-docs` |
-
-The loop, per phase:
+`phase-0-skeleton`, `phase-1-vocab`, `phase-2-maps`, `phase-3-intake`, `phase-4-bridge`,
+`phase-5-export`, `phase-6-docs`.
 
 ```bash
-git checkout main && git pull                  # start from the last landed phase
+git checkout main && git pull
 git checkout -b phase-1-vocab
-# …work; commit freely…
-# CI green and the phase's "Accept when" criteria demonstrably met:
-git push origin phase-1-vocab:main             # fast-forward — no merge commit
+# …work…  then, with CI green and the phase's "Accept when" criteria met:
+git push origin phase-1-vocab:main
 git push origin --delete phase-1-vocab
 ```
 
-**These branches are sequential, not stacked.** Each is cut *after* the previous has landed, so
-there is never a stack to rebase — the failure mode that makes stacked PRs expensive. The only
-discipline required is: **do not start phase N+1 until phase N has landed on `main`.**
+Branches are **sequential, not stacked** — each is cut after the previous lands, so there is no stack
+to rebase. The one rule: **do not start phase N+1 until phase N is on `main`.** Phase 0 is the
+exception, running on the current branch because it is the phase that builds the CI.
 
-Phase 0 is the exception. It *builds* the CI, so there is no gate to pass yet; run it on the current
-branch and let the transition above carry it to `main`.
-
-### Why this shape
-
-- **No stacked PRs, because they would buy review this repo does not perform.** Six of the eight PRs
-  ever opened here have zero reviews, including #80 and #81 — both against `omop`. Seven more
-  unreviewed PRs is ceremony, not a quality gate.
-- **No single long-lived branch merged at the end either**, because that deletes a risk mitigation
-  this plan depends on. The Risks table rests on *"every phase is independently valuable and
-  independently landable."* If nothing reaches trunk until everything does, a stall at Phase 3
-  produces exactly the half-migrated repo the risk warns about. Landing each phase on the **default
-  branch** is what makes that property real rather than nominal — it is also why the target is
-  `main` and not `omop`: advancing a branch nobody reads would have been ceremony too.
-- **Fast-forward, so trunk has one history.** No merge commits, no reconciliation, and `main` is
-  always exactly "the last phase that passed its acceptance criteria."
-
-**If `main` diverges**, nothing breaks — the fast-forward push is simply rejected. Merge `main` back
-into the phase branch and push again; one merge commit restores the property. The thing actually
-worth avoiding is *sustained* parallel development on `main` during the rebuild, which would turn
-every phase landing into a conflict resolution. `main` is unprotected, so this is a convention rather
-than a guarantee; restrict pushes to `main` if it needs enforcing.
-
-A phase is done when its acceptance criteria pass, `main` has been fast-forwarded to it, and its
-GitHub issue is closed.
-
-### What the redesign branch already carries
-
-Everything below is on `three-schema-repo-reorg` and therefore becomes `main` at step 2 — it is the
-starting point, not work to redo:
-
-| Asset | Why it matters here |
-|---|---|
-| `database/schemas/naaccr/` | The entire versioned 3NF dictionary design this plan extends |
-| `database/schemas/sdc/` | The SDC form/report schema |
-| `database/etl/` | The occurrence-aware bridge whose idempotency pattern Phase 4 preserves |
-| `tools/load_athena_vocab.py` | 1024 lines, three backends, tested — and Phase 5 reuses its `TABLE_SPECS` as the CDM column source of truth |
-| `tools/ccr_labreport_to_naaccr.py` | **Deleted** in Phase 3 along with `tools/tests/test_obx_parser.py`. Noted here only so that whoever lifts it into the private project copies this branch's version |
+A phase is done when its acceptance criteria pass, `main` is fast-forwarded to it, and its GitHub
+issue is closed. If `main` diverges, merge it back into the phase branch and push again.
 
 ### Assets to preserve through the restructure
 
@@ -200,10 +130,9 @@ and `git blame` survive — the blame trail is how anyone will ever find out *wh
 | `TEST_PLAN.md` | ~85 catalogued test IDs. Retarget, don't discard. |
 | Git history | Why `sdc_report_id` and not accession; why SQLitePCLRaw is pinned; the 17 review findings. |
 
-Deliberately discarded: the C# HL7 importer's *structure* (not its constants), the notebook-resident
-Python port in `notebooks/python_cdm_utils/` (superseded by the real `src/python/sdc_cdm` parser, not
-promoted to it), the three-way DDL wiring, `phenoml_workflows/mapper.py` as a mapper, hardcoded
-concept IDs, and the entire PostgreSQL dialect including its container wiring.
+Deliberately discarded: the C# HL7 importer's *structure* (not its constants),
+`notebooks/python_cdm_utils/`, the three-way DDL wiring, `phenoml_workflows/mapper.py` as a mapper,
+hardcoded concept IDs, and the PostgreSQL dialect with its container wiring.
 
 ---
 
@@ -252,10 +181,8 @@ persistence:
 Three things fall out of this:
 
 1. **Parser regressions are a file diff.** `contracts/golden/<fixture>.envelope.json` is the oracle:
-   the parser must reproduce it byte-identically under the serialization profile below. With one
-   implementation this is no longer a cross-language parity check — it is a regression gate, and it
-   is still far stronger than today's manual row-count comparison because it catches drift before
-   the database is involved. It is also what an out-of-tree parser conforms to.
+   the parser must reproduce it byte-identically under the serialization profile below. It is also
+   what an out-of-tree parser conforms to.
 2. **The remaining intake shapes converge.** HL7 v2 ER7 text and (later) NAACCR XML become *parsers
    emitting the same envelope*. `ccr_labreport_to_naaccr.py` and its tests are **deleted** from this
    tree — but the envelope is what makes that safe: whatever the private project becomes, it can emit
@@ -407,30 +334,21 @@ resource glob in `BuildSchema()` (`SdcCdmInSqlite.cs:127-135`).
 | `validate` | DQ assertions | set-based SQL, Python-driven |
 | `export` | `omop` → CSV bundle + manifest | Python (CSV writing) |
 
-#### Why the bridge stays SQL under a Python driver
+#### SQL under a Python driver
 
-"Python owns transforms" is about **ownership, not syntax**. Python owns orchestration, ordering,
-parameters, transactions, `etl.run` logging, error handling, and every conditional decision. What it
-executes for the set-based stages is SQL, for three reasons:
+Python owns orchestration, ordering, parameters, transactions, `etl.run` logging, and every
+conditional decision. The set-based stages execute SQL, because the bridge is a relational mapping
+(`INSERT…SELECT` across five tables) whose occurrence-aware idempotency
+(`1_naaccr_sdc_to_omop.sql:87-121`) is the best-built code in the repo, and because PHI never leaves
+the database.
 
-- The bridge is a relational mapping — `INSERT…SELECT` across five tables — and the occurrence-aware
-  idempotency (`ROW_NUMBER()` + correlated `COUNT(*)`, `1_naaccr_sdc_to_omop.sql:87-121`) is the one
-  piece of the current codebase this plan calls genuinely well-built. Re-expressing it as Python row
-  logic is the highest-risk, lowest-reward change available.
-- PHI never leaves the database.
-- Registry volumes make `INSERT…SELECT` the right shape; round-tripping rows through Python is
-  strictly more work for the same result.
+**SQL is not a public interface.** The `.sql` files are Python's implementation detail and may assume
+Python has resolved constants, opened a transaction, and bound parameters. There is no hand-driven
+`sqlite3`/`sqlcmd` path.
 
-**The critical change is that SQL is no longer a public interface.** The previous plan advertised a
-third "DBA with `sqlite3`/`sqlcmd`" path, which is what made SQL a parallel implementation that had
-to stay driveable by hand. That path is **withdrawn**. The `.sql` files are Python's implementation
-detail; they may assume Python has already resolved constants, opened a transaction, and bound
-parameters.
-
-**On Jinja and DBT.** DBT is **rejected**: it brings its own DAG via `ref()`, which would compete
-with `manifest.json` as the ordering contract, and the project would have two. Jinja is *compatible*
-but not adopted — it is the answer if maintaining the two dialect variants of a bridge script starts
-to hurt. With PostgreSQL gone that is two files, so this stays a fallback rather than a dependency.
+**DBT is rejected** — its `ref()` DAG competes with `manifest.json` as the ordering contract. Jinja is
+compatible but not adopted; it is the fallback if the two dialect variants of a script start to
+diverge.
 
 **Toolchain × dialect support matrix** — publish this in the README and keep it honest. Today
 neither driver is what this table describes: `BuildSchema()` is SQLite-only, Python has no schema
@@ -442,42 +360,21 @@ pure-SQL path is Postgres-only via the Dockerfile — the one dialect this rebui
 | Python CLI (`sdc_cdm`) | full | full |
 | C# (`SdcCdm`) | SDC XML import only | SDC XML import only |
 
-#### PostgreSQL is removed, not deferred
+#### PostgreSQL is removed
 
-The previous position — "PostgreSQL DDL stays vendored and schema-smoke-tested" — was imprecise in a
-way that hid four gaps, so the decision is to drop the dialect outright.
+Only `database/schemas/omop/ddl/postgresql/*` is vendored from OHDSI; the `naaccr` and `sdc`
+PostgreSQL DDL are hand-maintained in this repo and are a third dialect to keep in sync. The dialect
+is dropped rather than kept "schema only", which would have left it absent from `manifest.json`,
+without a CI job, and without DDL for the new `intake` and `etl` schemas.
 
-**"Vendored" was the wrong word.** Only `database/schemas/omop/ddl/postgresql/*` (4 files) comes
-from OHDSI. `database/schemas/naaccr/ddl/postgresql/1_naaccr_postgresql_ddl.sql` (208 lines) and
-`database/schemas/sdc/ddl/postgresql/1_sdc_postgresql_ddl.sql` (126 lines) are **hand-written in
-this repo** and must be re-edited by hand every time a table changes. Calling them vendored implied
-they maintain themselves; in fact they are a third hand-maintained dialect, which is exactly the
-drift this rebuild exists to remove.
+- **Delete** `database/schemas/{naaccr,sdc}/ddl/postgresql/`, `database/etl/postgresql/`, and the
+  Postgres-only container wiring (`database/Dockerfile`, `docker-compose.yml`, `.env.example`).
+  SQLite is the local dev story; the SQL Server CI service container covers the rest.
+- **Keep** the OHDSI PostgreSQL CDM files in the vendored drop, omitted from `manifest.json`.
+  `VENDORED.md` records that they are present but unapplied.
+- **Correct the docs that promise it**: `README.md:18` and `:46`; `TEST_PLAN.md:20`, `:187`, `:250`.
 
-Keeping it "schema only" would also have meant carrying four unfunded obligations: PostgreSQL is
-absent from the repo-layout `ddl/{sqlite,sqlserver}` glob, has no CI job behind the phrase
-"smoke-tested", would need its own `manifest.json` section or drop out of the single ordering
-contract, and has no DDL at all for the two new schemas (`intake`, `etl`) — so "schema only" would
-really have meant three of five schemas, untested.
-
-What actually happens:
-
-- **Delete** `database/schemas/{naaccr,sdc}/ddl/postgresql/`, the empty `database/etl/postgresql/`,
-  and the PostgreSQL-only container wiring: `database/Dockerfile`, `database/docker-compose.yml`,
-  `database/.env.example` (all three are Postgres-specific — `POSTGRES_PASSWORD`, port 5432,
-  `/var/lib/postgresql/data`). The SQL Server CI service container replaces the local-Postgres dev
-  story.
-- **Keep** the OHDSI PostgreSQL CDM files as part of the vendored upstream drop, since re-vendoring
-  takes the upstream tree wholesale. `VENDORED.md` records that they are present-but-unapplied and
-  that `manifest.json` deliberately omits them.
-- **Re-deriving the dialect later** starts from the SQLite DDL plus the vendored OHDSI PostgreSQL
-  CDM, not from a half-maintained copy. That is a cleaner starting point than what exists today, so
-  deleting now costs the roadmap nothing.
-
-Docs that currently promise PostgreSQL must be corrected in the same pass: `README.md:18` ("SQLite,
-PostgreSQL, or SQL Server") and `:46`; `TEST_PLAN.md:20` (the `{sqlite,sqlserver,postgresql}` bridge
-glob), `:187` (PostgreSQL ports), and `:250` (SCHEMA-02 DDL parity across three dialects — retarget
-to two).
+Re-adding PostgreSQL is roadmap, starting from the SQLite DDL plus the vendored CDM.
 
 The DDL is currently wired three separate ways — a csproj embedded-resource glob
 (`SdcCdmInSqlite.csproj:11-13`), a Python runtime glob, and per-file `COPY` in the Dockerfile — so
@@ -486,19 +383,13 @@ ordering contract, read by the Python driver and by nothing else.
 
 #### Test topology
 
-With one implementation the test story collapses to something much smaller. The C# job shrinks to
-the SDC XML importer, and nobody needs .NET installed to work on the pipeline.
+Three jobs. Nobody needs .NET installed to work on the pipeline.
 
 | CI job | Runs | When |
 |---|---|---|
 | `python-sqlite` | pytest: golden-envelope conformance, full pipeline, export round-trip | every push |
 | `csharp-sdc` | `dotnet test`: SDC XML import only — `ImportXmlForm` / `ImportTemplate` and the template/form-answer contract. Note the current `SdcImporterTests.cs` is misnamed: its headline test is HL7, and that one moves to pytest. | every push |
 | `python-sqlserver` | same pytest suite, `mcr.microsoft.com/mssql/server` service container | nightly + on `database/**` changes |
-
-**Deleted from the previous plan:** `csharp-sqlite` and `csharp-sqlserver` (no C# pipeline to
-exercise), `sql-only` (the DBA path is withdrawn), and `cross-impl-diff` (nothing to diff — it was
-the most expensive and brittlest check on offer, needing deterministic surrogate IDs and timestamp
-exclusion, and its entire purpose was cross-language regression signal).
 
 `contracts/golden/*.envelope.json` remains blocking, now as a **parser regression gate** rather than
 a parity oracle. Keeping SQL Server off the PR path still removes the container cost from ordinary
@@ -645,8 +536,7 @@ importer today (`ImportNaaccrVolV.cs:537-614` never passes either; `ISdcCdm.cs:2
 - **`schema_id_number` only when derivable.** It is a function of the `schema_selection_rule` inputs
   — site, histology, behavior, `sex_at_birth`, the two discriminators, `year_dx`. Derive it at load
   where all required inputs are present in the report; otherwise leave NULL and emit a diagnostic.
-  Running the full SEER staging algorithm to resolve every case is **roadmap**, not this rebuild —
-  state that, so the column reads as scoped rather than merely unimplemented.
+  Running the full SEER staging algorithm to resolve every case is **roadmap**.
 
 ### Concept maps, layered with provenance
 
@@ -729,30 +619,24 @@ concept or a `NAACCR_LOCAL` mint. Therefore:
 
 #### Layer 2 without a review UI
 
-`phenoml-workflows/` is **retired**, so layer 2 has no web front-end. It doesn't need one: the
-override set becomes a tracked CSV and **git is the review trail.** A mapping decision arrives as a
-PR that edits `database/seed/concept_map_overrides.csv`, gets reviewed like any other change, and
-carries its rationale in the commit message. That is a better audit trail than a `review_status`
-column that has sat at `unreviewed` for all 780 rows.
+`phenoml-workflows/` is retired; layer 2 is a tracked CSV and git is the review trail.
 
 `database/seed/concept_map_overrides.csv` columns: `item_num`, `code` (blank for item-level),
 `omop_concept_id`, `omop_source_concept_id`, `target_domain_id`, `rationale`, `reviewer`,
 `reviewed_at`.
 
-**One-time conversion, then retire the artifacts.** `naaccr_omop_extension_mapping_spec.json` holds
-780 item rows whose *inventory* is worth keeping even though the mappings are not — concept class,
-proposed OMOP table, grain, and the `is_mappable` flag. Convert it once into two tracked seeds:
+**One-time conversion, then retire the artifacts.** Convert
+`naaccr_omop_extension_mapping_spec.json` (780 rows; the inventory is worth keeping, the mappings are
+not) into two tracked seeds:
 
 - `database/seed/concept_map_overrides.csv` — skeleton rows with `omop_concept_id` blank where
   unreviewed (which is all 780 today), so the file starts as an honest to-do list rather than a
   pretend mapping.
 - `database/seed/naaccr_item_exclusions.csv` — the 74 items explicitly flagged `is_mappable: false`.
 
-Then drop the JSON, `tools/convert_naaccr_omop_maps.py`, and the `NAACRToOMOPmaps/*.xlsx` workbooks,
-recording their provenance in the conversion commit message. If the working group later delivers
-another spreadsheet, converting it is a one-off script run, not a permanent tool in the tree.
+Then drop the JSON, `tools/convert_naaccr_omop_maps.py`, and the `NAACRToOMOPmaps/*.xlsx` workbooks.
 
-Note the field-name trap when writing that converter: the spec's `concept_id` field holds a NAACCR
+Field-name trap in the converter: the spec's `concept_id` field holds a NAACCR
 **item number** (e.g. `442` / `ambiguousTerminologyDx`), and its `domain_id` holds an invented value
 (`DIGITS`, `TEXT`) that is not an OMOP domain. Map them to `item_num` and drop the fake domain.
 
@@ -853,11 +737,9 @@ former C# path and the hand-driven `sqlite3` path are both gone. The one-off
 
 ### Doc drift
 
-- **Delete `ECP_OMOP_MAPPING.md`.** Its central claim at line 64 ("the importer does not write OMOP
-  rows directly") is false today, and its premise — "eCP synoptic Q&A defaults to `measurement`"
-  (line 14) — is superseded by domain routing. The only content worth keeping is its
-  numeric/coded/text → OMOP column table, which moves into `SCHEMA_ARCHITECTURE.md` beside the
-  two-slot contract. One fewer document to drift is worth more than the file.
+- **Delete `ECP_OMOP_MAPPING.md`.** Its central claim (`:64`) is false today and its premise (`:14`)
+  is replaced by domain routing. Move its numeric/coded/text → OMOP column table into
+  `SCHEMA_ARCHITECTURE.md` beside the two-slot contract.
 - `TEST_PLAN.md` EXP-01 asserts a `NULL AS response` bug that is **already fixed** — verified:
   `GetSdcObsClasses` selects `sdc_form_answer.response` at `SdcCdmInSqlite.cs:578-600`. Delete the
   stale claim, and see "The FHIR export code, and what that means for `EXP-01`" under Phasing for the
@@ -1018,20 +900,16 @@ rebuild stalls after them.
 
 ### Test artifacts per phase
 
-`TEST_PLAN.md` catalogues **75 test IDs across 12 prefixes**, and the earlier draft of this plan
-touched it only in Phase 6. That is wrong: six phases of accumulated drift is exactly how the repo
-acquired the stale claims this rebuild is fixing. **The rule is that `TEST_PLAN.md` is updated in the
-same PR as the phase that invalidates it** — a phase whose test IDs are not retargeted is not done.
-
-Each phase below names what it retires, retargets, and adds. "Retire" means delete the ID with a
-one-line note in the PR body saying why, not silently drop it.
+`TEST_PLAN.md` catalogues **75 test IDs across 12 prefixes**. It is updated in the same phase that
+invalidates it — a phase whose test IDs are not retargeted is not done. "Retire" means delete the ID
+with a one-line note saying why.
 
 | Phase | Retire | Retarget | Add |
 |---|---|---|---|
 | **0** skeleton | `SCHEMA-05` (C# `BuildSchema()` ↔ raw-DDL drift check — there is no C# schema builder any more) | `TEST_PLAN.md:20` bridge glob → `{sqlite,sqlserver}`; `SCHEMA-02` DDL parity → two dialects; `SCHEMA-04` → whatever survives of `update-ddl-files.py`; `CLEAN-03` → the three-job topology; `CLEAN-02` shared golden files → `contracts/golden/`, Python-only | manifest ordering is the single apply order; `build` twice is a no-op (the `CREATE INDEX` regression); migration-ledger skip works |
 | **1** vocab + dict | `VocabImporterTests.cs` — deleted with `ImportCsv.cs`, not ported; the Python loader's 8 tests already cover strictly more | `SCHEMA-03` (bridge concept literals exist) → `constants resolve` fails loudly on a missing `(vocabulary_id, concept_code)` | `section` non-null for 100% of items at the anchor and the 17 expected values; zero orphan `schema_item.item_num`; dictionary row counts match across dialects |
 | **2** concept maps | `PY-04` (`test_convert_naaccr_omop_maps.py` — the converter is deleted after the one-time seed conversion) | the `NAACCR`/`OMOP` map IDs at the layered build | coverage by layer **and by section**; layer 2 beats layer 1 on an edited override row; layer-3 mints stable across two rebuilds; no non-standard concept in a `*_concept_id` slot |
-| **3** intake | **all of `TEST_PLAN.md` §6 "Python port parity"** — `PY-01` and `PY-02` exist to stop the port drifting from the C# importer, and there is no longer a C# importer to drift from; `PY-03` (`test_obx_parser.py`) leaves with `ccr_labreport_to_naaccr.py` | the 9 `IMP-HL7` IDs in §1.1, from `SdcCdm.NAACCRVolVImporter.ImportNaaccrVolV` to the Python parser; `CLEAN-01` fixture dedup now that `sample_data/` is the single source | golden-envelope conformance + serialization fixed point; partial dates; provenance walk to `raw_blob`; duplicate bytes stored-flagged-not-loaded; two authorities → two patients; malformed message → `parse_status='failed'` |
+| **3** intake | **all of §6 "Python port parity"** — `PY-01`/`PY-02` guard drift from a C# importer that no longer exists; `PY-03` (`test_obx_parser.py`) is deleted with `ccr_labreport_to_naaccr.py` | the 9 `IMP-HL7` IDs in §1.1, from `SdcCdm.NAACCRVolVImporter.ImportNaaccrVolV` to the Python parser; `CLEAN-01` fixture dedup now that `sample_data/` is the single source | golden-envelope conformance + serialization fixed point; partial dates; provenance walk to `raw_blob`; duplicate bytes stored-flagged-not-loaded; two authorities → two patients; malformed message → `parse_status='failed'` |
 | **4** bridge | — | the 11 `OMOP` IDs in §3 at the split scripts; the 6 `NAACCR` IDs in §2 | domain routing (coded/numeric/text); the two-slot contract; person/period/`cdm_source`; `9_validate.sql` against `validate_thresholds.csv`; every stage idempotent twice |
 | **5** export | — | **move `EXP-01`–`EXP-04` to roadmap, do not retarget them** — all four are FHIR round-trips against `ExportFhirCpds`, not CSV-bundle tests; see below | a fresh set of CSV-export IDs: export → fresh-schema round-trip equality; manifest row counts and sha256; PHI grep returns zero; header order matches the shared CDM 5.4 `TABLE_SPECS` |
 | **6** docs | — | the 12 `SDCOM` IDs at the C# SDC Object Model refactor; mark `IMP-FHIR` (12), `IMP-NXML` (2), `IMP-CCDA` (1) as roadmap-blocked rather than merely unchecked | notebooks execute top-to-bottom; no doc statement contradicts the code |
@@ -1040,33 +918,21 @@ Two structural changes to `TEST_PLAN.md` itself, both in Phase 3 where the owner
 flips: **§6 is deleted outright** (see above), and §1.1's heading stops naming a C# type. The
 `SdcImporterTests.cs` split and rename described under Correctness fixes lands in the same PR.
 
-#### The FHIR export code, and what that means for `EXP-01`
+#### FHIR code and `EXP-01`
 
-The "FHIR: roadmap only" decision left the *existing* FHIR code undisposed, and the repo layout
-above (`src/csharp/{SdcCdm.Sdc,SdcCdm.Sdc.Tests}/`) silently drops it. State it instead:
-`SdcCdm/ExportFhirCpds.cs`, `SdcCdm/FHIR/{Converters,Importers,Parse}.cs` and
-`SdcCdm.Tests/FhirCpdsExporterTests.cs` are **deleted**, with git history as the recovery path when
-FHIR comes off the roadmap. (This supersedes the suggestion above of moving the stray FHIR test into
-`FhirCpdsExporterTests.cs` — that file is going too; delete the test with it.)
+`SdcCdm/ExportFhirCpds.cs`, `SdcCdm/FHIR/`, and `SdcCdm.Tests/FhirCpdsExporterTests.cs` are
+**deleted**; git history is the recovery path when FHIR comes off the roadmap.
 
-`EXP-01`–`EXP-04` follow that code to roadmap. They are worth separating into two claims:
+`EXP-01`–`EXP-04` go to roadmap with that code — they round-trip through `ExportFhirCpds`, so they
+are not CSV-export tests and must not be retargeted as if they were. Two consequences:
 
-- **The parenthetical is stale.** `EXP-01` says "currently `GetSdcObsClasses` returns
-  `NULL AS response`, so exported Observations are empty". That is fixed — `GetSdcObsClasses` now
-  selects `sdc_form_answer.response` (`SdcCdmInSqlite.cs:578-600`). The claim must go regardless of
-  what happens to the test.
-- **The test is still a real assertion**, just not one this rebuild can host: it round-trips through
-  `ExportFhirCpds`, which is being deleted. Retargeting it at the CSV export would be a different
-  test wearing the same ID.
+- `EXP-01`'s claim that `GetSdcObsClasses` returns `NULL AS response` is **stale** — it now selects
+  `sdc_form_answer.response` (`SdcCdmInSqlite.cs:578-600`).
+- That fix is otherwise untested. In Phase 3, before deleting the FHIR code, assert in the SDC XML
+  import tests that `sdc_form_answer.response` is populated for every answered question.
 
-**The fix it guarded is left untested, so replace it cheaply.** Add an assertion in the SDC XML
-import tests that `sdc_form_answer.response` is populated for every answered question — that pins the
-same regression with no FHIR involved. Do this in Phase 3, before the FHIR code is deleted.
-
-`EXP-01` is also cross-referenced from five other places in `TEST_PLAN.md`
-(`:140` IMP-SDC-03, `:288` and `:313` in the SDC Object Model section, `:365` and `:373` in the
-implementation order), so retiring it is not a one-line delete — those references point at the
-underlying *answer-value* bug, and should be re-pointed at the new import-side assertion.
+`EXP-01` is cross-referenced from `TEST_PLAN.md:140`, `:288`, `:313`, `:365`, `:373` — re-point those
+at the new import-side assertion rather than deleting them.
 
 ---
 
@@ -1074,15 +940,15 @@ underlying *answer-value* bug, and should be re-pointed at the new import-side a
 
 | Risk | Consequence | Mitigation |
 |---|---|---|
-| **Athena NAACCR coverage is worse than assumed.** The whole layered map rests on the OHDSI `NAACCR` vocabulary covering most registry items. Nobody in this repo has measured it. | Layer 3 becomes the dominant layer, most concepts are local, and the export is far less interoperable than the design implies. | Measure coverage in Phase 2 **before** building the bridge on it. `concept_map_coverage` exists precisely to make this a number. If layer 1 is thin, that is a finding worth surfacing to the working group, not something to paper over with mints. |
-| **The envelope contract ossifies too early.** Version 1 gets designed around HL7 v2 alone — a narrower base than before, now that CCR JSON is leaving the tree — and then NAACCR XML or FHIR won't fit. | Either a breaking `envelope_version` bump with stored envelopes to migrate, or per-format hacks that defeat the point. | `envelope_version` is in the schema from day one and stored per row. Sketch the NAACCR XML mapping onto v1 during Phase 3 design as a cheap falsification test, even though the importer is roadmap. |
-| **JSON shredding in SQL is the weakest link.** `json_each` / `OPENJSON` are the one place the two dialects genuinely diverge. | Two hand-maintained `load_envelope.sql` variants drift apart, and the divergence is invisible until a SQL Server run produces different rows. | Keep the divergence to that single file per dialect, and make the nightly `python-sqlserver` job run the same pytest assertions so drift surfaces as a test failure. Because Python owns the driver, shredding in Python is now an available fallback rather than an architectural retreat — and Jinja-templating one source into two variants is the middle option if the files start diverging for uninteresting reasons. |
-| **A single implementation is a single point of failure.** Dropping the C# pipeline and the DBA path removes the two fallbacks a stuck operator previously had. | If the Python driver breaks or a stage is unimplemented, there is no second way to run the pipeline, and a deployment is blocked rather than degraded. | This is the accepted cost of deleting the duplication, and it is the right trade — the fallbacks were fictional (the C# pipeline was untested against SQL Server, the DBA path never existed). Mitigate where it is cheap: every stage stays separately invocable and idempotent, so a failed stage can be re-run in isolation, and the `.sql` files remain readable enough to run by hand in an emergency even though that is not a supported interface. |
-| **Concept identity differs by dialect** (an accepted decision, not a defect). | A SQL Server export and a SQLite export of the same message are not concept-comparable; someone will eventually compare them and file a bug. | Documented in `SCHEMA_ARCHITECTURE.md`; recorded per row in `mapping_layer`; carried in export `manifest.json`; explicitly excluded from test assertions. |
-| **Seven phases is a lot of runway.** Phases 3–5 depend on 0–2 landing. | Stalling mid-rebuild leaves the repo in a worse state than today — two half-migrated layouts. | Every phase is independently valuable and independently landable, and fast-forwarding **`main`** — the default branch — at each phase boundary is what makes that real rather than nominal; this is why the plan uses neither a stack of PRs nor one long-lived branch merged at the end. Phases 1–2 alone fix the `concept_id = 0` problem on the existing bridge. Do not start Phase 3 until 0–2 have landed on `main`. |
-| **Dropping PostgreSQL strands a deployment.** The decision rests on the belief that nobody runs this on Postgres today — the container was a local dev convenience, not a target. | If someone is in fact deploying it, this rebuild removes their dialect and they cannot follow. | The claim is cheap to falsify before Phase 0 lands: ask. If it turns out to be a real target, the answer is to fund it properly (manifest entry, CI job, `intake`/`etl` DDL) rather than restore the untested half-maintained version. Meanwhile the local dev story moves to SQLite, which needs no container at all. |
-| **`items-extra-info.csv` is an internal resource of a third-party library, not a NAACCR-published artifact.** It already lags the dictionary: 51 of NAACCR 27's 822 items are absent from it. | `section` goes stale or vanishes on a version bump, silently NULLing the column the layer-3 concept-class derivation depends on. | Vendor it with a checksum and fail `dict load` on drift; keep `database/seed/naaccr_item_section_overrides.csv` as the tracked escape hatch; `validate` counts NULL sections against a declared threshold. The NAACCR Data Dictionary API is the fallback source if IMS drops it. |
-| **`4_condition_and_episode.sql` is the thinnest-specified script.** Thin condition + episode grouping is a deliberate scope cut. | The episode grain (one per accession) may not survive contact with multi-tumor reports. | Keep it in its own script so it can be replaced without touching measurement routing. Revisit with the ICD-O-3 roadmap work. |
+| **Athena NAACCR coverage is worse than assumed.** Nobody has measured it. | Layer 3 dominates, most concepts are local, the export is far less interoperable than the design implies. | Measure in Phase 2 **before** the bridge is built on it; `concept_map_coverage` makes it a number. Thin layer 1 is a finding for the working group, not something to paper over with mints. |
+| **The envelope contract ossifies too early.** v1 is designed around HL7 v2 alone. | A breaking `envelope_version` bump with stored envelopes to migrate, or per-format hacks. | `envelope_version` is in the schema from day one and stored per row. Sketch the NAACCR XML mapping onto v1 during Phase 3 design as a cheap falsification test. |
+| **JSON shredding in SQL is the weakest link.** `json_each` / `OPENJSON` are where the two dialects genuinely diverge. | The two `load_envelope.sql` variants drift apart, invisible until a SQL Server run produces different rows. | Keep divergence to that one file per dialect; the nightly `python-sqlserver` job runs the same assertions so drift fails a test. Shredding in Python, or Jinja-templating one source into two, are the fallbacks. |
+| **A single implementation is a single point of failure.** No C# pipeline, no hand-driven SQL path. | If a stage breaks there is no second way to run the pipeline. | Accepted cost of deleting the duplication. Every stage stays separately invocable and idempotent, so a failed stage can be re-run in isolation. |
+| **Concept identity differs by dialect** (accepted, not a defect). | A SQL Server export and a SQLite export of the same message are not concept-comparable. | Documented in `SCHEMA_ARCHITECTURE.md`, recorded per row in `mapping_layer`, carried in export `manifest.json`, excluded from test assertions. |
+| **Seven phases is a lot of runway.** Phases 3–5 depend on 0–2 landing. | Stalling mid-rebuild leaves two half-migrated layouts. | Each phase lands on `main` by fast-forward, so a stall leaves trunk holding every completed phase. Phases 1–2 alone fix the `concept_id = 0` problem. Do not start Phase 3 until 0–2 are on `main`. |
+| **Dropping PostgreSQL strands a deployment.** Assumes the container was dev convenience, not a target. | Someone deploying on Postgres cannot follow the rebuild. | Confirmed with the working group before Phase 0. If it becomes a real target, fund it properly (manifest entry, CI job, `intake`/`etl` DDL). |
+| **`items-extra-info.csv` is a third-party library resource**, not a NAACCR artifact, and lags: 51 of NAACCR 27's 822 items are absent. | `section` silently NULLs, breaking the layer-3 concept-class derivation. | Vendor with a checksum and fail `dict load` on drift; `naaccr_item_section_overrides.csv` is the escape hatch; `validate` counts NULL sections. NAACCR DD API is the fallback source. |
+| **`4_condition_and_episode.sql` is thinly specified.** Thin condition + episode grouping is a deliberate scope cut. | The episode grain (one per accession) may not survive multi-tumor reports. | Keep it in its own script so it can be replaced without touching measurement routing. Revisit with the ICD-O-3 roadmap work. |
 
 ---
 
