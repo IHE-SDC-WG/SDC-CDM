@@ -1,14 +1,16 @@
 # Rebuild SDC-CDM around a canonical intake envelope
 
-**Status:** proposed. **Scope:** six phases, one PR each.
+**Status:** proposed. **Scope:** seven phases (0–6), each landing on `main` by fast-forward from its
+own `phase-<N>-<topic>` branch — see "Starting point" for why this is not a stack of PRs.
 
-This is the controlling design document for the rebuild. Each phase PR should link to its section
-here, and reviewers should check that phase's acceptance criteria rather than re-deriving intent.
-Amend this file in the same PR whenever a decision in it changes — this repo has already been bitten
-by docs that contradict the code, and that list is in the Doc drift section below.
+This is the controlling design document for the rebuild. Each phase's GitHub issue links to its
+section here, and the acceptance criteria in that section are the gate — not intent to be
+re-derived. Amend this file in the same commit whenever a decision in it changes; this repo has
+already been bitten by docs that contradict the code, and that list is in the Doc drift section
+below.
 
-Supersedes the `three-schema-repo-reorg` branch, closed unmerged as a learning exercise. Nothing here
-depends on that PR landing, but the rebuild does start from its tip — see **Starting point** below.
+PR #81 (`three-schema-repo-reorg` → `omop`) is closed unmerged, but the **branch** is where all
+current work lives and becomes `main` — see **Starting point** below.
 
 ## Context
 
@@ -69,26 +71,114 @@ with cross-language parity:
 
 ---
 
-## Starting point: branch from the three-schema tip, not from `omop`
+## Starting point: `main` becomes trunk, phases land by fast-forward
 
-**`origin/omop` is 20 commits behind `three-schema-repo-reorg`, and the merge base is `origin/omop`
-itself** (`git rev-list --left-right --count origin/omop...three-schema-repo-reorg` → `0 20`).
-`origin/omop` *is* the pre-three-schema state, commit `6304b3e`.
+The rebuild does **not** branch from `origin/omop`, and it is **not** a stack of PRs. Both of those
+were earlier positions in this document and both are superseded. The reason is a single measurement:
 
-So branching the rebuild from `origin/omop` does not give a clean slate — it gives a slate that is
-missing everything this plan builds on:
+```
+git rev-list --left-right --count origin/three-schema-repo-reorg...origin/omop  →  22  0
+```
 
-| Missing on `origin/omop` | Why it matters here |
+**`omop` is `ahead=0`.** It holds nothing that is not already in the redesign branch. So is
+`check-observation-table-mapping`, and so is `import-export-cdm`. `main` is `ahead=1` — a single
+144-line discussion-summary document (`20b443e`, Richard Moldwin, 2026-06-10) that touches no path
+the redesign touches.
+
+In other words there is no integration target to land *into*. The redesign branch already contains
+every branch that matters, and is the only one with commits after June 2026.
+
+### The one-time transition
+
+`main` stays the trunk and stays the default branch — no rename, no default-branch change. It simply
+starts pointing at the redesign:
+
+```bash
+# 1. absorb main's lone commit (test-merged: 0 conflicts, new path, no overlap)
+git merge origin/main
+
+# 2. main is now a strict ancestor, so this is a true fast-forward
+git push origin three-schema-repo-reorg:main
+
+# 3. omop is now an ancestor of main — nothing is lost by removing it
+git push origin --delete omop
+```
+
+Order matters: `omop` is deleted only *after* step 2, so no commit is ever briefly unreferenced.
+Confirmed with the working group that `omop` carries no current value. The remaining stale branches
+(`sql-refactor` +8, `add-sdc-template-row-data` +13, `copilot/fix-*` +3–6 each, `update-readme` +2,
+`importFHIRIps` +1, `mvp` +1) do hold unmerged commits and are **deliberately left alone** — they are
+scoped to a cleanup project after this rebuild completes, not to this plan. This is announced to the
+working group before step 2 runs, since `main` moving 84 commits is visible to everyone.
+
+### Per-phase branches, fast-forwarded into `main`
+
+Once `main` is trunk, each phase gets its **own fresh branch cut from `main`**, named
+`phase-<N>-<topic>`:
+
+| Phase | Branch |
+|---|---|
+| 0 | `phase-0-skeleton` |
+| 1 | `phase-1-vocab` |
+| 2 | `phase-2-maps` |
+| 3 | `phase-3-intake` |
+| 4 | `phase-4-bridge` |
+| 5 | `phase-5-export` |
+| 6 | `phase-6-docs` |
+
+The loop, per phase:
+
+```bash
+git checkout main && git pull                  # start from the last landed phase
+git checkout -b phase-1-vocab
+# …work; commit freely…
+# CI green and the phase's "Accept when" criteria demonstrably met:
+git push origin phase-1-vocab:main             # fast-forward — no merge commit
+git push origin --delete phase-1-vocab
+```
+
+**These branches are sequential, not stacked.** Each is cut *after* the previous has landed, so
+there is never a stack to rebase — the failure mode that makes stacked PRs expensive. The only
+discipline required is: **do not start phase N+1 until phase N has landed on `main`.**
+
+Phase 0 is the exception. It *builds* the CI, so there is no gate to pass yet; run it on the current
+branch and let the transition above carry it to `main`.
+
+### Why this shape
+
+- **No stacked PRs, because they would buy review this repo does not perform.** Six of the eight PRs
+  ever opened here have zero reviews, including #80 and #81 — both against `omop`. Seven more
+  unreviewed PRs is ceremony, not a quality gate.
+- **No single long-lived branch merged at the end either**, because that deletes a risk mitigation
+  this plan depends on. The Risks table rests on *"every phase is independently valuable and
+  independently landable."* If nothing reaches trunk until everything does, a stall at Phase 3
+  produces exactly the half-migrated repo the risk warns about. Landing each phase on the **default
+  branch** is what makes that property real rather than nominal — it is also why the target is
+  `main` and not `omop`: advancing a branch nobody reads would have been ceremony too.
+- **Fast-forward, so trunk has one history.** No merge commits, no reconciliation, and `main` is
+  always exactly "the last phase that passed its acceptance criteria."
+
+**If `main` diverges**, nothing breaks — the fast-forward push is simply rejected. Merge `main` back
+into the phase branch and push again; one merge commit restores the property. The thing actually
+worth avoiding is *sustained* parallel development on `main` during the rebuild, which would turn
+every phase landing into a conflict resolution. `main` is unprotected, so this is a convention rather
+than a guarantee; restrict pushes to `main` if it needs enforcing.
+
+A phase is done when its acceptance criteria pass, `main` has been fast-forwarded to it, and its
+GitHub issue is closed.
+
+### What the redesign branch already carries
+
+Everything below is on `three-schema-repo-reorg` and therefore becomes `main` at step 2 — it is the
+starting point, not work to redo:
+
+| Asset | Why it matters here |
 |---|---|
 | `database/schemas/naaccr/` | The entire versioned 3NF dictionary design this plan extends |
 | `database/schemas/sdc/` | The SDC form/report schema |
 | `database/etl/` | The occurrence-aware bridge whose idempotency pattern Phase 4 preserves |
 | `tools/load_athena_vocab.py` | 1024 lines, three backends, tested — and Phase 5 reuses its `TABLE_SPECS` as the CDM column source of truth |
-| `tools/ccr_labreport_to_naaccr.py` | **Deleted** in Phase 3 along with `tools/tests/test_obx_parser.py`. Listed here only because whoever lifts it into the private project should copy this branch's version, not `origin/omop`'s |
-
-Recommended: **create the new branch at the `three-schema-repo-reorg` tip** and execute the phases
-as stacked PRs from there. If `omop` must be the merge base, land the three-schema foundation into
-`omop` first — this plan treats it as the starting point, not as work to redo.
+| `tools/ccr_labreport_to_naaccr.py` | **Deleted** in Phase 3 along with `tools/tests/test_obx_parser.py`. Noted here only so that whoever lifts it into the private project copies this branch's version |
 
 ### Assets to preserve through the restructure
 
@@ -845,11 +935,16 @@ These are cheap now and expensive later:
 
 Order matters — vocabulary before mapping before ingest, so nothing needs re-ingesting.
 
-Each phase is one PR. Acceptance criteria are what the PR must demonstrate, not aspirations.
+Each phase runs on its own `phase-<N>-<topic>` branch cut from `main`, ends by fast-forwarding `main`
+to it, and closes one GitHub issue. Acceptance criteria are what the phase must demonstrate before
+that fast-forward, not aspirations.
 
 **Phase 0 — skeleton and contracts.** Repo layout, `contracts/envelope.schema.json`, `intake` + `etl`
-DDL, `database/manifest.json`, migration ledger, CI. **Commit this plan as `docs/REBUILD_PLAN.md`**
-so each subsequent phase PR can link to its section and reviewers can see the whole arc.
+DDL, `database/manifest.json`, migration ledger, CI. This plan is already committed as
+`docs/REBUILD_PLAN.md` on `three-schema-repo-reorg`, so each phase issue can link to its section;
+the one-time transition in "Starting point" carries it to `main`. Open the seven phase issues here
+too. Phase 0 runs on the current branch rather than a `phase-0-skeleton` branch, since it is the
+phase that builds the CI there is nothing yet to gate against.
 *Accept when:* `build` runs twice against the same database with no error and no duplicate objects
 (the current `IF NOT EXISTS` regression); the Python driver builds a SQLite database from the
 manifest, and the SQL Server job does the same on its own schedule; the three CI jobs exist and the
@@ -984,7 +1079,7 @@ underlying *answer-value* bug, and should be re-pointed at the new import-side a
 | **JSON shredding in SQL is the weakest link.** `json_each` / `OPENJSON` are the one place the two dialects genuinely diverge. | Two hand-maintained `load_envelope.sql` variants drift apart, and the divergence is invisible until a SQL Server run produces different rows. | Keep the divergence to that single file per dialect, and make the nightly `python-sqlserver` job run the same pytest assertions so drift surfaces as a test failure. Because Python owns the driver, shredding in Python is now an available fallback rather than an architectural retreat — and Jinja-templating one source into two variants is the middle option if the files start diverging for uninteresting reasons. |
 | **A single implementation is a single point of failure.** Dropping the C# pipeline and the DBA path removes the two fallbacks a stuck operator previously had. | If the Python driver breaks or a stage is unimplemented, there is no second way to run the pipeline, and a deployment is blocked rather than degraded. | This is the accepted cost of deleting the duplication, and it is the right trade — the fallbacks were fictional (the C# pipeline was untested against SQL Server, the DBA path never existed). Mitigate where it is cheap: every stage stays separately invocable and idempotent, so a failed stage can be re-run in isolation, and the `.sql` files remain readable enough to run by hand in an emergency even though that is not a supported interface. |
 | **Concept identity differs by dialect** (an accepted decision, not a defect). | A SQL Server export and a SQLite export of the same message are not concept-comparable; someone will eventually compare them and file a bug. | Documented in `SCHEMA_ARCHITECTURE.md`; recorded per row in `mapping_layer`; carried in export `manifest.json`; explicitly excluded from test assertions. |
-| **Six phases is a lot of runway.** Phases 3–5 depend on 0–2 landing. | Stalling mid-rebuild leaves the repo in a worse state than today — two half-migrated layouts. | Every phase is independently valuable and independently mergeable. Phases 1–2 alone fix the `concept_id = 0` problem on the existing bridge. Do not start Phase 3 until 0–2 are merged. |
+| **Seven phases is a lot of runway.** Phases 3–5 depend on 0–2 landing. | Stalling mid-rebuild leaves the repo in a worse state than today — two half-migrated layouts. | Every phase is independently valuable and independently landable, and fast-forwarding **`main`** — the default branch — at each phase boundary is what makes that real rather than nominal; this is why the plan uses neither a stack of PRs nor one long-lived branch merged at the end. Phases 1–2 alone fix the `concept_id = 0` problem on the existing bridge. Do not start Phase 3 until 0–2 have landed on `main`. |
 | **Dropping PostgreSQL strands a deployment.** The decision rests on the belief that nobody runs this on Postgres today — the container was a local dev convenience, not a target. | If someone is in fact deploying it, this rebuild removes their dialect and they cannot follow. | The claim is cheap to falsify before Phase 0 lands: ask. If it turns out to be a real target, the answer is to fund it properly (manifest entry, CI job, `intake`/`etl` DDL) rather than restore the untested half-maintained version. Meanwhile the local dev story moves to SQLite, which needs no container at all. |
 | **`items-extra-info.csv` is an internal resource of a third-party library, not a NAACCR-published artifact.** It already lags the dictionary: 51 of NAACCR 27's 822 items are absent from it. | `section` goes stale or vanishes on a version bump, silently NULLing the column the layer-3 concept-class derivation depends on. | Vendor it with a checksum and fail `dict load` on drift; keep `database/seed/naaccr_item_section_overrides.csv` as the tracked escape hatch; `validate` counts NULL sections against a declared threshold. The NAACCR Data Dictionary API is the fallback source if IMS drops it. |
 | **`4_condition_and_episode.sql` is the thinnest-specified script.** Thin condition + episode grouping is a deliberate scope cut. | The episode grain (one per accession) may not survive contact with multi-tumor reports. | Keep it in its own script so it can be replaced without touching measurement routing. Revisit with the ICD-O-3 roadmap work. |
