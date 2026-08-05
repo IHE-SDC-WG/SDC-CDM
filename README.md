@@ -1,82 +1,91 @@
 # SDC-CDM
 
-A *Structured Data Capture Common Data Model* (**SDC-CDM**) for the SDC Implementation Guide (SDC IG).
+This repository models CAP eCP / NAACCR data with a three-schema architecture:
 
-## Purpose
+- `naaccr` stores NAACCR dictionary metadata and raw captured values.
+- `sdc` stores SDC form and report structure.
+- `omop` stores unmodified OMOP CDM 5.4 rows.
 
-The SDC-CDM is designed to streamline the management of SDC processes by providing a unified data model for SDC data.
+The active database guidance is in [database/SCHEMA_ARCHITECTURE.md](database/SCHEMA_ARCHITECTURE.md), with entity-relationship diagrams in [diagrams/](diagrams/) — start with [`three-schema-overview.mmd`](diagrams/three-schema/three-schema-overview.mmd). Historical artifacts from the retired combined OMOP-SDC model are available in Git at commit [`6304b3e`](https://github.com/IHE-SDC-WG/SDC-CDM/tree/6304b3e).
 
-### Example Use Cases
+## OMOP Vocabularies
 
-- **Data Integration:** Add support for SDC data into a new or existing database by adopting a single, consistent schema.
-- **Unified Reporting and Analytics:** Be able to use the same SQL queries to generate reports and perform data analytics between any database that has adopted the schema.
-- **Data Import/Export:** Import and export various SDC data types for interoperability with other systems.
-- **Development and Testing:** Use the provided .NET library and Jupyter-style notebooks to develop, test, and validate the CDM schema.
+Create the three database schemas, then load an OHDSI Athena vocabulary extract
+before importing clinical data. Downloaded vocabulary files belong in
+[`database/vocab/`](database/vocab/README.md), where they are ignored by Git.
+That README explains how to request a bundle from Athena, comply with the
+individual vocabulary licenses, validate the extract, and run the loader for
+SQLite, PostgreSQL, or SQL Server.
 
-### This Repository
+For example, validate an extracted bundle without connecting to a database:
 
-The SDC-CDM GitHub repository hosts the following projects to help users and developers work with the SDC-CDM
+```bash
+python3 tools/load_athena_vocab.py \
+  --vocab-dir database/vocab \
+  --check-only
+```
 
-- `database/` - A standardized schema to store SDC data.
-- `notebooks/` - Jupyter-style notebooks to onboard users and familiarize themselves with the CDM.
-- `SdcCdmLib/` - A .NET library serving as a reference implementation for some common operations on SDC data, including:
-  - Importing SDC Forms and NAACCR V2 Messages into the CDM
-  - Exporting data from the CDM into FHIR CPDS Bundles
-- `sample_data/` - Sample data for testing and demonstration purposes.
+The Athena files are not covered by this repository's license and must not be
+committed or redistributed through this repository.
 
-## Getting Started
+## Quick Checks
 
-### Notebook
+SQLite DDL can be smoke-tested with attached databases:
 
-The notebooks contain a number of examples of how to use the CDM schema.
+```bash
+sqlite3 /tmp/sdc-cdm-control.db
+```
 
-#### .NET Polyglot Notebook
+Then attach `omop`, `naaccr`, and `sdc` databases and run the DDL under `database/schemas/**/ddl/sqlite/`.
 
-1. **Open the Notebook:**
-   Open [`notebooks/try_sdc_cdm_dotnet.dib`](notebooks/try_sdc_cdm_dotnet.dib) using VS Code with the [Polyglot Notebooks extension](https://marketplace.visualstudio.com/items?itemName=ms-dotnettools.polyglot-notebooks) installed.
+The .NET SQLite implementation builds the same attached schema layout from embedded DDL resources.
 
-2. **Notebook Walkthrough:**
-   The notebook will guide you through:
-   - Creating a SQLite database loaded with the CDM schema.
-   - Importing SDC templates, SDC forms, and NAACCR V2 messages.
-   - Exporting CDM data into FHIR CPDS bundles.
+## End-to-end quickstart
 
-#### Python Jupyter Notebook
+1. Build the three schemas for your database dialect. The DDL is under
+   `database/schemas/{omop,naaccr,sdc}/ddl/<dialect>/`. PostgreSQL and SQL Server use real
+   schemas. SQLite attaches separate `omop`, `naaccr`, and `sdc` database files; `BuildSchema()`
+   loads the SQLite DDL resources and performs those attachments.
+2. Load the Athena vocabulary files by following
+   [`database/vocab/README.md`](database/vocab/README.md). Apply any repo-specific NAACCR
+   vocabulary additions after the standard Athena load.
+3. Import an HL7 V2 / NAACCR message. The importer writes raw answers to
+   `naaccr.naaccr_value` and the report header to `sdc.sdc_report`.
+4. Run `database/etl/<dialect>/1_naaccr_sdc_to_omop.sql` to create the report note and its
+   measurements. For SQLite, `BridgeNaaccrSdcToOmop()` runs the embedded bridge script.
 
-1. **Open the Notebook:**
-   Open [`notebooks/try_sdc_cdm_python.ipynb`](notebooks/try_sdc_cdm_python.ipynb) using a Jupyter notebook viewer.
+The compact code sample below uses the built-in SQLite bridge seed concepts. A
+complete OMOP deployment should perform step 2 before running the import and
+bridge.
 
-2. **Notebook Walkthrough:**
-   The notebook will guide you through:
-   - Creating a SQLite database loaded with the CDM schema.
-   - Importing SDC templates, SDC forms, and NAACCR V2 messages.
+```csharp
+using System.IO;
+using SdcCdm;
+using SdcCdmInSqlite;
 
-### Library
+var store = new SdcCdmInSqlite("quickstart.db", overwrite: true);
+store.BuildSchema();
 
-We maintain a .NET library at `SdcCdmLib/` that provides reference implementations for various import and export operations related to SDC data. For example usage, refer to the Polyglot Notebook located in the `notebooks/` directory.
+var message = File.ReadAllText("sample_data/naaccr_v2/obx-Adrenal.hl7");
+NAACCRVolVImporter.ImportNaaccrVolV(store, message);
+store.BridgeNaaccrSdcToOmop();
+```
 
-### Standalone Database
+5. Inspect the bridged rows with the standard OMOP note anchor. More examples are in
+   `database/SCHEMA_ARCHITECTURE.md` and `sample_data/ecp_query_examples.sql`.
 
-A docker compose file is provided under `database/` to set up a PostgreSQL database containing the CDM schema.
+```sql
+SELECT m.measurement_id,
+       n.note_source_value AS report_accession,
+       m.measurement_source_value AS item_num,
+       m.value_as_number,
+       m.value_as_concept_id,
+       m.value_source_value
+FROM omop.measurement m
+JOIN omop.note n ON n.note_id = m.measurement_event_id
+WHERE m.meas_event_field_concept_id = 1147289
+ORDER BY m.measurement_id;
+```
 
-1. **Copy Environment Variables:**
-   ```
-   cp .env.example .env
-   ```
-   The default values will work for initial setup. Docker Compose will automatically use any `.env` file in the current working directory
-
-2. **Start Docker Compose:**
-   ```
-   docker compose up
-   ```
-   This command initializes a PostgreSQL database and loads the OMOP CDM schema on the first run.
-
-3. **Resetting the Database:**
-   To reset the database, execute:
-   ```
-   docker compose down -v
-   ```
-   This command removes the persistent database volume (with the `-v` flag). Afterward, you can restart the database with:
-   ```
-   docker compose up
-   ```
+6. For SQL Server, optionally run
+   `database/etl/sqlserver/validate_naaccr_sdc_to_omop.sql` after the bridge.

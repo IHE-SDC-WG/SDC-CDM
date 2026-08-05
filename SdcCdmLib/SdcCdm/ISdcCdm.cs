@@ -22,7 +22,6 @@ public record SdcObsClass(
     double? ResponseFloat,
     DateTimeOffset? ResponseDatetime,
     string? ReponseStringNvarchar,
-    DateTimeOffset? ObsDateTime,
     string? SdcOrder,
     string? SdcRepeatLevel,
     string? SdcComments
@@ -184,4 +183,111 @@ public interface ISdcCdm
     public TemplateInstanceRecord? GetTemplateInstanceRecord(long templateInstanceClassPk);
 
     public List<SdcObsClass> GetSdcObsClasses(long templateInstanceClassPk);
+
+    public long WriteSdcReport(
+        string template_name,
+        string template_version,
+        string template_instance_guid,
+        long? person_id = null,
+        long? visit_occurrence_id = null,
+        long? provider_id = null,
+        string? report_text = null,
+        string? report_template_source = null,
+        string? report_template_id = null,
+        string? report_template_version_id = null,
+        string? tumor_site = null,
+        string? procedure_type = null,
+        string? specimen_laterality = null,
+        // Synoptic report identifiers (OBR segment) + re-import collision flagging
+        string? report_accession = null,
+        string? report_loinc = null,
+        bool is_duplicate_accession = false,
+        long? first_seen_report_id = null
+    );
+
+    public long? FindFirstSdcReportByAccession(string report_accession);
+
+    public long WriteNaaccrValue(
+        long person_id,
+        string episode_key,
+        int item_num,
+        string? report_accession = null,
+        string? schema_id_number = null,
+        string? value_code = null,
+        double? value_num = null,
+        string? value_unit_source = null,
+        DateTime? observation_date = null,
+        long? sdc_report_id = null,
+        string? obx_sub_id = null,
+        string? value_text = null
+    );
+
+    public long WriteSdcFormAnswer(
+        long template_instance_id,
+        long? parent_form_answer_id = null,
+        string? section_sdcid = null,
+        string? section_guid = null,
+        string? question_text = null,
+        string? question_instance_guid = null,
+        string? question_sdcid = null,
+        string? list_item_id = null,
+        string? list_item_text = null,
+        string? list_item_instance_guid = null,
+        string? list_item_parent_guid = null,
+        string? units_system = null,
+        string? datatype = null,
+        string? sdc_order = null,
+        string? sdc_repeat_level = null,
+        string? sdc_comments = null,
+        string? response = null,
+        string? units = null,
+        long? response_int = null,
+        double? response_float = null,
+        DateTime? response_datetime = null,
+        string? reponse_string_nvarchar = null
+    );
+
+    public long WriteNote(
+        long person_id,
+        DateTime note_date,
+        long note_type_concept_id,
+        long note_class_concept_id,
+        string note_text,
+        string? note_title = null,
+        long encoding_concept_id = 0,
+        long language_concept_id = 0,
+        long? provider_id = null,
+        long? visit_occurrence_id = null,
+        string? note_source_value = null,
+        long? note_event_id = null,
+        long? note_event_field_concept_id = null
+    );
+
+    public int BridgeNaaccrSdcToOmop();
+
+    public record SdcReportRecord(
+        long Pk,
+        string TemplateName,
+        string TemplateVersion,
+        string TemplateInstanceGuid,
+        long? PersonId,
+        long? VisitOccurrenceId,
+        long? ProviderId,
+        string? ReportText,
+        string? ReportTemplateSource,
+        string? ReportTemplateId,
+        string? ReportTemplateVersionId,
+        string? TumorSite,
+        string? ProcedureType,
+        string? SpecimenLaterality,
+        string? ReportAccession,
+        string? ReportLoinc,
+        bool IsDuplicateAccession,
+        long? FirstSeenReportId,
+        DateTime CreatedDatetime,
+        DateTime UpdatedDatetime
+    );
+
+    public SdcReportRecord? GetSdcReportRecord(long reportPk);
+    public SdcReportRecord? FindSdcReportByGuid(string templateInstanceGuid);
 }

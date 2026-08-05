@@ -1,20 +1,45 @@
-## SDC-CDM Schema Files
+# Database Layout
 
-The SDC tables in described in a human-readable format in `SDC CDM Requirements.xlsx`
+The canonical database design is [SCHEMA_ARCHITECTURE.md](SCHEMA_ARCHITECTURE.md).
 
-The OMOP tables are described at https://ohdsi.github.io/CommonDataModel/cdm54.html
+This repo now uses one physical database with three logical schemas:
 
-Data Definition Language (DDL) files are provided under `ddl/` for the following backends:
+- `naaccr`: NAACCR dictionary tables, raw captured values, and NAACCR to OMOP concept maps.
+- `sdc`: SDC form, report, question, section, list-item, and specimen structure. The SDC XML path stores submitted answers in `sdc_form_answer`; the eCP/HL7 path stores answers in `naaccr_value`.
+- `omop`: stock OMOP CDM 5.4 tables, kept unmodified.
 
-- PostgreSQL
-- SQLite
+The bridge step reads `naaccr` and `sdc`, then writes standard OMOP rows only. OMOP rows point back to the source through standard fields such as `note_source_value`, `measurement_event_id`, `observation_event_id`, and source value columns.
 
-### Guide to updating the DDLs
+## Files
 
-DDL templates are generated in our [OHDSI/CommonDataModel fork](https://github.com/IHE-SDC-WG/OHDSI-CommonDataModel-SDC). The following .csv files should be considered the source of truth for the SDC-CDM schema:
-- [OMOP_CDMv5.4-SDC_Table_Level.csv](https://github.com/IHE-SDC-WG/OHDSI-CommonDataModel-SDC/blob/add-SDC-schema/inst/csv/OMOP_CDMv5.4-SDC_Table_Level.csv)
-- [OMOP_CDMv5.4-SDC_Field_Level.csv](https://github.com/IHE-SDC-WG/OHDSI-CommonDataModel-SDC/blob/add-SDC-schema/inst/csv/OMOP_CDMv5.4-SDC_Field_Level.csv)
+```text
+database/
+  vocab/
+    README.md
+  schemas/
+    naaccr/ddl/{sqlite,postgresql,sqlserver}/
+    sdc/ddl/{sqlite,postgresql,sqlserver}/
+    omop/ddl/{sqlite,postgresql,sqlserver}/
+  etl/
+    sqlite/
+    sqlserver/
+```
 
-The script `update-ddl-files.py [commit_hash]` fetches DDL templates from the fork, processes them, then writes ready-to-use files to the `ddl/` directory. The details of this process depends on the database type. See the script for details.
+SQLite uses attached databases named `naaccr`, `sdc`, and `omop`. PostgreSQL and SQL Server use real schemas.
+The repository currently provides bridge ETL for SQLite and SQL Server. PostgreSQL schema
+initialization is complete, but PostgreSQL bridge ETL is deferred.
 
-Any change to the schema should be made to the linked CSV files first. Note that all SDC additions are at the end of each CSV file.
+## OMOP Vocabulary Data
+
+The OMOP DDL creates empty vocabulary tables. Download an OHDSI Athena bundle,
+extract its nine vocabulary files under [`vocab/`](vocab/README.md), and run
+`tools/load_athena_vocab.py` before importing clinical data. The downloaded
+files are ignored by Git and remain subject to the licenses of their individual
+vocabularies.
+
+## Historical Model
+
+The previous combined OMOP-SDC model is available in Git at commit
+[`6304b3e`](https://github.com/IHE-SDC-WG/SDC-CDM/tree/6304b3e). It is retained
+in repository history for reference only. Do not regenerate active DDL from the
+old OMOP-SDC fork.

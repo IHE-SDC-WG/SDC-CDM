@@ -1,9 +1,80 @@
 using System.Diagnostics;
+using System.Globalization;
 
 namespace SdcCdm;
 
 public static class NAACCRVolVImporter
 {
+    private sealed class CapturedValue
+    {
+        public required int ItemNum { get; init; }
+        public string? ObxSubId { get; init; }
+        public string? ValueCode { get; set; }
+        public double? ValueNum { get; set; }
+        public string? ValueText { get; set; }
+        public string? ValueUnitSource { get; set; }
+        public DateTime? ObservationDate { get; set; }
+    }
+
+    private static string? NullIfBlank(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    }
+
+    private static string? NormalizeObxSubId(string? value)
+    {
+        var normalized = NullIfBlank(value)?.TrimStart('+');
+        if (normalized == null)
+        {
+            return null;
+        }
+
+        return NullIfBlank(normalized.Split('.')[0]);
+    }
+
+    private static DateTime? ParseHl7Date(string? value)
+    {
+        var trimmed = NullIfBlank(value);
+        if (trimmed == null)
+        {
+            return null;
+        }
+
+        var digitCount = 0;
+        while (digitCount < trimmed.Length && char.IsDigit(trimmed[digitCount]))
+        {
+            digitCount++;
+        }
+
+        var digits = trimmed[..digitCount];
+        foreach (
+            var (width, format) in new[]
+            {
+                (14, "yyyyMMddHHmmss"),
+                (12, "yyyyMMddHHmm"),
+                (10, "yyyyMMddHH"),
+                (8, "yyyyMMdd"),
+            }
+        )
+        {
+            if (
+                digits.Length >= width
+                && DateTime.TryParseExact(
+                    digits[..width],
+                    format,
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.None,
+                    out var parsed
+                )
+            )
+            {
+                return parsed;
+            }
+        }
+
+        return null;
+    }
+
     private static void ErrorCallback(string message)
     {
         Debug.Assert(message != null, "No message provided for error callback");
@@ -12,6 +83,7 @@ public static class NAACCRVolVImporter
 
     public static void ImportNaaccrVolV(ISdcCdm sdcCdm, string hl7_message)
     {
+        Console.WriteLine("Starting NAACCR Vol V import...");
         string get_field(string[] fields, int index)
         {
             // If fields[0] == "MSH", use index-1, else index.
@@ -30,10 +102,12 @@ public static class NAACCRVolVImporter
         {
             foreach (var segment in segments)
             {
-                var fields = segment.Split('|');
-                if (fields[0] == segment_name)
+                var seg = segment.Trim();
+                var fields = seg.Split('|');
+                var name = fields.Length > 0 ? fields[0].TrimStart('\uFEFF') : string.Empty;
+                if (name == segment_name)
                 {
-                    return segment;
+                    return seg;
                 }
             }
             return null;
@@ -44,17 +118,22 @@ public static class NAACCRVolVImporter
             var found_segments = new List<string>();
             foreach (var segment in segments)
             {
-                var fields = segment.Split('|');
-                if (fields[0] == segment_name)
+                var seg = segment.Trim();
+                var fields = seg.Split('|');
+                var name = fields.Length > 0 ? fields[0].TrimStart('\uFEFF') : string.Empty;
+                if (name == segment_name)
                 {
-                    found_segments.Add(segment);
+                    found_segments.Add(seg);
                 }
             }
             return found_segments;
         }
 
-        // Split the HL7 message into lines
-        var lines = hl7_message.Split(new char[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
+        // Split the HL7 message into lines (HL7 commonly uses CR "\r", sometimes CRLF)
+        var lines = hl7_message.Split(
+            new char[] { '\r', '\n' },
+            StringSplitOptions.RemoveEmptyEntries
+        );
 
         // MSH segment
         var msh_segment = get_first_segment(lines, "MSH");
@@ -95,159 +174,456 @@ public static class NAACCRVolVImporter
         }
         var obr_segment_fields = obr_segment.Split('|');
         var report_type = get_field(obr_segment_fields, 4);
-        if (report_type != "60568-3^SYNOPTIC REPORT^LN")
+        // Be tolerant of case and formatting differences by matching on the LOINC code (first component)
+        var report_type_code = (report_type ?? string.Empty).Split('^')[0];
+        var valid_report_type_codes = new[] { "60568-3", "35265-8" };
+        if (!valid_report_type_codes.Contains(report_type_code))
         {
             ErrorCallback($"Unknown report type: {report_type}");
         }
-        Debug.Print($"Report type: {report_type}");
 
-        // OBX segments
-        var obx_segments = get_all_segments(lines, "OBX");
-        if (obx_segments.Count < 3)
+        // Synoptic report identifiers from OBR: OBR-3 is the filler order number /
+        // accession (durable real-world report key); OBR-4 carries the report LOINC.
+        var report_accession_raw = (get_field(obr_segment_fields, 3) ?? string.Empty).Split('^')[0];
+        // Normalize a missing/blank accession to NULL so accession-less reports never share
+        // an empty-string join key in the bridge.
+        string? report_accession = string.IsNullOrWhiteSpace(report_accession_raw)
+            ? null
+            : report_accession_raw;
+        var report_loinc = report_type_code;
+        var report_observation_date =
+            ParseHl7Date(get_field(obr_segment_fields, 7))
+            ?? ParseHl7Date(get_field(obr_segment_fields, 22))
+            ?? DateTime.Now.Date;
+
+        // Extract person data
+        var person_source_value = get_field(pid_segment_fields, 3);
+        var person_name = get_field(pid_segment_fields, 5);
+        var birth_date = get_field(pid_segment_fields, 7);
+        var gender = get_field(pid_segment_fields, 8);
+
+        // Parse birth date
+        DateTime? birth_datetime = null;
+        if (!string.IsNullOrEmpty(birth_date) && birth_date.Length >= 8)
         {
-            ErrorCallback("Not enough OBX segments found");
+            try
+            {
+                var year = int.Parse(birth_date.Substring(0, 4));
+                var month = int.Parse(birth_date.Substring(4, 2));
+                var day = int.Parse(birth_date.Substring(6, 2));
+                birth_datetime = new DateTime(year, month, day);
+            }
+            catch (Exception ex)
+            {
+                Debug.Print($"Error parsing birth date: {ex.Message}");
+            }
+        }
+
+        // Create or find person
+        var existingPersonId = sdcCdm.FindPersonByIdentifier(person_source_value);
+        long? personId = null;
+
+        if (existingPersonId == null)
+        {
+            // Create new person record
+            var personDto = new ISdcCdm.PersonDTO
+            {
+                PersonSourceValue = person_source_value,
+                YearOfBirth = birth_datetime?.Year ?? 1900,
+                MonthOfBirth = birth_datetime?.Month,
+                DayOfBirth = birth_datetime?.Day,
+                BirthDatetime = birth_datetime,
+                GenderConceptId =
+                    gender == "M" ? 8507L
+                    : gender == "F" ? 8532L
+                    : 0L, // Male/Female/Unknown
+                RaceConceptId = 0L, // Unknown
+                EthnicityConceptId = 0L, // Unknown
+            };
+            var newPerson = sdcCdm.WritePerson(personDto);
+            personId = newPerson?.PersonId;
+        }
+        else
+        {
+            personId = existingPersonId;
+        }
+
+        // Extract all OBX segments and look for ECP-specific ones
+        var obx_segments = get_all_segments(lines, "OBX");
+        if (obx_segments.Count < 6)
+        {
+            ErrorCallback("Not enough OBX segments for template metadata (need at least 6)");
             return;
         }
 
-        // First OBX
-        var first_obx = obx_segments[0];
-        var first_obx_fields = first_obx.Split('|');
-        var observation_identifier = get_field(first_obx_fields, 3);
-        if (observation_identifier != "60573-3^Report template source^LN")
-        {
-            ErrorCallback($"Unexpected observation identifier: {observation_identifier}");
-        }
-        Debug.Print($"First OBX identifier: {observation_identifier}");
-        var document_source_style = get_field(first_obx_fields, 5);
-        if (document_source_style != "CAP eCC")
-        {
-            ErrorCallback($"Unexpected document source style: {document_source_style}");
-        }
-        Debug.Print($"Document source style: {document_source_style}");
+        Console.WriteLine($"Found {obx_segments.Count} total OBX segments");
 
-        // Second OBX
-        var second_obx = obx_segments[1];
-        var second_obx_fields = second_obx.Split('|');
-        observation_identifier = get_field(second_obx_fields, 3);
-        if (observation_identifier != "60572-5^Report template ID^LN")
-        {
-            ErrorCallback($"Unexpected observation identifier: {observation_identifier}");
-        }
-        var template_id = get_field(second_obx_fields, 5);
-        var template_id_parts = template_id.Split('^');
-        // Assuming template_id always has at least two parts
-        var form_title = template_id_parts.Length > 1 ? template_id_parts[1] : "UNKNOWN_FORM_TITLE";
-        Debug.Print($"Template ID: {template_id}");
+        // Find ECP-specific OBX segments by looking for the Report Template Source
+        var template_source = "";
+        var template_id = "";
+        var template_version = "";
 
-        // Third OBX
-        var third_obx = obx_segments[2];
-        var third_obx_fields = third_obx.Split('|');
-        observation_identifier = get_field(third_obx_fields, 3);
-        if (observation_identifier != "60574-1^Report template version ID^LN")
+        // Look for OBX segments with Report Template Source (60573-3)
+        for (int i = 0; i < obx_segments.Count; i++)
         {
-            ErrorCallback($"Unexpected observation identifier: {observation_identifier}");
-        }
-        var version_id = get_field(third_obx_fields, 5);
+            var obx_fields = obx_segments[i].Split('|');
+            var obx_observation_id = get_field(obx_fields, 3);
 
-        // Insert into DB (template_sdc)
-        var new_template_sdc_pk = sdcCdm.WriteTemplateSdcClass(
-            "UNKNOWN",
-            "UNKNOWN",
-            "UNKNOWN",
-            version_id ?? "UNKNOWN",
-            "UNKNOWN",
-            form_title,
-            "UNKNOWN",
-            "FD"
+            if (
+                obx_observation_id.Contains("60573-3")
+                && (
+                    obx_observation_id.Contains("Report Template Source")
+                    || obx_observation_id.Contains("Report template source")
+                )
+            )
+            {
+                template_source = get_field(obx_fields, 5);
+                Console.WriteLine($"Found Report Template Source at OBX[{i}]: {template_source}");
+                break;
+            }
+        }
+
+        // Look for OBX segments with Report Template ID (60572-5)
+        for (int i = 0; i < obx_segments.Count; i++)
+        {
+            var obx_fields = obx_segments[i].Split('|');
+            var obx_observation_id = get_field(obx_fields, 3);
+
+            if (
+                obx_observation_id.Contains("60572-5")
+                && (
+                    obx_observation_id.Contains("Report Template ID")
+                    || obx_observation_id.Contains("Report template ID")
+                )
+            )
+            {
+                template_id = get_field(obx_fields, 5);
+                Console.WriteLine($"Found Report Template ID at OBX[{i}]: {template_id}");
+                break;
+            }
+        }
+
+        // Look for OBX segments with Report Template Version ID (60574-1)
+        for (int i = 0; i < obx_segments.Count; i++)
+        {
+            var obx_fields = obx_segments[i].Split('|');
+            var obx_observation_id = get_field(obx_fields, 3);
+
+            if (
+                obx_observation_id.Contains("60574-1")
+                && (
+                    obx_observation_id.Contains("Report Template Version ID")
+                    || obx_observation_id.Contains("Report template version ID")
+                )
+            )
+            {
+                template_version = get_field(obx_fields, 5);
+                Console.WriteLine(
+                    $"Found Report Template Version ID at OBX[{i}]: {template_version}"
+                );
+                break;
+            }
+        }
+
+        // Parse additional metadata by looking for specific OBX segments
+        string? tumor_site = null;
+        string? procedure_type = null;
+        string? specimen_laterality = null;
+
+        // Look for Tumor Site (usually contains "Tumor Site" in the observation ID)
+        for (int i = 0; i < obx_segments.Count; i++)
+        {
+            var obx_fields = obx_segments[i].Split('|');
+            var obx_observation_id = get_field(obx_fields, 3);
+
+            if (
+                obx_observation_id.Contains("Tumor Site")
+                || obx_observation_id.Contains("22371.100004300")
+                || obx_observation_id.Contains("2118.1000043")
+            )
+            {
+                tumor_site = NullIfBlank(get_field(obx_fields, 5));
+                Console.WriteLine($"Found Tumor Site at OBX[{i}]: {tumor_site}");
+                break;
+            }
+        }
+
+        // Look for Procedure (usually contains "Procedure" in the observation ID)
+        for (int i = 0; i < obx_segments.Count; i++)
+        {
+            var obx_fields = obx_segments[i].Split('|');
+            var obx_observation_id = get_field(obx_fields, 3);
+
+            if (
+                obx_observation_id.Contains("Procedure")
+                || obx_observation_id.Contains("51121.100004300")
+                || obx_observation_id.Contains("820603.1000043")
+            )
+            {
+                procedure_type = NullIfBlank(get_field(obx_fields, 5));
+                Console.WriteLine($"Found Procedure at OBX[{i}]: {procedure_type}");
+                break;
+            }
+        }
+
+        // Look for Specimen Laterality or Tumor Focality
+        for (int i = 0; i < obx_segments.Count; i++)
+        {
+            var obx_fields = obx_segments[i].Split('|');
+            var obx_observation_id = get_field(obx_fields, 3);
+
+            if (
+                obx_observation_id.Contains("Tumor Focality")
+                || obx_observation_id.Contains("8722.100004300")
+                || obx_observation_id.Contains("Specimen Laterality")
+                || obx_observation_id.Contains("52756.1000043")
+            )
+            {
+                specimen_laterality = NullIfBlank(get_field(obx_fields, 5));
+                Console.WriteLine($"Found Tumor Focality at OBX[{i}]: {specimen_laterality}");
+                break;
+            }
+        }
+
+        // Generate template instance GUID
+        var template_instance_guid = Guid.NewGuid().ToString();
+
+        // Re-import policy: never dedup — always insert — but flag collisions so duplicate
+        // synoptic reports (same OBR accession) are queryable. See ECP_OMOP_MAPPING.md.
+        long? first_seen_ecp_id = string.IsNullOrEmpty(report_accession)
+            ? null
+            : sdcCdm.FindFirstSdcReportByAccession(report_accession);
+        bool is_duplicate_accession = first_seen_ecp_id != null;
+        if (is_duplicate_accession)
+        {
+            Console.WriteLine(
+                $"Duplicate synoptic report accession '{report_accession}' (first seen ECP id {first_seen_ecp_id}); inserting and flagging."
+            );
+        }
+
+        // Gather the report narrative (the CAP eCC comment item) for the synoptic-report NOTE.
+        string? report_narrative = null;
+        foreach (var seg in obx_segments)
+        {
+            var f = seg.Split('|');
+            var oid = get_field(f, 3);
+            if (oid.Contains("2168.1000043") || oid.Contains("Comment"))
+            {
+                report_narrative = NullIfBlank(get_field(f, 5));
+                break;
+            }
+        }
+
+        var sdcReportId = sdcCdm.WriteSdcReport(
+            template_name: template_id,
+            template_version: template_version,
+            template_instance_guid: template_instance_guid,
+            person_id: personId,
+            report_text: report_narrative,
+            report_template_source: NullIfBlank(template_source),
+            report_template_id: NullIfBlank(template_id),
+            report_template_version_id: NullIfBlank(template_version),
+            tumor_site: tumor_site,
+            procedure_type: procedure_type,
+            specimen_laterality: specimen_laterality,
+            report_accession: report_accession,
+            report_loinc: report_loinc,
+            is_duplicate_accession: is_duplicate_accession,
+            first_seen_report_id: first_seen_ecp_id
         );
 
-        // Insert into DB (template_instance_class)
-        var new_template_instance_class_pk = sdcCdm.WriteTemplateInstanceClass(new_template_sdc_pk);
-        var new_template_instance_class_fk = new_template_instance_class_pk;
-
-        // Build map of observations
-        var obs_sub_id_map = new Dictionary<string, Dictionary<string, string?>>();
-
-        var rest_of_obx_segments = obx_segments.Skip(3);
-        foreach (var obx_segment in rest_of_obx_segments)
+        // Process OBX segments for ECP data (starting from 4th OBX). CAP messages use
+        // OBX-4 to connect a coded selection with its numeric or text companion, so
+        // stage one logical captured value per normalized item/sub-id group.
+        var capturedValues = new List<CapturedValue>();
+        var activeGroups = new Dictionary<(int ItemNum, string SubId), CapturedValue>();
+        for (int i = 3; i < obx_segments.Count; i++)
         {
-            var obx_segment_fields = obx_segment.Split('|');
-            var observation_data_type = get_field(obx_segment_fields, 2);
-            observation_identifier = get_field(obx_segment_fields, 3);
-            var obs_id_parts = observation_identifier.Split('^');
-            var q_id = obs_id_parts.Length > 0 ? obs_id_parts[0] : null;
-            var q_text = obs_id_parts.Length > 1 ? obs_id_parts[1] : null;
+            var obx_fields = obx_segments[i].Split('|');
+            var obx_value_type = get_field(obx_fields, 2);
+            var obx_observation_id = get_field(obx_fields, 3);
+            var obx_sub_id = NormalizeObxSubId(get_field(obx_fields, 4));
+            var obx_value = get_field(obx_fields, 5);
+            var obx_units = NullIfBlank(get_field(obx_fields, 6));
+            var observation_date =
+                ParseHl7Date(get_field(obx_fields, 14)) ?? report_observation_date;
 
-            var observation_sub_id = get_field(obx_segment_fields, 4);
-            if (!string.IsNullOrEmpty(observation_sub_id))
+            // Debug logging for units extraction
+            if (!string.IsNullOrEmpty(obx_units))
             {
-                var observation_value = get_field(obx_segment_fields, 5);
-                var obs_val_parts = observation_value.Split('^');
-                string? li_text = null;
-                string? li_id = null;
-                if (obs_val_parts.Length > 1)
-                {
-                    li_id = obs_val_parts[0];
-                    li_text = obs_val_parts[1];
-                }
-                var observation_units = get_field(obx_segment_fields, 6);
+                Console.WriteLine(
+                    $"OBX[{i}] - Observation: {obx_observation_id} - Units: '{obx_units}'"
+                );
+            }
 
-                if (obs_sub_id_map.ContainsKey(observation_sub_id))
-                {
-                    Debug.Print($"@@@@@ Observation sub ID already exists: {observation_sub_id}");
-                }
-                else
-                {
-                    obs_sub_id_map[observation_sub_id] = new Dictionary<string, string?>
+            // Skip narrative content (focus on structured ECP data)
+            if (obx_value_type == "ST" && obx_value.Length > 200)
+            {
+                continue; // Skip long narrative text
+            }
+
+            // Parse question identifier from observation ID
+            var question_parts = obx_observation_id.Split('^');
+            var question_identifier =
+                question_parts.Length > 0 ? question_parts[0] : obx_observation_id;
+            double? numeric_value = null;
+            string? cwe_code = null;
+            string? text_value = null;
+            var componentType = "text";
+
+            switch (obx_value_type)
+            {
+                case "NM":
+                    if (
+                        double.TryParse(
+                            obx_value,
+                            NumberStyles.Float,
+                            CultureInfo.InvariantCulture,
+                            out double num_val
+                        )
+                    )
                     {
-                        { "q_id", q_id },
-                        { "q_text", q_text },
-                        { "value", observation_value },
-                        { "units", observation_units },
-                    };
-                }
-                if (!string.IsNullOrEmpty(observation_units))
+                        componentType = "numeric";
+                        numeric_value = num_val;
+                    }
+                    else
+                    {
+                        text_value = NullIfBlank(obx_value);
+                        Console.WriteLine(
+                            $"WARNING: preserving non-numeric NM value '{obx_value}' as text for '{obx_observation_id}'"
+                        );
+                    }
+                    break;
+                case "CWE":
+                    // Parse CWE: code^text^codingSystem^...
+                    if (!string.IsNullOrEmpty(obx_value))
+                    {
+                        var parts = obx_value.Split('^');
+                        cwe_code = parts.Length > 0 ? NullIfBlank(parts[0]) : null;
+                        if (cwe_code == null)
+                        {
+                            text_value = NullIfBlank(obx_value);
+                        }
+                        else
+                        {
+                            componentType = "coded";
+                        }
+                    }
+                    break;
+                case "ST":
+                    // Some feeds encode numeric values in ST; treat as numeric when parsable
+                    if (
+                        double.TryParse(
+                            obx_value,
+                            NumberStyles.Float,
+                            CultureInfo.InvariantCulture,
+                            out double num_val_st
+                        )
+                    )
+                    {
+                        componentType = "numeric";
+                        numeric_value = num_val_st;
+                    }
+                    else
+                    {
+                        text_value = NullIfBlank(obx_value);
+                    }
+                    break;
+                default:
+                    text_value = NullIfBlank(obx_value);
+                    break;
+            }
+
+            var itemNumText = question_identifier.Split('.')[0];
+            if (!int.TryParse(itemNumText, out var itemNum))
+            {
+                Console.WriteLine(
+                    $"WARNING: skipping OBX with non-integer item number: obx_observation_id='{obx_observation_id}' (parsed '{itemNumText}')"
+                );
+                continue;
+            }
+
+            CapturedValue capturedValue;
+            if (obx_sub_id == null)
+            {
+                capturedValue = new CapturedValue
                 {
-                    Debug.Print($"Observation units: {observation_units}");
-                }
-                Debug.Print($"@@@ Observation sub ID: {observation_sub_id}");
+                    ItemNum = itemNum,
+                    ObservationDate = observation_date,
+                };
+                capturedValues.Add(capturedValue);
             }
             else
             {
-                var observation_value = get_field(obx_segment_fields, 5);
-                string? response = null;
-                string? li_text = null;
-                string? li_id = null;
-                if (observation_data_type == "ST")
+                var groupKey = (itemNum, obx_sub_id);
+                activeGroups.TryGetValue(groupKey, out var existingValue);
+                var repeatsComponent =
+                    existingValue != null
+                    && (
+                        (componentType == "coded" && existingValue.ValueCode != null)
+                        || (componentType == "numeric" && existingValue.ValueNum != null)
+                        || (componentType == "text" && existingValue.ValueText != null)
+                    );
+                if (existingValue == null || repeatsComponent)
                 {
-                    response =
-                        observation_value.Length > 99 ? observation_value[..99] : observation_value;
+                    if (repeatsComponent)
+                    {
+                        Console.WriteLine(
+                            $"WARNING: repeated {componentType} component for item {itemNum}, OBX-4 '{obx_sub_id}'; starting another captured-value occurrence"
+                        );
+                    }
+                    capturedValue = new CapturedValue
+                    {
+                        ItemNum = itemNum,
+                        ObxSubId = obx_sub_id,
+                        ObservationDate = observation_date,
+                    };
+                    activeGroups[groupKey] = capturedValue;
+                    capturedValues.Add(capturedValue);
                 }
                 else
                 {
-                    var obs_val_parts = observation_value.Split('^');
-                    if (obs_val_parts.Length > 1)
-                    {
-                        li_id = obs_val_parts[0];
-                        li_text = obs_val_parts[1];
-                    }
+                    capturedValue = existingValue;
                 }
+            }
 
-                sdcCdm.WriteSdcObsClass(
-                    new_template_instance_class_fk,
-                    parent_observation_id: null,
-                    "UNKNOWN",
-                    "UNKNOWN",
-                    q_text,
-                    "UNKNOWN",
-                    q_id,
-                    li_text,
-                    li_id,
-                    "UNKNOWN",
-                    "UNKNOWN",
-                    response
-                );
+            capturedValue.ObservationDate ??= observation_date;
+            capturedValue.ValueUnitSource ??= obx_units;
+            if (componentType == "coded")
+            {
+                capturedValue.ValueCode = cwe_code;
+            }
+            else if (componentType == "numeric")
+            {
+                capturedValue.ValueNum = numeric_value;
+            }
+            else
+            {
+                capturedValue.ValueText = text_value;
             }
         }
+
+        foreach (var capturedValue in capturedValues)
+        {
+            _ = sdcCdm.WriteNaaccrValue(
+                person_id: personId ?? 0,
+                episode_key: string.IsNullOrWhiteSpace(report_accession)
+                    ? template_instance_guid
+                    : report_accession,
+                report_accession: report_accession,
+                item_num: capturedValue.ItemNum,
+                obx_sub_id: capturedValue.ObxSubId,
+                value_code: capturedValue.ValueCode,
+                value_num: capturedValue.ValueNum,
+                value_text: capturedValue.ValueText,
+                value_unit_source: capturedValue.ValueUnitSource,
+                observation_date: capturedValue.ObservationDate,
+                sdc_report_id: sdcReportId
+            );
+        }
+
+        Console.WriteLine(
+            $"Successfully imported NAACCR V2 message with {capturedValues.Count} logical ECP values"
+        );
     }
 }

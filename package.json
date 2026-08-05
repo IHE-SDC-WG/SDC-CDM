@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "fast-csv": "^5.0.5",
+    "mssql": "^12.2.0"
+  },
+  "devDependencies": {
+    "@types/mssql": "^9.1.8"
+  }
+}

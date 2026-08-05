@@ -1,0 +1,225 @@
+erDiagram
+  %% This section repeats PERSON/VISIT/PROVIDER/CONCEPT minimally for clarity.
+  PERSON { INT person_id PK }
+  VISIT_OCCURRENCE { INT visit_occurrence_id PK }
+  VISIT_DETAIL { INT visit_detail_id PK }
+  PROVIDER { INT provider_id PK }
+  CONCEPT { INT concept_id PK }
+
+  CONDITION_OCCURRENCE {
+    INT condition_occurrence_id PK
+    INT person_id FK
+    INT condition_concept_id FK
+    DATE condition_start_date
+    DATE condition_end_date
+    INT condition_type_concept_id FK
+    INT provider_id FK
+    INT visit_occurrence_id FK
+    INT visit_detail_id FK
+    INT condition_status_concept_id FK
+    VARCHAR condition_source_value
+    INT condition_source_concept_id FK
+    VARCHAR condition_status_source_value
+  }
+
+  PROCEDURE_OCCURRENCE {
+    INT procedure_occurrence_id PK
+    INT person_id FK
+    INT procedure_concept_id FK
+    DATE procedure_date
+    INT procedure_type_concept_id FK
+    INT modifier_concept_id FK
+    INT quantity
+    INT provider_id FK
+    INT visit_occurrence_id FK
+    INT visit_detail_id FK
+    VARCHAR procedure_source_value
+    INT procedure_source_concept_id FK
+    VARCHAR modifier_source_value
+  }
+
+  DRUG_EXPOSURE {
+    INT drug_exposure_id PK
+    INT person_id FK
+    INT drug_concept_id FK
+    DATE drug_exposure_start_date
+    DATE drug_exposure_end_date
+    INT drug_type_concept_id FK
+    INT refills
+    FLOAT quantity
+    INT days_supply
+    VARCHAR sig
+    INT route_concept_id FK
+    INT lot_number
+    INT provider_id FK
+    INT visit_occurrence_id FK
+    INT visit_detail_id FK
+    VARCHAR drug_source_value
+    INT drug_source_concept_id FK
+    VARCHAR route_source_value
+    VARCHAR dose_unit_source_value
+  }
+
+  DEVICE_EXPOSURE {
+    INT device_exposure_id PK
+    INT person_id FK
+    INT device_concept_id FK
+    DATE device_exposure_start_date
+    DATE device_exposure_end_date
+    INT device_type_concept_id FK
+    VARCHAR unique_device_id
+    INT quantity
+    INT provider_id FK
+    INT visit_occurrence_id FK
+    INT visit_detail_id FK
+    VARCHAR device_source_value
+    INT device_source_concept_id FK
+  }
+
+  MEASUREMENT {
+    INT measurement_id PK
+    INT person_id FK
+    INT measurement_concept_id FK
+    DATE measurement_date
+    INT measurement_type_concept_id FK
+    FLOAT value_as_number
+    INT value_as_concept_id FK
+    INT unit_concept_id FK
+    FLOAT range_low
+    FLOAT range_high
+    INT provider_id FK
+    INT visit_occurrence_id FK
+    INT visit_detail_id FK
+    VARCHAR measurement_source_value
+    INT measurement_source_concept_id FK
+    VARCHAR unit_source_value
+    VARCHAR value_source_value
+  }
+
+  OBSERVATION {
+    INT observation_id PK
+    INT person_id FK
+    INT observation_concept_id FK
+    DATE observation_date
+    INT observation_type_concept_id FK
+    FLOAT value_as_number
+    INT value_as_concept_id FK
+    VARCHAR value_as_string
+    INT qualifier_concept_id FK
+    INT unit_concept_id FK
+    INT provider_id FK
+    INT visit_occurrence_id FK
+    INT visit_detail_id FK
+    VARCHAR observation_source_value
+    INT observation_source_concept_id FK
+    VARCHAR unit_source_value
+    VARCHAR qualifier_source_value
+  }
+
+  SPECIMEN {
+    INT specimen_id PK
+    INT person_id FK
+    INT specimen_concept_id FK
+    DATE specimen_date
+    INT specimen_type_concept_id FK
+    FLOAT quantity
+    INT unit_concept_id FK
+    INT anatomic_site_concept_id FK
+    INT disease_status_concept_id FK
+    VARCHAR specimen_source_id
+    INT specimen_source_concept_id FK
+    VARCHAR unit_source_value
+    VARCHAR anatomic_site_source_value
+    VARCHAR disease_status_source_value
+  }
+
+  NOTE {
+    INT note_id PK
+    INT person_id FK
+    INT note_event_id
+    INT note_event_field_concept_id FK
+    INT note_type_concept_id FK
+    INT note_class_concept_id FK
+    DATE note_date
+    DATETIME note_datetime
+    VARCHAR note_title
+    TEXT note_text
+    INT encoding_concept_id FK
+    INT language_concept_id FK
+    INT provider_id FK
+    INT visit_occurrence_id FK
+    INT visit_detail_id FK
+    VARCHAR note_source_value
+  }
+
+  NOTE_NLP {
+    INT note_nlp_id PK
+    INT note_id FK
+    VARCHAR snippet
+    VARCHAR offset
+    VARCHAR lexical_variant
+    INT note_nlp_concept_id FK
+    INT note_nlp_source_concept_id FK
+    VARCHAR nlp_system
+    DATE nlp_date
+    DATETIME nlp_datetime
+    VARCHAR term_exists
+    VARCHAR term_temporal
+    VARCHAR term_modifiers
+  }
+
+  FACT_RELATIONSHIP {
+    INT domain_concept_id_1 FK
+    INT fact_id_1
+    INT domain_concept_id_2 FK
+    INT fact_id_2
+    INT relationship_concept_id FK
+  }
+
+  %% Relationships to person/visit/provider/concepts
+  PERSON ||--o{ CONDITION_OCCURRENCE : "person_id"
+  VISIT_OCCURRENCE ||--o{ CONDITION_OCCURRENCE : "visit_occurrence_id"
+  VISIT_DETAIL ||--o{ CONDITION_OCCURRENCE : "visit_detail_id"
+  PROVIDER ||--o{ CONDITION_OCCURRENCE : "provider_id"
+  CONCEPT ||--o{ CONDITION_OCCURRENCE : "condition/type/status"
+
+  PERSON ||--o{ PROCEDURE_OCCURRENCE : "person_id"
+  VISIT_OCCURRENCE ||--o{ PROCEDURE_OCCURRENCE : "visit_occurrence_id"
+  VISIT_DETAIL ||--o{ PROCEDURE_OCCURRENCE : "visit_detail_id"
+  PROVIDER ||--o{ PROCEDURE_OCCURRENCE : "provider_id"
+  CONCEPT ||--o{ PROCEDURE_OCCURRENCE : "procedure/type/modifier"
+
+  PERSON ||--o{ DRUG_EXPOSURE : "person_id"
+  VISIT_OCCURRENCE ||--o{ DRUG_EXPOSURE : "visit_occurrence_id"
+  VISIT_DETAIL ||--o{ DRUG_EXPOSURE : "visit_detail_id"
+  PROVIDER ||--o{ DRUG_EXPOSURE : "provider_id"
+  CONCEPT ||--o{ DRUG_EXPOSURE : "drug/type/route/unit"
+
+  PERSON ||--o{ DEVICE_EXPOSURE : "person_id"
+  VISIT_OCCURRENCE ||--o{ DEVICE_EXPOSURE : "visit_occurrence_id"
+  VISIT_DETAIL ||--o{ DEVICE_EXPOSURE : "visit_detail_id"
+  PROVIDER ||--o{ DEVICE_EXPOSURE : "provider_id"
+  CONCEPT ||--o{ DEVICE_EXPOSURE : "device/type"
+
+  PERSON ||--o{ MEASUREMENT : "person_id"
+  VISIT_OCCURRENCE ||--o{ MEASUREMENT : "visit_occurrence_id"
+  VISIT_DETAIL ||--o{ MEASUREMENT : "visit_detail_id"
+  PROVIDER ||--o{ MEASUREMENT : "provider_id"
+  CONCEPT ||--o{ MEASUREMENT : "measurement/type/unit/value"
+
+  PERSON ||--o{ OBSERVATION : "person_id"
+  VISIT_OCCURRENCE ||--o{ OBSERVATION : "visit_occurrence_id"
+  VISIT_DETAIL ||--o{ OBSERVATION : "visit_detail_id"
+  PROVIDER ||--o{ OBSERVATION : "provider_id"
+  CONCEPT ||--o{ OBSERVATION : "observation/type/unit/qualifier"
+
+  PERSON ||--o{ SPECIMEN : "person_id"
+  CONCEPT ||--o{ SPECIMEN : "specimen/type/unit/site/disease"
+
+  PERSON ||--o{ NOTE : "person_id"
+  VISIT_OCCURRENCE ||--o{ NOTE : "visit_occurrence_id"
+  VISIT_DETAIL ||--o{ NOTE : "visit_detail_id"
+  PROVIDER ||--o{ NOTE : "provider_id"
+  NOTE ||--o{ NOTE_NLP : "note_id"
+
+  CONCEPT ||--o{ FACT_RELATIONSHIP : "domain_concept_id_1/2"

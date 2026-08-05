@@ -1,0 +1,123 @@
+erDiagram
+  %% ===== Reference/Admin =====
+  LOCATION {
+    INT location_id PK
+    VARCHAR address_1
+    VARCHAR address_2
+    VARCHAR city
+    VARCHAR state
+    VARCHAR zip
+    VARCHAR county
+    VARCHAR location_source_value
+    FLOAT latitude
+    FLOAT longitude
+  }
+
+  CARE_SITE {
+    INT care_site_id PK
+    VARCHAR care_site_name
+    INT place_of_service_concept_id FK
+    INT location_id FK
+    VARCHAR care_site_source_value
+    VARCHAR place_of_service_source_value
+  }
+
+  PROVIDER {
+    INT provider_id PK
+    INT specialty_concept_id FK
+    INT care_site_id FK
+    INT year_of_birth
+    INT gender_concept_id FK
+    VARCHAR provider_source_value
+    VARCHAR specialty_source_value
+    VARCHAR gender_source_value
+  }
+
+  %% ===== People/Time =====
+  PERSON {
+    INT person_id PK
+    INT gender_concept_id FK
+    INT year_of_birth
+    INT month_of_birth
+    INT day_of_birth
+    DATETIME birth_datetime
+    INT race_concept_id FK
+    INT ethnicity_concept_id FK
+    INT location_id FK
+    INT care_site_id FK
+    VARCHAR person_source_value
+    INT gender_source_concept_id FK
+    INT race_source_concept_id FK
+    INT ethnicity_source_concept_id FK
+  }
+
+  OBSERVATION_PERIOD {
+    INT observation_period_id PK
+    INT person_id FK
+    DATE observation_period_start_date
+    DATE observation_period_end_date
+    INT period_type_concept_id FK
+  }
+
+  DEATH {
+    INT person_id PK,FK
+    DATE death_date
+    DATETIME death_datetime
+    INT death_type_concept_id FK
+    INT cause_concept_id FK
+    VARCHAR cause_source_value
+    INT cause_source_concept_id FK
+  }
+
+  %% ===== Visit tables =====
+  VISIT_OCCURRENCE {
+    INT visit_occurrence_id PK
+    INT person_id FK
+    INT visit_concept_id FK
+    DATE visit_start_date
+    DATE visit_end_date
+    INT visit_type_concept_id FK
+    INT provider_id FK
+    INT care_site_id FK
+    INT visit_source_concept_id FK
+    VARCHAR visit_source_value
+    INT admitting_source_concept_id FK
+    INT discharge_to_concept_id FK
+    INT preceding_visit_occurrence_id FK
+  }
+
+  VISIT_DETAIL {
+    INT visit_detail_id PK
+    INT person_id FK
+    INT visit_occurrence_id FK
+    INT visit_detail_concept_id FK
+    DATE visit_detail_start_date
+    DATE visit_detail_end_date
+    INT visit_detail_type_concept_id FK
+    INT provider_id FK
+    INT care_site_id FK
+    INT visit_detail_source_concept_id FK
+    VARCHAR visit_detail_source_value
+    INT admitting_source_concept_id FK
+    INT discharge_to_concept_id FK
+    INT preceding_visit_detail_id FK
+    INT parent_visit_detail_id FK
+  }
+
+  %% Relationships
+  LOCATION ||--o{ CARE_SITE : "location_id"
+  LOCATION ||--o{ PERSON : "location_id"
+  CARE_SITE ||--o{ PROVIDER : "care_site_id"
+
+  PERSON ||--o{ OBSERVATION_PERIOD : "person_id"
+  PERSON ||--o| DEATH : "person_id"
+
+  PERSON ||--o{ VISIT_OCCURRENCE : "person_id"
+  CARE_SITE ||--o{ VISIT_OCCURRENCE : "care_site_id"
+  PROVIDER ||--o{ VISIT_OCCURRENCE : "provider_id"
+
+  VISIT_OCCURRENCE ||--o{ VISIT_DETAIL : "visit_occurrence_id"
+  PERSON ||--o{ VISIT_DETAIL : "person_id"
+  CARE_SITE ||--o{ VISIT_DETAIL : "care_site_id"
+  PROVIDER ||--o{ VISIT_DETAIL : "provider_id"
+  VISIT_DETAIL ||--o{ VISIT_DETAIL : "parent/preceding"

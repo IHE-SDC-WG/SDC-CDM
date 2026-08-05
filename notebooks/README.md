@@ -79,8 +79,11 @@ This script is used to serve the SQLite database in a web browser.
 - Python 3.12
 - `sql-wasm-debug.wasm` and `sql-wasm-debug.js` from https://github.com/sql-js/sql.js under `./public`
   - Use script `./fetch-sqlite-wasm.sh` to fulfill this requirement
-- A SQLite database file at `./public/sdc_cdm.db`
+- The SQLite database files under `./public/`
   - Use either notebook to fulfill this requirement
+  - The three-schema layout (see `../database/SCHEMA_ARCHITECTURE.md`) produces a
+    control database `sdc_cdm.db` plus three attached schema files
+    `sdc_cdm.omop.db`, `sdc_cdm.naaccr.db`, and `sdc_cdm.sdc.db`
 
 ### Usage
 
@@ -90,4 +93,6 @@ python serve_db.py
 
 The webpage will be served at http://localhost:8000
 
-Enter a SQL query in the text area and click "Run" to execute the query.
+On startup the script prints a [Datasette Lite](https://lite.datasette.io/) URL
+that opens all three attached schema files (`omop`, `naaccr`, `sdc`) at once for
+a friendlier GUI. You can also enter a SQL query in the text area and click "Run".

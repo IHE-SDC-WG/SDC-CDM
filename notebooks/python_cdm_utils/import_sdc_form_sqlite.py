@@ -1,11 +1,17 @@
 #!/usr/bin/env python3
+"""Import an SDCFormSubmission XML form into the three-schema SDC CDM.
+
+Ported from SdcCdmLib/SdcCdm/ImportXmlForm.cs. Writes the form structure and
+answer values into ``sdc.template_instance`` and ``sdc.sdc_form_answer``.
+"""
 
 from lxml import etree
 import logging
 from python_cdm_utils.crud_sqlite import (
     create_template_sdc_class,
+    find_template_sdc_class,
     create_template_instance_class,
-    create_sdc_obs_class,
+    create_sdc_form_answer,
 )
 
 logging.basicConfig(
@@ -13,172 +19,178 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+NAMESPACES = {
+    "sdc": "urn:ihe:qrph:sdc:2016",
+    "xsi": "http://www.w3.org/2001/XMLSchema-instance",
+    "xsd": "http://www.w3.org/2001/XMLSchema",
+}
+
 
 def process_xml(xml_root, cursor):
     """
-    :param xml_root: The root of the XML tree to process (lxml.etree.Element)
-    :param cursor: The database cursor to use for inserting data
+    :param xml_root: Root of the SDCFormSubmission XML tree (lxml Element)
+    :param cursor: SQLite cursor to insert with
     """
-    namespaces = {
-        "sdc": "urn:ihe:qrph:sdc:2016",
-        "xsi": "http://www.w3.org/2001/XMLSchema-instance",
-        "xsd": "http://www.w3.org/2001/XMLSchema",
-    }
-
-    form_design = xml_root.find("sdc:FormDesign", namespaces)
+    form_design = xml_root.find("sdc:FormDesign", NAMESPACES)
     if form_design is None:
-        form_design = xml_root
+        raise Exception("No Form Design found in XML")
     print(f"Form Design: {form_design}")
-    if form_design is not None:
-        new_template_sdc = create_template_sdc_class(
+
+    sdc_form_design_id = form_design.get("ID")
+    if not sdc_form_design_id:
+        raise Exception("No Form Design ID provided in XML")
+
+    # Find the template row for this form-design id; create one if missing.
+    template_sdc_id = find_template_sdc_class(cursor, sdc_form_design_id)
+    if template_sdc_id is None:
+        template_sdc_id = create_template_sdc_class(
             cursor=cursor,
-            sdcformdesignid=form_design.get("ID") or "UNKNOWN",
-            baseuri=form_design.get("baseURI") or "UNKNOWN",
+            sdc_form_design_sdcid=sdc_form_design_id,
+            base_uri=form_design.get("baseURI") or "UNKNOWN",
             lineage=form_design.get("lineage") or "UNKNOWN",
             version=form_design.get("version") or "UNKNOWN",
-            fulluri=form_design.get("fullURI") or "UNKNOWN",
-            formtitle=form_design.get("formTitle") or "UNKNOWN",
+            full_uri=form_design.get("fullURI") or "UNKNOWN",
+            form_title=form_design.get("formTitle") or "UNKNOWN",
             sdc_xml=etree.tostring(form_design).decode("utf-8"),
-            doctype="FD",  # TODO: Parse from fullURI
-        )
+            doc_type="FD",
+        )["pk"]
 
-        new_template_instance_class = create_template_instance_class(
-            cursor=cursor,
-            templatesdc_fk=new_template_sdc["pk"],
-            # TODO: Fill in TemplateInstanceClass fields
-        )
+    template_instance = create_template_instance_class(
+        cursor=cursor,
+        template_sdc_id=template_sdc_id,
+        template_instance_version_guid=xml_root.get("instanceID"),
+        template_instance_version_uri=xml_root.get("instanceVersionURI"),
+        instance_version_date=xml_root.get("instanceVersion"),
+    )
+    template_instance_id = template_instance["pk"]
 
-        body = form_design.find("sdc:Body", namespaces)
-        assert body is not None
-        child_items = body.findall("sdc:ChildItems", namespaces)
-        assert child_items is not None
-        for child in child_items:
-            process_child_item(
-                child, cursor, namespaces, new_template_instance_class["pk"]
-            )
+    body = form_design.find("sdc:Body", NAMESPACES)
+    if body is None:
+        raise Exception("Body element not found.")
+
+    for child in body.findall("sdc:ChildItems", NAMESPACES):
+        process_child_item(child, cursor, template_instance_id)
 
 
 def process_child_item(
     child_item,
     cursor,
-    namespaces,
-    template_instance_class_fk,
+    template_instance_id,
     section_id=None,
     section_guid=None,
 ):
-    sections = child_item.findall("sdc:Section", namespaces)
-    for section in sections:
-        section_id = section.get("name")
-        section_guid = section.get("ID")
-        child_items = section.findall("sdc:ChildItems", namespaces)
-        assert child_items is not None
-        for child in child_items:
+    for section in child_item.findall("sdc:Section", NAMESPACES):
+        inner_section_guid = section.get("ID")
+        if not inner_section_guid:
+            continue
+        inner_section_id = section.get("title")
+        for child in section.findall("sdc:ChildItems", NAMESPACES):
             process_child_item(
                 child,
                 cursor,
-                namespaces,
-                template_instance_class_fk,
-                section_id,
-                section_guid,
+                template_instance_id,
+                inner_section_id,
+                inner_section_guid,
             )
-    questions = child_item.findall("sdc:Question", namespaces)
-    for question in questions:
+
+    # Questions are only emitted when inside a section (i.e. section_guid set).
+    if not section_guid:
+        return
+
+    for question in child_item.findall("sdc:Question", NAMESPACES):
         process_question(
-            question,
-            cursor,
-            namespaces,
-            template_instance_class_fk,
-            section_id,
-            section_guid,
+            question, cursor, template_instance_id, section_id, section_guid
         )
 
 
 def process_question(
-    question, cursor, namespaces, template_instance_class_fk, section_id, section_guid
+    question, cursor, template_instance_id, section_id, section_guid
 ):
     question_id = question.get("name")
     question_guid = question.get("ID")
     question_text = question.get("title")
-    listfield = question.find("sdc:ListField", namespaces)
-    if listfield is not None:
+
+    list_field = question.find("sdc:ListField", NAMESPACES)
+    response_field = question.find("sdc:ResponseField", NAMESPACES)
+
+    if list_field is not None:
         process_list_field(
-            listfield,
+            list_field,
             cursor,
-            namespaces,
-            template_instance_class_fk,
+            template_instance_id,
             section_id,
             section_guid,
             question_text,
             question_id,
             question_guid,
         )
-    responsefield = question.find("sdc:ResponseField", namespaces)
-    if responsefield is not None:
+    elif response_field is not None:
         process_response_field(
-            responsefield,
+            response_field,
             cursor,
-            namespaces,
-            template_instance_class_fk,
+            template_instance_id,
             section_id,
             section_guid,
             question_text,
             question_id,
             question_guid,
         )
+    else:
+        print("Warning: No ListField or ResponseField found for Question")
 
 
 def process_list_field(
     list_field,
     cursor,
-    namespaces,
-    template_instance_class_fk,
+    template_instance_id,
     section_id,
     section_guid,
     question_text,
     question_id,
     question_guid,
 ):
-    list_elem = list_field.find("sdc:List", namespaces)
-    if list_elem is not None:
-        list_items = list_elem.findall("sdc:ListItem", namespaces)
-        for list_item in list_items:
-            li_response_field = list_item.find("sdc:ListItemResponseField", namespaces)
-            if li_response_field is not None:
-                process_response_field(
-                    li_response_field,
-                    cursor,
-                    namespaces,
-                    template_instance_class_fk,
-                    section_id,
-                    section_guid,
-                    question_text,
-                    question_id,
-                    question_guid,
-                    li_text=list_item.get("title"),
-                    li_id=list_item.get("name"),
-                    li_instance_guid=list_item.get("ID"),
-                )
-            else:
-                create_sdc_obs_class(
-                    cursor=cursor,
-                    template_instance_class_fk=template_instance_class_fk,
-                    section_id=section_id,
-                    section_guid=section_guid,
-                    q_text=question_text,
-                    q_instance_guid=question_guid,
-                    q_id=question_id,
-                    li_text=list_item.get("title"),
-                    li_id=list_item.get("name"),
-                    li_instance_guid=list_item.get("ID"),
-                    sdc_order=list_item.get("order"),
-                )
+    list_elem = list_field.find("sdc:List", NAMESPACES)
+    if list_elem is None:
+        return
+    for list_item in list_elem.findall("sdc:ListItem", NAMESPACES):
+        # Only selected list items are captured (matches the C# importer).
+        if list_item.get("selected") != "true":
+            continue
+        li_response_field = list_item.find("sdc:ListItemResponseField", NAMESPACES)
+        if li_response_field is not None:
+            process_response_field(
+                li_response_field,
+                cursor,
+                template_instance_id,
+                section_id,
+                section_guid,
+                question_text,
+                question_id,
+                question_guid,
+                li_text=list_item.get("title"),
+                li_id=list_item.get("name"),
+                li_instance_guid=list_item.get("ID"),
+            )
+        else:
+            create_sdc_form_answer(
+                cursor=cursor,
+                template_instance_id=template_instance_id,
+                section_sdcid=section_id,
+                section_guid=section_guid,
+                question_text=question_text,
+                question_instance_guid=question_guid,
+                question_sdcid=question_id,
+                list_item_text=list_item.get("title"),
+                list_item_id=list_item.get("name"),
+                list_item_instance_guid=list_item.get("ID"),
+                sdc_order=list_item.get("order"),
+            )
 
 
 def process_response_field(
     response_field,
     cursor,
-    namespaces,
-    template_instance_class_fk,
+    template_instance_id,
     section_id,
     section_guid,
     question_text,
@@ -189,38 +201,34 @@ def process_response_field(
     li_instance_guid=None,
     li_parent_guid=None,
 ):
-    # Get units
     response_units = None
     response_units_system = None
-    response_units_elem = response_field.find("sdc:ResponseUnits", namespaces)
+    response_units_elem = response_field.find("sdc:ResponseUnits", NAMESPACES)
     if response_units_elem is not None:
         response_units = response_units_elem.get("val")
         response_units_system = response_units_elem.get("unitSystem")
-    response = response_field.find("sdc:Response", namespaces)
+
+    response = response_field.find("sdc:Response", NAMESPACES)
     if response is not None:
-        response_string = response.find("sdc:string", namespaces)
-        response_string_val = None
-        if response_string is not None:
-            response_string_val = response_string.get("val")
-        create_sdc_obs_class(
+        response_string = response.find("sdc:string", NAMESPACES)
+        response_string_val = (
+            response_string.get("val") if response_string is not None else None
+        )
+        create_sdc_form_answer(
             cursor=cursor,
-            template_instance_class_fk=template_instance_class_fk,
-            section_id=section_id,
+            template_instance_id=template_instance_id,
+            section_sdcid=section_id,
             section_guid=section_guid,
-            q_text=question_text,
-            q_instance_guid=question_guid,
-            q_id=question_id,
-            li_text=li_text,
-            li_id=li_id,
-            li_instance_guid=li_instance_guid,
-            li_parent_guid=li_parent_guid,
+            question_text=question_text,
+            question_instance_guid=question_guid,
+            question_sdcid=question_id,
+            list_item_text=li_text,
+            list_item_id=li_id,
+            list_item_instance_guid=li_instance_guid,
+            list_item_parent_guid=li_parent_guid,
+            units_system=response_units_system,
             response=response.get("val"),
             units=response_units,
-            units_system=response_units_system,
-            datatype=None,
-            response_int=None,
-            response_float=None,
-            response_datetime=None,
             reponse_string_nvarchar=response_string_val,
             sdc_order=response.get("order"),
         )
