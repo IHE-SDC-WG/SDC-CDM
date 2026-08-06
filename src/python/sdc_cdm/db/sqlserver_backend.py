@@ -64,6 +64,11 @@ class SqlServerBackend(DatabaseBackend):
         cursor.execute(sql, tuple(parameters))
         return cursor.fetchone()
 
+    def fetch_all(self, sql: str, parameters: Sequence[Any] = ()) -> list[Any]:
+        cursor = self.connection.cursor()
+        cursor.execute(sql, tuple(parameters))
+        return list(cursor.fetchall())
+
     def table_exists(self, schema: str, table: str) -> bool:
         return self.fetch_one("SELECT OBJECT_ID(?, 'U')", (f"{schema}.{table}",))[0] is not None
 

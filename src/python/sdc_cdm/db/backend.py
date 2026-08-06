@@ -29,6 +29,10 @@ class DatabaseBackend(ABC):
         """Return one row, or None."""
 
     @abstractmethod
+    def fetch_all(self, sql: str, parameters: Sequence[Any] = ()) -> list[Any]:
+        """Return all result rows."""
+
+    @abstractmethod
     def table_exists(self, schema: str, table: str) -> bool:
         """Return whether a table exists."""
 

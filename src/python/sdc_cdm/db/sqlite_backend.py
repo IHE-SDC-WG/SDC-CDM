@@ -69,6 +69,9 @@ class SQLiteBackend(DatabaseBackend):
     def fetch_one(self, sql: str, parameters: Sequence[Any] = ()) -> Any:
         return self.connection.execute(sql, tuple(parameters)).fetchone()
 
+    def fetch_all(self, sql: str, parameters: Sequence[Any] = ()) -> list[Any]:
+        return self.connection.execute(sql, tuple(parameters)).fetchall()
+
     def table_exists(self, schema: str, table: str) -> bool:
         row = self.fetch_one(
             f'SELECT 1 FROM "{schema}".sqlite_master WHERE type = ? AND name = ?',
