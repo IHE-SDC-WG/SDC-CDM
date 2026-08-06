@@ -834,8 +834,10 @@ manifest, and the SQL Server job does the same on its own schedule; the three CI
 two per-push jobs are green; **no pytest run requires .NET and no `dotnet test` requires Python** —
 the SDC XML suite must not reach into the pipeline; the
 promoted end-to-end no-double-count test (from the untracked `.context/verify_e2e_bridge.py`) passes
-as a tracked test; `grep -ri postgres` over the tree returns hits **only** inside the vendored OHDSI
-CDM files and `VENDORED.md` — no DDL, no container wiring, no doc claiming PostgreSQL support.
+as a tracked test; `test_no_postgres.py` verifies that removed-dialect text occurs only in the four
+vendored OHDSI files, `VENDORED.md`, this plan, and the manifest entries that declare those files
+excluded. Its path check filters its own descriptive filename and finds exactly the four vendored
+files. No executable DDL, container wiring, or support claim remains.
 
 **Phase 1 — vocabulary and constants.** Athena loader promoted out of `tools/`; `etl.concept_constant`
 resolver; SEER dictionary loader for **both** dialects.
