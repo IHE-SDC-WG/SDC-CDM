@@ -230,6 +230,6 @@ def process_response_field(
             units_system=response_units_system,
             response=response.get("val"),
             units=response_units,
-            reponse_string_nvarchar=response_string_val,
+            response_string=response_string_val,
             sdc_order=response.get("order"),
         )

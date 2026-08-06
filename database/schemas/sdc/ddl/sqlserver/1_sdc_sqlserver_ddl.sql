@@ -103,7 +103,7 @@ BEGIN
     response_int BIGINT NULL,
     response_float FLOAT NULL,
     response_datetime DATETIME2 NULL,
-    reponse_string_nvarchar NVARCHAR(MAX) NULL,
+    response_string NVARCHAR(MAX) NULL,
     datatype NVARCHAR(255) NULL,
     sdc_order NVARCHAR(255) NULL,
     sdc_repeat_level NVARCHAR(255) NULL,

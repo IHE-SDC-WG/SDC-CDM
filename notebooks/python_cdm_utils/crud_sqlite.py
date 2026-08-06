@@ -128,7 +128,7 @@ def create_sdc_form_answer(
     response_int: int = None,
     response_float: float = None,
     response_datetime: str = None,
-    reponse_string_nvarchar: str = None,
+    response_string: str = None,
     datatype: str = None,
     sdc_order: str = None,
     sdc_repeat_level: str = None,
@@ -152,7 +152,7 @@ def create_sdc_form_answer(
         "response_int": response_int,
         "response_float": response_float,
         "response_datetime": response_datetime,
-        "reponse_string_nvarchar": reponse_string_nvarchar,
+        "response_string": response_string,
         "datatype": datatype,
         "sdc_order": sdc_order,
         "sdc_repeat_level": sdc_repeat_level,
@@ -166,7 +166,7 @@ def create_sdc_form_answer(
                 section_sdcid, section_guid, question_text, question_instance_guid,
                 question_sdcid, list_item_id, list_item_text, list_item_instance_guid,
                 list_item_parent_guid, units_system, response, units, response_int,
-                response_float, response_datetime, reponse_string_nvarchar, datatype,
+                response_float, response_datetime, response_string, datatype,
                 sdc_order, sdc_repeat_level, sdc_comments
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,

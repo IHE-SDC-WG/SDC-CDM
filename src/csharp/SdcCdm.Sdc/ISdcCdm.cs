@@ -21,7 +21,7 @@ public record SdcObsClass(
     long? ResponseInt,
     double? ResponseFloat,
     DateTimeOffset? ResponseDatetime,
-    string? ReponseStringNvarchar,
+    string? ResponseString,
     string? SdcOrder,
     string? SdcRepeatLevel,
     string? SdcComments
@@ -74,16 +74,13 @@ public interface ISdcCdm
         long? response_int = null,
         double? response_float = null,
         DateTime? response_datetime = null,
-        string? reponse_string_nvarchar = null,
+        string? response_string = null,
         string? li_parent_guid = null
     );
 
     long? FindTemplateSdcClass(string formDesignId);
 
-    long? FindTemplateInstanceClass(
-        string instanceVersionGuid,
-        string? instanceVersionDate = null
-    );
+    long? FindTemplateInstanceClass(string instanceVersionGuid, string? instanceVersionDate = null);
 
     TemplateItem? WriteTemplateItem(in TemplateItemDTO templateItem);
 

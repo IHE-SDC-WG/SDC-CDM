@@ -1,36 +1,26 @@
+using System.Globalization;
 using System.Xml.Linq;
 
 namespace SdcCdm;
 
 public static class XmlFormImporter
 {
-    /**
-    <summary>Imports an SDCFormSubmission XML form into the SDC CDM.</summary>
-    <param name="sdcCdm">The SDC CDM to import the form into.</param>
-    <param name="sdcSubmissionPackage">The SDCFormSubmission XML form to import.</param>
-    */
+    private static readonly XNamespace Sdc = "urn:ihe:qrph:sdc:2016";
+
+    /// <summary>Imports an SDCFormSubmission XML form into the SDC CDM.</summary>
     public static void ProcessXmlForm(ISdcCdm sdcCdm, XElement sdcSubmissionPackage)
     {
-        XNamespace sdc = "urn:ihe:qrph:sdc:2016";
-
         XElement formDesign =
-            sdcSubmissionPackage.Element(sdc + "FormDesign")
+            sdcSubmissionPackage.Element(Sdc + "FormDesign")
             ?? throw new Exception("No Form Design found in XML");
-        Console.WriteLine($"Form Design: {formDesign}");
-
-        string sdc_form_design_id =
+        string formDesignId =
             formDesign.Attribute("ID")?.Value
             ?? throw new Exception("No Form Design ID provided in XML");
 
-        // Find the row pertaining to the template we are submitting a filled form of.
-        // We are creating a row for the template if one does not exist.
-        // TODO: We should fail to import the form if the template does not
-        // exist, since a submitted form does not necessarily contain all
-        // information required to create a template.
-        long template_sdc_id =
-            sdcCdm.FindTemplateSdcClass(sdc_form_design_id)
+        long templateSdcId =
+            sdcCdm.FindTemplateSdcClass(formDesignId)
             ?? sdcCdm.WriteTemplateSdcClass(
-                sdc_form_design_id,
+                formDesignId,
                 formDesign.Attribute("baseURI")?.Value ?? "UNKNOWN",
                 formDesign.Attribute("lineage")?.Value ?? "UNKNOWN",
                 formDesign.Attribute("version")?.Value ?? "UNKNOWN",
@@ -40,74 +30,66 @@ public static class XmlFormImporter
                 "FD"
             );
 
-        long template_instance_id = sdcCdm.WriteTemplateInstanceClass(
-            template_sdc_id,
-            sdcSubmissionPackage.Attribute("instanceID")?.Value ?? null,
-            sdcSubmissionPackage.Attribute("instanceVersionURI")?.Value ?? null,
-            sdcSubmissionPackage.Attribute("instanceVersion")?.Value ?? null
+        long templateInstanceId = sdcCdm.WriteTemplateInstanceClass(
+            templateSdcId,
+            sdcSubmissionPackage.Attribute("instanceID")?.Value,
+            sdcSubmissionPackage.Attribute("instanceVersionURI")?.Value,
+            sdcSubmissionPackage.Attribute("instanceVersion")?.Value
         );
 
         XElement body =
-            formDesign.Element(sdc + "Body") ?? throw new Exception("Body element not found.");
-
-        IEnumerable<XElement> childItems =
-            body.Elements(sdc + "ChildItems")
-            ?? throw new Exception("No ChildItems found in Body.");
-
-        foreach (XElement child in childItems)
+            formDesign.Element(Sdc + "Body") ?? throw new Exception("Body element not found.");
+        foreach (XElement childItems in body.Elements(Sdc + "ChildItems"))
         {
-            ProcessChildItem(sdcCdm, child, template_instance_id);
+            ProcessChildItems(sdcCdm, childItems, templateInstanceId);
         }
     }
 
-    private static void ProcessChildItem(
+    private static void ProcessChildItems(
         ISdcCdm sdcCdm,
-        XElement childItem,
-        long template_instance_class_fk,
-        string? section_id = null,
-        string? section_guid = null,
-        long? parent_observation_id = null
+        XElement childItems,
+        long templateInstanceId,
+        string? sectionId = null,
+        string? sectionGuid = null,
+        long? parentAnswerId = null
     )
     {
-        XNamespace sdc = "urn:ihe:qrph:sdc:2016";
-
-        var sections = childItem.Elements(sdc + "Section");
-        foreach (XElement section in sections)
+        foreach (XElement section in childItems.Elements(Sdc + "Section"))
         {
-            string? inner_section_guid = section.Attribute("ID")?.Value;
-            if (string.IsNullOrEmpty(inner_section_guid))
-                continue;
-            string? inner_section_id = section.Attribute("title")?.Value;
-
-            IEnumerable<XElement> childItems =
-                section.Elements(sdc + "ChildItems")
-                ?? throw new Exception("ChildItems not found inside Section.");
-
-            foreach (XElement child in childItems)
+            string? nestedSectionGuid = section.Attribute("ID")?.Value;
+            if (string.IsNullOrEmpty(nestedSectionGuid))
             {
-                ProcessChildItem(
+                continue;
+            }
+
+            string? nestedSectionId = section.Attribute("title")?.Value;
+            foreach (XElement nestedItems in section.Elements(Sdc + "ChildItems"))
+            {
+                ProcessChildItems(
                     sdcCdm,
-                    child,
-                    template_instance_class_fk,
-                    inner_section_id,
-                    inner_section_guid
+                    nestedItems,
+                    templateInstanceId,
+                    nestedSectionId,
+                    nestedSectionGuid,
+                    parentAnswerId
                 );
             }
         }
 
-        if (string.IsNullOrEmpty(section_guid))
+        if (string.IsNullOrEmpty(sectionGuid))
+        {
             return;
+        }
 
-        var questions = childItem.Elements(sdc + "Question");
-        foreach (XElement question in questions)
+        foreach (XElement question in childItems.Elements(Sdc + "Question"))
         {
             ProcessQuestion(
                 sdcCdm,
                 question,
-                template_instance_class_fk,
-                section_id,
-                section_guid,
-                null
+                templateInstanceId,
+                sectionId,
+                sectionGuid,
+                parentAnswerId
             );
         }
     }
@@ -115,170 +97,217 @@ public static class XmlFormImporter
     private static void ProcessQuestion(
         ISdcCdm sdcCdm,
         XElement question,
-        long template_instance_class_fk,
-        string? section_id,
-        string section_guid,
-        long? parent_observation_id
+        long templateInstanceId,
+        string? sectionId,
+        string sectionGuid,
+        long? parentAnswerId
     )
     {
-        XNamespace sdc = "urn:ihe:qrph:sdc:2016";
+        string? questionId = question.Attribute("name")?.Value;
+        string? questionGuid = question.Attribute("ID")?.Value;
+        string? questionText = question.Attribute("title")?.Value;
+        long? questionAnswerId = parentAnswerId;
 
-        string? question_id = question.Attribute("name")?.Value;
-        string? question_guid = question.Attribute("ID")?.Value;
-        string? question_text = question.Attribute("title")?.Value;
-
-        // Only one of ListField or ResponseField is allowed under each SDC Question
-        XElement? listField = question.Element(sdc + "ListField");
-        XElement? responseField = question.Element(sdc + "ResponseField");
-
-        if (listField != null)
+        XElement? listField = question.Element(Sdc + "ListField");
+        XElement? responseField = question.Element(Sdc + "ResponseField");
+        if (listField is not null)
         {
             ProcessListField(
                 sdcCdm,
                 listField,
-                template_instance_class_fk,
-                section_id,
-                section_guid,
-                question_text,
-                question_id,
-                question_guid,
-                null
+                templateInstanceId,
+                sectionId,
+                sectionGuid,
+                questionText,
+                questionId,
+                questionGuid,
+                parentAnswerId
             );
         }
-        else if (responseField != null)
+        else if (responseField is not null)
         {
-            ProcessResponseField(
+            questionAnswerId = ProcessResponseField(
                 sdcCdm,
                 responseField,
-                template_instance_class_fk,
-                section_id,
-                section_guid,
-                question_text,
-                question_id,
-                question_guid,
-                null
+                templateInstanceId,
+                sectionId,
+                sectionGuid,
+                questionText,
+                questionId,
+                questionGuid,
+                parentAnswerId
             );
         }
-        else
+
+        foreach (XElement nestedItems in question.Elements(Sdc + "ChildItems"))
         {
-            Console.Write("Warning: No ListField or ResponseField found for Question");
+            ProcessChildItems(
+                sdcCdm,
+                nestedItems,
+                templateInstanceId,
+                sectionId,
+                sectionGuid,
+                questionAnswerId
+            );
         }
     }
 
     private static void ProcessListField(
         ISdcCdm sdcCdm,
         XElement listField,
-        long template_instance_class_fk,
-        string? section_id,
-        string section_guid,
-        string? question_text,
-        string? question_id,
-        string? question_guid,
-        long? parent_observation_id
+        long templateInstanceId,
+        string? sectionId,
+        string sectionGuid,
+        string? questionText,
+        string? questionId,
+        string? questionGuid,
+        long? parentAnswerId
     )
     {
-        XNamespace sdc = "urn:ihe:qrph:sdc:2016";
-
-        XElement? listElem = listField.Element(sdc + "List");
-        if (listElem != null)
+        XElement? list = listField.Element(Sdc + "List");
+        if (list is null)
         {
-            foreach (XElement listItem in listElem.Elements(sdc + "ListItem"))
-            {
-                // If this ListItem is 'selected' then create an SDC Observation for it, otherwise skip it
-                bool listItemSelected = listItem.Attribute("selected")?.Value == "true";
-                if (!listItemSelected)
-                    continue;
+            return;
+        }
 
-                XElement? li_response_field = listItem.Element(sdc + "ListItemResponseField");
-                if (li_response_field != null)
-                {
-                    ProcessResponseField(
-                        sdcCdm,
-                        li_response_field,
-                        template_instance_class_fk,
-                        section_id,
-                        section_guid,
-                        question_text,
-                        question_id,
-                        question_guid,
-                        null,
-                        li_text: listItem.Attribute("title")?.Value,
-                        li_id: listItem.Attribute("name")?.Value,
-                        li_instance_guid: listItem.Attribute("ID")?.Value
-                    );
-                }
-                else
-                {
-                    sdcCdm.WriteSdcObsClass(
-                        template_instance_class_fk,
-                        parent_observation_id: null,
-                        section_id,
-                        section_guid,
-                        question_text,
-                        question_guid,
-                        question_id,
-                        listItem.Attribute("title")?.Value,
-                        listItem.Attribute("name")?.Value,
-                        listItem.Attribute("ID")?.Value,
-                        listItem.Attribute("order")?.Value
-                    );
-                }
+        foreach (XElement listItem in list.Elements(Sdc + "ListItem"))
+        {
+            if (listItem.Attribute("selected")?.Value != "true")
+            {
+                continue;
+            }
+
+            string? listItemText = listItem.Attribute("title")?.Value;
+            string? listItemId = listItem.Attribute("name")?.Value;
+            string? listItemGuid = listItem.Attribute("ID")?.Value;
+            XElement? responseField = listItem.Element(Sdc + "ListItemResponseField");
+            long? listItemAnswerId;
+            if (responseField is not null)
+            {
+                listItemAnswerId = ProcessResponseField(
+                    sdcCdm,
+                    responseField,
+                    templateInstanceId,
+                    sectionId,
+                    sectionGuid,
+                    questionText,
+                    questionId,
+                    questionGuid,
+                    parentAnswerId,
+                    listItemText,
+                    listItemId,
+                    listItemGuid
+                );
+            }
+            else
+            {
+                listItemAnswerId = sdcCdm.WriteSdcObsClass(
+                    templateInstanceId,
+                    parentAnswerId,
+                    sectionId,
+                    sectionGuid,
+                    questionText,
+                    questionGuid,
+                    questionId,
+                    listItemText,
+                    listItemId,
+                    listItemGuid,
+                    listItem.Attribute("order")?.Value
+                );
+            }
+
+            foreach (XElement nestedItems in listItem.Elements(Sdc + "ChildItems"))
+            {
+                ProcessChildItems(
+                    sdcCdm,
+                    nestedItems,
+                    templateInstanceId,
+                    sectionId,
+                    sectionGuid,
+                    listItemAnswerId
+                );
             }
         }
     }
 
-    private static void ProcessResponseField(
+    private static long? ProcessResponseField(
         ISdcCdm sdcCdm,
         XElement responseField,
-        long template_instance_class_fk,
-        string? section_id,
-        string section_guid,
-        string? question_text,
-        string? question_id,
-        string? question_guid,
-        long? parent_observation_id,
-        string? li_text = null,
-        string? li_id = null,
-        string? li_instance_guid = null,
-        string? li_parent_guid = null
+        long templateInstanceId,
+        string? sectionId,
+        string sectionGuid,
+        string? questionText,
+        string? questionId,
+        string? questionGuid,
+        long? parentAnswerId,
+        string? listItemText = null,
+        string? listItemId = null,
+        string? listItemGuid = null,
+        string? listItemParentGuid = null
     )
     {
-        XNamespace sdc = "urn:ihe:qrph:sdc:2016";
-
-        string? response_units = null;
-        string? response_units_system = null;
-
-        XElement? response_units_elem = responseField.Element(sdc + "ResponseUnits");
-        if (response_units_elem != null)
-        {
-            response_units = response_units_elem.Attribute("val")?.Value;
-            response_units_system = response_units_elem.Attribute("unitSystem")?.Value;
-        }
-
-        XElement? response = responseField.Element(sdc + "Response");
-        if (response != null)
-        {
-            XElement? response_string = response.Element(sdc + "string");
-            string? response_string_val = response_string?.Attribute("val")?.Value;
-
-            sdcCdm.WriteSdcObsClass(
-                template_instance_class_fk,
-                parent_observation_id: null,
-                section_id,
-                section_guid,
-                question_text,
-                question_guid,
-                question_id,
-                li_text,
-                li_id,
-                li_instance_guid,
-                response.Attribute("order")?.Value,
-                response: response.Attribute("val")?.Value,
-                units: response_units,
-                units_system: response_units_system,
-                reponse_string_nvarchar: response_string_val,
-                li_parent_guid: li_parent_guid
+        XElement? unitsElement = responseField.Element(Sdc + "ResponseUnits");
+        string? units = unitsElement?.Attribute("val")?.Value;
+        string? unitsSystem = unitsElement?.Attribute("unitSystem")?.Value;
+        XElement? response = responseField.Element(Sdc + "Response");
+        XElement? typedValue = response
+            ?.Elements()
+            .FirstOrDefault(element =>
+                element.Attribute("val") is not null
+                && element.Name.LocalName is "string" or "integer" or "int" or "decimal"
             );
+
+        if (typedValue is null && listItemId is null)
+        {
+            return null;
         }
+
+        string? value = typedValue?.Attribute("val")?.Value;
+        string? responseText = null;
+        long? responseInt = null;
+        double? responseFloat = null;
+        string? datatype = typedValue?.Name.LocalName;
+        switch (datatype)
+        {
+            case "string":
+                responseText = value;
+                break;
+            case "integer":
+            case "int":
+                responseInt = long.Parse(
+                    value!,
+                    NumberStyles.Integer,
+                    CultureInfo.InvariantCulture
+                );
+                break;
+            case "decimal":
+                responseFloat = double.Parse(
+                    value!,
+                    NumberStyles.Float,
+                    CultureInfo.InvariantCulture
+                );
+                break;
+        }
+
+        return sdcCdm.WriteSdcObsClass(
+            templateInstanceId,
+            parentAnswerId,
+            sectionId,
+            sectionGuid,
+            questionText,
+            questionGuid,
+            questionId,
+            listItemText,
+            listItemId,
+            listItemGuid,
+            typedValue?.Attribute("order")?.Value ?? response?.Attribute("order")?.Value,
+            response: responseText,
+            units: units,
+            units_system: unitsSystem,
+            datatype: datatype,
+            response_int: responseInt,
+            response_float: responseFloat,
+            li_parent_guid: listItemParentGuid
+        );
     }
 }

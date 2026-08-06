@@ -110,7 +110,7 @@ def test_sqlite_three_schema_layout_and_bridge(tmp_path: Path) -> None:
         "response_int",
         "response_float",
         "response_datetime",
-        "reponse_string_nvarchar",
+        "response_string",
     } <= form_answer_columns
     assert "report_id" not in form_answer_columns
 

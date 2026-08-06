@@ -84,7 +84,7 @@ CREATE TABLE IF NOT EXISTS sdc.sdc_form_answer (
     response_int INTEGER NULL,
     response_float REAL NULL,
     response_datetime TEXT NULL,
-    reponse_string_nvarchar TEXT NULL,
+    response_string TEXT NULL,
     datatype TEXT NULL,
     sdc_order TEXT NULL,
     sdc_repeat_level TEXT NULL,

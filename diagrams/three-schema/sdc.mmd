@@ -82,7 +82,7 @@ erDiagram
     TEXT updated_datetime
   }
 
-  %% Answer store for the SDC XML path only. Note: reponse_string_nvarchar is
+  %% Answer store for the SDC XML path only. Note: response_string is
   %% misspelled in the DDL; the name is reproduced here verbatim on purpose.
   SDC_FORM_ANSWER {
     INTEGER sdc_form_answer_id PK
@@ -103,7 +103,7 @@ erDiagram
     INTEGER response_int
     REAL response_float
     TEXT response_datetime
-    TEXT reponse_string_nvarchar
+    TEXT response_string
     TEXT datatype
     TEXT sdc_order
     TEXT sdc_repeat_level

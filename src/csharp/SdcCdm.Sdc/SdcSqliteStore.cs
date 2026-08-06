@@ -5,9 +5,8 @@ namespace SdcCdm;
 
 public sealed class SdcSqliteStore : ISdcCdm, IDisposable
 {
-    private static readonly ILoggerFactory LoggerFactory = Microsoft.Extensions.Logging.LoggerFactory.Create(
-        builder => builder.AddConsole()
-    );
+    private static readonly ILoggerFactory LoggerFactory =
+        Microsoft.Extensions.Logging.LoggerFactory.Create(builder => builder.AddConsole());
 
     private readonly SqliteConnection connection;
 
@@ -69,7 +68,9 @@ public sealed class SdcSqliteStore : ISdcCdm, IDisposable
 
         using Stream stream =
             assembly.GetManifestResourceStream(resourceName)
-            ?? throw new InvalidOperationException($"The embedded resource {resourceName} was not found.");
+            ?? throw new InvalidOperationException(
+                $"The embedded resource {resourceName} was not found."
+            );
         using StreamReader reader = new(stream);
         using var command = connection.CreateCommand();
         command.CommandText = reader.ReadToEnd();
@@ -176,7 +177,7 @@ public sealed class SdcSqliteStore : ISdcCdm, IDisposable
         long? response_int,
         double? response_float,
         DateTime? response_datetime,
-        string? reponse_string_nvarchar,
+        string? response_string,
         string? li_parent_guid
     )
     {
@@ -188,13 +189,13 @@ public sealed class SdcSqliteStore : ISdcCdm, IDisposable
                 section_sdcid, section_guid, question_text, question_instance_guid, question_sdcid,
                 list_item_id, list_item_text, list_item_instance_guid, list_item_parent_guid,
                 units_system, response, units, response_int, response_float, response_datetime,
-                reponse_string_nvarchar, datatype, sdc_order
+                response_string, datatype, sdc_order
             ) VALUES (
                 @template_instance_id, @parent_form_answer_id,
                 @section_sdcid, @section_guid, @question_text, @question_instance_guid, @question_sdcid,
                 @list_item_id, @list_item_text, @list_item_instance_guid, @list_item_parent_guid,
                 @units_system, @response, @units, @response_int, @response_float, @response_datetime,
-                @reponse_string_nvarchar, @datatype, @sdc_order
+                @response_string, @datatype, @sdc_order
             );
             SELECT last_insert_rowid();
         ";
@@ -207,22 +208,31 @@ public sealed class SdcSqliteStore : ISdcCdm, IDisposable
         cmd.Parameters.AddWithValue("@section_sdcid", section_id ?? (object)DBNull.Value);
         cmd.Parameters.AddWithValue("@section_guid", section_guid ?? (object)DBNull.Value);
         cmd.Parameters.AddWithValue("@question_text", q_text ?? (object)DBNull.Value);
-        cmd.Parameters.AddWithValue("@question_instance_guid", q_instance_guid ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue(
+            "@question_instance_guid",
+            q_instance_guid ?? (object)DBNull.Value
+        );
         cmd.Parameters.AddWithValue("@question_sdcid", q_id ?? (object)DBNull.Value);
         cmd.Parameters.AddWithValue("@list_item_id", li_id ?? (object)DBNull.Value);
         cmd.Parameters.AddWithValue("@list_item_text", li_text ?? (object)DBNull.Value);
-        cmd.Parameters.AddWithValue("@list_item_instance_guid", li_instance_guid ?? (object)DBNull.Value);
-        cmd.Parameters.AddWithValue("@list_item_parent_guid", li_parent_guid ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue(
+            "@list_item_instance_guid",
+            li_instance_guid ?? (object)DBNull.Value
+        );
+        cmd.Parameters.AddWithValue(
+            "@list_item_parent_guid",
+            li_parent_guid ?? (object)DBNull.Value
+        );
         cmd.Parameters.AddWithValue("@units_system", units_system ?? (object)DBNull.Value);
         cmd.Parameters.AddWithValue("@response", response ?? (object)DBNull.Value);
         cmd.Parameters.AddWithValue("@units", units ?? (object)DBNull.Value);
         cmd.Parameters.AddWithValue("@response_int", response_int ?? (object)DBNull.Value);
         cmd.Parameters.AddWithValue("@response_float", response_float ?? (object)DBNull.Value);
-        cmd.Parameters.AddWithValue("@response_datetime", response_datetime ?? (object)DBNull.Value);
         cmd.Parameters.AddWithValue(
-            "@reponse_string_nvarchar",
-            reponse_string_nvarchar ?? (object)DBNull.Value
+            "@response_datetime",
+            response_datetime ?? (object)DBNull.Value
         );
+        cmd.Parameters.AddWithValue("@response_string", response_string ?? (object)DBNull.Value);
         cmd.Parameters.AddWithValue("@datatype", datatype ?? (object)DBNull.Value);
         cmd.Parameters.AddWithValue("@sdc_order", sdc_order ?? (object)DBNull.Value);
 
@@ -301,7 +311,7 @@ public sealed class SdcSqliteStore : ISdcCdm, IDisposable
                    question_text, question_instance_guid, question_sdcid, list_item_text,
                    list_item_id, list_item_instance_guid, list_item_parent_guid, response,
                    units, units_system, datatype, response_int, response_float,
-                   response_datetime, reponse_string_nvarchar, sdc_order,
+                   response_datetime, response_string, sdc_order,
                    sdc_repeat_level, sdc_comments
             FROM sdc.sdc_form_answer
             WHERE template_instance_id = @templateinstanceclasspk
@@ -373,12 +383,18 @@ public sealed class SdcSqliteStore : ISdcCdm, IDisposable
         );
         cmd.Parameters.AddWithValue("@templateItemSdcid", templateItem.TemplateItemSdcid);
         cmd.Parameters.AddWithValue("@type", templateItem.Type ?? (object)DBNull.Value);
-        cmd.Parameters.AddWithValue("@visibleText", templateItem.VisibleText ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue(
+            "@visibleText",
+            templateItem.VisibleText ?? (object)DBNull.Value
+        );
         cmd.Parameters.AddWithValue(
             "@invisibleText",
             templateItem.InvisibleText ?? (object)DBNull.Value
         );
-        cmd.Parameters.AddWithValue("@minCardinality", templateItem.MinCard ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue(
+            "@minCardinality",
+            templateItem.MinCard ?? (object)DBNull.Value
+        );
         cmd.Parameters.AddWithValue(
             "@mustImplement",
             templateItem.MustImplement ?? (object)DBNull.Value
