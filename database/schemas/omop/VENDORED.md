@@ -29,5 +29,7 @@ To recover provenance during the Phase 6 re-vendor:
 - SQL Server `concept_id` is not an identity because Athena vocabulary loads supply canonical IDs.
   `person_id` is not an identity because the bridge preserves the one-to-one `intake.patient_id`.
   Other surrogate keys remain explicit so SQL Server does not reject values accepted by SQLite.
+- SQL Server uses `integer` for every `person_id` reference, including `EPISODE.person_id`, so the
+  foreign keys match `PERSON.person_id`.
 - The `5.4-SDC` header suffix is a stale remnant of the retired combined model. No current OMOP table
   or column differs from stock CDM 5.4 because of that suffix.

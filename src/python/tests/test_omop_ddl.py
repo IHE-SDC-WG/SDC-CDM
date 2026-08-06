@@ -29,3 +29,4 @@ def test_sqlserver_identities_are_limited_to_pipeline_generated_keys() -> None:
     }
     assert re.search(r"^\s*concept_id integer NOT NULL", ddl, re.MULTILINE)
     assert re.search(r"^\s*person_id integer NOT NULL", ddl, re.MULTILINE)
+    assert not re.search(r"^\s*person_id bigint\b", ddl, re.IGNORECASE | re.MULTILINE)

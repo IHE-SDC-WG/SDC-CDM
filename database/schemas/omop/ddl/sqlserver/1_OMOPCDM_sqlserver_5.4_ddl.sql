@@ -399,7 +399,7 @@ CREATE TABLE omop.CONDITION_ERA (
 --HINT DISTRIBUTE ON KEY (person_id)
 CREATE TABLE omop.EPISODE (
 			episode_id bigint IDENTITY(1,1) NOT NULL,
-			person_id bigint NOT NULL,
+			person_id integer NOT NULL,
 			episode_concept_id integer NOT NULL,
 			episode_start_date date NOT NULL,
 			episode_start_datetime datetime NULL,
