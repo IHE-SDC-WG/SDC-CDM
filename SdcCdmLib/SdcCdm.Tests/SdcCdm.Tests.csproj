@@ -10,17 +10,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Update="TestData\*">
+    <None Update="TestData\SDC_Form.xml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="TestData\HL7/**/*.hl7">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <Content Include="..\..\sample_data\naaccr_v2\*.hl7"
-             Link="TestData\HL7\%(Filename)%(Extension)"
-             CopyToOutputDirectory="PreserveNewest" />
-    <Content Include="..\..\sample_data\test-fixtures\*.csv"
-             Link="TestData\%(Filename)%(Extension)"
+    <Content Include="..\..\sample_data\test-fixtures\TemplateHistory-small.csv"
+             Link="TestData\TemplateHistory-small.csv"
              CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 

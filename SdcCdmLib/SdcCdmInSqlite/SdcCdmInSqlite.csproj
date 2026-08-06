@@ -4,12 +4,11 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <OutputType>Exe</OutputType>
+    <RootNamespace>SdcCdm</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="..\..\database\schemas\**\ddl\sqlite\*.sql" Link="database\schemas\%(RecursiveDir)%(Filename)%(Extension)" />
-    <EmbeddedResource Include="..\..\database\etl\sqlite\*.sql" Link="database\etl\sqlite\%(Filename)%(Extension)" />
+    <EmbeddedResource Include="..\..\database\schemas\sdc\ddl\sqlite\1_sdc_sqlite_ddl.sql" Link="database\schemas\sdc\ddl\sqlite\1_sdc_sqlite_ddl.sql" />
   </ItemGroup>
 
   <ItemGroup>
