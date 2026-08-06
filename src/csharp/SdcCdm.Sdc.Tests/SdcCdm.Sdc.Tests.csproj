@@ -4,6 +4,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <RootNamespace>SdcCdm.Tests</RootNamespace>
 
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
@@ -13,7 +14,7 @@
     <None Update="TestData\SDC_Form.xml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <Content Include="..\..\sample_data\test-fixtures\TemplateHistory-small.csv"
+    <Content Include="..\..\..\sample_data\test-fixtures\TemplateHistory-small.csv"
              Link="TestData\TemplateHistory-small.csv"
              CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
@@ -38,7 +39,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\SdcCdm\SdcCdm.csproj" />
+    <ProjectReference Include="..\SdcCdm.Sdc\SdcCdm.Sdc.csproj" />
   </ItemGroup>
 
 </Project>

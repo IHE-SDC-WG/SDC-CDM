@@ -19,7 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="..\..\database\schemas\sdc\ddl\sqlite\1_sdc_sqlite_ddl.sql"
+    <EmbeddedResource Include="..\..\..\database\schemas\sdc\ddl\sqlite\1_sdc_sqlite_ddl.sql"
                       Link="database\schemas\sdc\ddl\sqlite\1_sdc_sqlite_ddl.sql" />
   </ItemGroup>
 
