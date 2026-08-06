@@ -1,0 +1,66 @@
+name: Nightly SQL Server
+
+on:
+  schedule:
+    - cron: "23 6 * * *"
+  push:
+    paths:
+      - "database/**"
+      - "src/python/**"
+      - "pyproject.toml"
+      - ".github/workflows/nightly-sqlserver.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  python-sqlserver:
+    runs-on: ubuntu-latest
+    env:
+      MSSQL_SA_PASSWORD: "Phase0_Test!Sql2026"
+    services:
+      mssql:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: "Y"
+          MSSQL_PID: Developer
+          MSSQL_SA_PASSWORD: "Phase0_Test!Sql2026"
+        ports:
+          - 1433:1433
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install Microsoft ODBC Driver 18
+        run: |
+          ubuntu_version="$(. /etc/os-release && printf '%s' "$VERSION_ID")"
+          package="$RUNNER_TEMP/packages-microsoft-prod.deb"
+          curl -sSL "https://packages.microsoft.com/config/ubuntu/${ubuntu_version}/packages-microsoft-prod.deb" -o "$package"
+          sudo dpkg -i "$package"
+          sudo apt-get update
+          sudo ACCEPT_EULA=Y apt-get install -y msodbcsql18 mssql-tools18 unixodbc-dev
+      - name: Install Python test dependencies
+        run: python -m pip install ".[test,sqlserver]"
+      - name: Create isolated test database
+        run: |
+          ready=0
+          for attempt in $(seq 1 30); do
+            if /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -Q "SELECT 1" >/dev/null 2>&1; then
+              ready=1
+              break
+            fi
+            sleep 2
+          done
+          if [ "$ready" -ne 1 ]; then
+            echo "SQL Server did not become ready" >&2
+            exit 1
+          fi
+          /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -Q "CREATE DATABASE sdc_cdm_test"
+          connection_string="DRIVER={ODBC Driver 18 for SQL Server};SERVER=localhost,1433;DATABASE=sdc_cdm_test;UID=sa;PWD=${MSSQL_SA_PASSWORD};Encrypt=yes;TrustServerCertificate=yes"
+          echo "SDC_CDM_SQLSERVER_CONNECTION_STRING=$connection_string" >> "$GITHUB_ENV"
+          echo "SDC_CDM_SQLSERVER_DSN=$connection_string" >> "$GITHUB_ENV"
+      - name: Run Python tests against SQLite and SQL Server
+        run: python -m pytest -ra

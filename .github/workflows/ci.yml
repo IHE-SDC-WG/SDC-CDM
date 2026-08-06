@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+
+permissions:
+  contents: read
+
+jobs:
+  python-sqlite:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install Python test dependencies
+        run: python -m pip install ".[test]"
+      - name: Shadow the .NET entrypoint
+        run: |
+          mkdir -p "$RUNNER_TEMP/no-dotnet"
+          printf '%s\n' '#!/bin/sh' 'echo "dotnet must not run in python-sqlite" >&2' 'exit 97' > "$RUNNER_TEMP/no-dotnet/dotnet"
+          chmod +x "$RUNNER_TEMP/no-dotnet/dotnet"
+          echo "$RUNNER_TEMP/no-dotnet" >> "$GITHUB_PATH"
+      - name: Run Python tests
+        run: python -m pytest -ra
+
+  csharp-sdc:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "10.0.x"
+      - name: Shadow the Python entrypoints
+        run: |
+          mkdir -p "$RUNNER_TEMP/no-python"
+          printf '%s\n' '#!/bin/sh' 'echo "python must not run in csharp-sdc" >&2' 'exit 97' > "$RUNNER_TEMP/no-python/python"
+          cp "$RUNNER_TEMP/no-python/python" "$RUNNER_TEMP/no-python/python3"
+          chmod +x "$RUNNER_TEMP/no-python/python" "$RUNNER_TEMP/no-python/python3"
+          echo "$RUNNER_TEMP/no-python" >> "$GITHUB_PATH"
+      - name: Run SDC C# tests
+        run: dotnet test src/csharp/SdcCdm.Sdc.Tests
