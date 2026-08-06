@@ -16,6 +16,7 @@ The bridge step reads `naaccr` and `sdc`, then writes standard OMOP rows only. O
 
 ```text
 database/
+  manifest.json
   vocab/
     README.md
   schemas/
@@ -31,6 +32,27 @@ database/
 
 SQLite uses attached databases named `etl`, `intake`, `omop`, `naaccr`, and `sdc`. SQL Server uses
 real schemas. The repository provides schema builds and bridge ETL for SQLite and SQL Server.
+
+## Build
+
+The manifest is the only complete schema apply order. The first entry creates the `etl` ledger;
+subsequent runs compare each file's SHA-256 hash with `etl.schema_migration` and skip unchanged
+files.
+
+From the repository root:
+
+```bash
+python -m pip install -e .
+python -m sdc_cdm build --dialect sqlite --db out/demo.db
+python -m sdc_cdm build --dialect sqlite --db out/demo.db --list
+```
+
+The control file is `out/demo.db`; attached schema files are written beside it as
+`demo.<schema>.db`. For SQL Server, install the `sqlserver` optional dependency and pass either
+`--connection-string` or `SDC_CDM_SQLSERVER_CONNECTION_STRING`.
+
+Only SQLite and SQL Server are executable dialects. Files listed under the manifest's `excluded`
+array are references or later-phase inputs and are never applied by `build`.
 
 ## OMOP Vocabulary Data
 

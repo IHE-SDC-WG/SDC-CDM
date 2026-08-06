@@ -174,7 +174,7 @@ EXPECTED_HEADERS = {
     for spec in TABLE_SPECS
 }
 
-# SdcCdmInSqlite.BuildSchema() inserts only these concepts so the bridge can run
+# Older databases may contain only these seed concepts so the bridge can run
 # without a full vocabulary. A fresh Athena load replaces them with canonical rows.
 SQLITE_ESSENTIAL_SEED_IDS = frozenset(
     {0, 8507, 8532, 32817, 32856, 32879, 45905771, 1147289}

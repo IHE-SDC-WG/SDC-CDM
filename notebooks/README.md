@@ -42,7 +42,9 @@ This script is used to serve the SQLite database in a web browser.
 - `sql-wasm-debug.wasm` and `sql-wasm-debug.js` from https://github.com/sql-js/sql.js under `./public`
   - Use script `./fetch-sqlite-wasm.sh` to fulfill this requirement
 - The SQLite database files under `./public/`
-  - Use the Python notebook or the repository build command to create them
+  - Use the repository build command to create the current five-schema set
+  - The retained notebook covers only the older clinical-schema subset and is scheduled for
+    replacement in Phase 6
   - The logical model (see `../database/SCHEMA_ARCHITECTURE.md`) produces a
     control database `sdc_cdm.db` plus five attached schema files: `etl`,
     `intake`, `omop`, `naaccr`, and `sdc`

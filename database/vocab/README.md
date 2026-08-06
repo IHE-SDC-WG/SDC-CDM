@@ -68,8 +68,12 @@ the row counts without connecting to a database.
 
 ## Load SQLite
 
-Create the three-schema database first. Pass the physical OMOP database file,
-not the control, SDC, or NAACCR database:
+Create the database through the manifest first. For SQLite, pass the physical OMOP database
+file to the vocabulary loader, not the control, ETL, intake, SDC, or NAACCR file:
+
+```bash
+python -m sdc_cdm build --dialect sqlite --db quickstart.db
+```
 
 ```bash
 python3 tools/load_athena_vocab.py \
@@ -78,9 +82,9 @@ python3 tools/load_athena_vocab.py \
   --sqlite-db quickstart.omop.db
 ```
 
-`SdcCdmInSqlite.BuildSchema()` inserts a small set of bridge concepts. The
-loader accepts only concept IDs from that seed set and replaces them with the
-canonical Athena rows.
+A fresh manifest build leaves the OMOP vocabulary tables empty. The loader also accepts the
+small known bridge-seed set from older databases and replaces those rows with the canonical
+Athena records.
 
 ## Load SQL Server
 
@@ -108,7 +112,7 @@ silently merge, delete, or refresh an existing vocabulary.
 
 For this repository, use the following order:
 
-1. Create the `omop`, `naaccr`, and `sdc` schemas.
+1. Build the `etl`, `intake`, `omop`, `naaccr`, and `sdc` schemas from the manifest.
 2. Load the Athena vocabulary files with this loader.
 3. Apply repo-specific NAACCR vocabulary additions where the database path
    requires them.

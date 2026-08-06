@@ -1,10 +1,12 @@
 # eCP to OMOP Mapping
 
-**Status:** updated for the three-schema architecture.
+**Status:** updated for the five-schema architecture.
 
 CAP eCP / NAACCR answers are ingested in two steps:
 
-1. The importer parses the message once and writes source data to:
+1. The planned Python importer parses the message once and writes source data to:
+   - `intake.inbound_message` for exact payload and envelope provenance.
+   - `intake.patient` for local patient identity.
    - `sdc.sdc_report` for report metadata.
    - `naaccr.naaccr_value` for raw answer values.
 2. The bridge reads `sdc` plus `naaccr` and writes only stock OMOP rows.
@@ -59,12 +61,15 @@ JOIN naaccr.naaccr_item ni
 WHERE m.meas_event_field_concept_id = 1147289;
 ```
 
-## Importer Boundary
+## Importer boundary
 
-`ImportNaaccrVolV.cs` writes `sdc.sdc_report` and `naaccr.naaccr_value`. It does not write
-SDC XML form tables or OMOP rows directly. Each `naaccr_value` row records the `sdc_report_id`
-of the report it came from (its provenance link), and a missing OBR-3 accession is stored as
-NULL rather than an empty string. Only non-duplicate, accessioned reports bridge to OMOP, so
-re-imports and accession-less reports never produce extra notes or measurements.
+Phase 0 has no active HL7 importer. The retired C# importer's expected output is frozen under
+`contracts/golden/` for the Python port. The new importer will write `intake`, `sdc.sdc_report`,
+and `naaccr.naaccr_value`; it will not write SDC XML form tables or OMOP rows directly.
 
-The SQLite implementation exposes `BridgeNaaccrSdcToOmop()` for the bridge step. Other dialects should follow the same boundary.
+Each `naaccr_value` row records its source `sdc_report_id`, and a missing OBR-3 accession is
+stored as NULL rather than an empty string. Only non-duplicate, accessioned reports bridge to
+OMOP, so re-imports and accession-less reports never produce extra notes or measurements.
+
+The SQLite and SQL Server bridge scripts follow the same boundary. Phase 0 tests execute them
+through the Python SQL splitter; a public `bridge` command is assigned to Phase 4.

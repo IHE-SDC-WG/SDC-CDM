@@ -1,5 +1,5 @@
 /*
-  eCP query examples for the three-schema architecture.
+  eCP query examples for the clinical schemas in the five-schema architecture.
 
   SQLite examples use attached databases named omop, sdc, and naaccr.
   SQL Server uses the same schema-qualified table shape.

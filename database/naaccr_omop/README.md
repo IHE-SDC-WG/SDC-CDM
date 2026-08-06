@@ -9,7 +9,8 @@ This directory contains the canonical review artifact generated from the NAACCR 
 
 ## Architecture Boundary
 
-The active database architecture uses three schemas:
+The active database architecture uses five schemas. This mapping artifact concerns the three
+clinical schemas in the center of the flow:
 
 ```text
 naaccr.naaccr_value + naaccr concept maps
@@ -17,6 +18,8 @@ sdc.sdc_report
         -> bridge
 omop.note + omop.measurement
 ```
+
+`intake` owns source payloads and patient identity; `etl` owns build and run records.
 
 `sdc.sdc_form_answer` is reserved for SDC XML form intake and is not part of the eCP bridge.
 

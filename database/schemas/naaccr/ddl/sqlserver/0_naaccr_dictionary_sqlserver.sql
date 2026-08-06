@@ -119,7 +119,7 @@ CREATE TABLE naaccr.SCHEMA_ITEM_CODE
 
 -- Gap #3: persist the SEER staging lookup tables (the value-validation / staging
 -- building blocks). Natural-keyed on (dd_version_id, table_key). Row cells are stored
--- as a JSON array of strings so the shape is portable across all three dialects.
+-- as a JSON array of strings so the shape is portable across both supported dialects.
 CREATE TABLE naaccr.STAGING_TABLE
 (
   dd_version_id INT NOT NULL,

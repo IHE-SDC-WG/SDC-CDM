@@ -350,15 +350,16 @@ Python has resolved constants, opened a transaction, and bound parameters. There
 compatible but not adopted; it is the fallback if the two dialect variants of a script start to
 diverge.
 
-**Toolchain × dialect support matrix** — publish this in the README and keep it honest. Today
-neither driver is what this table describes: `BuildSchema()` is SQLite-only, Python has no schema
-builder at all (just duplicated glob/`executescript` code in a notebook and a test helper), and the
-pure-SQL path is Postgres-only via the Dockerfile — the one dialect this rebuild drops.
+**Toolchain × dialect support matrix:** publish this in the README and keep it honest.
+
+**Phase 0 amendment (2026-08-06):** the Python manifest builder now supports both target
+dialects. The surviving C# SDC importer uses its trimmed SQLite store only; it has no SQL Server
+implementation.
 
 | | SQLite | SQL Server |
 |---|---|---|
 | Python CLI (`sdc_cdm`) | full | full |
-| C# (`SdcCdm`) | SDC XML import only | SDC XML import only |
+| C# (`SdcCdm.Sdc`) | SDC XML import only | not supported |
 
 #### PostgreSQL is removed
 
