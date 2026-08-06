@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sdc-cdm"
+version = "0.1.0"
+description = "SDC-CDM database build tooling"
+requires-python = ">=3.11"
+
+[project.optional-dependencies]
+sqlserver = ["pyodbc>=5,<6"]
+test = ["pytest>=8,<9"]
+
+[project.scripts]
+sdc-cdm = "sdc_cdm.cli.main:main"
+
+[tool.setuptools.packages.find]
+where = ["src/python"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src/python"]
+testpaths = ["src/python/tests", "tools/tests"]
