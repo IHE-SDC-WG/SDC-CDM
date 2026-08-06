@@ -39,7 +39,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\SdcCdm\SdcCdm.csproj" />
-    <ProjectReference Include="..\SdcCdmInSqlite\SdcCdmInSqlite.csproj" />
   </ItemGroup>
 
 </Project>
