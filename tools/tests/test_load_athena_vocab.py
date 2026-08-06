@@ -158,26 +158,6 @@ def _create_sqlite_omop(tmp_path: Path) -> Path:
     return omop_path
 
 
-def _seed_sqlite_concept(database_path: Path) -> None:
-    connection = sqlite3.connect(database_path)
-    connection.execute(
-        """
-        INSERT INTO concept (
-            concept_id, concept_name, domain_id, vocabulary_id,
-            concept_class_id, standard_concept, concept_code,
-            valid_start_date, valid_end_date, invalid_reason
-        )
-        VALUES (
-            32879, 'placeholder', 'Type Concept', 'Type Concept',
-            'Type Concept', 'S', 'Registry',
-            '1970-01-01', '2099-12-31', NULL
-        )
-        """
-    )
-    connection.commit()
-    connection.close()
-
-
 def test_extract_check_parses_all_nine_tab_delimited_files(
     tmp_path: Path,
 ) -> None:
@@ -214,13 +194,12 @@ def test_extract_check_reports_malformed_numeric_value(
         inspect_extract(vocab_dir, "\t")
 
 
-def test_sqlite_load_replaces_known_seed_and_validates_counts(
+def test_sqlite_load_populates_a_fresh_schema_and_validates_counts(
     tmp_path: Path,
 ) -> None:
     vocab_dir = tmp_path / "vocab"
     rows = _write_extract(vocab_dir)
     omop_path = _create_sqlite_omop(tmp_path)
-    _seed_sqlite_concept(omop_path)
 
     report = load_vocab(
         SqliteBackend(omop_path, batch_size=3),
@@ -252,7 +231,6 @@ def test_sqlite_load_rolls_back_on_orphaned_relationship(
     ]
     _write_extract(vocab_dir, rows)
     omop_path = _create_sqlite_omop(tmp_path)
-    _seed_sqlite_concept(omop_path)
 
     with pytest.raises(
         LoaderError, match="Vocabulary integrity validation failed"
@@ -264,9 +242,7 @@ def test_sqlite_load_rolls_back_on_orphaned_relationship(
         )
 
     connection = sqlite3.connect(omop_path)
-    assert connection.execute(
-        "SELECT concept_id, concept_name FROM concept"
-    ).fetchall() == [(32879, "placeholder")]
+    assert connection.execute("SELECT COUNT(*) FROM concept").fetchone()[0] == 0
     assert connection.execute("SELECT COUNT(*) FROM vocabulary").fetchone()[0] == 0
     connection.close()
 

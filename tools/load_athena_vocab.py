@@ -174,11 +174,8 @@ EXPECTED_HEADERS = {
     for spec in TABLE_SPECS
 }
 
-# Older databases may contain only these seed concepts so the bridge can run
-# without a full vocabulary. A fresh Athena load replaces them with canonical rows.
-SQLITE_ESSENTIAL_SEED_IDS = frozenset(
-    {0, 8507, 8532, 32817, 32856, 32879, 45905771, 1147289}
-)
+# Concepts the NAACCR-to-OMOP bridge joins against. Checked in the Athena extract,
+# not in the target database, so a bundle missing them fails before it is loaded.
 BRIDGE_REQUIRED_CONCEPT_IDS = frozenset({0, 32817, 32879, 1147289})
 IDENTIFIER_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
@@ -539,45 +536,16 @@ def _target_row_counts(backend: DatabaseBackend) -> dict[str, int]:
 
 
 def _prepare_fresh_target(backend: DatabaseBackend) -> None:
-    counts = _target_row_counts(backend)
-    non_concept_rows = {
-        table: count
-        for table, count in counts.items()
-        if table != "concept" and count
+    populated = {
+        table: count for table, count in _target_row_counts(backend).items() if count
     }
-    if non_concept_rows:
+    if populated:
         details = ", ".join(
-            f"{table}={count}"
-            for table, count in sorted(non_concept_rows.items())
+            f"{table}={count}" for table, count in sorted(populated.items())
         )
         raise LoaderError(
             "Vocabulary target is not fresh. Existing rows were found: "
             f"{details}. Create a fresh OMOP schema for the initial Athena load."
-        )
-
-    concept_table = backend.qualified_table("concept")
-    existing_ids = {
-        int(row[0])
-        for row in backend.fetch_all(
-            f"SELECT concept_id FROM {concept_table}"
-        )
-    }
-    unexpected_ids = existing_ids - SQLITE_ESSENTIAL_SEED_IDS
-    if unexpected_ids:
-        sample = ", ".join(str(value) for value in sorted(unexpected_ids)[:10])
-        suffix = "..." if len(unexpected_ids) > 10 else ""
-        raise LoaderError(
-            "Vocabulary target is not fresh. Unexpected concept IDs were "
-            f"found: {sample}{suffix}"
-        )
-
-    if existing_ids:
-        markers = ", ".join(
-            backend.parameter_marker for _ in existing_ids
-        )
-        backend.execute(
-            f"DELETE FROM {concept_table} WHERE concept_id IN ({markers})",
-            tuple(sorted(existing_ids)),
         )
 
 

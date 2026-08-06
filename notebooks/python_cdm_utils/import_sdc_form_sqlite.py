@@ -215,6 +215,10 @@ def process_response_field(
         response_string_val = (
             response_string.get("val") if response_string is not None else None
         )
+        # Match the C# XmlFormImporter column contract: `response` holds the raw
+        # source lexeme and `response_string` holds the string-typed value, so both
+        # importers write sdc_form_answer the same way.
+        is_string = response_string is not None
         create_sdc_form_answer(
             cursor=cursor,
             template_instance_id=template_instance_id,
@@ -228,8 +232,9 @@ def process_response_field(
             list_item_instance_guid=li_instance_guid,
             list_item_parent_guid=li_parent_guid,
             units_system=response_units_system,
-            response=response.get("val"),
+            response=response_string_val if is_string else response.get("val"),
             units=response_units,
+            datatype="string" if is_string else None,
             response_string=response_string_val,
             sdc_order=response.get("order"),
         )

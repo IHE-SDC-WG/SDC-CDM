@@ -365,8 +365,9 @@ time**, so no new golden files are needed for the core oracle tests (SDCOM-03/04
   `NAACCR_VolV.hl7`, and the IPS bundle into `sample_data/` first.
 - [x] **CLEAN-02** Frozen importer outputs live under `contracts/golden/` for the Python
   conformance tests. The Phase 0 C# suite does not consume shared golden files.
-- [x] **CLEAN-03** CI has independent `python-sqlite` and `csharp-sdc` jobs on every push,
-  plus a scheduled and manually runnable `python-sqlserver` job.
+- [x] **CLEAN-03** CI has independent `python-sqlite`, `csharp-sdc`, and
+  `python-sqlserver` jobs for pull requests and pushes to `main`. The SQL Server job is
+  limited to database and Python changes.
 
 ## Suggested implementation order
 

@@ -86,6 +86,7 @@ class BuildRunner:
         if dry_run:
             return self._dry_run(entries)
 
+        self.backend.prepare_for_writes()
         actions: list[BuildAction] = []
         run_id: int | None = None
         start_index = 0

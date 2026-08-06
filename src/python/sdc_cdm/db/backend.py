@@ -10,6 +10,13 @@ from typing import Any
 class DatabaseBackend(ABC):
     dialect: str
 
+    def prepare_for_writes(self) -> None:
+        """Create any structure the manifest itself cannot create.
+
+        Called only when the driver is about to write, so a dry run leaves the
+        target untouched.
+        """
+
     @abstractmethod
     def execute_units(self, units: Sequence[str]) -> None:
         """Execute one manifest file atomically."""

@@ -1,0 +1,19 @@
+{
+  "load": {
+    "naaccr_value": {
+      "observation_date": {
+        "max": "2021-02-23",
+        "min": "2021-02-23"
+      }
+    },
+    "rule": "With every OBX-14 removed, observation_date falls back to the OBR date rather than to the current date."
+  },
+  "source": {
+    "commit": "c29d01dc6a042b13217bbb511864b98aa714aee5",
+    "fixture": "sample_data/naaccr_v2/obx-Adrenal.hl7",
+    "fixture_mutation": "replace every occurrence of '20231005152616' with the empty string",
+    "kind": "post-load database snapshot",
+    "oracle": "SdcCdmLib/SdcCdm.Tests/SdcImporterTests.cs:214-238",
+    "phase_3_note": "REBUILD_PLAN.md replaces the today's-date fallback with a diagnostic. The OBR-date fallback asserted here is separate behaviour and is expected to survive."
+  }
+}

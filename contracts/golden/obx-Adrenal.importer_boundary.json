@@ -1,0 +1,17 @@
+{
+  "load": {
+    "boundary": {
+      "naaccr.naaccr_value": 19,
+      "sdc.sdc_form_answer": 0,
+      "sdc.template_instance": 0,
+      "sdc.template_sdc": 0
+    },
+    "rule": "The eCP/HL7 path stages answers in naaccr.naaccr_value and writes no SDC XML form tables. sdc.sdc_report is written and is not part of this assertion."
+  },
+  "source": {
+    "commit": "c29d01dc6a042b13217bbb511864b98aa714aee5",
+    "fixture": "sample_data/naaccr_v2/obx-Adrenal.hl7",
+    "kind": "post-load database snapshot",
+    "oracle": "SdcCdmLib/SdcCdm.Tests/SdcImporterTests.cs:156-185"
+  }
+}

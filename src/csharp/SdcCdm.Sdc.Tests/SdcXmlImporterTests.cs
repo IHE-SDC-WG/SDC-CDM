@@ -88,13 +88,104 @@ public class SdcXmlImporterTests
 
         using var stringCommand = store.GetConnection().CreateCommand();
         stringCommand.CommandText =
-            "SELECT response, units, datatype FROM sdc.sdc_form_answer "
+            "SELECT response, response_string, units, datatype FROM sdc.sdc_form_answer "
             + "WHERE question_sdcid = 'Q_16451'";
         using var stringReader = stringCommand.ExecuteReader();
         Assert.True(stringReader.Read());
         Assert.Equal("10", stringReader.GetString(0));
-        Assert.Equal("mm", stringReader.GetString(1));
-        Assert.Equal("string", stringReader.GetString(2));
+        Assert.Equal("10", stringReader.GetString(1));
+        Assert.Equal("mm", stringReader.GetString(2));
+        Assert.Equal("string", stringReader.GetString(3));
+    }
+
+    [Fact]
+    public void ProcessXmlForm_KeepsTheRawLexemeInResponseForEveryTypedAnswer()
+    {
+        using var store = CreateStore();
+
+        XmlFormImporter.ProcessXmlForm(store, LoadSubmission());
+
+        // `datatype` names which typed column holds the parsed value; `response`
+        // holds the source lexeme regardless, so it is never null for an answered
+        // question. Only selected list items without a response field lack one.
+        Assert.Equal(
+            0L,
+            Scalar(
+                store,
+                "SELECT COUNT(*) FROM sdc.sdc_form_answer "
+                    + "WHERE datatype IS NOT NULL AND response IS NULL"
+            )
+        );
+        Assert.Equal(
+            "1",
+            ScalarValue(
+                store,
+                "SELECT response FROM sdc.sdc_form_answer WHERE list_item_id = 'LI_40253'"
+            )
+        );
+    }
+
+    [Fact]
+    public void ProcessXmlForm_KeepsUnparseableNumericsInsteadOfFailingTheSubmission()
+    {
+        using var store = CreateStore();
+        XElement submission = XElement.Parse(
+            """
+            <SDCSubmissionPackage xmlns="urn:ihe:qrph:sdc:2016" instanceID="bad-values">
+              <FormDesign ID="bad-form" baseURI="test" lineage="bad" version="1" fullURI="bad:1" formTitle="Bad values">
+                <Body>
+                  <ChildItems>
+                    <Section ID="section-1" title="Section 1">
+                      <ChildItems>
+                        <Question name="Q_blank_int" ID="q-blank-int" title="Blank integer">
+                          <ResponseField><Response><integer val="" /></Response></ResponseField>
+                        </Question>
+                        <Question name="Q_bad_decimal" ID="q-bad-decimal" title="Non-numeric decimal">
+                          <ResponseField><Response><decimal val="not a number" /></Response></ResponseField>
+                        </Question>
+                        <Question name="Q_good" ID="q-good" title="Good">
+                          <ResponseField><Response><integer val="42" /></Response></ResponseField>
+                        </Question>
+                      </ChildItems>
+                    </Section>
+                  </ChildItems>
+                </Body>
+              </FormDesign>
+            </SDCSubmissionPackage>
+            """
+        );
+
+        XmlFormImporter.ProcessXmlForm(store, submission);
+
+        // The malformed values must not discard the rest of the submission.
+        Assert.Equal(3L, Scalar(store, "SELECT COUNT(*) FROM sdc.sdc_form_answer"));
+        Assert.Equal(
+            42L,
+            ScalarValue(
+                store,
+                "SELECT response_int FROM sdc.sdc_form_answer WHERE question_sdcid = 'Q_good'"
+            )
+        );
+        Assert.Null(
+            ScalarValue(
+                store,
+                "SELECT response_int FROM sdc.sdc_form_answer WHERE question_sdcid = 'Q_blank_int'"
+            )
+        );
+        Assert.Equal(
+            "not a number",
+            ScalarValue(
+                store,
+                "SELECT response FROM sdc.sdc_form_answer WHERE question_sdcid = 'Q_bad_decimal'"
+            )
+        );
+        Assert.Null(
+            ScalarValue(
+                store,
+                "SELECT response_float FROM sdc.sdc_form_answer "
+                    + "WHERE question_sdcid = 'Q_bad_decimal'"
+            )
+        );
     }
 
     [Fact]
@@ -182,10 +273,12 @@ public class SdcXmlImporterTests
     private static long Scalar(SdcSqliteStore store, string sql) =>
         Convert.ToInt64(ScalarValue(store, sql));
 
+    /// <summary>Returns the first column of the first row, with SQL NULL as null.</summary>
     private static object? ScalarValue(SdcSqliteStore store, string sql)
     {
         using SqliteCommand command = store.GetConnection().CreateCommand();
         command.CommandText = sql;
-        return command.ExecuteScalar();
+        object? value = command.ExecuteScalar();
+        return value is DBNull ? null : value;
     }
 }

@@ -23,6 +23,7 @@
   "source": {
     "commit": "c29d01dc6a042b13217bbb511864b98aa714aee5",
     "fixture": "sample_data/naaccr_v2/obx-Adrenal.hl7",
+    "kind": "post-bridge database snapshot",
     "oracle": "SdcCdmLib/SdcCdm.Tests/SdcImporterTests.cs:41-154"
   }
 }

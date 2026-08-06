@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Xml.Linq;
+using Microsoft.Extensions.Logging;
 
 namespace SdcCdm;
 
@@ -262,30 +263,54 @@ public static class XmlFormImporter
             return null;
         }
 
+        // `response` holds the raw source lexeme for every typed answer; the
+        // response_string / response_int / response_float columns hold the parsed value
+        // for the datatype named in `datatype`. A value that does not parse keeps its
+        // lexeme in `response` and is logged, so one bad value cannot discard the form.
         string? value = typedValue?.Attribute("val")?.Value;
-        string? responseText = null;
+        string? responseString = null;
         long? responseInt = null;
         double? responseFloat = null;
         string? datatype = typedValue?.Name.LocalName;
         switch (datatype)
         {
             case "string":
-                responseText = value;
+                responseString = value;
                 break;
             case "integer":
             case "int":
-                responseInt = long.Parse(
-                    value!,
-                    NumberStyles.Integer,
-                    CultureInfo.InvariantCulture
-                );
+                if (
+                    long.TryParse(
+                        value,
+                        NumberStyles.Integer,
+                        CultureInfo.InvariantCulture,
+                        out long parsedInt
+                    )
+                )
+                {
+                    responseInt = parsedInt;
+                }
+                else
+                {
+                    LogUnparseableValue(sdcCdm, questionId, datatype, value);
+                }
                 break;
             case "decimal":
-                responseFloat = double.Parse(
-                    value!,
-                    NumberStyles.Float,
-                    CultureInfo.InvariantCulture
-                );
+                if (
+                    double.TryParse(
+                        value,
+                        NumberStyles.Float,
+                        CultureInfo.InvariantCulture,
+                        out double parsedFloat
+                    )
+                )
+                {
+                    responseFloat = parsedFloat;
+                }
+                else
+                {
+                    LogUnparseableValue(sdcCdm, questionId, datatype, value);
+                }
                 break;
         }
 
@@ -301,13 +326,30 @@ public static class XmlFormImporter
             listItemId,
             listItemGuid,
             typedValue?.Attribute("order")?.Value ?? response?.Attribute("order")?.Value,
-            response: responseText,
+            response: value,
             units: units,
             units_system: unitsSystem,
             datatype: datatype,
             response_int: responseInt,
             response_float: responseFloat,
+            response_string: responseString,
             li_parent_guid: listItemParentGuid
+        );
+    }
+
+    private static void LogUnparseableValue(
+        ISdcCdm sdcCdm,
+        string? questionId,
+        string datatype,
+        string? value
+    )
+    {
+        sdcCdm.Logger.LogWarning(
+            "Question {QuestionId}: {Datatype} value {Value} did not parse; "
+                + "the raw lexeme is kept in sdc_form_answer.response.",
+            questionId ?? "(unnamed)",
+            datatype,
+            value ?? "(empty)"
         );
     }
 }

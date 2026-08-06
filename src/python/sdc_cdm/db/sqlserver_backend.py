@@ -21,6 +21,8 @@ class SqlServerBackend(DatabaseBackend):
                 "SQL Server builds require the optional pyodbc dependency"
             ) from exc
         self.connection = pyodbc.connect(connection_string, autocommit=False)
+
+    def prepare_for_writes(self) -> None:
         self._ensure_schemas()
 
     def _ensure_schemas(self) -> None:

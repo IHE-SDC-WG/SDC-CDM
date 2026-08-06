@@ -68,7 +68,8 @@ dotnet test src/csharp/SdcCdm.Sdc.Tests
 ```
 
 The Python suite covers the manifest, migration ledger, schema contracts, parser utilities, and
-the SQLite bridge rerun regression. SQL Server runs the same suite in its scheduled workflow.
+the SQLite bridge rerun regression. SQL Server runs the same suite for pull requests and pushes to
+`main` when database or Python paths change.
 The C# suite covers only the SDC XML library.
 
 Historical artifacts from the retired combined OMOP-SDC model are available in Git at commit

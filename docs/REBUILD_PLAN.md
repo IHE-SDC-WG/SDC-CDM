@@ -388,13 +388,12 @@ Three jobs. Nobody needs .NET installed to work on the pipeline.
 
 | CI job | Runs | When |
 |---|---|---|
-| `python-sqlite` | pytest: golden-envelope conformance, full pipeline, export round-trip | every push |
-| `csharp-sdc` | `dotnet test`: SDC XML import only — `ImportXmlForm` / `ImportTemplate` and the template/form-answer contract. Note the current `SdcImporterTests.cs` is misnamed: its headline test is HL7, and that one moves to pytest. | every push |
-| `python-sqlserver` | same pytest suite, `mcr.microsoft.com/mssql/server` service container | nightly + on `database/**` changes |
+| `python-sqlite` | pytest: golden-envelope conformance, full pipeline, export round-trip | pull requests + pushes to `main` |
+| `csharp-sdc` | `dotnet test`: SDC XML import only — `ImportXmlForm` / `ImportTemplate` and the template/form-answer contract. Note the current `SdcImporterTests.cs` is misnamed: its headline test is HL7, and that one moves to pytest. | pull requests + pushes to `main` |
+| `python-sqlserver` | same pytest suite, `mcr.microsoft.com/mssql/server` service container | matching pull requests + pushes to `main` |
 
 `contracts/golden/*.envelope.json` remains blocking, now as a **parser regression gate** rather than
-a parity oracle. Keeping SQL Server off the PR path still removes the container cost from ordinary
-review.
+a parity oracle. The SQL Server path filter removes the container cost from unrelated reviews.
 
 ### Repo layout
 
@@ -430,8 +429,9 @@ docs/{REBUILD_PLAN,SCHEMA_ARCHITECTURE,ROADMAP,TEST_PLAN}.md
 The Python CLI exposes the full verb set above. The C# project is a library plus tests for SDC XML
 import; it has no CLI and no pipeline verbs.
 
-**Deleted outright:** `phenoml-workflows/` (mapping absorbed into Phase 4 SQL, review role replaced
-by the tracked overrides CSV), `NAACRToOMOPmaps/*.xlsx` and `tools/convert_naaccr_omop_maps.py`
+**Deleted outright:** `phenoml-workflows/` (deleted in Phase 0; mapping absorbed into Phase 4 SQL,
+review role replaced by the tracked overrides CSV), `NAACCRtoOMOPmaps/*.xlsx` and
+`tools/convert_naaccr_omop_maps.py`
 (after the one-time seed conversion), the whole PostgreSQL dialect (`database/etl/postgresql/`,
 `database/schemas/{naaccr,sdc}/ddl/postgresql/`, `database/Dockerfile`,
 `database/docker-compose.yml`, `database/.env.example` — see "PostgreSQL is removed, not deferred"
@@ -635,7 +635,7 @@ not) into two tracked seeds:
   pretend mapping.
 - `database/seed/naaccr_item_exclusions.csv` — the 74 items explicitly flagged `is_mappable: false`.
 
-Then drop the JSON, `tools/convert_naaccr_omop_maps.py`, and the `NAACRToOMOPmaps/*.xlsx` workbooks.
+Then drop the JSON, `tools/convert_naaccr_omop_maps.py`, and the `NAACCRtoOMOPmaps/*.xlsx` workbooks.
 
 Field-name trap in the converter: the spec's `concept_id` field holds a NAACCR
 **item number** (e.g. `442` / `ambiguousTerminologyDx`), and its `domain_id` holds an invented value
@@ -649,11 +649,14 @@ minting for most of the dictionary.
 ### OMOP breadth, domain-routed
 
 Split the monolithic bridge into ordered scripts. The `phenoml_workflows/mapper.py` logic
-(episode / episode_event / observation routing, currently JSON-only with no database) is **absorbed
-here, and `phenoml-workflows/` is deleted from the tree** — its two roles (mapping, and review UI)
-are replaced by these SQL scripts and by the tracked overrides CSV respectively. Read it once for
-its episode-grain and domain-routing decisions before deleting it; those are the parts worth
-carrying over.
+(episode / episode_event / observation routing, JSON-only with no database) is **absorbed here** —
+its two roles (mapping, and review UI) are replaced by these SQL scripts and by the tracked
+overrides CSV respectively.
+
+**Phase 0 amendment (2026-08-06):** `phenoml-workflows/` was deleted in Phase 0 rather than here.
+Read the mapper for its episode-grain and domain-routing decisions from git history —
+`git show <phase-0-parent>:phenoml-workflows/phenoml_workflows/mapper.py` — before writing
+`4_condition_and_episode.sql`; those are the parts worth carrying over.
 
 1. `1_person_and_period.sql` — `omop.person` from `intake.patient` 1:1, with gender resolved through
    `etl.concept_constant`; `observation_period`; `cdm_source` from seed. This is the honest fix for
@@ -830,8 +833,8 @@ too. Phase 0 runs on the current branch rather than a `phase-0-skeleton` branch,
 phase that builds the CI there is nothing yet to gate against.
 *Accept when:* `build` runs twice against the same database with no error and no duplicate objects
 (the current `IF NOT EXISTS` regression); the Python driver builds a SQLite database from the
-manifest, and the SQL Server job does the same on its own schedule; the three CI jobs exist and the
-two per-push jobs are green; **no pytest run requires .NET and no `dotnet test` requires Python** —
+manifest, and the SQL Server job does the same for matching changes; the three CI jobs are green on
+pull requests and pushes to `main`; **no pytest run requires .NET and no `dotnet test` requires Python** —
 the SDC XML suite must not reach into the pipeline; the
 promoted end-to-end no-double-count test (from the untracked `.context/verify_e2e_bridge.py`) passes
 as a tracked test; `test_no_postgres.py` verifies that removed-dialect text occurs only in the four
@@ -876,7 +879,7 @@ assertions (19 values → 19 measurements, both OBX-4 grouped shapes) pass again
 this is the phase's proof that nothing was lost in retiring the C# HL7 path.
 
 **Phase 4 — bridge broadening.** person/period/cdm_source, domain routing, thin condition + episode,
-validate. Delete `phenoml-workflows/`.
+validate. (`phenoml-workflows/` was already deleted in Phase 0; read `mapper.py` from git history.)
 *Accept when:* the importer writes zero `omop` rows; `omop.person` count equals `intake.patient`
 count; a fixture with coded, numeric, and text answers produces `value_as_concept_id`,
 `value_as_number` + `unit_source_value` (with `unit_concept_id` null), and an
@@ -945,7 +948,7 @@ at the new import-side assertion rather than deleting them.
 |---|---|---|
 | **Athena NAACCR coverage is worse than assumed.** Nobody has measured it. | Layer 3 dominates, most concepts are local, the export is far less interoperable than the design implies. | Measure in Phase 2 **before** the bridge is built on it; `concept_map_coverage` makes it a number. Thin layer 1 is a finding for the working group, not something to paper over with mints. |
 | **The envelope contract ossifies too early.** v1 is designed around HL7 v2 alone. | A breaking `envelope_version` bump with stored envelopes to migrate, or per-format hacks. | `envelope_version` is in the schema from day one and stored per row. Sketch the NAACCR XML mapping onto v1 during Phase 3 design as a cheap falsification test. |
-| **JSON shredding in SQL is the weakest link.** `json_each` / `OPENJSON` are where the two dialects genuinely diverge. | The two `load_envelope.sql` variants drift apart, invisible until a SQL Server run produces different rows. | Keep divergence to that one file per dialect; the nightly `python-sqlserver` job runs the same assertions so drift fails a test. Shredding in Python, or Jinja-templating one source into two, are the fallbacks. |
+| **JSON shredding in SQL is the weakest link.** `json_each` / `OPENJSON` are where the two dialects genuinely diverge. | The two `load_envelope.sql` variants drift apart, invisible until a SQL Server run produces different rows. | Keep divergence to that one file per dialect; the path-filtered `python-sqlserver` job runs the same assertions so drift fails a test. Shredding in Python, or Jinja-templating one source into two, are the fallbacks. |
 | **A single implementation is a single point of failure.** No C# pipeline, no hand-driven SQL path. | If a stage breaks there is no second way to run the pipeline. | Accepted cost of deleting the duplication. Every stage stays separately invocable and idempotent, so a failed stage can be re-run in isolation. |
 | **Concept identity differs by dialect** (accepted, not a defect). | A SQL Server export and a SQLite export of the same message are not concept-comparable. | Documented in `SCHEMA_ARCHITECTURE.md`, recorded per row in `mapping_layer`, carried in export `manifest.json`, excluded from test assertions. |
 | **Seven phases is a lot of runway.** Phases 3–5 depend on 0–2 landing. | Stalling mid-rebuild leaves two half-migrated layouts. | Each phase lands on `main` by fast-forward, so a stall leaves trunk holding every completed phase. Phases 1–2 alone fix the `concept_id = 0` problem. Do not start Phase 3 until 0–2 are on `main`. |
@@ -982,8 +985,8 @@ dotnet test src/csharp/SdcCdm.Sdc.Tests
 
 - **Envelope conformance.** The parser reproduces `contracts/golden/*.envelope.json` byte-for-byte
   under the serialization profile, and `serialize(parse(serialize(x)))` is a fixed point. Blocking.
-- **Dialect behaviour parity.** The same pytest suite passes against SQLite and, nightly, against
-  SQL Server — asserting equal *behaviour*, never equal concept IDs.
+- **Dialect behaviour parity.** The same pytest suite passes against SQLite and, for matching CI
+  changes, against SQL Server — asserting equal *behaviour*, never equal concept IDs.
 - **Partial dates.** A `1957`-only birth date survives as `year` precision into
   `omop.person.year_of_birth` with null month/day; an unparseable date becomes `null` plus a
   diagnostic, never today's date.

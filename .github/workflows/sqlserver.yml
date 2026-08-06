@@ -1,15 +1,20 @@
-name: Nightly SQL Server
+name: SQL Server CI
 
 on:
-  schedule:
-    - cron: "23 6 * * *"
-  push:
+  pull_request:
     paths:
       - "database/**"
       - "src/python/**"
       - "pyproject.toml"
-      - ".github/workflows/nightly-sqlserver.yml"
-  workflow_dispatch:
+      - ".github/workflows/sqlserver.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "database/**"
+      - "src/python/**"
+      - "pyproject.toml"
+      - ".github/workflows/sqlserver.yml"
 
 permissions:
   contents: read

@@ -82,8 +82,10 @@ erDiagram
     TEXT updated_datetime
   }
 
-  %% Answer store for the SDC XML path only. Note: response_string is
-  %% misspelled in the DDL; the name is reproduced here verbatim on purpose.
+  %% Answer store for the SDC XML path only. `response` holds the raw source
+  %% lexeme for every typed answer; `datatype` names which of response_string /
+  %% response_int / response_float / response_datetime holds the parsed value.
+  %% (`response_string` was `reponse_string_nvarchar` before the Phase 0 rename.)
   SDC_FORM_ANSWER {
     INTEGER sdc_form_answer_id PK
     INTEGER template_instance_id FK

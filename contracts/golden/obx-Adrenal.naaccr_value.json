@@ -31,6 +31,8 @@
   "source": {
     "commit": "c29d01dc6a042b13217bbb511864b98aa714aee5",
     "fixture": "sample_data/naaccr_v2/obx-Adrenal.hl7",
-    "oracle": "SdcCdmLib/SdcCdm.Tests/SdcImporterTests.cs:41-154"
+    "kind": "post-load database snapshot",
+    "oracle": "SdcCdmLib/SdcCdm.Tests/SdcImporterTests.cs:41-154",
+    "value_num_note": "value_num here is the naaccr_value.value_num REAL column. The envelope's values[].value_num is a different field carrying the source lexeme as a JSON string ('10'). See contracts/golden/README.md."
   }
 }

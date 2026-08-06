@@ -20,14 +20,14 @@ def schema_database_path(control_path: Path, schema: str) -> Path:
 class SQLiteBackend(DatabaseBackend):
     dialect = "sqlite"
 
-    def __init__(self, database_path: Path | str):
+    def __init__(self, database_path: Path | str, *, read_only: bool = False):
+        self.read_only = read_only
         self.database_path = Path(database_path) if database_path != ":memory:" else None
-        if self.database_path is not None:
+        if self.database_path is not None and not read_only:
             self.database_path.parent.mkdir(parents=True, exist_ok=True)
-            data_source = str(self.database_path)
-        else:
-            data_source = ":memory:"
-        self.connection = sqlite3.connect(data_source)
+        self.connection = sqlite3.connect(
+            self._data_source(self.database_path), uri=read_only
+        )
         self.connection.execute("PRAGMA foreign_keys = ON")
         self.schema_paths: dict[str, Path | None] = {}
         for schema in SCHEMA_ORDER:
@@ -37,8 +37,22 @@ class SQLiteBackend(DatabaseBackend):
                 else None
             )
             self.schema_paths[schema] = schema_path
-            target = str(schema_path) if schema_path is not None else ":memory:"
-            self.connection.execute(f'ATTACH DATABASE ? AS "{schema}"', (target,))
+            self.connection.execute(
+                f'ATTACH DATABASE ? AS "{schema}"', (self._data_source(schema_path),)
+            )
+
+    def _data_source(self, path: Path | None) -> str:
+        """Resolve one database file to a connect/ATTACH target.
+
+        Under ``read_only`` an absent file becomes a private in-memory database
+        rather than a new empty file, so a dry run never touches the filesystem.
+        """
+
+        if path is None:
+            return ":memory:"
+        if not self.read_only:
+            return str(path)
+        return f"{path.as_uri()}?mode=ro" if path.is_file() else ":memory:"
 
     def execute_units(self, units: Sequence[str]) -> None:
         try:

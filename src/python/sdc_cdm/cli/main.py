@@ -46,7 +46,7 @@ def _run_build(args: argparse.Namespace) -> int:
     if args.dialect == "sqlite":
         if args.db is None:
             raise UsageError("SQLite build requires --db")
-        backend = SQLiteBackend(args.db)
+        backend = SQLiteBackend(args.db, read_only=args.dry_run)
     else:
         connection_string = args.connection_string or os.environ.get(
             "SDC_CDM_SQLSERVER_CONNECTION_STRING"

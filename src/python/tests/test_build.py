@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import sqlite3
 from pathlib import Path
 
@@ -49,6 +50,14 @@ def test_build_twice_is_a_no_op(tmp_path: Path) -> None:
         assert backend.table_exists("sdc", "sdc_report")
 
 
+def test_dry_run_against_a_new_database_writes_nothing_to_disk(tmp_path: Path) -> None:
+    control_path = tmp_path / "unbuilt" / "demo.db"
+
+    assert main(["build", "--dialect", "sqlite", "--db", str(control_path), "--dry-run"]) == 0
+
+    assert not control_path.parent.exists()
+
+
 def test_dry_run_does_not_mutate_the_ledger(tmp_path: Path) -> None:
     control_path = tmp_path / "build.db"
     _run_build(control_path)
@@ -60,6 +69,25 @@ def test_dry_run_does_not_mutate_the_ledger(tmp_path: Path) -> None:
 
     assert before == after
     assert all(action.status is BuildStatus.SKIPPED for action in actions)
+
+
+def test_dry_run_over_an_existing_build_leaves_every_file_byte_identical(
+    tmp_path: Path,
+) -> None:
+    control_path = tmp_path / "demo.db"
+    _run_build(control_path)
+
+    def digests() -> dict[str, str]:
+        return {
+            path.name: hashlib.sha256(path.read_bytes()).hexdigest()
+            for path in sorted(tmp_path.iterdir())
+        }
+
+    before = digests()
+    # Goes through the CLI so the read-only backend is what reads the ledger.
+    assert main(["build", "--dialect", "sqlite", "--db", str(control_path), "--dry-run"]) == 0
+
+    assert digests() == before
 
 
 def test_second_build_without_the_ledger_fails(tmp_path: Path) -> None:
