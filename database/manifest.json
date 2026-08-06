@@ -108,14 +108,6 @@
       "reason": "Vendored OHDSI reference retained for Phase 6 re-vendoring; PostgreSQL is unsupported."
     },
     {
-      "path": "database/schemas/naaccr/ddl/postgresql/1_naaccr_postgresql_ddl.sql",
-      "reason": "Obsolete PostgreSQL path awaiting the Phase 0 purge commit."
-    },
-    {
-      "path": "database/schemas/sdc/ddl/postgresql/1_sdc_postgresql_ddl.sql",
-      "reason": "Obsolete PostgreSQL path awaiting the Phase 0 purge commit."
-    },
-    {
       "path": "database/schemas/naaccr/ddl/sqlserver/2_naaccr_omop_vocab_sqlserver.sql",
       "reason": "Concept-map seeding belongs to Phase 2 maps build, not schema DDL."
     },

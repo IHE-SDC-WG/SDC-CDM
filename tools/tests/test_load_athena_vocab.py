@@ -16,7 +16,6 @@ sys.path.insert(0, str(ROOT / "tools"))
 
 from load_athena_vocab import (  # noqa: E402
     LoaderError,
-    PostgresBackend,
     SqlServerBackend,
     SqliteBackend,
     TABLE_SPECS,
@@ -299,21 +298,6 @@ class _RecordingConnection:
 
     def cursor(self) -> _RecordingCursor:
         return _RecordingCursor(self.statements)
-
-
-def test_postgres_adapter_uses_quoted_schema_and_replication_role() -> None:
-    backend = PostgresBackend("unused", "omop", 100)
-    connection = _RecordingConnection()
-    backend.connection = connection
-
-    backend.begin_load()
-    backend.enable_constraints_for_validation()
-
-    assert backend.qualified_table("concept") == '"omop"."concept"'
-    assert connection.statements == [
-        "SET session_replication_role = replica",
-        "SET session_replication_role = DEFAULT",
-    ]
 
 
 def test_sqlserver_adapter_disables_and_rechecks_each_target_table() -> None:

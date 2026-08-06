@@ -466,78 +466,6 @@ class SqliteBackend(DatabaseBackend):
         )
 
 
-class PostgresBackend(DatabaseBackend):
-    parameter_marker = "%s"
-
-    def __init__(self, dsn: str, schema: str, batch_size: int):
-        super().__init__(schema, batch_size)
-        self.dsn = dsn
-
-    def qualified_table(self, table_name: str) -> str:
-        return (
-            f'{self.quote_identifier(self.schema)}.'
-            f'{self.quote_identifier(table_name)}'
-        )
-
-    def connect(self) -> None:
-        try:
-            psycopg = importlib.import_module("psycopg")
-        except ImportError as exc:
-            raise LoaderError(
-                "PostgreSQL loading requires psycopg. Install "
-                "`tools/requirements-vocab.txt` in a virtual environment."
-            ) from exc
-        self.connection = psycopg.connect(self.dsn)
-
-    def ensure_tables_exist(self) -> None:
-        missing = []
-        for spec in TABLE_SPECS:
-            found = self.fetch_scalar(
-                """
-                SELECT 1
-                FROM information_schema.tables
-                WHERE table_schema = %s AND table_name = %s
-                """,
-                (self.schema, spec.table_name),
-            )
-            if found is None:
-                missing.append(spec.table_name)
-        if missing:
-            raise LoaderError(
-                "PostgreSQL target is missing OMOP vocabulary tables: "
-                + ", ".join(missing)
-            )
-
-    def begin_load(self) -> None:
-        try:
-            self.execute("SET session_replication_role = replica")
-        except Exception as exc:
-            self.connection.rollback()
-            raise LoaderError(
-                "PostgreSQL could not suspend vocabulary foreign keys. "
-                "Run the initial load with a role permitted to set "
-                "session_replication_role."
-            ) from exc
-
-    def enable_constraints_for_validation(self) -> None:
-        self.execute("SET session_replication_role = DEFAULT")
-
-    def insert_rows(
-        self, spec: TableSpec, rows: Iterable[tuple[Any, ...]]
-    ) -> int:
-        columns = ", ".join(self.quote_identifier(c) for c in spec.columns)
-        copy_sql = (
-            f"COPY {self.qualified_table(spec.table_name)} ({columns}) "
-            "FROM STDIN"
-        )
-        count = 0
-        with self.connection.cursor().copy(copy_sql) as copy:
-            for row in rows:
-                copy.write_row(row)
-                count += 1
-        return count
-
-
 class SqlServerBackend(DatabaseBackend):
     def __init__(self, connection_string: str, schema: str, batch_size: int):
         super().__init__(schema, batch_size)
@@ -912,14 +840,6 @@ def _build_backend(args: argparse.Namespace) -> DatabaseBackend:
             raise LoaderError("--sqlite-db is required for SQLite")
         return SqliteBackend(Path(args.sqlite_db), args.batch_size)
 
-    if args.dialect == "postgresql":
-        dsn = os.environ.get("ATHENA_POSTGRES_DSN")
-        if not dsn:
-            raise LoaderError(
-                "Set ATHENA_POSTGRES_DSN before loading PostgreSQL"
-            )
-        return PostgresBackend(dsn, args.schema, args.batch_size)
-
     if args.dialect == "sqlserver":
         connection_string = os.environ.get(
             "ATHENA_SQLSERVER_CONNECTION_STRING"
@@ -949,7 +869,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--dialect",
-        choices=("sqlite", "postgresql", "sqlserver"),
+        choices=("sqlite", "sqlserver"),
         help="Target database dialect",
     )
     parser.add_argument(
@@ -960,7 +880,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--schema",
         default="omop",
-        help="OMOP schema for PostgreSQL or SQL Server (default: omop)",
+        help="OMOP schema for SQL Server (default: omop)",
     )
     parser.add_argument(
         "--sqlite-db",
