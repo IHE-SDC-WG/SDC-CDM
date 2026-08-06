@@ -15,7 +15,7 @@ before importing clinical data. Downloaded vocabulary files belong in
 [`database/vocab/`](database/vocab/README.md), where they are ignored by Git.
 That README explains how to request a bundle from Athena, comply with the
 individual vocabulary licenses, validate the extract, and run the loader for
-SQLite, PostgreSQL, or SQL Server.
+SQLite or SQL Server.
 
 For example, validate an extracted bundle without connecting to a database:
 
@@ -43,8 +43,8 @@ The .NET SQLite implementation builds the same attached schema layout from embed
 ## End-to-end quickstart
 
 1. Build the three schemas for your database dialect. The DDL is under
-   `database/schemas/{omop,naaccr,sdc}/ddl/<dialect>/`. PostgreSQL and SQL Server use real
-   schemas. SQLite attaches separate `omop`, `naaccr`, and `sdc` database files; `BuildSchema()`
+   `database/schemas/{omop,naaccr,sdc}/ddl/<dialect>/`. SQL Server uses real schemas. SQLite
+   attaches separate `omop`, `naaccr`, and `sdc` database files; `BuildSchema()`
    loads the SQLite DDL resources and performs those attachments.
 2. Load the Athena vocabulary files by following
    [`database/vocab/README.md`](database/vocab/README.md). Apply any repo-specific NAACCR

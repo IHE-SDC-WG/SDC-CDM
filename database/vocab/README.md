@@ -82,26 +82,6 @@ python3 tools/load_athena_vocab.py \
 loader accepts only concept IDs from that seed set and replaces them with the
 canonical Athena rows.
 
-## Load PostgreSQL
-
-Install the optional drivers in a virtual environment, set the task-specific
-connection variable, and run the loader:
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-python3 -m pip install -r tools/requirements-vocab.txt
-
-export ATHENA_POSTGRES_DSN='postgresql://user:password@localhost:5432/database'
-python3 tools/load_athena_vocab.py \
-  --dialect postgresql \
-  --vocab-dir database/vocab \
-  --schema omop
-```
-
-The initial load requires a PostgreSQL role permitted to set
-`session_replication_role` while the circular vocabulary references are loaded.
-
 ## Load SQL Server
 
 Install a system ODBC manager and a Microsoft SQL Server ODBC driver for your

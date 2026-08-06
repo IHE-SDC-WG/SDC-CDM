@@ -17,7 +17,7 @@ HL7v2 / FHIR / SDC XML / CCDA / NAACCR XML          (Import layer)
         ├─► sdc.sdc_report                          (eCP report metadata)
         └─► sdc.sdc_form_answer, sdc.template_*     (SDC XML forms and answers)
         │
-        ▼  database/etl/{sqlite,sqlserver,postgresql}/1_naaccr_sdc_to_omop.sql
+        ▼  database/etl/{sqlite,sqlserver}/1_naaccr_sdc_to_omop.sql
    omop.note + omop.measurement / omop.observation  ("To OMOP": vanilla CDM 5.4)
 ```
 
@@ -183,8 +183,8 @@ shape**, so the OMOP bridge only has to be tested once.
 
 ## 3. ETL "To OMOP" tests — `EtlToOmop/`
 
-Target: `database/etl/sqlite/1_naaccr_sdc_to_omop.sql` (and the SQL Server /
-PostgreSQL ports). Seed via an importer or direct inserts, run the bridge, assert on `omop.*`.
+Target: `database/etl/sqlite/1_naaccr_sdc_to_omop.sql` and its SQL Server counterpart. Seed via an
+importer or direct inserts, run the bridge, assert on `omop.*`.
 
 - [x] **OMOP-01** Three-schema layout + minimal bridge smoke test
   (`tools/tests/test_three_schema_sqlite.py`): OMOP tables carry **no** `sdc_*` columns;
@@ -247,8 +247,8 @@ PostgreSQL ports). Seed via an importer or direct inserts, run the bridge, asser
 
 - [x] **SCHEMA-01** SQLite three-schema attach builds all DDLs and OMOP stays vanilla
   (`test_three_schema_sqlite.py`).
-- [ ] **SCHEMA-02** DDL parity: the set of tables/columns in the sqlite, postgresql, and
-  sqlserver DDLs for `naaccr` and `sdc` schemas is identical (name-normalized diff).
+- [ ] **SCHEMA-02** DDL parity: the set of tables/columns in the SQLite and SQL Server DDLs for
+  `intake`, `naaccr`, `sdc`, and `etl` is identical (name-normalized diff).
 - [ ] **SCHEMA-03** Essential concept seeding: every `concept_id` literal referenced by the
   bridge ETLs exists in the seeded `omop.concept` rows.
 - [ ] **SCHEMA-04** `update-ddl-files.py` output is committed: regenerating produces no diff

@@ -2,7 +2,7 @@
   eCP query examples for the three-schema architecture.
 
   SQLite examples use attached databases named omop, sdc, and naaccr.
-  PostgreSQL and SQL Server use the same schema-qualified table shape.
+  SQL Server uses the same schema-qualified table shape.
 */
 
 -- 1. Reports imported from SDC.

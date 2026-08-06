@@ -119,24 +119,24 @@ paths at a glance, [`naaccr.mmd`](../diagrams/three-schema/naaccr.mmd) and
 transform itself (columns read/written, hardcoded concept ids, and the guards that stop a row
 bridging). They are hand-maintained — update them alongside the DDL.
 
-## Physical model per dialect (decide at implementation)
+## Physical model per dialect
 
-- **PostgreSQL / SQL Server**: real `CREATE SCHEMA naaccr|sdc|omop`; schema-qualified joins are free.
-  (SQL Server already does `cap` + `dbo`.)
-- **SQLite**: no native schemas — emulate with **`ATTACH DATABASE 'naaccr.db' AS naaccr`** (one file
-  per schema, schema-qualified names + cross-schema joins work), or a single file with `naaccr_` /
-  `sdc_` / `omop_` table-name prefixes. ATTACH is the closer analog and keeps the qualified-name model.
+- **SQL Server**: real `CREATE SCHEMA etl|intake|omop|naaccr|sdc`; schema-qualified joins are direct.
+- **SQLite**: no native schemas, so the build driver attaches one database file per logical schema.
+  Schema-qualified names and cross-database joins retain the same SQL shape.
 
 ## Repo layout
 
 ```
 database/
+  manifest.json                                  (single ordered build inventory)
   schemas/
-    naaccr/ddl/{sqlite,postgresql,sqlserver}/   + seed/   (dictionary, concept maps)
-    sdc/ddl/{sqlite,postgresql,sqlserver}/
-    omop/ddl/{sqlite,postgresql,sqlserver}/      (vendored upstream OHDSI CDM 5.4, unmodified)
+    intake/ddl/{sqlite,sqlserver}/
+    etl/ddl/{sqlite,sqlserver}/
+    naaccr/ddl/{sqlite,sqlserver}/              + seed/   (dictionary, concept maps)
+    sdc/ddl/{sqlite,sqlserver}/
+    omop/ddl/{sqlite,sqlserver}/                 (OHDSI CDM 5.4)
   etl/                                           (naaccr+sdc -> omop transform, dialect-aware)
-  build.sh                                       (create schemas in order; load seeds; run etl)
 diagrams/
   three-schema/                                  (ERDs for naaccr, sdc, and the bridge)
   original-omop/                                 (upstream OMOP CDM 5.4 reference ERDs)

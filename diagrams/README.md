@@ -49,9 +49,7 @@ Source of truth is the **SQLite** DDL, the only dialect with every table in one 
 - `../database/schemas/omop/ddl/sqlite/1_OMOPCDM_sqlite_5.4_ddl.sql`
 - `../database/etl/sqlite/1_naaccr_sdc_to_omop.sql` (the bridge)
 
-SQL Server matches SQLite. PostgreSQL does not yet: its `sdc` DDL is missing `template_term_map`,
-`template_map_content`, `sdc_specimen`, and `observation_specimens`, and it has no bridge script.
-The diagrams reflect the complete model, not the PostgreSQL subset.
+SQL Server and SQLite implement the same logical model. Type and identity syntax differ by dialect.
 
 To check your edits parse before committing (one-off, adds no project dependency):
 
