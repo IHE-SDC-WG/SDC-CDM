@@ -27,6 +27,15 @@ public class SdcXmlImporterTests
         Assert.Equal("Breast.Invasive.Res.189", reader.GetString(1));
         Assert.Equal("4.002.001.REL", reader.GetString(2));
         Assert.Equal("INVASIVE CARCINOMA OF THE BREAST: Resection", reader.GetString(3));
+
+        using var instanceCommand = store.GetConnection().CreateCommand();
+        instanceCommand.CommandText =
+            "SELECT template_instance_version_guid, instance_version_date "
+            + "FROM sdc.template_instance";
+        using var instanceReader = instanceCommand.ExecuteReader();
+        Assert.True(instanceReader.Read());
+        Assert.Equal("f1076104-28b1-4dca-87e9-d8e0b77f8219", instanceReader.GetString(0));
+        Assert.Equal("2023-12-15T14:11:27", instanceReader.GetString(1));
     }
 
     [Fact]
