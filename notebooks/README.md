@@ -1,41 +1,3 @@
-## try_sdc_cdm_dotnet.dib
-
-This .NET Polyglot Notebook demonstrates how to use the SDC-CDM with .NET libraries to create databases, import data, and export FHIR bundles.
-
-### Requirements
-
-- .NET SDK 8.0 (version specified in `global.json` at repository root)
-- VS Code with the [Polyglot Notebooks extension](https://marketplace.visualstudio.com/items?itemName=ms-dotnettools.polyglot-notebooks) installed
-- Sample data files in the repository (automatically available with git clone)
-
-### Usage
-
-#### Using VS Code
-
-1. Open VS Code in the notebooks directory
-2. Install the Polyglot Notebooks extension if not already installed
-3. Open `try_sdc_cdm_dotnet.dib`
-4. Run each cell sequentially using Ctrl+Enter or the Run button
-
-#### From Command Line
-
-```bash
-# Build the required libraries first
-dotnet build ../SdcCdmLib
-
-# Note: Command line execution of .dib files requires the dotnet interactive tool
-dotnet tool install -g Microsoft.dotnet-interactive
-dotnet interactive jupyter install
-# Then open with jupyter or VS Code
-```
-
-The notebook will guide you through:
-- Building the SDC CDM libraries
-- Creating a SQLite database loaded with the CDM schema
-- Importing SDC templates and forms
-- Importing NAACCR V2 messages
-- Exporting CDM data into FHIR CPDS bundles
-
 ## try_sdc_cdm_python.ipynb
 
 This Python Jupyter Notebook demonstrates how to use the SDC-CDM with Python to create databases, import SDC data, and work with the schema.
@@ -80,10 +42,10 @@ This script is used to serve the SQLite database in a web browser.
 - `sql-wasm-debug.wasm` and `sql-wasm-debug.js` from https://github.com/sql-js/sql.js under `./public`
   - Use script `./fetch-sqlite-wasm.sh` to fulfill this requirement
 - The SQLite database files under `./public/`
-  - Use either notebook to fulfill this requirement
-  - The three-schema layout (see `../database/SCHEMA_ARCHITECTURE.md`) produces a
-    control database `sdc_cdm.db` plus three attached schema files
-    `sdc_cdm.omop.db`, `sdc_cdm.naaccr.db`, and `sdc_cdm.sdc.db`
+  - Use the Python notebook or the repository build command to create them
+  - The logical model (see `../database/SCHEMA_ARCHITECTURE.md`) produces a
+    control database `sdc_cdm.db` plus five attached schema files: `etl`,
+    `intake`, `omop`, `naaccr`, and `sdc`
 
 ### Usage
 
@@ -94,5 +56,5 @@ python serve_db.py
 The webpage will be served at http://localhost:8000
 
 On startup the script prints a [Datasette Lite](https://lite.datasette.io/) URL
-that opens all three attached schema files (`omop`, `naaccr`, `sdc`) at once for
-a friendlier GUI. You can also enter a SQL query in the text area and click "Run".
+that opens all five attached schema files at once for a friendlier GUI. You can
+also enter a SQL query in the text area and click "Run".
