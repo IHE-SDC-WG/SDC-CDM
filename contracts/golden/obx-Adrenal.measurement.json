@@ -1,0 +1,28 @@
+{
+  "bridge": {
+    "measurement": {
+      "count": 19,
+      "measurement_date": {
+        "max": "2023-10-05",
+        "min": "2023-10-05"
+      },
+      "rows": [
+        {
+          "measurement_source_value": "2129",
+          "value_as_number": 10.0,
+          "value_source_value": "2131.1000043"
+        },
+        {
+          "measurement_source_value": "820404",
+          "value_as_number": null,
+          "value_source_value": "Capsular invasion and sinusoidal vascular invasion identified"
+        }
+      ]
+    }
+  },
+  "source": {
+    "commit": "c29d01dc6a042b13217bbb511864b98aa714aee5",
+    "fixture": "sample_data/naaccr_v2/obx-Adrenal.hl7",
+    "oracle": "SdcCdmLib/SdcCdm.Tests/SdcImporterTests.cs:41-154"
+  }
+}

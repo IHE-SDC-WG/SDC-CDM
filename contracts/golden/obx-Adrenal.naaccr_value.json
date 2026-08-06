@@ -1,0 +1,36 @@
+{
+  "load": {
+    "naaccr_value": {
+      "count": 19,
+      "observation_date": {
+        "max": "2023-10-05",
+        "min": "2023-10-05"
+      },
+      "rows": [
+        {
+          "item_num": 2129,
+          "obx_sub_id": "2131",
+          "value_code": "2131.1000043",
+          "value_num": 10.0,
+          "value_text": null
+        },
+        {
+          "item_num": 820404,
+          "value_code": "45594.1000043",
+          "value_text": "Capsular invasion and sinusoidal vascular invasion identified"
+        }
+      ]
+    },
+    "sdc_report": {
+      "report_accession": "15SL-2",
+      "report_template_id": "129.1000043^ADRENAL GLAND^CAPECC",
+      "report_template_source": "CAP eCC",
+      "report_template_version_id": "3.007.011.1000043"
+    }
+  },
+  "source": {
+    "commit": "c29d01dc6a042b13217bbb511864b98aa714aee5",
+    "fixture": "sample_data/naaccr_v2/obx-Adrenal.hl7",
+    "oracle": "SdcCdmLib/SdcCdm.Tests/SdcImporterTests.cs:41-154"
+  }
+}

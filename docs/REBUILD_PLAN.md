@@ -126,7 +126,7 @@ and `git blame` survive — the blame trail is how anyone will ever find out *wh
 | The OBX-4 grouping rule | Re-derived three times already in this repo. Port it to the parsers verbatim. |
 | Occurrence-aware idempotency SQL | The one genuinely well-built part of the current bridge. |
 | `sample_data/` | Real HL7 messages, SDC templates, FHIR bundles. |
-| `SdcImporterTests.cs:41-154` | The behavioural contract: 19 values → 19 measurements, items 2129 and 820404. **This is `ImportNaaccrVolV_ExecutesWithoutError` — an HL7 test, on the path C# is losing.** It must be **ported to pytest**, assertion for assertion, not simply kept. Porting it is how Phase 3 proves the Python parser matches the behaviour being retired. |
+| `SdcImporterTests.cs@c29d01dc6a042b13217bbb511864b98aa714aee5:41-154` | The behavioural contract: 19 values → 19 measurements, items 2129 and 820404. **This is `ImportNaaccrVolV_ExecutesWithoutError` — an HL7 test, on the path C# is losing.** It must be **ported to pytest**, assertion for assertion, not simply kept. Porting it is how Phase 3 proves the Python parser matches the behaviour being retired. |
 | `TEST_PLAN.md` | ~85 catalogued test IDs. Retarget, don't discard. |
 | Git history | Why `sdc_report_id` and not accession; why SQLitePCLRaw is pinned; the 17 review findings. |
 
@@ -788,7 +788,7 @@ These are cheap now and expensive later:
   | Method | Fate |
   |---|---|
   | `ProcessXmlForm_ExecutesWithoutError` | **stays in C#** — this is the only genuine SDC test |
-  | `ImportNaaccrVolV_ExecutesWithoutError` (`:41-154`) | **port to pytest** — the 19→19 behavioural contract |
+  | `ImportNaaccrVolV_ExecutesWithoutError` (`SdcImporterTests.cs@c29d01dc6a042b13217bbb511864b98aa714aee5:41-154`) | **port to pytest** — the 19→19 behavioural contract |
   | `ImportNaaccrVolV_DoesNotWriteSdcFormTables` | port to pytest |
   | `ImportNaaccrVolV_BlankNarrativeUsesBridgeFallback` | port to pytest |
   | `ImportNaaccrVolV_MissingObxDateFallsBackToObrDate` | port to pytest — and tighten it, since Phase 3 replaces the today's-date fallback with a diagnostic |
@@ -868,7 +868,7 @@ assigning authorities produce two `intake.patient` rows; a deliberately malforme
 `parse_status = 'failed'` row rather than throwing; every `naaccr_value` row written by
 `load_envelope.sql` carries a non-null `dd_version_id`; a fixture carrying the staging-selection
 inputs yields a non-null `schema_id_number` that resolves to a `staging_schema` row, and one lacking
-them yields NULL plus a diagnostic; **`SdcImporterTests.cs:41-154` is ported to pytest** and its
+them yields NULL plus a diagnostic; **`SdcImporterTests.cs@c29d01dc6a042b13217bbb511864b98aa714aee5:41-154` is ported to pytest** and its
 assertions (19 values → 19 measurements, both OBX-4 grouped shapes) pass against the Python parser —
 this is the phase's proof that nothing was lost in retiring the C# HL7 path.
 
@@ -1002,7 +1002,7 @@ dotnet test src/csharp/SdcCdm.Sdc.Tests
   `value_as_string` respectively.
 - **Person identity.** `omop.person` count equals `intake.patient` count; the same PID-3 under two
   different assigning authorities yields two patients, not one.
-- **Existing coverage retained, in the new language.** `SdcImporterTests.cs:41-154` asserts 19
+- **Existing coverage retained, in the new language.** `SdcImporterTests.cs@c29d01dc6a042b13217bbb511864b98aa714aee5:41-154` asserts 19
   `naaccr_value` rows → 19 `omop.measurement` rows with both OBX-4 grouped shapes (item 2129
   code+number, item 820404 code+text). Because it exercises the HL7 path, it cannot stay in C#: port
   it to pytest assertion for assertion and require the port to pass before the C# HL7 importer is

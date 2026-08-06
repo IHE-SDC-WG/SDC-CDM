@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Import an SDCFormSubmission XML form into the three-schema SDC CDM.
 
-Ported from SdcCdmLib/SdcCdm/ImportXmlForm.cs. Writes the form structure and
+Ported from SdcCdmLib/SdcCdm/ImportXmlForm.cs at commit
+c29d01dc6a042b13217bbb511864b98aa714aee5. Writes the form structure and
 answer values into ``sdc.template_instance`` and ``sdc.sdc_form_answer``.
 """
 
