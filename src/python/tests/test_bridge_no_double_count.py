@@ -53,13 +53,25 @@ def _ensure_bridge_map_tables(backend: DatabaseBackend) -> None:
     backend.execute_units(split_script(backend.dialect, sql).executable)
 
 
-def _seed_concepts(backend: DatabaseBackend) -> None:
+def _seed_bridge_vocabulary(backend: DatabaseBackend) -> None:
     concepts = (
-        (0, "Unknown", "Metadata", "None", "None", "0"),
+        (0, "Unknown", "Metadata", "None", "Undefined", "0"),
+        (1, "Metadata domain", "Metadata", "None", "Undefined", "1"),
+        (2, "Type Concept domain", "Metadata", "None", "Undefined", "2"),
+        (3, "None vocabulary", "Metadata", "None", "Undefined", "3"),
+        (4, "Type Concept vocabulary", "Metadata", "None", "Undefined", "4"),
+        (5, "CDM vocabulary", "Metadata", "None", "Undefined", "5"),
+        (6, "Undefined concept class", "Metadata", "None", "Undefined", "6"),
+        (7, "Type Concept class", "Metadata", "None", "Undefined", "7"),
+        (8, "Field concept class", "Metadata", "None", "Undefined", "8"),
         (32817, "EHR", "Type Concept", "Type Concept", "Type Concept", "EHR"),
         (32879, "Registry", "Type Concept", "Type Concept", "Type Concept", "Registry"),
         (1147289, "note.note_id", "Metadata", "CDM", "Field", "note.note_id"),
     )
+    if backend.dialect == "sqlserver":
+        # CONCEPT and its three metadata tables have circular foreign keys.
+        # Seed the complete graph, then re-enable and validate CONCEPT's side.
+        backend.execute("ALTER TABLE omop.concept NOCHECK CONSTRAINT ALL")
     for concept in concepts:
         if backend.fetch_one(
             "SELECT concept_id FROM omop.concept WHERE concept_id = ?", (concept[0],)
@@ -71,6 +83,46 @@ def _seed_concepts(backend: DatabaseBackend) -> None:
             "concept_code, valid_start_date, valid_end_date"
             ") VALUES (?, ?, ?, ?, ?, ?, '1970-01-01', '2099-12-31')",
             concept,
+        )
+
+    reference_rows = (
+        (
+            "domain",
+            "domain_id",
+            "domain_id, domain_name, domain_concept_id",
+            (("Metadata", "Metadata", 1), ("Type Concept", "Type Concept", 2)),
+        ),
+        (
+            "vocabulary",
+            "vocabulary_id",
+            "vocabulary_id, vocabulary_name, vocabulary_concept_id",
+            (("None", "None", 3), ("Type Concept", "Type Concept", 4), ("CDM", "CDM", 5)),
+        ),
+        (
+            "concept_class",
+            "concept_class_id",
+            "concept_class_id, concept_class_name, concept_class_concept_id",
+            (
+                ("Undefined", "Undefined", 6),
+                ("Type Concept", "Type Concept", 7),
+                ("Field", "Field", 8),
+            ),
+        ),
+    )
+    for table, key_column, columns, rows in reference_rows:
+        for row in rows:
+            if backend.fetch_one(
+                f"SELECT {key_column} FROM omop.{table} WHERE {key_column} = ?",
+                (row[0],),
+            ):
+                continue
+            backend.execute(
+                f"INSERT INTO omop.{table} ({columns}) VALUES (?, ?, ?)", row
+            )
+
+    if backend.dialect == "sqlserver":
+        backend.execute(
+            "ALTER TABLE omop.concept WITH CHECK CHECK CONSTRAINT ALL"
         )
 
 
@@ -187,7 +239,7 @@ def test_bridge_reruns_do_not_double_count(
     with backend:
         BuildRunner(load_manifest(), backend).run()
         _ensure_bridge_map_tables(backend)
-        _seed_concepts(backend)
+        _seed_bridge_vocabulary(backend)
         patient_id, accession = _seed_source_rows(backend)
 
         _apply_bridge(backend)
