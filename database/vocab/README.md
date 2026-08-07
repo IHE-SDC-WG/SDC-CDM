@@ -82,9 +82,9 @@ python3 tools/load_athena_vocab.py \
   --sqlite-db quickstart.omop.db
 ```
 
-A fresh manifest build leaves the OMOP vocabulary tables empty. The loader also accepts the
-small known bridge-seed set from older databases and replaces those rows with the canonical
-Athena records.
+A fresh manifest build leaves the OMOP vocabulary tables empty. The loader
+requires all nine target vocabulary tables to be empty and stops if it finds any
+existing rows.
 
 ## Load SQL Server
 
@@ -107,8 +107,8 @@ python3 tools/load_athena_vocab.py \
 ## Safety and Load Order
 
 The loader is for the initial load into a fresh OMOP vocabulary schema. It
-stops if it finds rows other than the known SQLite bridge seeds. It does not
-silently merge, delete, or refresh an existing vocabulary.
+stops if any of the nine target vocabulary tables contains existing rows. It
+does not silently merge, delete, or refresh an existing vocabulary.
 
 For this repository, use the following order:
 

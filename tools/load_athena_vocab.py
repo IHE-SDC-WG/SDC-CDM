@@ -174,8 +174,8 @@ EXPECTED_HEADERS = {
     for spec in TABLE_SPECS
 }
 
-# Concepts the NAACCR-to-OMOP bridge joins against. Checked in the Athena extract,
-# not in the target database, so a bundle missing them fails before it is loaded.
+# Concepts the NAACCR-to-OMOP bridge joins against. After insertion, validation
+# queries the target concept table before commit; missing IDs cause a rollback.
 BRIDGE_REQUIRED_CONCEPT_IDS = frozenset({0, 32817, 32879, 1147289})
 IDENTIFIER_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
