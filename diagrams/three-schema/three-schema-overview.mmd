@@ -1,5 +1,5 @@
 erDiagram
-  %% Orientation map for the whole model: one database, three schemas.
+  %% Orientation map for the whole model: one database, five logical schemas.
   %% Key tables only, minimal attributes -- see naaccr.mmd, sdc.mmd, and
   %% naaccr-sdc-to-omop-bridge.mmd for the full detail.
   %% Prose: database/SCHEMA_ARCHITECTURE.md
@@ -8,11 +8,39 @@ erDiagram
   %% Every cross-schema link is dotted by design -- there is no crosswalk table and
   %% omop stays vanilla CDM 5.4, so ATLAS/Achilles/DQD work out of the box.
   %% Path A -- eCP / HL7 V2 / NAACCR XML intake:
-  %%   importer writes naaccr.naaccr_value (raw answers) + sdc.sdc_report (header),
-  %%   then the bridge transforms them into omop.note + omop.measurement.
+  %%   source identity and bytes land in intake; the importer writes
+  %%   naaccr.naaccr_value (raw answers) + sdc.sdc_report (header), then the
+  %%   bridge transforms them into omop.note + omop.measurement.
   %% Path B -- SDC XML form submission:
   %%   sdc.template_* form structure + sdc.sdc_form_answer answer values.
   %%   This path does not currently bridge into omop.
+  INTAKE_INBOUND_MESSAGE {
+    INTEGER inbound_message_id PK
+    TEXT source_format
+    TEXT raw_sha256
+    TEXT parse_status
+  }
+
+  INTAKE_PATIENT {
+    INTEGER patient_id PK
+    INTEGER first_seen_inbound_message_id FK
+    TEXT assigning_authority
+    TEXT person_source_value
+  }
+
+  ETL_RUN {
+    INTEGER run_id PK
+    TEXT command
+    TEXT dialect
+    TEXT status
+  }
+
+  ETL_SCHEMA_MIGRATION {
+    TEXT migration_path PK
+    INTEGER last_run_id FK
+    TEXT file_sha256
+  }
+
   NAACCR_DATA_DICTIONARY_VERSION {
     INTEGER dd_version_id PK
     TEXT algorithm
@@ -88,6 +116,9 @@ erDiagram
   }
 
   %% Relationships
+  INTAKE_INBOUND_MESSAGE o|--o{ INTAKE_PATIENT : "first_seen_inbound_message_id"
+  ETL_RUN o|--o{ ETL_SCHEMA_MIGRATION : "last_run_id"
+
   NAACCR_DATA_DICTIONARY_VERSION ||--o{ NAACCR_ITEM : "dd_version_id"
   NAACCR_DATA_DICTIONARY_VERSION ||--o{ NAACCR_VALUE : "dd_version_id (stamp)"
   NAACCR_ITEM ||..o| NAACCR_CONCEPT_MAP : "item_num (version-independent)"
@@ -98,6 +129,9 @@ erDiagram
   SDC_TEMPLATE_INSTANCE ||--o{ SDC_REPORT : "template_instance_id (nullable)"
 
   SDC_REPORT ||..o{ NAACCR_VALUE : "path A: sdc_report_id (bridge join key)"
+  INTAKE_PATIENT ||..o{ SDC_REPORT : "patient_id -> person_id (logical)"
+  INTAKE_PATIENT ||..o{ NAACCR_VALUE : "patient_id -> person_id (logical)"
+  INTAKE_PATIENT ||..o| OMOP_PERSON : "later 1:1 person transform"
 
   SDC_REPORT ||..o| OMOP_NOTE : "bridge: 1 note per accession"
   NAACCR_VALUE ||..o| OMOP_MEASUREMENT : "bridge: 1 measurement per value"

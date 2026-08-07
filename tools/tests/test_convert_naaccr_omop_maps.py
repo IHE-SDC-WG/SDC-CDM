@@ -12,7 +12,7 @@ from convert_naaccr_omop_maps import build_spec  # noqa: E402
 
 
 def test_converter_merges_person_mappings_and_normalizes_storage_language() -> None:
-    spec = build_spec(REPO_ROOT / "NAACRToOMOPmaps")
+    spec = build_spec(REPO_ROOT / "NAACCRtoOMOPmaps")
     items = spec["workflow_input"]["item_mappings"]
     by_code = {mapping["concept_code"]: mapping for mapping in items}
 

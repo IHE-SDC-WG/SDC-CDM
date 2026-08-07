@@ -26,7 +26,7 @@ CREATE TABLE omop.PERSON (
 
 --HINT DISTRIBUTE ON KEY (person_id)
 CREATE TABLE omop.OBSERVATION_PERIOD (
-			observation_period_id integer NOT NULL,
+			observation_period_id integer IDENTITY(1,1) NOT NULL,
 			person_id integer NOT NULL,
 			observation_period_start_date date NOT NULL,
 			observation_period_end_date date NOT NULL,
@@ -76,7 +76,7 @@ CREATE TABLE omop.VISIT_DETAIL (
 
 --HINT DISTRIBUTE ON KEY (person_id)
 CREATE TABLE omop.CONDITION_OCCURRENCE (
-			condition_occurrence_id integer NOT NULL,
+			condition_occurrence_id integer IDENTITY(1,1) NOT NULL,
 			person_id integer NOT NULL,
 			condition_concept_id integer NOT NULL,
 			condition_start_date date NOT NULL,
@@ -162,7 +162,7 @@ CREATE TABLE omop.DEVICE_EXPOSURE (
 
 --HINT DISTRIBUTE ON KEY (person_id)
 CREATE TABLE omop.MEASUREMENT (
-			measurement_id integer NOT NULL,
+			measurement_id integer IDENTITY(1,1) NOT NULL,
 			person_id integer NOT NULL,
 			measurement_concept_id integer NOT NULL,
 			measurement_date date NOT NULL,
@@ -188,7 +188,7 @@ CREATE TABLE omop.MEASUREMENT (
 
 --HINT DISTRIBUTE ON KEY (person_id)
 CREATE TABLE omop.OBSERVATION (
-			observation_id integer NOT NULL,
+			observation_id integer IDENTITY(1,1) NOT NULL,
 			person_id integer NOT NULL,
 			observation_concept_id integer NOT NULL,
 			observation_date date NOT NULL,
@@ -222,7 +222,7 @@ CREATE TABLE omop.DEATH (
 
 --HINT DISTRIBUTE ON KEY (person_id)
 CREATE TABLE omop.NOTE (
-			note_id integer NOT NULL,
+			note_id integer IDENTITY(1,1) NOT NULL,
 			person_id integer NOT NULL,
 			note_date date NOT NULL,
 			note_datetime datetime NULL,
@@ -398,8 +398,8 @@ CREATE TABLE omop.CONDITION_ERA (
 
 --HINT DISTRIBUTE ON KEY (person_id)
 CREATE TABLE omop.EPISODE (
-			episode_id bigint NOT NULL,
-			person_id bigint NOT NULL,
+			episode_id bigint IDENTITY(1,1) NOT NULL,
+			person_id integer NOT NULL,
 			episode_concept_id integer NOT NULL,
 			episode_start_date date NOT NULL,
 			episode_start_datetime datetime NULL,

@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>SdcCdm.Tests</RootNamespace>
+
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Update="TestData\SDC_Form.xml">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <Content Include="..\..\..\sample_data\test-fixtures\TemplateHistory-small.csv"
+             Link="TestData\TemplateHistory-small.csv"
+             CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference
+        Include="coverlet.collector"
+        Version="6.0.0" />
+    <PackageReference
+        Include="Microsoft.NET.Test.Sdk"
+        Version="17.8.0" />
+    <PackageReference
+        Include="xunit"
+        Version="2.5.3" />
+    <PackageReference
+        Include="xunit.runner.visualstudio"
+        Version="2.5.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SdcCdm.Sdc\SdcCdm.Sdc.csproj" />
+  </ItemGroup>
+
+</Project>

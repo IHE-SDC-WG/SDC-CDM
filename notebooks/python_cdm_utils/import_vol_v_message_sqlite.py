@@ -2,7 +2,8 @@
 """Import a NAACCR Volume V (HL7 v2 ORU) synoptic report into the three-schema
 SDC CDM.
 
-Ported from SdcCdmLib/SdcCdm/ImportNaaccrVolV.cs. Writes:
+Ported from SdcCdmLib/SdcCdm/ImportNaaccrVolV.cs at commit
+c29d01dc6a042b13217bbb511864b98aa714aee5. Writes:
   - omop.person          (create-or-find by source identifier)
   - sdc.sdc_report       (one synoptic report header per message)
   - naaccr.naaccr_value  (one row per logical captured value)

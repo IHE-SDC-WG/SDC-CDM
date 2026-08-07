@@ -1,0 +1,21 @@
+{
+  "bridge": {
+    "note": {
+      "note_source_value": "24-11-000312",
+      "note_text": "Synoptic report"
+    },
+    "rule": "A report with no narrative stores NULL report_text; the bridge substitutes the literal 'Synoptic report' so omop.note.note_text is never null."
+  },
+  "load": {
+    "sdc_report": {
+      "report_accession": "24-11-000312",
+      "report_text": null
+    }
+  },
+  "source": {
+    "commit": "c29d01dc6a042b13217bbb511864b98aa714aee5",
+    "fixture": "sample_data/naaccr_v2/24-11-000312-2.txt.hl7",
+    "kind": "post-load and post-bridge database snapshot",
+    "oracle": "SdcCdmLib/SdcCdm.Tests/SdcImporterTests.cs:187-213"
+  }
+}

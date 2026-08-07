@@ -6,7 +6,7 @@
   "pipeline_position": {
     "sdc_cdm_repo_path": "SQL_SERVER_DIRECT_STAGING_TO_OMOP",
     "workflow_handoff_path": "NAACCR_XML_OR_V2_TO_JSON_TO_PHENOML_WORKFLOW_TO_OMOP_ROWS",
-    "workflows_repo_boundary": "PhenoML auth, workflow definitions, and execution harness live under phenoml-workflows/ in this repo. Credentials stay outside committed files."
+    "workflows_repo_boundary": "The phenoml-workflows/ package has been removed from this repo. Any workflow auth, definitions, and execution harness live outside it."
   },
   "working_group_rules": {
     "default_target": "eCP synoptic Q&A (pathology items, SSDIs, grades, staging, and constrained pick lists) defaults to MEASUREMENT \u2014 each item is a qualitative or quantitative result of a standardized pathology activity (coded answers use value_as_concept_id, numeric uses value_as_number). Domain-driven routing (read the mapped concept's domain_id) is the future refinement. See ECP_OMOP_MAPPING.md.",
@@ -29,15 +29,15 @@
   },
   "source_workbooks": {
     "extension_table_names": {
-      "path": "NAACRToOMOPmaps/extension_table_names.xlsx",
+      "path": "NAACCRtoOMOPmaps/extension_table_names.xlsx",
       "size_bytes": 6632
     },
     "extension_tables_by_concept_class": {
-      "path": "NAACRToOMOPmaps/NAACCR_OMOP_Extension_Tables_by_ConceptClass.xlsx",
+      "path": "NAACCRtoOMOPmaps/NAACCR_OMOP_Extension_Tables_by_ConceptClass.xlsx",
       "size_bytes": 82427
     },
     "naaccr_person": {
-      "path": "NAACRToOMOPmaps/NAACCR_PERSON_proposed.xlsx",
+      "path": "NAACCRtoOMOPmaps/NAACCR_PERSON_proposed.xlsx",
       "size_bytes": 28937
     }
   },

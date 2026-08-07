@@ -11,46 +11,15 @@ def _exec_script(conn: sqlite3.Connection, relative_path: str) -> None:
     conn.executescript((ROOT / relative_path).read_text())
 
 
-def test_cross_dialect_schema_and_docker_bootstrap() -> None:
-    postgres_sdc = (
-        ROOT / "database/schemas/sdc/ddl/postgresql/1_sdc_postgresql_ddl.sql"
-    ).read_text()
-    expected_sdc_tables = {
-        "template_sdc",
-        "template_item",
-        "template_instance",
-        "sdc_report",
-        "sdc_form_answer",
-        "template_term_map",
-        "template_map_content",
-        "sdc_specimen",
-        "observation_specimens",
-    }
-    assert all(
-        f"CREATE TABLE IF NOT EXISTS sdc.{table}" in postgres_sdc
-        for table in expected_sdc_tables
-    )
-    assert "idx_sdc_report_accession" in postgres_sdc
-    assert "idx_sdc_form_answer_instance_question" in postgres_sdc
-
+def test_cross_dialect_schema_contracts() -> None:
     naaccr_ddls = [
         ROOT / "database/schemas/naaccr/ddl/sqlite/1_naaccr_sqlite_ddl.sql",
-        ROOT / "database/schemas/naaccr/ddl/postgresql/1_naaccr_postgresql_ddl.sql",
         ROOT / "database/schemas/naaccr/ddl/sqlserver/1_naaccr_sqlserver_ddl.sql",
     ]
     for ddl_path in naaccr_ddls:
         ddl = ddl_path.read_text().lower()
         assert "obx_sub_id" in ddl_path.read_text().lower()
         assert "value_text" in ddl
-
-    postgres_naaccr = naaccr_ddls[1].read_text()
-    for index_name in (
-        "idx_naaccr_value_person_episode",
-        "idx_naaccr_value_report_item",
-        "idx_naaccr_value_item_code",
-        "idx_naaccr_value_sdc_report",
-    ):
-        assert index_name in postgres_naaccr
 
     sqlserver_vocab = (
         ROOT
@@ -65,18 +34,6 @@ def test_cross_dialect_schema_and_docker_bootstrap() -> None:
     assert ";WITH report_dates AS" in sqlserver_bridge
     assert "GROUP BY\n    sr.sdc_report_id" not in sqlserver_bridge
     assert "HASHBYTES('SHA2_256'" in sqlserver_bridge
-
-    dockerfile = (ROOT / "database/Dockerfile").read_text().splitlines()
-    copy_lines = [line for line in dockerfile if line.startswith("COPY ")]
-    assert [line.split()[2] for line in copy_lines] == [
-        "/docker-entrypoint-initdb.d/10_omop_ddl.sql",
-        "/docker-entrypoint-initdb.d/20_omop_primary_keys.sql",
-        "/docker-entrypoint-initdb.d/30_omop_constraints.sql",
-        "/docker-entrypoint-initdb.d/40_omop_indices.sql",
-        "/docker-entrypoint-initdb.d/50_naaccr_ddl.sql",
-        "/docker-entrypoint-initdb.d/60_sdc_ddl.sql",
-    ]
-    assert all((ROOT / "database" / line.split()[1]).is_file() for line in copy_lines)
 
     ssdi_loader = (
         ROOT / "tools/ssdi-ts/src/load-3nf-to-sqlserver.ts"
@@ -153,7 +110,7 @@ def test_sqlite_three_schema_layout_and_bridge(tmp_path: Path) -> None:
         "response_int",
         "response_float",
         "response_datetime",
-        "reponse_string_nvarchar",
+        "response_string",
     } <= form_answer_columns
     assert "report_id" not in form_answer_columns
 
@@ -451,7 +408,7 @@ def test_naaccr_dictionary_versioning_and_features(tmp_path: Path) -> None:
 
 
 if __name__ == "__main__":
-    test_cross_dialect_schema_and_docker_bootstrap()
+    test_cross_dialect_schema_contracts()
     with tempfile.TemporaryDirectory() as temp_dir:
         test_sqlite_three_schema_layout_and_bridge(Path(temp_dir))
     with tempfile.TemporaryDirectory() as temp_dir:

@@ -820,7 +820,7 @@ def _log_summary(rows_processed: int, totals: dict[str, Any]) -> None:
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Import dbo.CCR_LabReportECP into the three-schema store.",
+        description="Import dbo.CCR_LabReportECP into the five-schema store.",
     )
     parser.add_argument(
         "--dry-run",

@@ -1,0 +1,124 @@
+{
+  "build": {
+    "sqlite": [
+      {
+        "path": "database/schemas/etl/ddl/sqlite/1_etl_sqlite_ddl.sql",
+        "reapply_on_change": true,
+        "schema": "etl"
+      },
+      {
+        "path": "database/schemas/intake/ddl/sqlite/1_intake_sqlite_ddl.sql",
+        "reapply_on_change": true,
+        "schema": "intake"
+      },
+      {
+        "path": "database/schemas/omop/ddl/sqlite/1_OMOPCDM_sqlite_5.4_ddl.sql",
+        "reapply_on_change": false,
+        "schema": "omop"
+      },
+      {
+        "path": "database/schemas/omop/ddl/sqlite/2_OMOPCDM_sqlite_5.4_primary_keys.sql",
+        "reapply_on_change": false,
+        "schema": "omop"
+      },
+      {
+        "path": "database/schemas/omop/ddl/sqlite/3_OMOPCDM_sqlite_5.4_constraints.sql",
+        "reapply_on_change": false,
+        "schema": "omop"
+      },
+      {
+        "path": "database/schemas/omop/ddl/sqlite/4_OMOPCDM_sqlite_5.4_indices.sql",
+        "reapply_on_change": false,
+        "schema": "omop"
+      },
+      {
+        "path": "database/schemas/naaccr/ddl/sqlite/1_naaccr_sqlite_ddl.sql",
+        "reapply_on_change": true,
+        "schema": "naaccr"
+      },
+      {
+        "path": "database/schemas/sdc/ddl/sqlite/1_sdc_sqlite_ddl.sql",
+        "reapply_on_change": true,
+        "schema": "sdc"
+      }
+    ],
+    "sqlserver": [
+      {
+        "path": "database/schemas/etl/ddl/sqlserver/1_etl_sqlserver_ddl.sql",
+        "reapply_on_change": true,
+        "schema": "etl"
+      },
+      {
+        "path": "database/schemas/intake/ddl/sqlserver/1_intake_sqlserver_ddl.sql",
+        "reapply_on_change": true,
+        "schema": "intake"
+      },
+      {
+        "path": "database/schemas/omop/ddl/sqlserver/1_OMOPCDM_sqlserver_5.4_ddl.sql",
+        "reapply_on_change": false,
+        "schema": "omop"
+      },
+      {
+        "path": "database/schemas/omop/ddl/sqlserver/2_OMOPCDM_sqlserver_5.4_primary_keys.sql",
+        "reapply_on_change": false,
+        "schema": "omop"
+      },
+      {
+        "path": "database/schemas/omop/ddl/sqlserver/3_OMOPCDM_sqlserver_5.4_constraints.sql",
+        "reapply_on_change": false,
+        "schema": "omop"
+      },
+      {
+        "path": "database/schemas/omop/ddl/sqlserver/4_OMOPCDM_sqlserver_5.4_indices.sql",
+        "reapply_on_change": false,
+        "schema": "omop"
+      },
+      {
+        "path": "database/schemas/naaccr/ddl/sqlserver/0_naaccr_dictionary_sqlserver.sql",
+        "reapply_on_change": false,
+        "schema": "naaccr"
+      },
+      {
+        "path": "database/schemas/naaccr/ddl/sqlserver/1_naaccr_sqlserver_ddl.sql",
+        "reapply_on_change": true,
+        "schema": "naaccr"
+      },
+      {
+        "path": "database/schemas/sdc/ddl/sqlserver/1_sdc_sqlserver_ddl.sql",
+        "reapply_on_change": true,
+        "schema": "sdc"
+      }
+    ]
+  },
+  "excluded": [
+    {
+      "path": "database/schemas/omop/ddl/postgresql/1_OMOPCDM_postgresql_5.4_ddl.sql",
+      "reason": "Vendored OHDSI reference retained for Phase 6 re-vendoring; PostgreSQL is unsupported."
+    },
+    {
+      "path": "database/schemas/omop/ddl/postgresql/2_OMOPCDM_postgresql_5.4_primary_keys.sql",
+      "reason": "Vendored OHDSI reference retained for Phase 6 re-vendoring; PostgreSQL is unsupported."
+    },
+    {
+      "path": "database/schemas/omop/ddl/postgresql/3_OMOPCDM_postgresql_5.4_constraints.sql",
+      "reason": "Vendored OHDSI reference retained for Phase 6 re-vendoring; PostgreSQL is unsupported."
+    },
+    {
+      "path": "database/schemas/omop/ddl/postgresql/4_OMOPCDM_postgresql_5.4_indices.sql",
+      "reason": "Vendored OHDSI reference retained for Phase 6 re-vendoring; PostgreSQL is unsupported."
+    },
+    {
+      "path": "database/schemas/naaccr/ddl/sqlserver/2_naaccr_omop_vocab_sqlserver.sql",
+      "reason": "Concept-map seeding belongs to Phase 2 maps build, not schema DDL."
+    },
+    {
+      "path": "database/schemas/naaccr/ddl/sqlserver/report_naaccr_omop_vocab_ingestion.sql",
+      "reason": "Read-only reporting query; it is not schema DDL."
+    },
+    {
+      "path": "database/schemas/naaccr/ddl/sqlserver/validate_naaccr_omop_vocab.sql",
+      "reason": "Validation belongs to Phase 4, not schema DDL."
+    }
+  ],
+  "manifest_version": 1
+}

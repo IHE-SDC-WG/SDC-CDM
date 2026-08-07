@@ -2,11 +2,13 @@
 
 The canonical database design is [SCHEMA_ARCHITECTURE.md](SCHEMA_ARCHITECTURE.md).
 
-This repo now uses one physical database with three logical schemas:
+This repo now uses one physical database with five logical schemas:
 
+- `intake`: exact inbound bytes, canonical envelopes, diagnostics, and local patient identity.
 - `naaccr`: NAACCR dictionary tables, raw captured values, and NAACCR to OMOP concept maps.
 - `sdc`: SDC form, report, question, section, list-item, and specimen structure. The SDC XML path stores submitted answers in `sdc_form_answer`; the eCP/HL7 path stores answers in `naaccr_value`.
 - `omop`: stock OMOP CDM 5.4 tables, kept unmodified.
+- `etl`: run history, applied migrations, and resolved concept constants.
 
 The bridge step reads `naaccr` and `sdc`, then writes standard OMOP rows only. OMOP rows point back to the source through standard fields such as `note_source_value`, `measurement_event_id`, `observation_event_id`, and source value columns.
 
@@ -14,20 +16,43 @@ The bridge step reads `naaccr` and `sdc`, then writes standard OMOP rows only. O
 
 ```text
 database/
+  manifest.json
   vocab/
     README.md
   schemas/
-    naaccr/ddl/{sqlite,postgresql,sqlserver}/
-    sdc/ddl/{sqlite,postgresql,sqlserver}/
-    omop/ddl/{sqlite,postgresql,sqlserver}/
+    intake/ddl/{sqlite,sqlserver}/
+    etl/ddl/{sqlite,sqlserver}/
+    naaccr/ddl/{sqlite,sqlserver}/
+    sdc/ddl/{sqlite,sqlserver}/
+    omop/ddl/{sqlite,sqlserver}/
   etl/
     sqlite/
     sqlserver/
 ```
 
-SQLite uses attached databases named `naaccr`, `sdc`, and `omop`. PostgreSQL and SQL Server use real schemas.
-The repository currently provides bridge ETL for SQLite and SQL Server. PostgreSQL schema
-initialization is complete, but PostgreSQL bridge ETL is deferred.
+SQLite uses attached databases named `etl`, `intake`, `omop`, `naaccr`, and `sdc`. SQL Server uses
+real schemas. The repository provides schema builds and bridge ETL for SQLite and SQL Server.
+
+## Build
+
+The manifest is the only complete schema apply order. The first entry creates the `etl` ledger;
+subsequent runs compare each file's SHA-256 hash with `etl.schema_migration` and skip unchanged
+files.
+
+From the repository root:
+
+```bash
+python -m pip install -e .
+python -m sdc_cdm build --dialect sqlite --db out/demo.db
+python -m sdc_cdm build --dialect sqlite --db out/demo.db --list
+```
+
+The control file is `out/demo.db`; attached schema files are written beside it as
+`demo.<schema>.db`. For SQL Server, install the `sqlserver` optional dependency and pass either
+`--connection-string` or `SDC_CDM_SQLSERVER_CONNECTION_STRING`.
+
+Only SQLite and SQL Server are executable dialects. Files listed under the manifest's `excluded`
+array are references or later-phase inputs and are never applied by `build`.
 
 ## OMOP Vocabulary Data
 

@@ -4,13 +4,14 @@ Mermaid `erDiagram` sources for the data model. `.mmd` source only — no render
 committed. GitHub renders `.mmd` files natively; you can also paste one into
 [mermaid.live](https://mermaid.live).
 
-## `three-schema/` — this project's model
+## `three-schema/`: current project model
 
 Matches the design in [../database/SCHEMA_ARCHITECTURE.md](../database/SCHEMA_ARCHITECTURE.md).
+The directory name predates the `intake` and `etl` schemas and is retained to avoid breaking links.
 
 | File | Covers |
 | --- | --- |
-| [`three-schema-overview.mmd`](three-schema/three-schema-overview.mmd) | Orientation map across all three schemas. Key tables only — start here. |
+| [`three-schema-overview.mmd`](three-schema/three-schema-overview.mmd) | Orientation map across all five schemas. Key tables only; start here. |
 | [`naaccr.mmd`](three-schema/naaccr.mmd) | All 15 `naaccr` tables: versioned dictionary, staging catalog, concept maps, captured values. |
 | [`sdc.mmd`](three-schema/sdc.mmd) | All 9 `sdc` tables: form design, template instances, `sdc_report`, `sdc_form_answer`. |
 | [`naaccr-sdc-to-omop-bridge.mmd`](three-schema/naaccr-sdc-to-omop-bridge.mmd) | The `naaccr` + `sdc` → stock OMOP transform: what it reads, what it writes, and the guards. |
@@ -44,14 +45,14 @@ tell you when they drift. Update them in the same commit as the DDL.
 
 Source of truth is the **SQLite** DDL, the only dialect with every table in one file per schema:
 
+- `../database/schemas/etl/ddl/sqlite/1_etl_sqlite_ddl.sql`
+- `../database/schemas/intake/ddl/sqlite/1_intake_sqlite_ddl.sql`
 - `../database/schemas/naaccr/ddl/sqlite/1_naaccr_sqlite_ddl.sql`
 - `../database/schemas/sdc/ddl/sqlite/1_sdc_sqlite_ddl.sql`
 - `../database/schemas/omop/ddl/sqlite/1_OMOPCDM_sqlite_5.4_ddl.sql`
 - `../database/etl/sqlite/1_naaccr_sdc_to_omop.sql` (the bridge)
 
-SQL Server matches SQLite. PostgreSQL does not yet: its `sdc` DDL is missing `template_term_map`,
-`template_map_content`, `sdc_specimen`, and `observation_specimens`, and it has no bridge script.
-The diagrams reflect the complete model, not the PostgreSQL subset.
+SQL Server and SQLite implement the same logical model. Type and identity syntax differ by dialect.
 
 To check your edits parse before committing (one-off, adds no project dependency):
 

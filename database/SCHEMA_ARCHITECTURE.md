@@ -1,87 +1,121 @@
-# Schema Architecture: NAACCR + SDC + OMOP (separation of concerns)
+# Schema Architecture: intake + NAACCR + SDC + OMOP + ETL
 
-**Status:** implemented. **Goal:** keep SDC/NAACCR extensions out of
-OMOP core. Instead, one physical database with **separate schemas per concern**, an unmodified
-OMOP CDM, and a transform that bridges them. This honors the policy already in
-`naaccr_omop/README.md`: *FKs live on the NAACCR side; do not add non-FK fields to OMOP core.*
+**Status:** implemented for schema construction. One physical database contains five logical
+schemas. OMOP remains stock CDM 5.4; source capture, SDC structure, NAACCR data, and execution
+records stay outside OMOP core.
 
-## Schemas (one database, extensible)
+## Schemas
 
-Start with three schemas; add more later (e.g. `vocab`, `fhir`, `audit`, `etl`) without disturbing
-these. Cross-schema references use schema-qualified names within the one database.
+### 1. `intake`: immutable source and local identity
 
-### 1. `naaccr` — NAACCR-native dictionary + captured values
-Authoritative for the NAACCR data dictionary **and** the raw captured answers.
+`intake` owns data needed before a source message can become clinical rows:
 
-- **Version dimension**: `data_dictionary_version` (`algorithm`, `version`, `naaccr_version`,
-  `source_api`, `is_current`) is the parent of the dictionary. Every dictionary row is scoped to a
-  `dd_version_id`, so multiple SEER algorithm/version generations (e.g. `eod_public`/`3.3`) coexist
-  and a captured answer records the version it was coded against.
-- **Dictionary / metadata**: `naaccr_item` (item_num, name, xml_id, plus field metadata:
-  `unit`, `decimal_places`, and — populated later from the NAACCR Data Dictionary API —
-  `data_type`, `length`, `padding`, `alignment`, `trim`, `section`, `parent_xml_element`),
-  `staging_schema`, `schema_selection_rule`, `schema_item` (with `item_role` = `input` | `output`,
-  so derived staging outputs are first-class), `schema_item_code` (value sets),
-  `schema_item_requirement`, `registry`. All are keyed by `dd_version_id`.
-- **Staging lookup-table catalog** (the SEER value-validation / staging building blocks):
-  `staging_table`, `staging_table_column`, `staging_table_row` (row `cells` stored as a JSON array
-  aligned to the columns), and `schema_involved_table` linking each schema to its tables. Enables
-  value validation and future offline stage derivation.
-- **Captured values — staging shape**:
-  `naaccr_value` with `person_id, episode_key, sdc_report_id, report_accession, schema_id_number,
-  item_num, obx_sub_id, value_code, value_num, value_text, value_unit_source, observation_date,
-  dd_version_id`. One row per logical answered item. CWE and numeric/text OBX components sharing
-  an OBX-4 sub-ID are combined in that row. `dd_version_id` is a nullable stamp of the dictionary version the answer was coded
-  against. `sdc_report_id` is a logical (non-FK) pointer to the originating `sdc.sdc_report`;
-  `report_accession` is retained as the denormalized business key (OBR accession).
-- **Concept maps**: `naaccr_concept_map` (item_num → OMOP concept), `naaccr_value_concept_map`
-  (item code → value concept). These are **version-independent** (a NAACCR item/code maps to the
-  same OMOP concept across dictionary versions) so they are keyed on `item_num` / `(item_num, code)`
-  only and reference `naaccr_item` logically, matching how the ETL bridge joins.
+- `inbound_message` stores the exact payload, SHA-256 digest, duplicate chain, source metadata,
+  canonical envelope, parser version, and parse status.
+- `inbound_message_diagnostic` stores parser information, warnings, and errors.
+- `patient` is the local patient registry, keyed by `(assigning_authority,
+  person_source_value)`, with partial birth dates represented as separate fields.
 
-### 2. `sdc` — Structured Data Capture and report metadata
-The IHE-SDC XML-form layer stores form structure and submitted answer values. The eCP/HL7
-path uses `sdc_report` for report metadata and keeps its raw answers in `naaccr_value`.
+`naaccr.naaccr_value.person_id` and `sdc.sdc_report.person_id` refer logically to
+`intake.patient.patient_id`, not directly to `omop.person.person_id`. Neither column has a
+cross-schema foreign key. The later person transform owns the 1:1 mapping into OMOP; current bridge
+regression fixtures seed the matching OMOP person explicitly.
 
-- `template_sdc`, `template_item`, `template_instance`, `template_term_map`, `template_map_content`
-- `sdc_form_answer` (question/section/list-item context and value for SDC XML intake), `sdc_specimen`,
-  `observation_specimens`
-- `sdc_report` (renamed `sdc_template_instance_ecp`): the synoptic-report header — `report_accession`,
-  `report_loinc` (60568-3), template name/version, narrative, `is_duplicate_accession`,
-  `first_seen_report_id`.
+### 2. `naaccr`: dictionary and captured values
 
-`naaccr_value` relates to `sdc_report` by the `naaccr_value.sdc_report_id` provenance pointer
-(the originating report), with `report_accession` kept as a denormalized business key. The bridge
-joins on `sdc_report_id` so re-imported (duplicate-flagged) reports and accession-less reports
-never fan out. No hard cross-schema FK is required.
-`sdc_form_answer` belongs to the separate SDC XML form path and is keyed to `template_instance`.
+`naaccr` is authoritative for the NAACCR dictionary and raw captured answers.
 
-### 3. `omop` — vanilla OMOP CDM 5.4 (UNMODIFIED)
-Stock OHDSI DDL, dropped in unchanged. **No `sdc_*` columns, no SDC tables, no `sdc_form_answer_id`
-FK.** Upgradable by swapping the upstream DDL; ATLAS/Achilles/DQD work out of the box.
+- `data_dictionary_version` scopes the dictionary by algorithm and version.
+- `naaccr_item`, `staging_schema`, `schema_item`, value-set, requirement, registry, and staging
+  lookup tables hold dictionary metadata.
+- `naaccr_value` stores one row per logical answered item, including `item_num`, OBX sub-ID,
+  coded, numeric, and text values, source units, observation date, dictionary version, and source
+  report identifiers.
+- `naaccr_concept_map` and `naaccr_value_concept_map` map item and item-value pairs to OMOP
+  concepts. They are keyed independently of dictionary version because the bridge joins by item
+  number and code.
 
-## Back-reference WITHOUT a crosswalk (loose coupling)
+`naaccr_value.sdc_report_id` is a logical pointer to the source `sdc.sdc_report` row.
+`report_accession` remains as a denormalized business key, but the bridge joins by report ID so
+duplicate-accession and accession-less reports cannot fan out.
 
-OMOP rows point back to the source using **only standard OMOP columns**:
+### 3. `sdc`: form structure and report metadata
 
-- `omop.measurement.measurement_source_value` = the NAACCR item number
-- `omop.measurement.measurement_source_concept_id` = mapped concept
-- `omop.measurement.measurement_event_id` = `omop.note.note_id`; `omop.note.note_source_value`
-  = the report accession
-- numeric → `value_as_number` (+ `unit_source_value`); coded → `value_as_concept_id`; text →
-  `value_source_value`
+The SDC XML path stores templates, instances, and submitted answers:
 
-Going from an OMOP measurement back to its report and NAACCR item metadata is a **key join**,
-not a stored FK:
+- `template_sdc`, `template_item`, `template_instance`, `template_term_map`, and
+  `template_map_content`
+- `sdc_form_answer`, including section, question, selected list item, typed response, units, and
+  parent-answer context
+- `sdc_specimen` and `observation_specimens`
+
+The eCP path uses `sdc_report` for report headers and keeps its answer values in
+`naaccr.naaccr_value`. `sdc_report` carries accession, report LOINC, template identity, narrative,
+and duplicate-report provenance.
+
+### 4. `omop`: stock OMOP CDM 5.4
+
+The executable OMOP DDL is the upstream SQLite or SQL Server CDM 5.4 drop. It has no SDC tables,
+no `sdc_*` columns, and no `sdc_form_answer_id` foreign key. Repository-specific provenance uses
+standard OMOP event and source-value columns.
+
+### 5. `etl`: build and run records
+
+- `schema_migration` stores each applied manifest path and SHA-256 hash.
+- `run` records command, dialect, status, timing, and errors.
+- `concept_constant` is reserved for resolved vocabulary constants in the later mapping phase.
+
+The first entry in `database/manifest.json` creates this schema and its ledger. Every later build
+decision is recorded against that ledger.
+
+## Data flow
+
+```text
+Inbound bytes
+   |
+   +--> intake.inbound_message + intake.patient
+   |          |
+   |          +--> canonical envelope and diagnostics
+   |
+   +--> naaccr.naaccr_value + sdc.sdc_report
+   |          |
+   |          +--> bridge --> omop.note + omop.measurement
+   |
+   +--> sdc.template_* + sdc.sdc_form_answer    (SDC XML path)
+
+database/manifest.json --> etl.schema_migration + etl.run
+```
+
+The bridge is a separate transform. It reads `naaccr` and `sdc`, writes only standard OMOP
+columns, and does not run as part of `build`.
+
+## Back-reference without a crosswalk
+
+OMOP rows point back to source records using standard columns:
+
+- `omop.note.note_source_value` stores the report accession.
+- `omop.measurement.measurement_source_value` stores the NAACCR item number.
+- `omop.measurement.measurement_event_id` points to `omop.note.note_id` when
+  `meas_event_field_concept_id = 1147289` (`note.note_id`).
+- Numeric answers use `value_as_number`; coded answers use `value_as_concept_id`; companion text
+  or an unmapped raw code uses `value_source_value`.
+
+The following SQLite query walks from a measurement back to report and dictionary metadata by
+key joins rather than a stored crosswalk:
 
 ```sql
-SELECT m.measurement_id, m.value_as_number, m.value_source_value,
-       sr.report_accession, ni.name AS naaccr_item_name
+SELECT m.measurement_id,
+       m.value_as_number,
+       m.value_source_value,
+       sr.report_accession,
+       ni.name AS naaccr_item_name
 FROM omop.measurement m
-JOIN omop.note n       ON n.note_id = m.measurement_event_id
-JOIN sdc.sdc_report sr ON sr.report_accession = n.note_source_value
-                      AND sr.person_id = n.person_id
-                      AND sr.is_duplicate_accession = 0
+JOIN omop.note n
+  ON n.note_id = m.measurement_event_id
+JOIN sdc.sdc_report sr
+  ON sr.report_accession = n.note_source_value
+ AND sr.person_id = n.person_id
+ AND sr.is_duplicate_accession = 0
 JOIN naaccr.naaccr_item ni
   ON CAST(ni.item_num AS TEXT) = m.measurement_source_value
  AND ni.dd_version_id = (
@@ -92,85 +126,54 @@ JOIN naaccr.naaccr_item ni
 WHERE m.meas_event_field_concept_id = 1147289;
 ```
 
-## Data flow
+## Physical model and build order
 
+- **SQLite:** the control file attaches one sibling database per logical schema. For a control
+  file `demo.db`, the files are `demo.etl.db`, `demo.intake.db`, `demo.omop.db`,
+  `demo.naaccr.db`, and `demo.sdc.db`.
+- **SQL Server:** `etl`, `intake`, `omop`, `naaccr`, and `sdc` are real schemas in one database.
+
+`database/manifest.json` is the only complete apply inventory. For both dialects it orders files
+by `etl`, `intake`, `omop`, `naaccr`, then `sdc`. Re-running `build` skips unchanged files by
+ledger hash. Changed re-applicable schema files run again; changed immutable files require an
+explicit hash acceptance after review.
+
+```bash
+python -m sdc_cdm build --dialect sqlite --db out/demo.db
+python -m sdc_cdm build --dialect sqlite --db out/demo.db --list
 ```
-HL7 V2 / NAACCR XML
-   │  (importer: parse once)
-   ├─► naaccr.naaccr_value         (raw answers, staging shape)
-   ├─► naaccr.* dictionary         (seeded/reference)
-   └─► sdc.sdc_report               (report header)
-            │
-            ▼  (bridge / transform — reads naaccr+sdc, writes standard OMOP only)
-   omop.note (1 per accession) + omop.measurement (measurement_event_id→note)
 
-SDC XML form submission
-   └─► sdc.template_* + sdc.sdc_form_answer   (form structure + answer values)
-```
+## Repository layout
 
-Two steps: (1) ingest to `naaccr`+`sdc`; (2) transform to `omop`. The transform is the only place
-that knows both sides, and it writes vanilla OMOP.
-
-Diagrams of the above live in [`../diagrams/three-schema/`](../diagrams/three-schema/):
-[`three-schema-overview.mmd`](../diagrams/three-schema/three-schema-overview.mmd) for both intake
-paths at a glance, [`naaccr.mmd`](../diagrams/three-schema/naaccr.mmd) and
-[`sdc.mmd`](../diagrams/three-schema/sdc.mmd) for the full per-schema detail, and
-[`naaccr-sdc-to-omop-bridge.mmd`](../diagrams/three-schema/naaccr-sdc-to-omop-bridge.mmd) for the
-transform itself (columns read/written, hardcoded concept ids, and the guards that stop a row
-bridging). They are hand-maintained — update them alongside the DDL.
-
-## Physical model per dialect (decide at implementation)
-
-- **PostgreSQL / SQL Server**: real `CREATE SCHEMA naaccr|sdc|omop`; schema-qualified joins are free.
-  (SQL Server already does `cap` + `dbo`.)
-- **SQLite**: no native schemas — emulate with **`ATTACH DATABASE 'naaccr.db' AS naaccr`** (one file
-  per schema, schema-qualified names + cross-schema joins work), or a single file with `naaccr_` /
-  `sdc_` / `omop_` table-name prefixes. ATTACH is the closer analog and keeps the qualified-name model.
-
-## Repo layout
-
-```
+```text
 database/
+  manifest.json
   schemas/
-    naaccr/ddl/{sqlite,postgresql,sqlserver}/   + seed/   (dictionary, concept maps)
-    sdc/ddl/{sqlite,postgresql,sqlserver}/
-    omop/ddl/{sqlite,postgresql,sqlserver}/      (vendored upstream OHDSI CDM 5.4, unmodified)
-  etl/                                           (naaccr+sdc -> omop transform, dialect-aware)
-  build.sh                                       (create schemas in order; load seeds; run etl)
+    etl/ddl/{sqlite,sqlserver}/
+    intake/ddl/{sqlite,sqlserver}/
+    omop/ddl/{sqlite,sqlserver}/
+    naaccr/ddl/{sqlite,sqlserver}/
+    sdc/ddl/{sqlite,sqlserver}/
+  etl/{sqlite,sqlserver}/
 diagrams/
-  three-schema/                                  (ERDs for naaccr, sdc, and the bridge)
-  original-omop/                                 (upstream OMOP CDM 5.4 reference ERDs)
+  three-schema/              historical directory name; current model diagrams
+  original-omop/             upstream OMOP CDM 5.4 reference diagrams
 ```
 
-## Migration from today
+The Mermaid sources are hand-maintained and must change with related DDL. Start with
+[`three-schema-overview.mmd`](../diagrams/three-schema/three-schema-overview.mmd), then use
+[`naaccr.mmd`](../diagrams/three-schema/naaccr.mmd),
+[`sdc.mmd`](../diagrams/three-schema/sdc.mmd), and
+[`naaccr-sdc-to-omop-bridge.mmd`](../diagrams/three-schema/naaccr-sdc-to-omop-bridge.mmd) for
+table and bridge details.
 
-- **Delete from OMOP core**: the 14 `sdc_*` columns on `observation` (PG), the `sdc_form_answer_id`
-  ALTERs/indexes (SQLite), and any SDC tables currently created inside the OMOP DDL.
-- **Move to `sdc`**: `template_*`, `sdc_form_answer`, `sdc_specimen`, `observation_specimens`,
-  `sdc_template_instance_ecp`→`sdc_report`. Drop the duplicate `sdc_observation` answer store.
-- **Move to `naaccr`**: `cap.*` dictionary + a `naaccr_value` (staging-shape) answer table + concept maps.
-- **Keep as-is (already OMOP-native, survives untouched)**: the `note` per report and
-  `observation_event_id` linkage we just built; `observation_source_value`/`_concept_id`.
-- **C# importer**: split writes — populate `naaccr`/`sdc`, then run the bridge to emit `omop`.
-  `ISdcCdm` gains `naaccr`/`sdc` writers; the OMOP writers target vanilla columns only.
-- **Queries**: `ecp_query_examples.sql` denormalized `sdc_*` selects become key joins (example above).
+## Fixed decisions
 
-## Decisions locked in
-- One database, three schemas (`naaccr`, `sdc`, `omop`), extensible to more.
-- Captured values stored in NAACCR staging shape.
-- OMOP back-reference via `observation_source_value` + `observation_event_id` only — no crosswalk table.
-- Dialects chosen at implementation time.
-- The `naaccr` dictionary is a versioned 3NF projection of the SEER Staging API (keyed by
-  `data_dictionary_version`). Additional SEER\*API reference sources (full NAACCR DD catalog, site
-  recodes, MPH, Disease DB, Rx/NDC/HCPCS, glossary) are deferred — see
-  `schemas/naaccr/FUTURE_REFERENCE_TABLES.md`.
-
-## Open questions for implementation
-- SQLite: ATTACH-per-schema vs name-prefix (affects build scripts and how the C# connection attaches).
-- Whether the importer writes `omop` inline (single pass) or the bridge is a separate batch step.
-
-## Resolved
-- **`naaccr_value` → report key.** Resolved: the row-to-report link is `naaccr_value.sdc_report_id`
-  (a logical pointer to the originating `sdc.sdc_report`), not `report_accession`. `report_accession`
-  can be absent (stored NULL) and is not unique across re-imports, so the bridge keys on
-  `sdc_report_id`; `episode_key` remains the intra-report grouping key.
+- One physical database, five logical schemas.
+- SQLite and SQL Server are the executable dialects.
+- The manifest is the schema construction order; the Python driver is its only consumer.
+- Captured eCP values use the NAACCR staging shape.
+- SDC XML answers stay in `sdc_form_answer`.
+- OMOP remains stock CDM 5.4.
+- Cross-schema provenance is logical and uses standard source/event fields.
+- The bridge is a separate batch transform and must be safe to rerun.

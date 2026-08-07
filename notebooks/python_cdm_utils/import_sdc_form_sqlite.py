@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Import an SDCFormSubmission XML form into the three-schema SDC CDM.
 
-Ported from SdcCdmLib/SdcCdm/ImportXmlForm.cs. Writes the form structure and
+Ported from SdcCdmLib/SdcCdm/ImportXmlForm.cs at commit
+c29d01dc6a042b13217bbb511864b98aa714aee5. Writes the form structure and
 answer values into ``sdc.template_instance`` and ``sdc.sdc_form_answer``.
 """
 
@@ -214,6 +215,10 @@ def process_response_field(
         response_string_val = (
             response_string.get("val") if response_string is not None else None
         )
+        # Match the C# XmlFormImporter column contract: `response` holds the raw
+        # source lexeme and `response_string` holds the string-typed value, so both
+        # importers write sdc_form_answer the same way.
+        is_string = response_string is not None
         create_sdc_form_answer(
             cursor=cursor,
             template_instance_id=template_instance_id,
@@ -227,8 +232,9 @@ def process_response_field(
             list_item_instance_guid=li_instance_guid,
             list_item_parent_guid=li_parent_guid,
             units_system=response_units_system,
-            response=response.get("val"),
+            response=response_string_val if is_string else response.get("val"),
             units=response_units,
-            reponse_string_nvarchar=response_string_val,
+            datatype="string" if is_string else None,
+            response_string=response_string_val,
             sdc_order=response.get("order"),
         )

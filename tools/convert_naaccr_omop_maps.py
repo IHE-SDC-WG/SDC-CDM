@@ -506,9 +506,9 @@ def build_spec(input_dir: Path, existing_spec: dict[str, Any] | None = None) -> 
             "sdc_cdm_repo_path": "SQL_SERVER_DIRECT_STAGING_TO_OMOP",
             "workflow_handoff_path": "NAACCR_XML_OR_V2_TO_JSON_TO_PHENOML_WORKFLOW_TO_OMOP_ROWS",
             "workflows_repo_boundary": (
-                "PhenoML auth, workflow definitions, and execution harness live "
-                "under phenoml-workflows/ in this repo. Credentials stay outside "
-                "committed files."
+                "The phenoml-workflows/ package has been removed from this repo. "
+                "Any workflow auth, definitions, and execution harness live "
+                "outside it."
             ),
         },
         "working_group_rules": {
@@ -577,7 +577,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     )
     parser.add_argument(
         "--input-dir",
-        default="NAACRToOMOPmaps",
+        default="NAACCRtoOMOPmaps",
         type=Path,
         help="Directory containing the three mapping workbooks.",
     )

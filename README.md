@@ -1,91 +1,76 @@
 # SDC-CDM
 
-This repository models CAP eCP / NAACCR data with a three-schema architecture:
+SDC-CDM models CAP eCP and NAACCR data in one physical database with five logical schemas:
 
-- `naaccr` stores NAACCR dictionary metadata and raw captured values.
-- `sdc` stores SDC form and report structure.
-- `omop` stores unmodified OMOP CDM 5.4 rows.
+- `etl` records schema migrations and pipeline runs.
+- `intake` stores source identity, exact inbound payloads, and canonical envelopes.
+- `omop` contains unmodified OMOP CDM 5.4 tables.
+- `naaccr` contains the NAACCR dictionary, captured values, and concept maps.
+- `sdc` contains SDC templates, form answers, and report metadata.
 
-The active database guidance is in [database/SCHEMA_ARCHITECTURE.md](database/SCHEMA_ARCHITECTURE.md), with entity-relationship diagrams in [diagrams/](diagrams/) — start with [`three-schema-overview.mmd`](diagrams/three-schema/three-schema-overview.mmd). Historical artifacts from the retired combined OMOP-SDC model are available in Git at commit [`6304b3e`](https://github.com/IHE-SDC-WG/SDC-CDM/tree/6304b3e).
+The active design is documented in
+[database/SCHEMA_ARCHITECTURE.md](database/SCHEMA_ARCHITECTURE.md). The diagrams directory is
+still named [`three-schema/`](diagrams/three-schema/) for continuity, but its overview covers
+all five current schemas.
 
-## OMOP Vocabularies
+## Database build
 
-Create the three database schemas, then load an OHDSI Athena vocabulary extract
-before importing clinical data. Downloaded vocabulary files belong in
-[`database/vocab/`](database/vocab/README.md), where they are ignored by Git.
-That README explains how to request a bundle from Athena, comply with the
-individual vocabulary licenses, validate the extract, and run the loader for
-SQLite, PostgreSQL, or SQL Server.
-
-For example, validate an extracted bundle without connecting to a database:
+Python 3.11 or later is required. From the repository root:
 
 ```bash
-python3 tools/load_athena_vocab.py \
-  --vocab-dir database/vocab \
-  --check-only
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -e ".[test]"
+
+python -m sdc_cdm build --dialect sqlite --db out/demo.db
+python -m sdc_cdm build --dialect sqlite --db out/demo.db
+python -m sdc_cdm build --dialect sqlite --db out/demo.db --list
 ```
 
-The Athena files are not covered by this repository's license and must not be
-committed or redistributed through this repository.
+The SQLite build creates `out/demo.db` as the control database and five sibling files named
+`demo.etl.db`, `demo.intake.db`, `demo.omop.db`, `demo.naaccr.db`, and `demo.sdc.db`. The second
+build reads `etl.schema_migration` and skips every unchanged file.
 
-## Quick Checks
-
-SQLite DDL can be smoke-tested with attached databases:
+SQL Server uses the same ordered [`database/manifest.json`](database/manifest.json). Install
+the optional driver and provide a complete ODBC connection string:
 
 ```bash
-sqlite3 /tmp/sdc-cdm-control.db
+python -m pip install -e ".[sqlserver]"
+export SDC_CDM_SQLSERVER_CONNECTION_STRING='DRIVER={ODBC Driver 18 for SQL Server};SERVER=localhost;DATABASE=sdc_cdm;UID=user;PWD=password;Encrypt=yes;TrustServerCertificate=yes'
+python -m sdc_cdm build --dialect sqlserver
 ```
 
-Then attach `omop`, `naaccr`, and `sdc` databases and run the DDL under `database/schemas/**/ddl/sqlite/`.
+Only SQLite and SQL Server are supported executable dialects. The manifest explicitly declares
+all retained, unexecuted upstream reference files as excluded.
 
-The .NET SQLite implementation builds the same attached schema layout from embedded DDL resources.
+## Tool support
 
-## End-to-end quickstart
+| Tool | SQLite | SQL Server |
+| --- | --- | --- |
+| Python `sdc_cdm build` | Supported | Supported |
+| C# SDC XML importer | Supported | Not supported |
 
-1. Build the three schemas for your database dialect. The DDL is under
-   `database/schemas/{omop,naaccr,sdc}/ddl/<dialect>/`. PostgreSQL and SQL Server use real
-   schemas. SQLite attaches separate `omop`, `naaccr`, and `sdc` database files; `BuildSchema()`
-   loads the SQLite DDL resources and performs those attachments.
-2. Load the Athena vocabulary files by following
-   [`database/vocab/README.md`](database/vocab/README.md). Apply any repo-specific NAACCR
-   vocabulary additions after the standard Athena load.
-3. Import an HL7 V2 / NAACCR message. The importer writes raw answers to
-   `naaccr.naaccr_value` and the report header to `sdc.sdc_report`.
-4. Run `database/etl/<dialect>/1_naaccr_sdc_to_omop.sql` to create the report note and its
-   measurements. For SQLite, `BridgeNaaccrSdcToOmop()` runs the embedded bridge script.
+The C# project is deliberately limited to SDC XML template and response persistence. It uses
+an isolated SQLite store and does not build or run the broader database pipeline.
 
-The compact code sample below uses the built-in SQLite bridge seed concepts. A
-complete OMOP deployment should perform step 2 before running the import and
-bridge.
+## Vocabulary data
 
-```csharp
-using System.IO;
-using SdcCdm;
-using SdcCdmInSqlite;
+The OMOP DDL creates empty vocabulary tables. Download an OHDSI Athena extract, place its nine
+files under [`database/vocab/`](database/vocab/README.md), and follow that directory's licensing,
+validation, and load instructions. Athena files are not covered by this repository's license and
+must not be committed or redistributed through this repository.
 
-var store = new SdcCdmInSqlite("quickstart.db", overwrite: true);
-store.BuildSchema();
+## Tests
 
-var message = File.ReadAllText("sample_data/naaccr_v2/obx-Adrenal.hl7");
-NAACCRVolVImporter.ImportNaaccrVolV(store, message);
-store.BridgeNaaccrSdcToOmop();
+```bash
+python -m pytest -ra
+dotnet test src/csharp/SdcCdm.Sdc.Tests
 ```
 
-5. Inspect the bridged rows with the standard OMOP note anchor. More examples are in
-   `database/SCHEMA_ARCHITECTURE.md` and `sample_data/ecp_query_examples.sql`.
+The Python suite covers the manifest, migration ledger, schema contracts, parser utilities, and
+the SQLite bridge rerun regression. SQL Server runs the same suite for pull requests and pushes to
+`main` when database or Python paths change.
+The C# suite covers only the SDC XML library.
 
-```sql
-SELECT m.measurement_id,
-       n.note_source_value AS report_accession,
-       m.measurement_source_value AS item_num,
-       m.value_as_number,
-       m.value_as_concept_id,
-       m.value_source_value
-FROM omop.measurement m
-JOIN omop.note n ON n.note_id = m.measurement_event_id
-WHERE m.meas_event_field_concept_id = 1147289
-ORDER BY m.measurement_id;
-```
-
-6. For SQL Server, optionally run
-   `database/etl/sqlserver/validate_naaccr_sdc_to_omop.sql` after the bridge.
+Historical artifacts from the retired combined OMOP-SDC model are available in Git at commit
+[`6304b3e`](https://github.com/IHE-SDC-WG/SDC-CDM/tree/6304b3e).

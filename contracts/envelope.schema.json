@@ -1,0 +1,418 @@
+{
+  "$defs": {
+    "date": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/year_date"
+        },
+        {
+          "$ref": "#/$defs/month_date"
+        },
+        {
+          "$ref": "#/$defs/day_date"
+        },
+        {
+          "$ref": "#/$defs/second_date"
+        }
+      ]
+    },
+    "day_date": {
+      "additionalProperties": false,
+      "properties": {
+        "d": {
+          "maximum": 31,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "m": {
+          "maximum": 12,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "precision": {
+          "const": "day"
+        },
+        "y": {
+          "maximum": 9999,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "d",
+        "m",
+        "precision",
+        "y"
+      ],
+      "type": "object"
+    },
+    "month_date": {
+      "additionalProperties": false,
+      "properties": {
+        "d": {
+          "type": "null"
+        },
+        "m": {
+          "maximum": 12,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "precision": {
+          "const": "month"
+        },
+        "y": {
+          "maximum": 9999,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "d",
+        "m",
+        "precision",
+        "y"
+      ],
+      "type": "object"
+    },
+    "second_date": {
+      "additionalProperties": false,
+      "properties": {
+        "d": {
+          "maximum": 31,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "hh": {
+          "maximum": 23,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "m": {
+          "maximum": 12,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "mi": {
+          "maximum": 59,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "precision": {
+          "const": "second"
+        },
+        "ss": {
+          "maximum": 59,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "tz": {
+          "pattern": "^[+-](?:0[0-9]|1[0-4]):[0-5][0-9]$",
+          "type": "string"
+        },
+        "y": {
+          "maximum": 9999,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "d",
+        "hh",
+        "m",
+        "mi",
+        "precision",
+        "ss",
+        "y"
+      ],
+      "type": "object"
+    },
+    "year_date": {
+      "additionalProperties": false,
+      "properties": {
+        "d": {
+          "type": "null"
+        },
+        "m": {
+          "type": "null"
+        },
+        "precision": {
+          "const": "year"
+        },
+        "y": {
+          "maximum": 9999,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "d",
+        "m",
+        "precision",
+        "y"
+      ],
+      "type": "object"
+    }
+  },
+  "$id": "https://github.com/IHE-SDC-WG/SDC-CDM/contracts/envelope.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "diagnostics": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "detail": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "info",
+              "warning",
+              "error"
+            ]
+          }
+        },
+        "required": [
+          "code",
+          "detail",
+          "severity"
+        ],
+        "type": "object"
+      },
+      "minItems": 1,
+      "type": "array"
+    },
+    "envelope_version": {
+      "const": "1"
+    },
+    "patient": {
+      "additionalProperties": false,
+      "properties": {
+        "assigning_authority": {
+          "type": "string"
+        },
+        "birth_date": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/date"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "gender": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "person_source_value": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "assigning_authority",
+        "person_source_value"
+      ],
+      "type": "object"
+    },
+    "raw": {
+      "additionalProperties": false,
+      "properties": {
+        "byte_length": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "media_type": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "byte_length",
+        "media_type",
+        "sha256"
+      ],
+      "type": "object"
+    },
+    "report": {
+      "additionalProperties": false,
+      "properties": {
+        "accession": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "laterality": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "narrative": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "observation_date": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/date"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "procedure": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "report_loinc": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "template_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "template_source": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "template_version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "tumor_site": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "source": {
+      "additionalProperties": false,
+      "properties": {
+        "format": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "message_control_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "message_profile": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sending_facility": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "format"
+      ],
+      "type": "object"
+    },
+    "values": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "item_num": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "observation_date": {
+            "oneOf": [
+              {
+                "$ref": "#/$defs/date"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "obx_sub_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "unit_source": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "value_code": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "value_num": {
+            "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?(?:[eE][+-]?[0-9]+)?$",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "value_text": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "item_num"
+        ],
+        "type": "object"
+      },
+      "minItems": 1,
+      "type": "array"
+    }
+  },
+  "required": [
+    "envelope_version",
+    "patient",
+    "raw",
+    "report",
+    "source"
+  ],
+  "title": "SDC-CDM canonical intake envelope",
+  "type": "object"
+}

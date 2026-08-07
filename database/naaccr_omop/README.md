@@ -4,12 +4,13 @@ This directory contains the canonical review artifact generated from the NAACCR 
 
 ## Files
 
-- `naaccr_omop_extension_mapping_spec.json` is the JSON mapping specification generated from the three XLSX workbooks in `NAACRToOMOPmaps/`.
+- `naaccr_omop_extension_mapping_spec.json` is the JSON mapping specification generated from the three XLSX workbooks in `NAACCRtoOMOPmaps/`.
 - `../../tools/convert_naaccr_omop_maps.py` regenerates the JSON spec.
 
 ## Architecture Boundary
 
-The active database architecture uses three schemas:
+The active database architecture uses five schemas. This mapping artifact concerns the three
+clinical schemas in the center of the flow:
 
 ```text
 naaccr.naaccr_value + naaccr concept maps
@@ -17,6 +18,8 @@ sdc.sdc_report
         -> bridge
 omop.note + omop.measurement
 ```
+
+`intake` owns source payloads and patient identity; `etl` owns build and run records.
 
 `sdc.sdc_form_answer` is reserved for SDC XML form intake and is not part of the eCP bridge.
 
@@ -39,9 +42,9 @@ python3 tools/convert_naaccr_omop_maps.py
 
 The converter reads:
 
-- `NAACRToOMOPmaps/extension_table_names.xlsx`
-- `NAACRToOMOPmaps/NAACCR_OMOP_Extension_Tables_by_ConceptClass.xlsx`
-- `NAACRToOMOPmaps/NAACCR_PERSON_proposed.xlsx`
+- `NAACCRtoOMOPmaps/extension_table_names.xlsx`
+- `NAACCRtoOMOPmaps/NAACCR_OMOP_Extension_Tables_by_ConceptClass.xlsx`
+- `NAACCRtoOMOPmaps/NAACCR_PERSON_proposed.xlsx`
 
 and writes:
 
@@ -51,4 +54,6 @@ Regeneration preserves review fields already present in `workflow_input.item_map
 
 ## Human Review
 
-The `phenoml-workflows/` package provides the web review UI and Excel import/export helpers. Review edits must flow back into the JSON spec through the app import/apply path.
+The `phenoml-workflows/` review UI has been removed from this repository. Review moves to a tracked
+`database/seed/concept_map_overrides.csv` in Phase 2 (#92), with git history as the review trail;
+until that lands, edit `workflow_input.item_mappings` in the JSON spec directly.

@@ -17,14 +17,12 @@ class MyHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
 
 with socketserver.TCPServer(("", PORT), MyHTTPRequestHandler) as httpd:
     print(f"Serving directory '{DIRECTORY}' at http://localhost:{PORT}")
-    # The three-schema layout produces one control DB plus three attached schema
-    # files (sdc_cdm.omop.db / sdc_cdm.naaccr.db / sdc_cdm.sdc.db). Point Datasette
-    # at each attached file so all three logical schemas are browsable.
-    datasette_url = (
-        "https://lite.datasette.io/"
-        "?url=http://localhost:8000/sdc_cdm.omop.db"
-        "&url=http://localhost:8000/sdc_cdm.naaccr.db"
-        "&url=http://localhost:8000/sdc_cdm.sdc.db"
+    # The build creates one control DB plus five attached schema files. Point
+    # Datasette at every attached file so the complete logical model is browsable.
+    schema_names = ("etl", "intake", "omop", "naaccr", "sdc")
+    datasette_url = "https://lite.datasette.io/" + "".join(
+        f"{'?' if index == 0 else '&'}url=http://localhost:8000/sdc_cdm.{schema}.db"
+        for index, schema in enumerate(schema_names)
     )
     print(f"Try {datasette_url} for a friendlier GUI into the databases")
     try:

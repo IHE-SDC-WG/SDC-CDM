@@ -1,8 +1,8 @@
 erDiagram
   %% The naaccr + sdc -> stock OMOP bridge.
   %% Source of truth: database/etl/sqlite/1_naaccr_sdc_to_omop.sql
-  %% (SQL Server equivalent: database/etl/sqlserver/1_naaccr_sdc_to_omop.sql;
-  %%  no PostgreSQL bridge exists yet. Entry point: BridgeNaaccrSdcToOmop().)
+  %% SQL Server equivalent: database/etl/sqlserver/1_naaccr_sdc_to_omop.sql.
+  %% Phase 0 test entry point: the Python SQL splitter executes this script directly.
   %% Prose: database/SCHEMA_ARCHITECTURE.md "Back-reference WITHOUT a crosswalk".
   %% Only the columns the bridge actually reads or writes are shown; entity names are
   %% prefixed with their schema. Line style: solid (--) = enforced FK,
@@ -14,7 +14,7 @@ erDiagram
   %%   1. omop.note        -- one row per (person_id, report_accession).
   %%   2. omop.measurement -- one row per bridgeable naaccr_value, anchored to that note.
   %% Constants the ETL hardcodes (an ERD cannot express these). All three must exist in
-  %% omop.concept before bridging or the FKs fail -- InsertEssentialConcepts() seeds them:
+  %% omop.concept before bridging or the FKs fail. Phase 0 bridge tests seed them directly:
   %%   note.note_type_concept_id               = 32817   "EHR"
   %%   measurement.measurement_type_concept_id = 32879   "Registry"
   %%   measurement.meas_event_field_concept_id = 1147289 "note.note_id" -- marks

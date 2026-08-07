@@ -4,54 +4,53 @@ Tracking issue: [#82 — Create ETL Tests](https://github.com/IHE-SDC-WG/SDC-CDM
 
 This is a TDD-style catalog of the tests this repo should have. Each test has an ID so it
 can be referenced from PRs and checked off as it is implemented. Status legend:
-`[x]` implemented, `[ ]` not yet written, `(blocked)` waiting on a feature that doesn't exist yet.
+`[x]` implemented, `[ ]` not currently implemented, `(blocked)` waiting on a missing
+feature, `(coverage regression)` previously implemented but removed, and `(retired)` no
+longer applicable.
 
 ## Architecture under test
 
-Data flows through three attached schemas (see `database/SCHEMA_ARCHITECTURE.md`):
+Data flows through five logical schemas (see `database/SCHEMA_ARCHITECTURE.md`):
 
 ```
 HL7v2 / FHIR / SDC XML / CCDA / NAACCR XML          (Import layer)
         │
+        ├─► intake.*                                 (source identity + immutable payload)
         ├─► naaccr.naaccr_value                     ("To NAACCR": raw captured answers)
         ├─► sdc.sdc_report                          (eCP report metadata)
         └─► sdc.sdc_form_answer, sdc.template_*     (SDC XML forms and answers)
         │
-        ▼  database/etl/{sqlite,sqlserver,postgresql}/1_naaccr_sdc_to_omop.sql
+        ▼  database/etl/{sqlite,sqlserver}/1_naaccr_sdc_to_omop.sql
    omop.note + omop.measurement / omop.observation  ("To OMOP": vanilla CDM 5.4)
+
+etl.schema_migration + etl.run                      (build and run provenance)
 ```
 
-"To NAACCR" tests therefore assert on `naaccr.*` + `sdc.*` after an import; "To OMOP"
-tests assert on `omop.*` after running the bridge ETL. The SDC XML form tables carry their
-own answer values; eCP answer values remain in `naaccr.naaccr_value`.
+"To NAACCR" tests therefore assert on `intake.*`, `naaccr.*`, and `sdc.*` after an import;
+"To OMOP" tests assert on `omop.*` after running the bridge ETL. The SDC XML form tables
+carry their own answer values; eCP answer values remain in `naaccr.naaccr_value`.
 
 ## Proposed folder layout
 
 ```
-SdcCdmLib/SdcCdm.Tests/
+src/csharp/SdcCdm.Sdc.Tests/
   Import/
-    Hl7v2/           IMP-HL7-*
-    Fhir/            IMP-FHIR-*
     SdcXml/          IMP-SDC-*
-    NaaccrXml/       IMP-NXML-*   (blocked: no importer yet)
-    Ccda/            IMP-CCDA-*   (blocked: no importer yet)
-  EtlToNaaccr/       NAACCR-*
-  EtlToOmop/         OMOP-*
-  Export/            EXP-*
-  Schema/            SCHEMA-*
-  SdcObjectModel/    SDCOM-* (differential tests vs the IHE SDC.Schema OM)
-tools/tests/         PY-* (Python ports + pure-SQL tests, pytest)
+src/python/tests/    MANIFEST-*, BUILD-*, schema and bridge tests
+tools/tests/         PY-* (Python ports + direct SQL tests, pytest)
+contracts/golden/    frozen importer outputs
 sample_data/         single source of truth for fixtures (see Cleanup)
 ```
 
 ## Conventions
 
-- Every test builds a fresh throwaway SQLite database (`SdcCdmInSqlite(name, overwrite: true)`
-  + `BuildSchema()`); no test depends on another test's database.
-- Fixtures live in `sample_data/` only. `SdcCdm.Tests/TestData/` is deleted and the test
-  csproj links files out of `sample_data/` instead (see Cleanup below).
+- Python database tests build a fresh throwaway SQLite control database through the manifest;
+  no test depends on another test's database.
+- C# SDC tests use a fresh in-memory `SdcSqliteStore`.
+- Fixtures should live in `sample_data/` only. The remaining C# test fixture copy is tracked by
+  CLEAN-01 below.
 - Import tests must assert on **row contents**, not just "ran without throwing" — the
-  existing smoke tests (`SdcImporterTests`) are the floor, not the bar.
+  focused SDC importer tests are the floor, not the bar.
 - Each ETL test that mutates state gets a matching **idempotency** test (run twice,
   same row counts).
 
@@ -59,21 +58,25 @@ sample_data/         single source of truth for fixtures (see Cleanup)
 
 ## 1. Import tests
 
-### 1.1 HL7v2 (NAACCR Vol V) — `SdcCdm.NAACCRVolVImporter.ImportNaaccrVolV`
+### 1.1 HL7v2 (NAACCR Vol V) (Python importer planned)
 
 Fixtures: `sample_data/naaccr_v2/24-11-000312-2.txt.hl7`, `obx-Adrenal.hl7`
 
-- [x] **IMP-HL7-01** Import completes without error on a valid Vol V message (exists as smoke test).
+- [ ] **IMP-HL7-01** Import completes without error on a valid Vol V message.
+  *(coverage regression: Phase 0 deleted `SdcImporterTests.cs` and the C# HL7 importer;
+  its output is frozen under `contracts/golden/` for the Python port.)*
 - [ ] **IMP-HL7-02** PID segment creates exactly one `person` with correct source values
   (MRN, birth date, gender mapping).
 - [ ] **IMP-HL7-03** OBR creates one `sdc.sdc_report` with the OBR accession as
   `report_accession` and report LOINC `60568-3`.
-- [x] **IMP-HL7-04** Each logical answer yields one `naaccr.naaccr_value` row with the right
+- [ ] **IMP-HL7-04** Each logical answer yields one `naaccr.naaccr_value` row with the right
   `item_num`, `obx_sub_id`, `value_code`/`value_num`/`value_text`, `report_accession`, and
   the originating `sdc_report_id`. CWE plus numeric/text OBX components sharing OBX-4 are
   combined. A missing OBR-3 accession is stored as NULL (not `''`).
-- [x] **IMP-HL7-05** The eCP path does not create `sdc.sdc_form_answer`, `template_sdc`, or
+  *(coverage regression: Phase 0 deleted `SdcImporterTests.cs` and the C# HL7 importer.)*
+- [ ] **IMP-HL7-05** The eCP path does not create `sdc.sdc_form_answer`, `template_sdc`, or
   `template_instance` rows; those tables are reserved for SDC XML form intake.
+  *(coverage regression: Phase 0 deleted `SdcImporterTests.cs` and the C# HL7 importer.)*
 - [ ] **IMP-HL7-06** Re-importing the same message flags the report
   (`is_duplicate_accession = 1`, `first_seen_report_id` points at the original) instead of
   silently duplicating or erroring.
@@ -128,19 +131,17 @@ same canonical NAACCR + SDC shape):
 
 Fixtures: `sample_data/sdc_xml/ADRENAL_GLAND.xml`, templates in `sample_data/sdc_templates/`
 
-> The importer hand-parses SDC XML with `XElement` and handles only a subset of the SDC
-> item model. Section 7 tests the same fixtures against the official IHE SDC object model
-> (`SDC.Schema`) as an oracle, which is how the "did we drop anything?" assertions below
-> (IMP-SDC-03/04) get their ground-truth expected sets.
+> The importer hand-parses SDC XML with `XElement` and handles a tested subset of the SDC
+> item model. Section 7 proposes a broader differential test against the official IHE SDC
+> object model (`SDC.Schema`).
 
 - [x] **IMP-SDC-01** Import completes without error on a valid submission package (exists as smoke test).
-- [ ] **IMP-SDC-02** Template metadata (name, version, instance GUID) lands in
+- [x] **IMP-SDC-02** Template metadata (name, version, instance GUID) lands in
   `sdc.template_*`.
-- [ ] **IMP-SDC-03** Every answered question in the XML produces a `sdc_form_answer` **and**
-  its value is retrievable (see EXP-01 round trip). *(regression guard for
-  `response`, `units`, and `response_*` persistence.)*
-- [ ] **IMP-SDC-04** Unanswered questions do not produce value rows.
-- [ ] **IMP-SDC-05** Importing a template FDF (`ImportTemplate`) then a matching submission
+- [x] **IMP-SDC-03** Every selected list item and every supported typed response in the XML
+  produces a `sdc_form_answer`, with its value and units retrievable.
+- [x] **IMP-SDC-04** Unanswered direct response children do not produce value rows.
+- [x] **IMP-SDC-05** Importing a template FDF (`ImportTemplate`) then a matching submission
   links the instance to the template.
 - [ ] **IMP-SDC-06** Re-import of the same submission package is detected (duplicate
   instance GUID) rather than duplicated.
@@ -164,9 +165,11 @@ Fixtures: `sample_data/sdc_xml/ADRENAL_GLAND.xml`, templates in `sample_data/sdc
 These verify that **every import source converges to the same canonical NAACCR + SDC
 shape**, so the OMOP bridge only has to be tested once.
 
-- [x] **NAACCR-01** *(from HL7v2)* Importing `obx-Adrenal.hl7` yields the expected
+- [ ] **NAACCR-01** *(from HL7v2)* Importing `obx-Adrenal.hl7` yields the expected
   `naaccr_value` rows, including grouped code/number and code/text answers, source units,
   OBX-14 dates, and OBX-4 sub-IDs.
+  *(coverage regression: Phase 0 deleted `SdcImporterTests.cs` and the C# HL7 importer;
+  the expected rows remain frozen under `contracts/golden/`.)*
 - [ ] **NAACCR-02** *(from FHIR)* Importing the CPDS bundle for the same case yields
   equivalent `naaccr_value` rows to NAACCR-01 where items overlap.
 - [ ] **NAACCR-03** *(from SDC XML)* Importing `ADRENAL_GLAND.xml` yields answers joinable
@@ -183,8 +186,8 @@ shape**, so the OMOP bridge only has to be tested once.
 
 ## 3. ETL "To OMOP" tests — `EtlToOmop/`
 
-Target: `database/etl/sqlite/1_naaccr_sdc_to_omop.sql` (and the SQL Server /
-PostgreSQL ports). Seed via an importer or direct inserts, run the bridge, assert on `omop.*`.
+Target: `database/etl/sqlite/1_naaccr_sdc_to_omop.sql` and its SQL Server counterpart. Seed via an
+importer or direct inserts, run the bridge, assert on `omop.*`.
 
 - [x] **OMOP-01** Three-schema layout + minimal bridge smoke test
   (`tools/tests/test_three_schema_sqlite.py`): OMOP tables carry **no** `sdc_*` columns;
@@ -229,32 +232,42 @@ PostgreSQL ports). Seed via an importer or direct inserts, run the bridge, asser
 
 ---
 
-## 4. Export / round-trip tests — `Export/`
+## 4. Export / round-trip tests (roadmap-blocked)
 
-- [ ] **EXP-01** *(regression, review finding #1)* Full round trip: import an SDC XML
+> The FHIR importer and exporter were removed in Phase 0. These tests stay assigned to
+> Phase 5 and cannot run until those paths are rebuilt. EXP-01 previously blamed a
+> `GetSdcObsClasses` projection that had already been corrected; the active defect was on
+> the response write path, now covered by IMP-SDC-03.
+
+- [ ] **EXP-01** *(roadmap-blocked, review finding #1)* Full round trip: import an SDC XML
   submission, export via `ExportFhirCpds`, and assert every answered question reappears
-  in the FHIR output **with its value** (currently `GetSdcObsClasses` returns
-  `NULL AS response`, so exported Observations are empty).
-- [ ] **EXP-02** Round trip preserves units and numeric precision.
-- [ ] **EXP-03** Exported bundle validates against the CPDS profile (or minimally: is
+  in the FHIR output **with its value**.
+- [ ] **EXP-02** *(roadmap-blocked)* Round trip preserves units and numeric precision.
+- [ ] **EXP-03** *(roadmap-blocked)* Exported bundle validates against the CPDS profile (or minimally: is
   parseable by the Firely SDK and every Observation has status/code/subject).
-- [ ] **EXP-04** FHIR → import → export → compare against the original bundle for the
+- [ ] **EXP-04** *(roadmap-blocked)* FHIR → import → export → compare against the original bundle for the
   supported subset (lossless where the model supports it, documented losses elsewhere).
 
 ---
 
 ## 5. Schema / DDL tests — `Schema/` and `tools/tests/`
 
-- [x] **SCHEMA-01** SQLite three-schema attach builds all DDLs and OMOP stays vanilla
+- [x] **MANIFEST-01** `database/manifest.json` validates, names every executable DDL file
+  exactly once, and applies files in `etl`, `intake`, `omop`, `naaccr`, `sdc` order.
+- [x] **BUILD-01** A SQLite build succeeds twice against the same control database; the
+  second run creates no duplicate objects.
+- [x] **BUILD-02** The migration ledger records applied hashes and the second build reports
+  every unchanged file as skipped.
+- [x] **SCHEMA-01** SQLite five-schema attach builds all DDLs and OMOP stays vanilla
   (`test_three_schema_sqlite.py`).
-- [ ] **SCHEMA-02** DDL parity: the set of tables/columns in the sqlite, postgresql, and
-  sqlserver DDLs for `naaccr` and `sdc` schemas is identical (name-normalized diff).
+- [ ] **SCHEMA-02** DDL parity: the set of tables/columns in the two supported dialects,
+  SQLite and SQL Server, is identical after name and type normalization.
 - [ ] **SCHEMA-03** Essential concept seeding: every `concept_id` literal referenced by the
   bridge ETLs exists in the seeded `omop.concept` rows.
-- [ ] **SCHEMA-04** `update-ddl-files.py` output is committed: regenerating produces no diff
-  (guards against hand-edited generated DDL).
-- [ ] **SCHEMA-05** C# `SdcCdmInSqlite.BuildSchema()` and the raw DDL files produce the same
-  schema (embedded-resource drift check).
+- (retired) **SCHEMA-04** Phase 0 removed the `update-ddl-files.py` tombstone; there is no
+  generated DDL output to compare.
+- (retired) **SCHEMA-05** Phase 0 removed the full C# schema builder. The manifest is now
+  the only complete database apply order; the surviving C# store builds only its SDC tables.
 
 ---
 
@@ -262,8 +275,8 @@ PostgreSQL ports). Seed via an importer or direct inserts, run the bridge, asser
 
 The Python ports must not drift from the C# importers.
 
-- [ ] **PY-01** Python HL7v2 importer produces the same `naaccr_value` golden file as
-  IMP-HL7 fixtures (shared expected-output files under `sample_data/expected/`).
+- [ ] **PY-01** Python HL7v2 importer produces the frozen `naaccr_value` output in
+  `contracts/golden/`. These contract files are Python-only after Phase 0.
 - [ ] **PY-02** *(regression, review finding #5)* Python port handles non-integer OBX-3
   identifiers the same way the C# fix does.
 - [x] **PY-03** OBX parser unit tests (`test_obx_parser.py`).
@@ -281,23 +294,20 @@ node dictionaries, get-by-name/id), and re-serializes / diffs (`TopNodeSerialize
 IComparer utilities).
 
 Why this belongs in the plan: `ImportXmlForm.cs` is a hand-rolled `XElement` parser
-(namespace `urn:ihe:qrph:sdc:2016`) that recognizes only `Section → Question →
-ListField`(selected `ListItem`)`/ResponseField → Response/string@val + ResponseUnits`. It
-silently ignores everything else the SDC model allows. The OM tells us *what a form
+(namespace `urn:ihe:qrph:sdc:2016`). It traverses nested sections, questions, and selected
+list items, and supports string, integer/int, and decimal response children. Other SDC item
+and response types remain outside its supported subset. The OM tells us *what a form
 actually contains*, so these tests assert the pipeline is **complete against the model**,
-not merely that it "ran without throwing." The bug pinned by EXP-01 / IMP-SDC-03 (dropped
-`response`/`units` values) is exactly the class of defect a differential-vs-OM test catches
-automatically for every fixture.
+not merely that it "ran without throwing." The response persistence defect is now pinned by
+IMP-SDC-03; differential tests would extend that check across every fixture.
 
 Fixtures: the existing `sample_data/sdc_xml/*.xml` submissions and
 `sample_data/sdc_templates/*` templates; expected sets are **derived from the OM at test
 time**, so no new golden files are needed for the core oracle tests (SDCOM-03/04).
 
-- [ ] **SDCOM-01** *(build/dependency — setup)* `SDC.Schema` is referenced from
-  `SdcCdm.Tests` and a smoke test deserializes a fixture to `FormDesignType` and reads one
-  node. The TFM gap that previously blocked this is resolved: `SdcCdm`, `SdcCdmInSqlite`, and
-  `SdcCdm.Tests` all target **`net10.0`** now, matching the library, so no multi-targeting or
-  vendoring is needed.
+- [ ] **SDCOM-01** *(build/dependency setup)* Create a separate optional conformance test
+  project under `src/csharp/`, reference `SDC.Schema`, and deserialize one fixture to
+  `FormDesignType`. Keep the core `SdcCdm.Sdc` project independent of the oracle package.
 - [ ] **SDCOM-02** *(fixture validity)* Every SDC XML fixture (`sdc_xml/` submissions and
   `sdc_templates/` templates) deserializes into the OM and passes `SdcValidate` with zero
   errors. Guards the whole SDC test surface against malformed / hand-edited XML so later
@@ -307,11 +317,10 @@ time**, so no new golden files are needed for the core oracle tests (SDCOM-03/04
   importer wrote **exactly one** `sdc_form_answer` per answered question, **none** for
   unanswered ones, and that the `item_num.suffix` question identifiers match the OM-derived
   set. No hand-maintained expected list — the OM is the expected list.
-- [ ] **SDCOM-04** *(answer value oracle — regression, review finding #1)* For every answered
+- [ ] **SDCOM-04** *(answer value oracle, review finding #1)* For every answered
   `Response`/selected `ListItem`/`ResponseUnits` the OM exposes, the value that lands in
-  `sdc`/`naaccr` (and re-emerges on export) equals the OM's value. This is the executable,
-  fixture-agnostic form of EXP-01: the OM asserts the value is *X*, so the pipeline may not
-  drop it via the `WriteSdcObsClass` shim.
+  `sdc`/`naaccr` equals the OM's value. This extends the import-side IMP-SDC-03 check; FHIR
+  re-export remains the roadmap-blocked EXP-01 test.
 - [ ] **SDCOM-05** *(multi-select lists)* For a multi-select `ListField`, the OM's count of
   `selected="true"` `ListItem`s equals the number of answer rows; deselected items produce
   zero rows and never leak a value.
@@ -331,7 +340,7 @@ time**, so no new golden files are needed for the core oracle tests (SDCOM-03/04
   section or repeated question (multiple instances), the importer produces one answer row
   per instance with distinct section/instance context — not a single collapsed row.
 - [ ] **SDCOM-10** *(item types the importer ignores — mirrors IMP-HL7-07 philosophy)*
-  Enumerate the OM item types **not** handled by `ProcessChildItem`/`ProcessQuestion`
+  Enumerate the OM item types **not** handled by `ProcessChildItems`/`ProcessQuestion`
   (e.g. `DisplayedItem`, injected/lookup lists, blob/attachment responses). Each must be
   either handled or logged as a warning — never silently dropped. *(blocked on fixtures that
   contain these item types.)*
@@ -344,31 +353,31 @@ time**, so no new golden files are needed for the core oracle tests (SDCOM-03/04
   equal to a canonical serialization via the library's compare utility for the
   supported/documented-loss subset.
 
-> Optionality: `SDC.Schema` is a large dependency, so this section can still be gated behind a
-> build flag / separate test project to keep the core C# suite lean. The TFM mismatch that
-> previously motivated the gate is gone — the solution targets `net10.0` throughout.
+> Optionality: `SDC.Schema` is a large dependency. Keep this section in a separate test
+> project so the core C# suite remains small; all current C# projects target `net10.0`.
 
 ## Cleanup (from issue #82)
 
-- [ ] **CLEAN-01** Deduplicate fixtures: `SdcCdmLib/SdcCdm.Tests/TestData/` duplicates
+- [ ] **CLEAN-01** Deduplicate fixtures: `src/csharp/SdcCdm.Sdc.Tests/TestData/` duplicates
   `sample_data/` (`ADRENAL_GLAND.xml` exists in both). Keep `sample_data/` as the single
-  source of truth; the test csproj should `<Content Include="../../sample_data/**">` (or
-  link specific files) instead of carrying copies. Move `SDC_Form.xml`,
+  source of truth; the test csproj should link files from `../../../sample_data/` instead of
+  carrying copies. Move `SDC_Form.xml`,
   `NAACCR_VolV.hl7`, and the IPS bundle into `sample_data/` first.
-- [ ] **CLEAN-02** Add `sample_data/expected/` for golden files shared by C# and Python
-  tests, so both stacks assert against the same expected outputs.
-- [ ] **CLEAN-03** Wire both test stacks into CI (`dotnet test` + `pytest tools/tests`) so
-  this plan is enforced, not aspirational.
+- [x] **CLEAN-02** Frozen importer outputs live under `contracts/golden/` for the Python
+  conformance tests. The Phase 0 C# suite does not consume shared golden files.
+- [x] **CLEAN-03** CI has independent `python-sqlite`, `csharp-sdc`, and
+  `python-sqlserver` jobs for pull requests and pushes to `main`. The SQL Server job is
+  limited to database and Python changes.
 
 ## Suggested implementation order
 
-1. **EXP-01, OMOP-05, OMOP-06** — they encode the currently-known bugs (answer values
-   dropped; bridge fan-out and non-idempotency), so they fail today and pin the fixes.
+1. **IMP-SDC-03, OMOP-05, OMOP-06** cover the import-side answer persistence and the
+   bridge fan-out/idempotency regressions. `EXP-01` remains blocked on the Phase 5 FHIR work.
 2. **IMP-HL7-02..07** — content-level assertions for the most mature importer.
 3. **OMOP-02..04, OMOP-08** — the bridge contract.
-4. **CLEAN-01/02** alongside, so new tests are written against `sample_data/` from day one.
+4. **CLEAN-01** alongside, so new tests are written against `sample_data/` from day one.
 5. FHIR and SDC XML content tests, then schema-parity tests, then blocked items
    (NAACCR XML, CCDA) as those importers land.
-6. **SDCOM-01/02** to stand up the SDC.Schema oracle, then **SDCOM-03/04** — once the OM is
-   wired in, these subsume the hand-maintained SDC-XML expected sets and back EXP-01 with a
-   fixture-agnostic check.
+6. **SDCOM-01/02** to stand up the optional SDC.Schema oracle, then **SDCOM-03/04**. Once
+   wired in, these replace hand-maintained SDC-XML expected sets and provide a
+   fixture-agnostic check for IMP-SDC-03.

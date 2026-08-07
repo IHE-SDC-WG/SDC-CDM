@@ -68,8 +68,12 @@ the row counts without connecting to a database.
 
 ## Load SQLite
 
-Create the three-schema database first. Pass the physical OMOP database file,
-not the control, SDC, or NAACCR database:
+Create the database through the manifest first. For SQLite, pass the physical OMOP database
+file to the vocabulary loader, not the control, ETL, intake, SDC, or NAACCR file:
+
+```bash
+python -m sdc_cdm build --dialect sqlite --db quickstart.db
+```
 
 ```bash
 python3 tools/load_athena_vocab.py \
@@ -78,29 +82,9 @@ python3 tools/load_athena_vocab.py \
   --sqlite-db quickstart.omop.db
 ```
 
-`SdcCdmInSqlite.BuildSchema()` inserts a small set of bridge concepts. The
-loader accepts only concept IDs from that seed set and replaces them with the
-canonical Athena rows.
-
-## Load PostgreSQL
-
-Install the optional drivers in a virtual environment, set the task-specific
-connection variable, and run the loader:
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-python3 -m pip install -r tools/requirements-vocab.txt
-
-export ATHENA_POSTGRES_DSN='postgresql://user:password@localhost:5432/database'
-python3 tools/load_athena_vocab.py \
-  --dialect postgresql \
-  --vocab-dir database/vocab \
-  --schema omop
-```
-
-The initial load requires a PostgreSQL role permitted to set
-`session_replication_role` while the circular vocabulary references are loaded.
+A fresh manifest build leaves the OMOP vocabulary tables empty. The loader
+requires all nine target vocabulary tables to be empty and stops if it finds any
+existing rows.
 
 ## Load SQL Server
 
@@ -123,12 +107,12 @@ python3 tools/load_athena_vocab.py \
 ## Safety and Load Order
 
 The loader is for the initial load into a fresh OMOP vocabulary schema. It
-stops if it finds rows other than the known SQLite bridge seeds. It does not
-silently merge, delete, or refresh an existing vocabulary.
+stops if any of the nine target vocabulary tables contains existing rows. It
+does not silently merge, delete, or refresh an existing vocabulary.
 
 For this repository, use the following order:
 
-1. Create the `omop`, `naaccr`, and `sdc` schemas.
+1. Build the `etl`, `intake`, `omop`, `naaccr`, and `sdc` schemas from the manifest.
 2. Load the Athena vocabulary files with this loader.
 3. Apply repo-specific NAACCR vocabulary additions where the database path
    requires them.
