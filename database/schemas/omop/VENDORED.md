@@ -31,5 +31,8 @@ To recover provenance during the Phase 6 re-vendor:
   Other surrogate keys remain explicit so SQL Server does not reject values accepted by SQLite.
 - SQL Server uses `integer` for every `person_id` reference, including `EPISODE.person_id`, so the
   foreign keys match `PERSON.person_id`.
+- SQL Server omits the invalid reversed `COHORT_DEFINITION.cohort_definition_id` foreign key from
+  the imported constraint file. The released OHDSI 5.4.2 artifact likewise defines only concept-ID
+  foreign keys on `COHORT_DEFINITION`.
 - The `5.4-SDC` header suffix is a stale remnant of the retired combined model. No current OMOP table
   or column differs from stock CDM 5.4 because of that suffix.
