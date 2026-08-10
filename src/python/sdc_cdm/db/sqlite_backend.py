@@ -54,9 +54,23 @@ class SQLiteBackend(DatabaseBackend):
             return str(path)
         return f"{path.as_uri()}?mode=ro" if path.is_file() else ":memory:"
 
+    def qualified_name(self, schema: str, table: str) -> str:
+        return f'"{schema}"."{table}"'
+
+    def _begin(self) -> None:
+        if self.connection.in_transaction:
+            raise RuntimeError(
+                "this SQLite connection already has an open implicit transaction "
+                "from uncommitted DML: BEGIN IMMEDIATE would fail and "
+                "PRAGMA foreign_keys = OFF would be silently ignored; commit or "
+                "roll back first"
+            )
+        self.connection.execute("BEGIN IMMEDIATE")
+
     def execute_units(self, units: Sequence[str]) -> None:
+        self._reject_during_transaction("execute_units")
         try:
-            self.connection.execute("BEGIN IMMEDIATE")
+            self._begin()
             for unit in units:
                 self.connection.execute(unit)
             self.connection.commit()
@@ -71,6 +85,7 @@ class SQLiteBackend(DatabaseBackend):
         *,
         return_scalar: bool = False,
     ) -> Any:
+        self._reject_during_transaction("execute")
         try:
             cursor = self.connection.execute(sql, tuple(parameters))
             value = cursor.fetchone()[0] if return_scalar else cursor.lastrowid

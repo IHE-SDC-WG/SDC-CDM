@@ -25,6 +25,14 @@ class SqlServerBackend(DatabaseBackend):
     def prepare_for_writes(self) -> None:
         self._ensure_schemas()
 
+    def qualified_name(self, schema: str, table: str) -> str:
+        return f"[{schema}].[{table}]"
+
+    def _bulk_cursor(self) -> Any:
+        cursor = self.connection.cursor()
+        cursor.fast_executemany = True
+        return cursor
+
     def _ensure_schemas(self) -> None:
         for schema in SCHEMA_ORDER:
             cursor = self.connection.cursor()
@@ -35,6 +43,7 @@ class SqlServerBackend(DatabaseBackend):
             self.connection.commit()
 
     def execute_units(self, units: Sequence[str]) -> None:
+        self._reject_during_transaction("execute_units")
         try:
             cursor = self.connection.cursor()
             for unit in units:
@@ -51,6 +60,7 @@ class SqlServerBackend(DatabaseBackend):
         *,
         return_scalar: bool = False,
     ) -> Any:
+        self._reject_during_transaction("execute")
         try:
             cursor = self.connection.cursor()
             cursor.execute(sql, tuple(parameters))

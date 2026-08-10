@@ -3,37 +3,31 @@
 from __future__ import annotations
 
 import argparse
-import os
 import sys
-from collections.abc import Sequence
-from pathlib import Path
+from collections.abc import Callable, Sequence
 
 from sdc_cdm.cli.build import BuildRunner
+from sdc_cdm.cli.target import add_target_arguments, open_backend
 from sdc_cdm.db.errors import MigrationHashMismatch, SdcCdmError, UsageError
-from sdc_cdm.db.manifest import SUPPORTED_DIALECTS, load_manifest
-from sdc_cdm.db.sqlite_backend import SQLiteBackend
-from sdc_cdm.db.sqlserver_backend import SqlServerBackend
+from sdc_cdm.db.manifest import load_manifest
 
 
-def registered_commands() -> tuple[str, ...]:
-    return ("build",)
+_Configure = Callable[[argparse.ArgumentParser], None]
+_Handler = Callable[[argparse.Namespace], int]
 
 
-def _parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="sdc-cdm")
-    subparsers = parser.add_subparsers(dest="command", required=True)
-    build = subparsers.add_parser("build", help="apply the ordered database manifest")
-    build.add_argument("--dialect", choices=SUPPORTED_DIALECTS, required=True)
-    build.add_argument("--db", type=Path, help="SQLite control database path")
-    build.add_argument("--connection-string", help="complete SQL Server ODBC connection string")
-    build.add_argument("--list", action="store_true", help="list apply order without connecting")
-    build.add_argument("--dry-run", action="store_true", help="show ledger decisions without writes")
-    build.add_argument(
+def _configure_build(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--list", action="store_true", help="list apply order without connecting"
+    )
+    parser.add_argument(
+        "--dry-run", action="store_true", help="show ledger decisions without writes"
+    )
+    parser.add_argument(
         "--accept-changed-hashes",
         action="store_true",
         help="update changed immutable hashes without executing their SQL",
     )
-    return parser
 
 
 def _run_build(args: argparse.Namespace) -> int:
@@ -43,22 +37,7 @@ def _run_build(args: argparse.Namespace) -> int:
             print(f"{index:02d} {entry.schema:<7} {entry.path}")
         return 0
 
-    if args.dialect == "sqlite":
-        if args.db is None:
-            raise UsageError("SQLite build requires --db")
-        backend = SQLiteBackend(args.db, read_only=args.dry_run)
-    else:
-        connection_string = args.connection_string or os.environ.get(
-            "SDC_CDM_SQLSERVER_CONNECTION_STRING"
-        )
-        if not connection_string:
-            raise UsageError(
-                "SQL Server build requires --connection-string or "
-                "SDC_CDM_SQLSERVER_CONNECTION_STRING"
-            )
-        backend = SqlServerBackend(connection_string)
-
-    with backend:
+    with open_backend(args, read_only=args.dry_run) as backend:
         actions = BuildRunner(
             manifest,
             backend,
@@ -69,13 +48,45 @@ def _run_build(args: argparse.Namespace) -> int:
     return 0
 
 
+# (verb path, help text, argument configuration, handler). Siblings append one
+# tuple each; a multi-word path such as ("vocab", "load") creates the "vocab"
+# group on first use.
+_VERBS: tuple[tuple[tuple[str, ...], str, _Configure, _Handler], ...] = (
+    (("build",), "apply the ordered database manifest", _configure_build, _run_build),
+)
+
+_TARGET = argparse.ArgumentParser(add_help=False)
+add_target_arguments(_TARGET)
+
+
+def registered_commands() -> tuple[str, ...]:
+    return tuple(" ".join(path) for path, _help, _configure, _handler in _VERBS)
+
+
+def _parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(prog="sdc-cdm")
+    groups = {(): parser.add_subparsers(dest="command", required=True)}
+    for path, help_text, configure, handler in _VERBS:
+        group = groups[()]
+        for depth, name in enumerate(path[:-1], start=1):
+            prefix = path[:depth]
+            if prefix not in groups:
+                node = group.add_parser(name, help=f"{name} commands")
+                groups[prefix] = node.add_subparsers(
+                    dest="_".join((*prefix, "command")), required=True
+                )
+            group = groups[prefix]
+        leaf = group.add_parser(path[-1], help=help_text, parents=[_TARGET])
+        configure(leaf)
+        leaf.set_defaults(_handler=handler)
+    return parser
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = _parser()
     args = parser.parse_args(argv)
     try:
-        if args.command == "build":
-            return _run_build(args)
-        parser.error(f"unknown command: {args.command}")
+        return args._handler(args)
     except MigrationHashMismatch as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 3
