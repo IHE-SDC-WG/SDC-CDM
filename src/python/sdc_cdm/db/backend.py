@@ -68,10 +68,15 @@ class DatabaseBackend(ABC):
             yield
             self.connection.commit()
         except BaseException:
-            self.connection.rollback()
+            self.rollback()
             raise
         finally:
             self._in_transaction = False
+
+    def rollback(self) -> None:
+        """Roll back transaction() failures and db.bulk undo paths."""
+
+        self.connection.rollback()
 
     def _reject_during_transaction(self, operation: str) -> None:
         if self._in_transaction:
@@ -110,8 +115,8 @@ class DatabaseBackend(ABC):
         """Insert rows in batches and return how many were sent.
 
         Streams: rows may be a generator and only one batch is held at a time.
-        Never commits; wrap the call in transaction() so validation can still
-        roll the load back.
+        Must run inside transaction(); refuses otherwise because it never
+        commits and validation must still be able to roll the load back.
         """
 
         if not columns:
@@ -120,6 +125,11 @@ class DatabaseBackend(ABC):
             )
         if batch_size < 1:
             raise ValueError(f"batch_size must be positive, got {batch_size}")
+        if not self._in_transaction:
+            raise RuntimeError(
+                "bulk_insert() never commits, so it cannot run outside "
+                "transaction(); its rows would be discarded uncommitted"
+            )
         left, right = ('"', '"') if self.dialect == "sqlite" else ("[", "]")
         quoted = ", ".join(f"{left}{column}{right}" for column in columns)
         markers = ", ".join("?" for _ in columns)

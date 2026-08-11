@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import uuid
+from collections.abc import Sequence
 from pathlib import Path
 
 import pytest
@@ -30,6 +31,56 @@ _CONCEPT_COLUMNS = (
     "valid_start_date",
     "valid_end_date",
 )
+
+
+class _FakeSqlServerBackend(DatabaseBackend):
+    dialect = "sqlserver"
+
+    def __init__(self, *, fail_on_statement: int | None = None):
+        self.fail_on_statement = fail_on_statement
+        self.statements: list[str] = []
+        self.rollbacks = 0
+
+    def qualified_name(self, schema: str, table: str) -> str:
+        return f"[{schema}].[{table}]"
+
+    def execute_uncommitted(
+        self, sql: str, parameters: Sequence[object] = ()
+    ) -> None:
+        self.statements.append(sql)
+        if len(self.statements) == self.fail_on_statement:
+            raise RuntimeError("forced NOCHECK failure")
+
+    def rollback(self) -> None:
+        self.rollbacks += 1
+
+    def execute_units(self, units: Sequence[str]) -> None:
+        raise NotImplementedError
+
+    def execute(
+        self,
+        sql: str,
+        parameters: Sequence[object] = (),
+        *,
+        return_scalar: bool = False,
+    ) -> object:
+        raise NotImplementedError
+
+    def fetch_one(
+        self, sql: str, parameters: Sequence[object] = ()
+    ) -> object:
+        raise NotImplementedError
+
+    def fetch_all(
+        self, sql: str, parameters: Sequence[object] = ()
+    ) -> list[object]:
+        raise NotImplementedError
+
+    def table_exists(self, schema: str, table: str) -> bool:
+        raise NotImplementedError
+
+    def close(self) -> None:
+        pass
 
 
 def _open_backend(dialect: str, tmp_path: Path) -> DatabaseBackend:
@@ -182,6 +233,20 @@ def test_execute_is_refused_inside_a_transaction_but_fetches_stay_usable(
             assert [tuple(row) for row in backend.fetch_all("SELECT 1")] == [(1,)]
 
 
+def test_bulk_insert_outside_a_transaction_is_refused(tmp_path: Path) -> None:
+    """Deleting bulk_insert's transaction-state guard makes this fail."""
+
+    with SQLiteBackend(tmp_path / "unguarded-bulk.db") as backend:
+        BuildRunner(load_manifest(), backend).run()
+        with pytest.raises(RuntimeError, match="cannot run outside"):
+            backend.bulk_insert(
+                "etl",
+                "run",
+                ("command", "dialect", "status"),
+                [("bulk pin", "sqlite", "running")],
+            )
+
+
 def test_only_the_schema_qualified_pragma_reports_an_orphan_in_an_attached_schema(
     tmp_path: Path,
 ) -> None:
@@ -223,3 +288,50 @@ def test_suspend_constraints_raises_when_sqlite_silently_ignored_the_pragma(
         finally:
             backend.connection.rollback()
         assert backend.fetch_one("PRAGMA foreign_keys")[0] == 1
+
+
+def test_suspend_constraints_raises_when_the_sqlite_restore_was_ignored(
+    tmp_path: Path,
+) -> None:
+    """Deleting _sqlite_restore's pragma read-back makes this fail."""
+
+    with SQLiteBackend(tmp_path / "ignored-restore.db") as backend:
+        BuildRunner(load_manifest(), backend).run()
+        body_ran = False
+        try:
+            with pytest.raises(VocabularyError, match="still off"):
+                with suspend_constraints(backend, "omop", _VOCABULARY_TABLES):
+                    backend.connection.execute(
+                        "INSERT INTO etl.run "
+                        "(command, dialect, status) VALUES (?, ?, ?)",
+                        ("restore pin", "sqlite", "running"),
+                    )
+                    body_ran = True
+            assert body_ran
+            assert backend.fetch_one("PRAGMA foreign_keys")[0] == 0
+        finally:
+            backend.connection.rollback()
+
+
+def test_a_failed_sqlserver_suspend_abandons_the_partial_nocheck() -> None:
+    """Deleting _sqlserver_suspend's rollback makes this fail."""
+
+    backend = _FakeSqlServerBackend(fail_on_statement=2)
+    with pytest.raises(VocabularyError, match="forced NOCHECK failure"):
+        with suspend_constraints(backend, "omop", ("concept", "domain")):
+            pass
+
+    assert len(backend.statements) == 2
+    assert backend.rollbacks == 1
+
+
+def test_a_raising_body_abandons_the_sqlserver_nocheck() -> None:
+    """Deleting suspend_constraints' exception rollback makes this fail."""
+
+    backend = _FakeSqlServerBackend()
+    with pytest.raises(RuntimeError, match="forced body failure"):
+        with suspend_constraints(backend, "omop", ("concept",)):
+            raise RuntimeError("forced body failure")
+
+    assert len(backend.statements) == 1
+    assert backend.rollbacks == 1
