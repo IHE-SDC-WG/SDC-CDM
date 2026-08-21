@@ -112,14 +112,11 @@ def _sqlserver_suspend(
 ) -> None:
     """Apply NOCHECK and roll back if a later table cannot be suspended."""
 
-    suspended = 0
     try:
         for table in tables:
             _alter_constraints(backend, schema, table, _NOCHECK)
-            suspended += 1
     except BaseException:
-        if suspended:
-            backend.rollback()
+        backend.rollback()
         raise
 
 
