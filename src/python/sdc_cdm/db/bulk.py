@@ -32,7 +32,7 @@ def suspend_constraints(
 
     Enter this outside transaction(): SQLite ignores the pragma inside one and
     cannot restore it inside one either. On SQL Server the NOCHECK DDL is
-    uncommitted, so it joins the transaction transaction() adopts and a rollback
+    uncommitted, so it joins the transaction that transaction() adopts and a rollback
     undoes it with the rows.
     """
 
