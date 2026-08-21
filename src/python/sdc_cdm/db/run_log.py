@@ -27,6 +27,8 @@ class RunLog:
         )
 
     def finish(self, run_id: int, *, error: str | None = None) -> None:
+        if error is not None:
+            self.backend.rollback()
         status = "failed" if error is not None else "succeeded"
         now = (
             "strftime('%Y-%m-%dT%H:%M:%fZ','now')"

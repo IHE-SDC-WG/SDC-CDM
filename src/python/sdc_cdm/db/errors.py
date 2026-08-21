@@ -15,3 +15,7 @@ class MigrationHashMismatch(SdcCdmError):
 
 class UsageError(SdcCdmError):
     """Raised for a command invocation that lacks a required target."""
+
+
+class VocabularyError(SdcCdmError):
+    """Raised when a bulk load's target, source, or constraint state is wrong."""
