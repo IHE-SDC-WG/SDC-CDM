@@ -1,0 +1,33 @@
+{
+  "item_number": "1280",
+  "item_name": "RX Date DX/Stg Proc",
+  "item_data_type": "date",
+  "item_length": "8",
+  "xml_naaccr_id": "rxDateDxStgProc",
+  "xml_parent_id": "Tumor",
+  "record_types": [
+    "A",
+    "C",
+    "I",
+    "M"
+  ],
+  "section": "Treatment-1st Course",
+  "source_of_standard": "CoC",
+  "date_created": "2012-04-04T04:58:16Z",
+  "date_modified": "2023-09-15T07:39:48.257334Z",
+  "description": "Records the date on which the surgical diagnostic and/or staging procedure was performed. See Surgical and Diagnostic Staging Procedure \\[1350\\]. See [**Data Descriptor Table**](https://apps.naaccr.org/data-dictionary/data-dictionary/version=24/chapter-view/data-descriptor-table/) for date format.  \r\n   \r\nFormerly RX Date--DX/Stg Proc.",
+  "general_notes": "_Note:_ This is a CoC item and for tumors diagnosed from January 1, 1996, through December 31, 2002, this may have been the date on which diagnostic, staging, and palliative procedures were performed. Beginning with tumors diagnosed on or after January 1, 2003, palliative procedures are collected in RX Summ--Palliative Proc \\[3270\\] and RX Hosp--Palliative Proc \\[3280\\].",
+  "npcr_collect": "No recommendation",
+  "coc_collect": "Required",
+  "seer_collect": "No recommendation",
+  "cccr_collect": "No recommendation",
+  "alternate_names": [
+    "Date of Non Cancer-Directed Surgery ( CoC)",
+    "Date of Diagnostic, Staging or Palliative Procedures (1996-2002)",
+    "Date of Surgical Diagnostic and Staging Procedure (CoC)",
+    "RX Date--DX/Stg/Pall Proc",
+    "RX Date--DX/Stg Proc"
+  ],
+  "format": "YYYYMMDD",
+  "allowable_values": "Valid dates"
+}

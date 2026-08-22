@@ -1,0 +1,177 @@
+{
+  "item_number": "1832",
+  "item_name": "Addr Current--Country",
+  "item_data_type": "alpha",
+  "item_length": "3",
+  "year_implemented": "2013",
+  "version_implemented": "13",
+  "xml_naaccr_id": "addrCurrentCountry",
+  "xml_parent_id": "Patient",
+  "record_types": [
+    "A",
+    "C",
+    "I",
+    "M"
+  ],
+  "section": "Demographic",
+  "source_of_standard": "NAACCR",
+  "date_created": "2012-03-24T08:27:16Z",
+  "date_modified": "2022-05-27T07:24:10Z",
+  "description": "Country code for the address of patient’s current usual residence. If the patient has multiple tumors, the current country of residence should be the same for all tumors. This data item became part of the NAACCR transmission record effective with Volume II, Version 13 in order to include country and state for each geographic item and to use interoperable codes. It supplements the item Addr Current--State [1820].",
+  "rationale": "Country of patient’s current residence is an important element of the patient’s residential history profile and is useful for understanding risk factors, assessment of patient prognosis, and chances for survival.",
+  "npcr_collect": "No recommendation",
+  "coc_collect": "No recommendation",
+  "seer_collect": "Required",
+  "cccr_collect": "No recommendation",
+  "format": "Upper case",
+  "code_description": "Use the International Standards Organization (ISO) 3166-1 Country Three Character Codes, whenever possible, augmented by custom codes, see below. See Appendix B for complete list of country names and corresponding three character alpha codes",
+  "allowable_values": "International Standards Organization (ISO) 3166-1 Country Three Character Codes and custom codes: ZZN, ZZC, ZZS, ZZP, ZZE, ZZF, ZZA, ZZX, ZZU, XNI, XCB, XEN, XSC, XGR, XSL, CSK, YUG, XUM, XNF, XSD, XWF, XSF, XEF, XIF, XET, XAP, XIS, XCR, XOR, XSE, XMS, XCH, XML, XMC, XPL",
+  "allowed_codes": [
+    {
+      "code": "Custom codes for historic use only"
+    },
+    {
+      "code": "ZZN",
+      "description": "North America NOS"
+    },
+    {
+      "code": "ZZC",
+      "description": "Central America NOS"
+    },
+    {
+      "code": "ZZS",
+      "description": "South America NOS"
+    },
+    {
+      "code": "ZZP",
+      "description": "Pacific NOS"
+    },
+    {
+      "code": "ZZE",
+      "description": "Europe NOS"
+    },
+    {
+      "code": "ZZF",
+      "description": "Africa NOS"
+    },
+    {
+      "code": "ZZA",
+      "description": "Asia NOS"
+    },
+    {
+      "code": "ZZX",
+      "description": "Non-US NOS"
+    },
+    {
+      "code": "ZZU",
+      "description": "Unknown"
+    },
+    {
+      "code": "Custom codes for historic use only"
+    },
+    {
+      "code": "XNI",
+      "description": "North American Islands"
+    },
+    {
+      "code": "SCB",
+      "description": "Other Caribbean Islands"
+    },
+    {
+      "code": "XEN",
+      "description": "England, Channel Island, Isle of Man"
+    },
+    {
+      "code": "XSC",
+      "description": "Scandinavia"
+    },
+    {
+      "code": "XGR",
+      "description": "Germanic Countries"
+    },
+    {
+      "code": "XSL",
+      "description": "Slavic Countries"
+    },
+    {
+      "code": "CSK",
+      "description": "Czechoslovakia (former)"
+    },
+    {
+      "code": "YUG",
+      "description": "Yugoslavia (former)"
+    },
+    {
+      "code": "XUM",
+      "description": "Ukraine and Moldova"
+    },
+    {
+      "code": "XNF",
+      "description": "North Africa"
+    },
+    {
+      "code": "XSD",
+      "description": "Sudanese Countries"
+    },
+    {
+      "code": "XWF",
+      "description": "West Africa"
+    },
+    {
+      "code": "XSF",
+      "description": "South Africa"
+    },
+    {
+      "code": "XEF",
+      "description": "East Africa"
+    },
+    {
+      "code": "XIF",
+      "description": "African Islands"
+    },
+    {
+      "code": "XET",
+      "description": "Ethiopia and Eritrea"
+    },
+    {
+      "code": "XAP",
+      "description": "Arabian Peninsula"
+    },
+    {
+      "code": "XIS",
+      "description": "Israel and Palestine"
+    },
+    {
+      "code": "XCR",
+      "description": "Caucasian Republics of former USSR"
+    },
+    {
+      "code": "XOR",
+      "description": "Other Asian Republics of former USSR"
+    },
+    {
+      "code": "XSE",
+      "description": "Southeast Asia"
+    },
+    {
+      "code": "XMS",
+      "description": "Malaysia, Singapore, Brunei"
+    },
+    {
+      "code": "XCH",
+      "description": "China, NOS"
+    },
+    {
+      "code": "XML",
+      "description": "Melanesian Islands"
+    },
+    {
+      "code": "XMC",
+      "description": "Micronesian Islands"
+    },
+    {
+      "code": "XPL",
+      "description": "Polynesian Islands"
+    }
+  ]
+}

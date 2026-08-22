@@ -52,7 +52,7 @@ class SQLiteBackend(DatabaseBackend):
             return ":memory:"
         if not self.read_only:
             return str(path)
-        return f"{path.as_uri()}?mode=ro" if path.is_file() else ":memory:"
+        return f"{path.resolve().as_uri()}?mode=ro" if path.is_file() else ":memory:"
 
     def qualified_name(self, schema: str, table: str) -> str:
         return f'"{schema}"."{table}"'

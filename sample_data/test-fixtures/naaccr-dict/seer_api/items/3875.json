@@ -1,0 +1,54 @@
+{
+  "item_number": "3875",
+  "item_name": "LN Distant: Mediastinal, Scalene",
+  "item_data_type": "digits",
+  "item_length": "1",
+  "year_implemented": "2018",
+  "version_implemented": "18",
+  "xml_naaccr_id": "lnDistantMediastinalScalene",
+  "xml_parent_id": "Tumor",
+  "record_types": [
+    "A",
+    "C",
+    "I",
+    "M"
+  ],
+  "section": "Stage/Prognostic Factors",
+  "source_of_standard": "NAACCR",
+  "date_created": "2017-11-14T17:43:31Z",
+  "date_modified": "2022-05-27T07:24:12Z",
+  "description": "This data item describes the status of Distant (mediastinal, scalene) nodes associated with certain female genital cancers.",
+  "rationale": "Specific distant lymph node involvement is listed as a Registry Data Collection Variable in the AJCC. This data was previously collected as Vagina, CS SSF# 6.",
+  "npcr_collect": "No recommendation",
+  "coc_collect": "Required, site specific",
+  "seer_collect": "Collected by SEER from CoC-accredited hospitals",
+  "cccr_collect": "No recommendation",
+  "code_note": "Each Site-Specific Data Item (SSDI) applies only to selected primary sites, histologies, and years of diagnosis. Depending on applicability and standard-setter requirements, SSDIs may be left blank.",
+  "allowable_values": "0-3, 8, 9",
+  "allowed_codes": [
+    {
+      "code": "0",
+      "description": "Negative mediastinal and scalene lymph nodes"
+    },
+    {
+      "code": "1",
+      "description": "Positive mediastinal lymph nodes"
+    },
+    {
+      "code": "2",
+      "description": "Positive scalene lymph nodes"
+    },
+    {
+      "code": "3",
+      "description": "Positive mediastinal and scalene lymph nodes"
+    },
+    {
+      "code": "8",
+      "description": "Not applicable: Information not collected for this case  \n (If this item is required by your standard setter, use of code 8 will result in an edit error.)"
+    },
+    {
+      "code": "9",
+      "description": "Not documented in medical record  \n Mediastinal and scalene lymph nodes not assessed or unknown if assessed"
+    }
+  ]
+}

@@ -43,11 +43,32 @@ python -m sdc_cdm build --dialect sqlserver
 Only SQLite and SQL Server are supported executable dialects. The manifest explicitly declares
 all retained, unexecuted upstream reference files as excluded.
 
+## NAACCR dictionary
+
+The dictionary comes from SEER\*API `/rest/naaccr/*`. Fetch writes four deterministic CSVs under
+gitignored repository-root `out-egs/`; load uses one transaction and the same CSVs for SQLite or SQL
+Server; verify compares counts with the committed NAACCR 25 expectations.
+
+```bash
+export SEER_API_KEY='your key'
+python -m sdc_cdm dict fetch --dialect sqlite --version 25
+python -m sdc_cdm dict load --dialect sqlite --db out/demo.db
+python -m sdc_cdm dict verify --dialect sqlite --db out/demo.db \
+  --expect expectations/naaccr-25.json
+```
+
+`dict fetch` inherits `--dialect` for a uniform command shape but does not connect to a database.
+The full API sequence, CSV contract, optional SSDI export, SQL Server commands, and rebuild guidance
+are in
+[`database/schemas/naaccr/DICTIONARY_LOAD.md`](database/schemas/naaccr/DICTIONARY_LOAD.md).
+
 ## Tool support
 
 | Tool | SQLite | SQL Server |
 | --- | --- | --- |
 | Python `sdc_cdm build` | Supported | Supported |
+| Python `sdc_cdm dict load` / `dict verify` | Supported | Supported |
+| Python `sdc_cdm dict fetch` | Network-only; target ignored | Network-only; target ignored |
 | C# SDC XML importer | Supported | Not supported |
 
 The C# project is deliberately limited to SDC XML template and response persistence. It uses
@@ -67,9 +88,9 @@ python -m pytest -ra
 dotnet test src/csharp/SdcCdm.Sdc.Tests
 ```
 
-The Python suite covers the manifest, migration ledger, schema contracts, parser utilities, and
-the SQLite bridge rerun regression. SQL Server runs the same suite for pull requests and pushes to
-`main` when database or Python paths change.
+The Python suite covers the manifest, migration ledger, schema contracts, NAACCR dictionary client
+and transaction behavior, parser utilities, and the SQLite bridge rerun regression. SQL Server runs
+the same suite for pull requests and pushes to `main` when database, Python, or tool paths change.
 The C# suite covers only the SDC XML library.
 
 Historical artifacts from the retired combined OMOP-SDC model are available in Git at commit

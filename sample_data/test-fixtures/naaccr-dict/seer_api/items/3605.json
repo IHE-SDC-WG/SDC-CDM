@@ -1,0 +1,164 @@
+{
+  "item_number": "3605",
+  "item_name": "Derived SEER Path Stg Grp",
+  "item_data_type": "text",
+  "item_length": "5",
+  "xml_naaccr_id": "derivedSeerPathStgGrp",
+  "xml_parent_id": "Tumor",
+  "record_types": [
+    "A",
+    "C",
+    "I",
+    "M"
+  ],
+  "section": "Stage/Prognostic Factors",
+  "source_of_standard": "SEER",
+  "date_created": "2015-08-22T08:32:59Z",
+  "date_modified": "2022-05-27T07:24:08Z",
+  "description": "This data item is needed to store the results of the derived algorithmic calculation of Derived SEER Pathologic Stage Group.",
+  "rationale": "The SEER Program is developing an algorithm to calculate clinical and pathologic stage group based on their T, N, and M components and additional information as needed to calculate stage. For example, for thyroid, additional information is needed on histology and age to calculate stage. Once the T, N, and M are known an algorithm can assign the stage group instead of a registrar having to look up the stage. There are also provisions for a separate field for directly assigned stage group if the registrar prefers entering it.",
+  "npcr_collect": "No recommendation",
+  "coc_collect": "No recommendation",
+  "seer_collect": "DH",
+  "cccr_collect": "No recommendation",
+  "format": "Upper-case alphanumeric, left justified",
+  "allowable_values": "0, 0A, 0IS, 1,1A, 1A1, 1A2, 1B, 1B1, 1B2, 1C, 1S, 2, 2A, 2A1, 2A2, 2B, 2C, 3, 3A, 3B, 3C, 3C1, 3C2, 4, 4A, 4A1, 4A2, 4B, 4C, OC, 88, 99, Blank",
+  "allowed_codes": [
+    {
+      "code": "0",
+      "description": "Stage 0"
+    },
+    {
+      "code": "0A",
+      "description": "Stage 0A"
+    },
+    {
+      "code": "0IS",
+      "description": "Stage 0is"
+    },
+    {
+      "code": "1",
+      "description": "Stage I"
+    },
+    {
+      "code": "1A",
+      "description": "Stage IA"
+    },
+    {
+      "code": "1A1",
+      "description": "Stage IA1"
+    },
+    {
+      "code": "1A2",
+      "description": "Stage IA2"
+    },
+    {
+      "code": "1B",
+      "description": "Stage IB"
+    },
+    {
+      "code": "1B1",
+      "description": "Stage IB1"
+    },
+    {
+      "code": "1B2",
+      "description": "Stage IB2"
+    },
+    {
+      "code": "1C",
+      "description": "Stage IC"
+    },
+    {
+      "code": "1S",
+      "description": "Stage IS"
+    },
+    {
+      "code": "2",
+      "description": "Stage II"
+    },
+    {
+      "code": "2A",
+      "description": "Stage IIA"
+    },
+    {
+      "code": "2A1",
+      "description": "Stage IIA1"
+    },
+    {
+      "code": "2A2",
+      "description": "Stage IIA2"
+    },
+    {
+      "code": "2B",
+      "description": "Stage IIB"
+    },
+    {
+      "code": "2C",
+      "description": "Stage IIC"
+    },
+    {
+      "code": "3",
+      "description": "Stage III"
+    },
+    {
+      "code": "3A",
+      "description": "Stage IIIA"
+    },
+    {
+      "code": "3B",
+      "description": "Stage IIIB"
+    },
+    {
+      "code": "3C",
+      "description": "Stage IIIC"
+    },
+    {
+      "code": "3C1",
+      "description": "Stage IIIC1"
+    },
+    {
+      "code": "3C2",
+      "description": "Stage IIIC2"
+    },
+    {
+      "code": "4",
+      "description": "Stage IV"
+    },
+    {
+      "code": "4A",
+      "description": "Stage IVA"
+    },
+    {
+      "code": "4A1",
+      "description": "Stage IVA1"
+    },
+    {
+      "code": "4A2",
+      "description": "Stage IVA2"
+    },
+    {
+      "code": "4B",
+      "description": "Stage IVB"
+    },
+    {
+      "code": "4C",
+      "description": "Stage IVC"
+    },
+    {
+      "code": "OC",
+      "description": "Occult"
+    },
+    {
+      "code": "88",
+      "description": "Not applicable"
+    },
+    {
+      "code": "99",
+      "description": "Unknown"
+    },
+    {
+      "code": "Blank",
+      "description": "Algorithm has not been run"
+    }
+  ]
+}

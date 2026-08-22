@@ -18,10 +18,25 @@ CREATE TABLE IF NOT EXISTS naaccr.data_dictionary_version (
     UNIQUE (algorithm, version)
 );
 
+-- Older loads defaulted every version to current. Keep the newest row for each
+-- algorithm before adding the one-current invariant on a re-applied build.
+UPDATE naaccr.data_dictionary_version
+SET is_current = 0
+WHERE is_current = 1
+  AND dd_version_id NOT IN (
+      SELECT MAX(dd_version_id)
+      FROM naaccr.data_dictionary_version
+      WHERE is_current = 1
+      GROUP BY algorithm
+  );
+
+CREATE UNIQUE INDEX IF NOT EXISTS naaccr.idx_dd_version_current_algorithm
+    ON data_dictionary_version (algorithm) WHERE is_current = 1;
+
 CREATE TABLE IF NOT EXISTS naaccr.staging_schema (
     dd_version_id INTEGER NOT NULL REFERENCES data_dictionary_version(dd_version_id),
     schema_id_number TEXT NOT NULL,
-    schema_id TEXT NULL,
+    schema_id TEXT NOT NULL,
     schema_name TEXT NULL,
     PRIMARY KEY (dd_version_id, schema_id_number)
 );
@@ -49,16 +64,59 @@ CREATE TABLE IF NOT EXISTS naaccr.naaccr_item (
     -- Gap #2a: field metadata available from the SEER Staging API (per-input unit/decimals).
     unit TEXT NULL,
     decimal_places INTEGER NULL,
-    -- Gap #2b: field metadata from the NAACCR Data Dictionary API / imsweb layout.
-    -- Nullable so the staging-only load works before the DD-API enrichment runs.
+    -- Gap #2b: field metadata from SEER*API's NAACCR Data Dictionary endpoints.
+    -- Nullable because the upstream DTO omits some fields and staging-only rows may be stubs.
     data_type TEXT NULL,
     length INTEGER NULL,
+    -- No NAACCR-published source supplies padding, alignment, or trim. These
+    -- fields existed only in the fixed-column layouts retired after v18.
     padding TEXT NULL,
     alignment TEXT NULL,
     trim TEXT NULL,
     section TEXT NULL,
     parent_xml_element TEXT NULL,
+    record_types TEXT NULL, -- compact JSON array
+    alternate_names TEXT NULL, -- compact JSON array
+    source_of_standard TEXT NULL,
+    allowable_values TEXT NULL,
+    code_description TEXT NULL,
+    code_note TEXT NULL,
+    item_format TEXT NULL,
+    description TEXT NULL,
+    rationale TEXT NULL,
+    general_notes TEXT NULL,
+    clarification TEXT NULL,
+    version_implemented TEXT NULL,
+    year_implemented INTEGER NULL,
+    version_retired TEXT NULL,
+    year_retired INTEGER NULL,
+    date_created TEXT NULL,
+    date_modified TEXT NULL,
     PRIMARY KEY (dd_version_id, item_num)
+);
+
+CREATE TABLE IF NOT EXISTS naaccr.naaccr_item_allowed_code (
+    dd_version_id INTEGER NOT NULL,
+    item_num INTEGER NOT NULL,
+    code_seq INTEGER NOT NULL,
+    code TEXT NOT NULL,
+    description TEXT NULL,
+    PRIMARY KEY (dd_version_id, item_num, code_seq),
+    FOREIGN KEY (dd_version_id, item_num)
+        REFERENCES naaccr_item(dd_version_id, item_num)
+);
+
+CREATE INDEX IF NOT EXISTS naaccr.idx_naaccr_item_allowed_code_lookup
+    ON naaccr_item_allowed_code (dd_version_id, item_num, code);
+
+CREATE TABLE IF NOT EXISTS naaccr.naaccr_item_registry_requirement (
+    dd_version_id INTEGER NOT NULL,
+    item_num INTEGER NOT NULL,
+    registry_code TEXT NOT NULL,
+    collect_status TEXT NOT NULL,
+    PRIMARY KEY (dd_version_id, item_num, registry_code),
+    FOREIGN KEY (dd_version_id, item_num)
+        REFERENCES naaccr_item(dd_version_id, item_num)
 );
 
 CREATE TABLE IF NOT EXISTS naaccr.schema_item (
@@ -67,7 +125,8 @@ CREATE TABLE IF NOT EXISTS naaccr.schema_item (
     item_num INTEGER NOT NULL,
     -- Gap #4: distinguish captured inputs from derived staging outputs.
     item_role TEXT NOT NULL DEFAULT 'input',
-    used_for_staging TEXT NULL,
+    used_for_staging INTEGER NOT NULL DEFAULT 0
+        CHECK (used_for_staging IN (0, 1)),
     default_value TEXT NULL,
     description TEXT NULL,
     rationale TEXT NULL,
@@ -88,13 +147,12 @@ CREATE TABLE IF NOT EXISTS naaccr.registry (
 );
 
 CREATE TABLE IF NOT EXISTS naaccr.schema_item_requirement (
-    schema_item_requirement_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     dd_version_id INTEGER NOT NULL,
     schema_id_number TEXT NOT NULL,
     item_num INTEGER NOT NULL,
     registry_id INTEGER NOT NULL REFERENCES registry(id),
     is_required INTEGER NOT NULL,
-    UNIQUE (dd_version_id, schema_id_number, item_num, registry_id),
+    PRIMARY KEY (dd_version_id, schema_id_number, item_num, registry_id),
     FOREIGN KEY (dd_version_id, schema_id_number, item_num)
         REFERENCES schema_item(dd_version_id, schema_id_number, item_num)
 );
@@ -109,6 +167,15 @@ CREATE TABLE IF NOT EXISTS naaccr.schema_item_code (
     FOREIGN KEY (dd_version_id, schema_id_number, item_num)
         REFERENCES schema_item(dd_version_id, schema_id_number, item_num)
 );
+
+CREATE INDEX IF NOT EXISTS naaccr.idx_selection_schema
+    ON schema_selection_rule (dd_version_id, schema_id_number);
+CREATE INDEX IF NOT EXISTS naaccr.idx_item_schema
+    ON schema_item (dd_version_id, schema_id_number);
+CREATE INDEX IF NOT EXISTS naaccr.idx_req_schema_item
+    ON schema_item_requirement (dd_version_id, schema_id_number, item_num);
+CREATE INDEX IF NOT EXISTS naaccr.idx_code_schema_item
+    ON schema_item_code (dd_version_id, schema_id_number, item_num);
 
 -- Gap #3: persist the SEER staging lookup tables (the value-validation / staging
 -- building blocks). Natural-keyed on (dd_version_id, table_key). Row cells are stored
