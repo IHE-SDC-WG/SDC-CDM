@@ -1,1 +1,1 @@
-"""Vocabulary command support, implemented in Phase 1."""
+"""OHDSI Athena vocabulary import and concept resolution."""

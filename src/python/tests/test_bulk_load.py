@@ -86,9 +86,9 @@ class _FakeSqlServerBackend(DatabaseBackend):
 def _open_backend(dialect: str, tmp_path: Path) -> DatabaseBackend:
     if dialect == "sqlite":
         return SQLiteBackend(tmp_path / "bulk.db")
-    connection_string = os.environ.get("SDC_CDM_SQLSERVER_DSN")
+    connection_string = os.environ.get("SDC_CDM_SQLSERVER_CONNECTION_STRING")
     if not connection_string:
-        pytest.skip("SDC_CDM_SQLSERVER_DSN is not set")
+        pytest.skip("SDC_CDM_SQLSERVER_CONNECTION_STRING is not set")
     return SqlServerBackend(connection_string)
 
 

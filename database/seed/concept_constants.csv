@@ -1,0 +1,7 @@
+constant_name,vocabulary_id,concept_code
+note_type_ehr,Type Concept,EHR
+measurement_type_registry,Type Concept,Registry
+field_note_note_id,CDM,note.note_id
+unmapped,None,No matching concept
+gender_male,Gender,M
+gender_female,Gender,F

@@ -57,10 +57,10 @@ array are references or later-phase inputs and are never applied by `build`.
 ## OMOP Vocabulary Data
 
 The OMOP DDL creates empty vocabulary tables. Download an OHDSI Athena bundle,
-extract its nine vocabulary files under [`vocab/`](vocab/README.md), and run
-`tools/load_athena_vocab.py` before importing clinical data. The downloaded
-files are ignored by Git and remain subject to the licenses of their individual
-vocabularies.
+extract its nine vocabulary files under [`vocab/`](vocab/README.md), then run
+`sdc-cdm vocab load` and `sdc-cdm constants resolve` before importing clinical
+data. The downloaded files are ignored by Git and remain subject to the
+licenses of their individual vocabularies.
 
 ## Historical Model
 
