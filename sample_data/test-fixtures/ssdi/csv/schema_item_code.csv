@@ -1,0 +1,7 @@
+"schema_id_number","item_num","code","description"
+"10","100","A","Alpha, one"
+"10","100","B","Beta ""quoted"""
+"10","200","0","Zero"
+"20","150","é","Unicode"
+"20","200","0","Zero"
+"20","900","X","Derived X"

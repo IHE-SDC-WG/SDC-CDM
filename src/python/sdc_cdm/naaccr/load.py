@@ -20,77 +20,20 @@ from sdc_cdm.naaccr.columns import (
     VERSION_FILE,
 )
 from sdc_cdm.naaccr.csv_io import DEFAULT_CSV_DIR, read_csv, read_single_row
-
-STAGING_SCHEMA_COLUMNS = ("schema_id_number", "schema_id", "schema_name")
-SELECTION_RULE_COLUMNS = (
-    "schema_id_number",
-    "site",
-    "histology",
-    "behavior",
-    "sex_at_birth",
-    "discriminator_1",
-    "discriminator_2",
-    "year_dx",
+from sdc_cdm.naaccr.ssdi import (
+    REGISTRY_COLUMNS,
+    SCHEMA_INVOLVED_TABLE_COLUMNS,
+    SCHEMA_ITEM_CODE_COLUMNS,
+    SCHEMA_ITEM_COLUMNS,
+    SELECTION_RULE_COLUMNS,
+    SSDI_CONTRACT,
+    SSDI_ITEM_COLUMNS,
+    STAGING_SCHEMA_COLUMNS,
+    STAGING_TABLE_COLUMN_COLUMNS,
+    STAGING_TABLE_COLUMNS,
+    STAGING_TABLE_ROW_COLUMNS,
+    STATIC_REGISTRIES,
 )
-SSDI_ITEM_COLUMNS = ("item_num", "name", "xml_id", "unit", "decimal_places")
-SCHEMA_ITEM_COLUMNS = (
-    "schema_id_number",
-    "item_num",
-    "item_role",
-    "used_for_staging",
-    "default_value",
-    "description",
-    "rationale",
-    "additional_info",
-    "table_notes",
-    "coding_guidelines",
-)
-REGISTRY_COLUMNS = ("code", "name")
-SCHEMA_ITEM_REQUIREMENT_COLUMNS = (
-    "schema_id_number",
-    "item_num",
-    "registry_code",
-    "is_required",
-)
-SCHEMA_ITEM_CODE_COLUMNS = (
-    "schema_id_number",
-    "item_num",
-    "code",
-    "description",
-)
-STAGING_TABLE_COLUMNS = (
-    "table_key",
-    "name",
-    "title",
-    "subtitle",
-    "description",
-    "notes",
-    "coding_guidelines",
-)
-STAGING_TABLE_COLUMN_COLUMNS = (
-    "table_key",
-    "col_index",
-    "col_key",
-    "col_name",
-    "col_type",
-    "col_source",
-)
-STAGING_TABLE_ROW_COLUMNS = ("table_key", "row_index", "cells")
-SCHEMA_INVOLVED_TABLE_COLUMNS = ("schema_id_number", "table_key")
-
-SSDI_CONTRACT: dict[str, tuple[str, ...]] = {
-    "staging_schema.csv": STAGING_SCHEMA_COLUMNS,
-    "schema_selection_rule.csv": SELECTION_RULE_COLUMNS,
-    "naaccr_item.csv": SSDI_ITEM_COLUMNS,
-    "schema_item.csv": SCHEMA_ITEM_COLUMNS,
-    "registry.csv": REGISTRY_COLUMNS,
-    "schema_item_requirement.csv": SCHEMA_ITEM_REQUIREMENT_COLUMNS,
-    "schema_item_code.csv": SCHEMA_ITEM_CODE_COLUMNS,
-    "staging_table.csv": STAGING_TABLE_COLUMNS,
-    "staging_table_column.csv": STAGING_TABLE_COLUMN_COLUMNS,
-    "staging_table_row.csv": STAGING_TABLE_ROW_COLUMNS,
-    "schema_involved_table.csv": SCHEMA_INVOLVED_TABLE_COLUMNS,
-}
 
 VERSIONED_DELETE_ORDER = (
     "schema_involved_table",
@@ -156,13 +99,6 @@ EXPECTED_ITEM_COLUMNS = frozenset(
         "parent_xml_element",
     )
     + DICTIONARY_COLUMNS[7:]
-)
-
-STATIC_REGISTRIES = (
-    ("SEER", "SEER"),
-    ("NPCR", "NPCR"),
-    ("COC", "COC"),
-    ("CCCR", "CCCR"),
 )
 
 

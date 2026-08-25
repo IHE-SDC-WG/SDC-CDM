@@ -1,0 +1,7 @@
+"schema_id_number","item_num","item_role","used_for_staging","default_value","description","rationale","additional_info","table_notes","coding_guidelines"
+"10","100","input","true","","Description with ""quotes""","Line one
+line two","","",""
+"10","200","input","false","0","","","","",""
+"20","150","input","false","","","","","",""
+"20","200","input","false","","","","","",""
+"20","900","output","false","X","","","","",""

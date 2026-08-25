@@ -1,91 +1,126 @@
-# NAACCR dictionary fetch, load, and verification
+# NAACCR dictionary and SSDI fetch, load, and verification
 
-The Python `dict` commands construct the NAACCR dictionary from SEER\*API and load the same
-CSV files into SQLite or SQL Server. The API key is used only by `dict fetch`; builds, loads,
-verification, and tests remain offline.
+The Python `dict` and `ssdi` commands fetch two parts of one versioned NAACCR data set from
+SEER\*API. Both producers write deterministic CSVs for the same Python loader. The API key is used
+only by the two fetch commands; builds, loads, verification, and tests remain offline.
 
-## How the API dictionary is constructed
+## Fetch commands and flags
 
-SEER\*API uses the `X-SEERAPI-Key` header for all `/rest/*` requests. The dictionary client
-calls the endpoints in this order:
+Both fetch commands inherit required `--dialect` for a uniform CLI shape but never open a database.
+They require `SEER_API_KEY` and exit 2 before any request when it is missing.
 
-1. `GET /rest/naaccr/versions` discovers the available NAACCR versions.
-2. `GET /rest/naaccr/{version}` returns a thin item index containing `id`, `item`, and `name`.
-3. `GET /rest/naaccr/{version}/{key}` returns one full item DTO for each index entry.
+| Command | NAACCR flag | Algorithm | Staging version | Output directory |
+| --- | --- | --- | --- | --- |
+| `dict fetch` | `--version`, default `25` | `--algorithm`, default `eod_public` | `--staging-version`, default `3.3` | `--csv-dir`, default repository-root `out-egs/` |
+| `ssdi fetch` | required `--naaccr-version` | `--algorithm`, default `eod_public` | `--staging-version`, default `3.3` | `--csv-dir`, default repository-root `out-egs/` |
 
-The index does not contain the detail fields, so a complete version requires one index request
-plus one detail request per item. For retired items, the index omits `id`; the request key is
-therefore `entry.get("id") or entry["item"]`. Retired detail DTOs are also sparse. Only the item
-number, item name, creation and modification dates, and retirement year and version are
-guaranteed.
+`SSDI_ALGORITHM` and `SSDI_VERSION` are not read. Pass non-default values as flags to both commands
+so they write the same `data_dictionary_version.csv` row. `SEER_API_KEY` is the only fetch
+credential.
 
-The client uses eight concurrent detail requests, caps a configured value at 16, and restores
-deterministic numeric item order before writing. It retries up to four times for HTTP 429, 500,
-502, 503, and 504 responses, URL errors, and timeouts. It honours `Retry-After`; authentication
-and not-found errors are not retried. An API error envelope's `message` is reported directly.
+```bash
+export SEER_API_KEY='your key'
 
-The item DTO is split into three relational shapes:
+python -m sdc_cdm dict fetch --dialect sqlite --version 26
+python -m sdc_cdm ssdi fetch --dialect sqlite --naaccr-version 26
+```
 
-- Scalar fields and compact JSON arrays (`record_types`, `alternate_names`) become one
-  `naaccr_item_dictionary.csv` row per item.
-- Each `allowed_codes` array entry becomes a `naaccr_item_allowed_code.csv` row. Its zero-based
-  `code_seq` preserves repeated codes in one item.
-- Each present `seer_collect`, `npcr_collect`, `coc_collect`, or `cccr_collect` value becomes a
-  `naaccr_item_registry_requirement.csv` row. Collection status remains source text.
+The same commands can target an explicit directory from any working directory:
 
-`allowable_values` is retained separately from `allowed_codes`: it can refer to an external
-coding system even when the DTO has no enumerated code list.
+```bash
+python -m sdc_cdm dict fetch --dialect sqlite --version 26 --csv-dir /tmp/naaccr-26
+python -m sdc_cdm ssdi fetch --dialect sqlite --naaccr-version 26 \
+  --csv-dir /tmp/naaccr-26
+```
 
-There is no cheap date-based incremental fetch. The index has no `date_modified`, so `--since`
-would still require every detail request. The API's `version_implemented=V` query is useful only
-for finding items added in a particular version.
+## Endpoint order and request bounds
+
+`dict fetch` calls:
+
+1. `GET /rest/naaccr/versions`
+2. `GET /rest/naaccr/{version}`
+3. `GET /rest/naaccr/{version}/{key}` once per index entry
+
+The detail key is `entry.get("id") or entry["item"]` because retired index entries can omit `id`.
+
+`ssdi fetch` calls:
+
+1. `GET /rest/naaccr/versions` and validates `--naaccr-version`
+2. `GET /rest/staging/{algorithm}/{staging-version}/schemas`
+3. `GET /rest/staging/{algorithm}/{staging-version}/schema/{id}` once per unique projection ID
+4. `GET /rest/staging/{algorithm}/{staging-version}/table/{id}` once per unique involved table
+
+NAACCR validation finishes before any staging request. Schema and table details use eight concurrent
+requests by default, capped at 16. Dictionary items use the same bound. The shared transport retries
+HTTP 429, 500, 502, 503, and 504 responses, URL errors, and timeouts up to four times. It honours
+`Retry-After`; authentication and not-found errors are not retried.
+
+Schemas are emitted in numeric `naaccr_schema_id` order. A schema without that output ID is fetched
+once and omitted. Involved tables include each retained schema's selection table plus every input
+and output table. Table catalog and link order first preserves the former producer order: selection
+table, SSDI inputs by item number, then API-order numeric NAACCR outputs. Tables on non-NAACCR
+outputs follow that prefix. Non-SSDI input tables are appended in sorted-schema and API-input order.
+Shared table IDs are fetched and emitted once.
 
 ## CSV contract
 
-All files are written under repository-root `out-egs/`, regardless of the shell's current
-directory. CSVs use UTF-8 without a BOM, LF endings, an always-quoted field format, doubled
-quotes, empty strings for nulls, and raw embedded newlines inside quoted fields. Array values
-use compact JSON. The reader trims every field to match the existing SSDI export contract.
+All CSVs use UTF-8 without a BOM, LF endings, always-quoted fields, empty cells for null scalar
+values, and atomic replacement. Embedded newlines and quotes are retained. Table row cells use
+compact JSON arrays, including `null` positions.
 
-The dictionary producer writes:
+`dict fetch` writes three dictionary files plus the shared version row:
 
-- `naaccr_item_dictionary.csv`
-- `naaccr_item_allowed_code.csv`
-- `naaccr_item_registry_requirement.csv`
-- `data_dictionary_version.csv`
+| File | Contents |
+| --- | --- |
+| `naaccr_item_dictionary.csv` | One scalar item row, with compact JSON `record_types` and `alternate_names` cells |
+| `naaccr_item_allowed_code.csv` | Ordered allowed codes; zero-based `code_seq` preserves duplicates |
+| `naaccr_item_registry_requirement.csv` | Present SEER, NPCR, COC, and CCCR collection text |
+| `data_dictionary_version.csv` | One algorithm, staging version, NAACCR version, and source API row |
 
-The first file stays separate from the SSDI producer's `naaccr_item.csv`. The dictionary owns
-item definitions; the SSDI file supplies only `unit` and `decimal_places`. Both producers share
-the single one-row `data_dictionary_version.csv`, and the loader injects its resolved
-`dd_version_id` into every versioned row. With non-default staging settings, pass matching
-`--algorithm` and `--staging-version` values to `dict fetch` and matching environment values to
-the SSDI exporter.
+`ssdi fetch` writes these twelve files:
 
-If any SSDI CSV is present, `dict load` requires the complete SSDI CSV set. A dictionary-only
-load is valid when none is present. The loader always seeds the four registry codes.
+| File | Contents |
+| --- | --- |
+| `data_dictionary_version.csv` | The same one-row generation record |
+| `staging_schema.csv` | Numeric schema ID, API schema ID, and name |
+| `schema_selection_rule.csv` | Site, histology, behavior, sex, discriminators, and diagnosis-year ranges |
+| `naaccr_item.csv` | SSDI input and NAACCR output items with unit and decimal metadata |
+| `schema_item.csv` | SSDI inputs and numeric NAACCR outputs; input wins on collisions |
+| `registry.csv` | Static SEER, NPCR, COC, and CCCR rows |
+| `schema_item_requirement.csv` | Four lowercase-Boolean registry rows per SSDI input |
+| `schema_item_code.csv` | First-column codes and case-insensitive description-column text |
+| `staging_table.csv` | Ordered, unique involved-table catalog |
+| `staging_table_column.csv` | Ordered column definitions per table |
+| `staging_table_row.csv` | Ordered rows as compact JSON cell arrays |
+| `schema_involved_table.csv` | Ordered schema-to-table links, including non-SSDI inputs |
+
+Only inputs carrying `metadata.name == "SSDI"` become `schema_item` input rows. All numeric NAACCR
+outputs are included unless the same schema and item already appeared as an input. Non-NAACCR
+outputs do not become item rows, but their tables remain involved. No flat compatibility files or
+`--flat` mode are provided.
+
+The complete fetched output stays in gitignored `out-egs/`. The repository contains only small,
+independently synthetic test fixtures under `sample_data/test-fixtures/ssdi/` and a reduced
+NAACCR dictionary excerpt under `sample_data/test-fixtures/naaccr-dict/`.
 
 ## SQLite workflow
 
 ```bash
 export SEER_API_KEY='your key'
-
-# If site-specific staging rows are needed, produce them first. This command remains
-# the SSDI producer until its Python port lands.
-cd tools/ssdi-ts
-SSDI_OUTPUT_3NF=1 SSDI_NAACCR_VERSION=25 npm run dev
-cd ../..
-
-# --dialect is inherited for a uniform CLI and is ignored by this network-only verb.
 python -m sdc_cdm dict fetch --dialect sqlite --version 25
+python -m sdc_cdm ssdi fetch --dialect sqlite --naaccr-version 25
 python -m sdc_cdm build --dialect sqlite --db out/demo.db
 python -m sdc_cdm dict load --dialect sqlite --db out/demo.db
 python -m sdc_cdm dict verify --dialect sqlite --db out/demo.db \
   --expect expectations/naaccr-25.json
 ```
 
-SQLite cannot conditionally add columns. If a database was built with the older
-`naaccr_item` shape, `dict load` fails before opening its transaction with a rebuild message.
-Delete the control database and its sibling schema database files, rebuild, and load again.
+Use an expectation file matching the fetched NAACCR version. The committed acceptance file is for
+version 25.
+
+SQLite cannot conditionally add columns. If a database was built with the older `naaccr_item`
+shape, `dict load` fails before opening its transaction with a rebuild message. Delete the control
+database and its sibling schema database files, rebuild, and load again.
 
 ## SQL Server workflow
 
@@ -96,25 +131,29 @@ database, user, password, port, or certificate defaults.
 python -m pip install -e '.[sqlserver]'
 export SDC_CDM_SQLSERVER_CONNECTION_STRING='DRIVER={ODBC Driver 18 for SQL Server};SERVER=localhost;DATABASE=sdc_cdm;UID=user;PWD=password;Encrypt=yes;TrustServerCertificate=yes'
 
+python -m sdc_cdm dict fetch --dialect sqlserver --version 25
+python -m sdc_cdm ssdi fetch --dialect sqlserver --naaccr-version 25
 python -m sdc_cdm build --dialect sqlserver
 python -m sdc_cdm dict load --dialect sqlserver
 python -m sdc_cdm dict verify --dialect sqlserver \
   --expect expectations/naaccr-25.json
 ```
 
-The SQL Server dictionary DDL is guarded and re-applicable, so an existing built database gains
-the new columns and tables when `build` runs again.
+The SQL Server dictionary DDL is guarded and re-applicable, so an existing built database gains the
+new columns and tables when `build` runs again.
 
 ## Transaction and current-version rules
 
-`dict load` validates the CSV headers, target columns, and every `schema_item.item_num` before
-opening the load transaction. Within one transaction it resolves the version row, demotes the
-previous current row for that algorithm, clears the selected generation child-first, loads item
-definitions before staging membership, and checks foreign keys before commit. Repeating the same
-load replaces that generation with identical counts. A failure restores the previous generation
-and its `is_current` value.
+If any SSDI CSV is present, `dict load` requires the complete 11-file SSDI set in addition to the
+shared version row. A dictionary-only load is valid when none is present. The loader validates CSV
+headers, target columns, and every `schema_item.item_num` before opening its transaction.
 
-Consumers select a current version by algorithm, never by an unqualified maximum ID:
+Within one transaction it resolves the version row, demotes the previous current row for that
+algorithm, clears the selected generation child-first, loads item definitions before staging
+membership, and checks foreign keys before commit. Repeating the same load replaces that generation
+with identical counts. A failure restores the prior generation and its `is_current` value.
+
+Consumers select a current version by algorithm:
 
 ```sql
 SELECT dd_version_id
@@ -122,15 +161,11 @@ FROM naaccr.data_dictionary_version
 WHERE algorithm = ? AND is_current = 1;
 ```
 
-The filtered unique index permits one current row per algorithm.
-
 ## NAACCR 25 acceptance anchor
 
-`expectations/naaccr-25.json` contains counts and section labels only. The live anchor is 946
-items: 780 non-retired and 166 retired, 17 populated sections for every non-retired item, 3,900
-allowed-code rows, 3,122 registry-requirement rows, and zero staging-item orphans. It also pins
-the 17-section distribution. The repository commits only a 12-item automated-test excerpt; the
-complete fetched dictionary remains in gitignored `out-egs/`.
+`expectations/naaccr-25.json` contains counts and section labels only. The live anchor is 946 items:
+780 non-retired and 166 retired, 17 populated sections for every non-retired item, 3,900
+allowed-code rows, 3,122 registry-requirement rows, and zero staging-item orphans.
 
 TODO(phase-6): define an owned credential-rotation and refresh policy before adding any scheduled,
 key-gated dictionary check. Do not add a disabled workflow or a schedule tied to a personal key.

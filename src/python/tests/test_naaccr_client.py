@@ -178,3 +178,45 @@ def test_dict_fetch_without_key_exits_two_before_fetch(
 
     assert exc_info.value.code == 2
     assert "SEER_API_KEY" in capsys.readouterr().err
+
+
+def test_dict_fetch_uses_flag_defaults_not_retired_ssdi_environment(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    observed: dict[str, Any] = {}
+
+    class _Result:
+        naaccr_version = "25"
+        item_count = 1
+        live_item_count = 1
+        retired_item_count = 0
+        section_count = 1
+        allowed_code_count = 0
+        registry_requirement_count = 0
+
+    def fake_fetch(*_args: object, **kwargs: Any) -> _Result:
+        observed.update(kwargs)
+        return _Result()
+
+    monkeypatch.setenv("SEER_API_KEY", "fixture-key")
+    monkeypatch.setenv("SSDI_ALGORITHM", "retired-algorithm")
+    monkeypatch.setenv("SSDI_VERSION", "retired-version")
+    monkeypatch.setattr("sdc_cdm.cli.dictionary.fetch_dictionary", fake_fetch)
+
+    assert (
+        main(
+            [
+                "dict",
+                "fetch",
+                "--dialect",
+                "sqlite",
+                "--csv-dir",
+                str(tmp_path),
+            ]
+        )
+        == 0
+    )
+    assert observed["algorithm"] == "eod_public"
+    assert observed["algorithm_version"] == "3.3"
+    assert observed["output_dir"] == tmp_path

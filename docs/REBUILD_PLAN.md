@@ -21,8 +21,8 @@ is everything around it:
   `Console.WriteLine` and vanish.
 - The C# importer (`ImportNaaccrVolV.cs`) and its Python port
   (`import_vol_v_message_sqlite.py`) reimplement the same 600 lines of parsing with no automated
-  parity test. A third variant (`ccr_labreport_to_naaccr.py`) reimplements the OBX-4 grouping again
-  for JSON input and should be dropped, this will be moved to a private project.
+  parity test. The former CCR JSON variant and its tests have been removed from this repository;
+  the private project now owns that path.
 - `naaccr_concept_map` / `naaccr_value_concept_map` are joined by the bridge but populated only by
   a SQL-Server-only script, so every SQLite measurement lands at `measurement_concept_id = 0`.
 - The bridge writes only `note` + `measurement`. `observation_period`, `cdm_source`,
@@ -118,8 +118,7 @@ and `git blame` survive — the blame trail is how anyone will ever find out *wh
 
 | Asset | Why it cannot be cheaply recreated |
 |---|---|
-| `tools/ssdi-ts/` | Working SEER Staging REST API client + 3NF export. It remains the only producer for the item→site-schema axis until its Phase 1 port. The SQL Server loader is replaced by the dual-dialect Python `dict load`. |
-| `src/python/sdc_cdm/naaccr/` | Stdlib-only SEER NAACCR client, deterministic CSV contract, transactional loader, and counts-only verifier. |
+| `src/python/sdc_cdm/naaccr/` | Stdlib-only SEER NAACCR and staging client, deterministic dictionary and SSDI CSV contracts, transactional loader, and counts-only verifier. |
 | `tools/load_athena_vocab.py` | Three DB backends, freshness guards, CDM 5.4 column metadata, 8 tests. **The only vocabulary loader** — the C# `ImportCsv.cs` is a single-table stub and is deleted, not merged. |
 | `database/schemas/naaccr/ddl/` | The `data_dictionary_version` dimension, staging-table catalog, `item_role` — real modelling. |
 | `.../sqlserver/2_naaccr_omop_vocab_sqlserver.sql` | 665 lines, and we have decided to **keep** it. |
@@ -421,9 +420,9 @@ database/
       cdm_source.csv
 src/csharp/{SdcCdm.Sdc,SdcCdm.Sdc.Tests}/  SDC XML import only — no CLI, no pipeline projects
 src/python/sdc_cdm/{envelope,hl7v2,cli,db,naaccr,vocab,export}/ + tests/
-tools/ssdi-ts/                             SEER staging export until its Python port
 expectations/naaccr-25.json                counts and section-label acceptance anchor
 sample_data/test-fixtures/naaccr-dict/     raw API excerpt + derived CSV fixture
+sample_data/test-fixtures/ssdi/             synthetic staging API + 12 derived CSV fixtures
 notebooks/                                 recreated from scratch (see below)
 sample_data/                               single source of fixtures
 docs/{REBUILD_PLAN,SCHEMA_ARCHITECTURE,ROADMAP,TEST_PLAN}.md
@@ -439,7 +438,8 @@ review role replaced by the tracked overrides CSV), `NAACCRtoOMOPmaps/*.xlsx` an
 `database/schemas/{naaccr,sdc}/ddl/postgresql/`, `database/Dockerfile`,
 `database/docker-compose.yml`, `database/.env.example` — see "PostgreSQL is removed, not deferred"
 above), the CCR JSON path (`tools/ccr_labreport_to_naaccr.py` + `tools/tests/test_obx_parser.py`,
-Phase 3), the FHIR code (`SdcCdm/ExportFhirCpds.cs`, `SdcCdm/FHIR/`,
+removed before Phase 3 after ownership moved to the private project), the FHIR code
+(`SdcCdm/ExportFhirCpds.cs`, `SdcCdm/FHIR/`,
 `SdcCdm.Tests/FhirCpdsExporterTests.cs` — FHIR is roadmap and git history is the recovery path;
 confirmed that nothing in `SdcCdm/FHIR/Importers.cs` needs preserving for the roadmap FHIR intake
 work), the C# vocabulary stub (`SdcCdm/ImportCsv.cs` + `SdcCdm.Tests/VocabImporterTests.cs`), the C#
@@ -504,7 +504,7 @@ supplies them; they existed only in the fixed-column layouts retired after v18.
 No change of shape. `naaccr.schema_item` (with its `item_role` input/output split) →
 `naaccr.staging_schema` stays the SSDI-sourced many-to-many, which is the right model: one item
 number legitimately belongs to many site schemas, so this can never be a column on `naaccr_item`.
-`tools/ssdi-ts` remains the SSDI CSV producer until its port; Python `dict load` is the only loader.
+Python `ssdi fetch` produces the SSDI CSVs; Python `dict load` is the only loader.
 
 The rebuild's contribution is making it actually *load* and *resolve*: the SSDI export and the
 item-definition seed share one `data_dictionary_version.csv` row, and `dict load` asserts zero orphan
@@ -522,8 +522,8 @@ WHERE si.item_num = ? AND si.dd_version_id = ?;
 #### Stamping captured values
 
 Both `naaccr_value.dd_version_id` and `naaccr_value.schema_id_number` are hard-coded NULL by every
-importer today (`ImportNaaccrVolV.cs:537-614` never passes either; `ISdcCdm.cs:215` defaults them;
-`ccr_labreport_to_naaccr.py:446,454` writes `None` literally).
+tracked importer today (`ImportNaaccrVolV.cs:537-614` never passes either; `ISdcCdm.cs:215`
+defaults them). The retired private CCR path also wrote `None` literally when it was tracked here.
 
 - **`dd_version_id` becomes non-null in practice.** `load_envelope.sql` resolves it from the
   message's NAACCR record version when present, else from the `is_current` row. This is a *load-time*
@@ -856,9 +856,8 @@ makes layer 2 win over layer 1 for that item; no OMOP row carries a non-standard
 `*_concept_id` slot.
 
 **Phase 3 — intake.** Blob + envelope + `intake.patient` + the Python HL7 parser +
-`load_envelope.sql` + golden-envelope conformance. **Delete `tools/ccr_labreport_to_naaccr.py` and
-`tools/tests/test_obx_parser.py`** in this phase — the envelope is what makes the split safe, so the
-deletion should not land before the Python parser conforms to the golden files.
+`load_envelope.sql` + golden-envelope conformance. The CCR JSON importer and its public tests were
+already removed after the private project took ownership; Phase 3 has no deferred CCR deletion.
 *Accept when:* the parser reproduces every `contracts/golden/*.envelope.json`
 byte-identically under the serialization profile, and `serialize(parse(serialize(x)))` is a fixed
 point; a message with a `1957`-only birth date yields `precision: "year"` with `m`/`d` null and an
@@ -911,13 +910,13 @@ with a one-line note saying why.
 | **0** skeleton | `SCHEMA-05` (C# `BuildSchema()` ↔ raw-DDL drift check — there is no C# schema builder any more) | `TEST_PLAN.md:20` bridge glob → `{sqlite,sqlserver}`; `SCHEMA-02` DDL parity → two dialects; `SCHEMA-04` → whatever survives of `update-ddl-files.py`; `CLEAN-03` → the three-job topology; `CLEAN-02` shared golden files → `contracts/golden/`, Python-only | manifest ordering is the single apply order; `build` twice is a no-op (the `CREATE INDEX` regression); migration-ledger skip works |
 | **1** vocab + dict | `VocabImporterTests.cs` — deleted with `ImportCsv.cs`, not ported; the Python loader tests cover the active contract | `SCHEMA-03` (bridge concept literals exist) → `constants resolve` fails loudly on a missing `(vocabulary_id, concept_code)`; `SCHEMA-01` / `SCHEMA-02` cover both active dialects and documented storage normalization | `DICT-01..15`: `section` non-null for 100% of non-retired items at the anchor and the 17 expected values; zero orphan `schema_item.item_num`; API/CSV behavior; retry and auth; idempotent load and rollback; dictionary row counts match across dialects |
 | **2** concept maps | `PY-04` (`test_convert_naaccr_omop_maps.py` — the converter is deleted after the one-time seed conversion) | the `NAACCR`/`OMOP` map IDs at the layered build | coverage by layer **and by section**; layer 2 beats layer 1 on an edited override row; layer-3 mints stable across two rebuilds; no non-standard concept in a `*_concept_id` slot |
-| **3** intake | **all of §6 "Python port parity"** — `PY-01`/`PY-02` guard drift from a C# importer that no longer exists; `PY-03` (`test_obx_parser.py`) is deleted with `ccr_labreport_to_naaccr.py` | the 9 `IMP-HL7` IDs in §1.1, from `SdcCdm.NAACCRVolVImporter.ImportNaaccrVolV` to the Python parser; `CLEAN-01` fixture dedup now that `sample_data/` is the single source | golden-envelope conformance + serialization fixed point; partial dates; provenance walk to `raw_blob`; duplicate bytes stored-flagged-not-loaded; two authorities → two patients; malformed message → `parse_status='failed'` |
+| **3** intake | `PY-01`/`PY-02` after their assertions move to the active parser; `PY-03` is already retired because the private project owns the former CCR path | the 9 `IMP-HL7` IDs in §1.1, from `SdcCdm.NAACCRVolVImporter.ImportNaaccrVolV` to the Python parser; `CLEAN-01` fixture dedup now that `sample_data/` is the single source | golden-envelope conformance + serialization fixed point; partial dates; provenance walk to `raw_blob`; duplicate bytes stored-flagged-not-loaded; two authorities → two patients; malformed message → `parse_status='failed'` |
 | **4** bridge | — | the 11 `OMOP` IDs in §3 at the split scripts; the 6 `NAACCR` IDs in §2 | domain routing (coded/numeric/text); the two-slot contract; person/period/`cdm_source`; `9_validate.sql` against `validate_thresholds.csv`; every stage idempotent twice |
 | **5** export | — | **move `EXP-01`–`EXP-04` to roadmap, do not retarget them** — all four are FHIR round-trips against `ExportFhirCpds`, not CSV-bundle tests; see below | a fresh set of CSV-export IDs: export → fresh-schema round-trip equality; manifest row counts and sha256; PHI grep returns zero; header order matches the shared CDM 5.4 `TABLE_SPECS` |
 | **6** docs | — | the 12 `SDCOM` IDs at the C# SDC Object Model refactor; mark `IMP-FHIR` (12), `IMP-NXML` (2), `IMP-CCDA` (1) as roadmap-blocked rather than merely unchecked | notebooks execute top-to-bottom; no doc statement contradicts the code |
 
-Two structural changes to `TEST_PLAN.md` itself, both in Phase 3 where the ownership actually
-flips: **§6 is deleted outright** (see above), and §1.1's heading stops naming a C# type. The
+Two structural changes to `TEST_PLAN.md` itself remain for Phase 3: the still-active `PY-01` and
+`PY-02` coverage moves to the intake section, and §1.1's heading stops naming a C# type. The
 `SdcImporterTests.cs` split and rename described under Correctness fixes lands in the same PR.
 
 #### FHIR code and `EXP-01`
