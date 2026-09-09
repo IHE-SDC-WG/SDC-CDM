@@ -7,10 +7,17 @@ import sys
 from collections.abc import Callable, Sequence
 
 from sdc_cdm.cli.build import BuildRunner
+from sdc_cdm.cli.dictionary import (
+    configure_dict_fetch,
+    configure_dict_load,
+    configure_dict_verify,
+    run_dict_fetch,
+    run_dict_load,
+    run_dict_verify,
+)
 from sdc_cdm.cli.target import add_target_arguments, open_backend
 from sdc_cdm.db.errors import MigrationHashMismatch, SdcCdmError, UsageError
 from sdc_cdm.db.manifest import load_manifest
-
 
 _Configure = Callable[[argparse.ArgumentParser], None]
 _Handler = Callable[[argparse.Namespace], int]
@@ -53,6 +60,24 @@ def _run_build(args: argparse.Namespace) -> int:
 # group on first use.
 _VERBS: tuple[tuple[tuple[str, ...], str, _Configure, _Handler], ...] = (
     (("build",), "apply the ordered database manifest", _configure_build, _run_build),
+    (
+        ("dict", "fetch"),
+        "fetch the NAACCR dictionary from SEER",
+        configure_dict_fetch,
+        run_dict_fetch,
+    ),
+    (
+        ("dict", "load"),
+        "load NAACCR dictionary CSVs",
+        configure_dict_load,
+        run_dict_load,
+    ),
+    (
+        ("dict", "verify"),
+        "verify loaded NAACCR dictionary counts",
+        configure_dict_verify,
+        run_dict_verify,
+    ),
 )
 
 _TARGET = argparse.ArgumentParser(add_help=False)

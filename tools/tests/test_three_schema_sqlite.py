@@ -3,6 +3,11 @@ import sqlite3
 import tempfile
 from pathlib import Path
 
+from sdc_cdm.naaccr.load import (
+    VERSIONED_DELETE_ORDER,
+    VERSIONED_FOREIGN_KEYS,
+)
+
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -35,31 +40,22 @@ def test_cross_dialect_schema_contracts() -> None:
     assert "GROUP BY\n    sr.sdc_report_id" not in sqlserver_bridge
     assert "HASHBYTES('SHA2_256'" in sqlserver_bridge
 
-    ssdi_loader = (
-        ROOT / "tools/ssdi-ts/src/load-3nf-to-sqlserver.ts"
-    ).read_text()
-    assert "transaction.begin(sql.ISOLATION_LEVEL.SERIALIZABLE)" in ssdi_loader
-    assert "await transaction.commit()" in ssdi_loader
-    assert "await transaction.rollback()" in ssdi_loader
-    delete_order = [
-        "naaccr.SCHEMA_INVOLVED_TABLE",
-        "naaccr.SCHEMA_ITEM_CODE",
-        "naaccr.SCHEMA_ITEM_REQUIREMENT",
-        "naaccr.SCHEMA_ITEM",
-        "naaccr.SCHEMA_SELECTION_RULE",
-        "naaccr.STAGING_TABLE_ROW",
-        "naaccr.STAGING_TABLE_COLUMN",
-        "naaccr.STAGING_TABLE",
-        "naaccr.NAACCR_ITEM",
-        "naaccr.STAGING_SCHEMA",
-    ]
-    delete_block = ssdi_loader[
-        ssdi_loader.index("const VERSIONED_DELETE_ORDER"):
-        ssdi_loader.index("async function clearVersionedRows")
-    ]
-    assert [delete_block.index(f"'{table}'") for table in delete_order] == sorted(
-        delete_block.index(f"'{table}'") for table in delete_order
-    )
+    delete_position = {
+        table: position for position, table in enumerate(VERSIONED_DELETE_ORDER)
+    }
+    for child, parents in VERSIONED_FOREIGN_KEYS.items():
+        for parent in parents:
+            assert delete_position[child] < delete_position[parent]
+
+    sqlite_dictionary = naaccr_ddls[0].read_text().lower()
+    sqlserver_dictionary = (
+        ROOT / "database/schemas/naaccr/ddl/sqlserver/0_naaccr_dictionary_sqlserver.sql"
+    ).read_text().lower()
+    for ddl in (sqlite_dictionary, sqlserver_dictionary):
+        assert "naaccr_item_allowed_code" in ddl
+        assert "naaccr_item_registry_requirement" in ddl
+        assert "alternate_names" in ddl
+    assert "schema_selection_rule_id" in sqlserver_dictionary
 
 
 def test_sqlite_three_schema_layout_and_bridge(tmp_path: Path) -> None:
@@ -129,8 +125,9 @@ def test_sqlite_three_schema_layout_and_bridge(tmp_path: Path) -> None:
         INSERT INTO naaccr.data_dictionary_version (algorithm, version)
         VALUES ('EOD', 'test');
 
-        INSERT INTO naaccr.staging_schema (dd_version_id, schema_id_number)
-        VALUES (1, 'test-schema');
+        INSERT INTO naaccr.staging_schema (
+            dd_version_id, schema_id_number, schema_id
+        ) VALUES (1, 'test-schema', 'test-schema');
 
         INSERT INTO naaccr.naaccr_item (dd_version_id, item_num, name)
         VALUES (1, 100, 'Test item');
@@ -312,8 +309,8 @@ def test_naaccr_dictionary_versioning_and_features(tmp_path: Path) -> None:
 
         INSERT INTO naaccr.schema_item (dd_version_id, schema_id_number, item_num, item_role, used_for_staging)
         VALUES
-            ({dd}, '00460', 3827, 'input', 'true'),
-            ({dd}, '00460', 3605, 'output', 'false');
+            ({dd}, '00460', 3827, 'input', 1),
+            ({dd}, '00460', 3605, 'output', 0);
 
         INSERT INTO naaccr.schema_item_code (dd_version_id, schema_id_number, item_num, code, description)
         VALUES
@@ -355,6 +352,10 @@ def test_naaccr_dictionary_versioning_and_features(tmp_path: Path) -> None:
     ).fetchone()[0] == dd
 
     cur.execute(
+        "UPDATE naaccr.data_dictionary_version SET is_current = 0 "
+        "WHERE algorithm = 'eod_public'"
+    )
+    cur.execute(
         "INSERT INTO naaccr.data_dictionary_version (algorithm, version) "
         "VALUES ('eod_public', '3.4')"
     )
@@ -371,7 +372,8 @@ def test_naaccr_dictionary_versioning_and_features(tmp_path: Path) -> None:
         " AND ni.dd_version_id = COALESCE("
         "       nv.dd_version_id, "
         "       (SELECT MAX(dd_version_id) "
-        "        FROM naaccr.data_dictionary_version WHERE is_current = 1)"
+        "        FROM naaccr.data_dictionary_version "
+        "        WHERE algorithm = 'eod_public' AND is_current = 1)"
         "     ) "
         "WHERE nv.value_code = '000'"
     ).fetchone()[0]

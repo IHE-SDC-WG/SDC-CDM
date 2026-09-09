@@ -75,7 +75,7 @@
       },
       {
         "path": "database/schemas/naaccr/ddl/sqlserver/0_naaccr_dictionary_sqlserver.sql",
-        "reapply_on_change": false,
+        "reapply_on_change": true,
         "schema": "naaccr"
       },
       {

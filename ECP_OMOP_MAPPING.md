@@ -57,6 +57,7 @@ JOIN naaccr.naaccr_item ni
        SELECT MAX(dd_version_id)
        FROM naaccr.data_dictionary_version
        WHERE is_current = 1
+         AND algorithm = 'eod_public'
      )
 WHERE m.meas_event_field_concept_id = 1147289;
 ```

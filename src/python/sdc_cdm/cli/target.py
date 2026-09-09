@@ -31,7 +31,7 @@ def open_backend(
 
     if args.dialect == "sqlite":
         if args.db is None:
-            raise UsageError("SQLite build requires --db")
+            raise UsageError("SQLite target requires --db")
         return SQLiteBackend(args.db, read_only=read_only)
 
     connection_string = args.connection_string or os.environ.get(
@@ -39,7 +39,7 @@ def open_backend(
     )
     if not connection_string:
         raise UsageError(
-            "SQL Server build requires --connection-string or "
+            "SQL Server target requires --connection-string or "
             "SDC_CDM_SQLSERVER_CONNECTION_STRING"
         )
     return SqlServerBackend(connection_string)

@@ -33,7 +33,8 @@ LEFT JOIN naaccr.naaccr_item ni
        nv.dd_version_id,
        (SELECT MAX(dd_version_id)
         FROM naaccr.data_dictionary_version
-        WHERE is_current = 1)
+        WHERE is_current = 1
+          AND algorithm = 'eod_public')
      )
 WHERE nv.report_accession = 'your-accession-here'
 ORDER BY nv.naaccr_value_id;
@@ -78,7 +79,8 @@ LEFT JOIN naaccr.naaccr_item ni
        nv.dd_version_id,
        (SELECT MAX(dd_version_id)
         FROM naaccr.data_dictionary_version
-        WHERE is_current = 1)
+        WHERE is_current = 1
+          AND algorithm = 'eod_public')
      )
 ORDER BY m.measurement_id;
 

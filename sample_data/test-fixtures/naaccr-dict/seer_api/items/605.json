@@ -1,0 +1,18 @@
+{
+  "item_number": "605",
+  "item_name": "Inpatient Status",
+  "item_length": "1",
+  "year_implemented": "2010",
+  "version_implemented": "12",
+  "record_types": [
+    "A",
+    "C",
+    "I",
+    "M"
+  ],
+  "date_created": "2011-11-10T10:47:21Z",
+  "date_modified": "2024-04-25T04:40:32.947549Z",
+  "description": "The NAACCR UDSC retired this data item in Version 25, as of January 1, 2025.",
+  "year_retired": "2025",
+  "version_retired": "25"
+}

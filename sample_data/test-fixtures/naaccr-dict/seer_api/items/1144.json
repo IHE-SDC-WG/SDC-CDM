@@ -1,0 +1,25 @@
+{
+  "item_number": "1144",
+  "item_name": "Derived Pediatric M",
+  "item_length": "3",
+  "year_implemented": "2025",
+  "version_implemented": "25",
+  "xml_naaccr_id": "derivedPediatricM",
+  "xml_parent_id": "Tumor",
+  "record_types": [
+    "A",
+    "C",
+    "I",
+    "M"
+  ],
+  "section": "Stage/Prognostic Factors",
+  "source_of_standard": "NAACCR/SEER",
+  "date_created": "2024-04-26T04:55:49.808585Z",
+  "date_modified": "2024-05-30T20:53:11.45259Z",
+  "description": "This item stores the derived Pediatric M value from Pediatric Mets **\\[1138\\]** and other fields (when applicable). Effective for cases diagnosed 1/1/2024 and forward.",
+  "rationale": "Derived Pediatric M can be used to evaluate disease spread at diagnosis, treatment patterns and outcomes over time.",
+  "npcr_collect": "No recommendation",
+  "coc_collect": "No recommendation",
+  "seer_collect": "Required, site specific; when available",
+  "cccr_collect": "No recommendation"
+}
