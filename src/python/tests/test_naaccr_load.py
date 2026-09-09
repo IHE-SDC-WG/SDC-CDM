@@ -200,8 +200,9 @@ def test_partial_ssdi_csv_set_is_rejected(tmp_path: Path) -> None:
             load_dictionary(backend, csv_dir=csv_dir)
 
 
+@pytest.mark.parametrize("dialect", ("sqlite", "sqlserver"))
 def test_failed_second_generation_rolls_back_current_flag_and_all_rows(
-    tmp_path: Path,
+    dialect: str, tmp_path: Path
 ) -> None:
     algorithm = f"rollback_{uuid.uuid4().hex}"
     first_csv = _copy_fixture(tmp_path, algorithm=algorithm, version="a")
@@ -215,7 +216,7 @@ def test_failed_second_generation_rolls_back_current_flag_and_all_rows(
         [tuple(row[column] for column in ALLOWED_CODE_COLUMNS) for row in code_rows],
     )
 
-    with SQLiteBackend(tmp_path / "rollback.db") as backend:
+    with _backend(dialect, tmp_path) as backend:
         BuildRunner(load_manifest(), backend).run()
         generation_a = load_dictionary(backend, csv_dir=first_csv)
 
