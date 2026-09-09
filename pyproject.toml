@@ -20,4 +20,4 @@ where = ["src/python"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src/python"]
-testpaths = ["src/python/tests"]
+testpaths = ["src/python/tests", "tools/tests"]

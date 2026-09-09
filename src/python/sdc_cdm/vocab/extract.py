@@ -8,7 +8,7 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any, Iterator
 
-from sdc_cdm.cdm.tables import EXPECTED_HEADERS, TABLE_SPECS, TableSpec
+from sdc_cdm.cdm.tables import TABLE_SPECS, TableSpec, expected_headers
 from sdc_cdm.db.errors import VocabularyError
 
 
@@ -74,7 +74,7 @@ def validate_source_files(vocab_dir: Path, delimiter: str) -> dict[str, Path]:
             errors.append(f"missing {spec.file_name}")
             continue
         actual_header = _read_header(path, delimiter)
-        expected_header = EXPECTED_HEADERS[spec.file_name]
+        expected_header = expected_headers(spec)
         if actual_header != expected_header:
             errors.append(
                 f"{spec.file_name} header mismatch\n"

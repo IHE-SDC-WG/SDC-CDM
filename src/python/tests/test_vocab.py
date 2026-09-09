@@ -184,6 +184,19 @@ def test_extract_check_reports_missing_file(tmp_path: Path) -> None:
         inspect_extract(vocab_dir, "\t")
 
 
+def test_extract_check_reports_header_mismatch(tmp_path: Path) -> None:
+    vocab_dir = tmp_path / "vocab"
+    _write_extract(vocab_dir)
+    concept_path = vocab_dir / "CONCEPT.csv"
+    header, _, body = concept_path.read_text(encoding="utf-8").partition("\n")
+    concept_path.write_text(
+        header.replace("CONCEPT_CODE", "CODE") + "\n" + body, encoding="utf-8"
+    )
+
+    with pytest.raises(VocabularyError, match="CONCEPT.csv header mismatch"):
+        inspect_extract(vocab_dir, "\t")
+
+
 def test_extract_check_reports_malformed_numeric_value(
     tmp_path: Path,
 ) -> None:

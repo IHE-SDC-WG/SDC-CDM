@@ -150,7 +150,7 @@ TABLE_SPECS = (
     ),
 )
 
-EXPECTED_HEADERS = {
-    spec.file_name: tuple(column.upper() for column in spec.columns)
-    for spec in TABLE_SPECS
-}
+
+def expected_headers(spec: TableSpec) -> tuple[str, ...]:
+    """Return the upper-case header an Athena file must carry for ``spec``."""
+    return tuple(column.upper() for column in spec.columns)
