@@ -60,7 +60,7 @@ with cross-language parity:
 | Units | **`unit_source_value` only.** `unit_concept_id` stays `NULL`; no UCUM mapping table is built. Roadmap. |
 | SDC reference leg | **Not wired.** The eCP path stays NAACCR-dictionary-driven; `sdc.template_*` is intake-only for the SDC XML path, and this gets documented as intentional rather than implied-but-missing. |
 | Concept mapping | **Layered**: Athena standard NAACCR vocabulary → curated overrides → locally minted 2B-range concepts, with a `mapping_layer` provenance column. |
-| Item→schema provenance | **Both axes, both in the dictionary layer.** Vol II *section* is a column on `naaccr_item`, seeded from the imsweb layout extra-info CSV; the site-specific *staging schema* stays the `schema_item` → `staging_schema` many-to-many from SSDI. Captured values stamp `dd_version_id` always and `schema_id_number` only when derivable. |
+| Item→schema provenance | **Both axes, both in the dictionary layer.** Vol II *section* is a column on `naaccr_item`, populated from SEER\*API `/rest/naaccr/*`; the site-specific *staging schema* stays the `schema_item` → `staging_schema` many-to-many from SSDI. Captured values stamp `dd_version_id` always and `schema_id_number` only when derivable. |
 | Concept slots | **Two-slot contract**: `*_source_concept_id` = the NAACCR source concept, `*_concept_id` = the standard concept reached via `concept_relationship` `'Maps to'`. Never the same value in both. |
 | `NAACCR2026` minting script | **Kept, SQL-Server-only, as a supplement.** Concept identity legitimately differs by dialect; this is documented, not treated as drift. |
 | `condition_occurrence` | **Thin version**: one row per report from the primary-site item alone, `concept_id = 0` where unmapped. ICD-O-3 combination-concept derivation goes to the roadmap. |
@@ -118,7 +118,8 @@ and `git blame` survive — the blame trail is how anyone will ever find out *wh
 
 | Asset | Why it cannot be cheaply recreated |
 |---|---|
-| `tools/ssdi-ts/` | Working SEER Staging REST API client + 3NF export. API-specific knowledge, weeks of work. It is now **load-bearing**, not a convenience export: it is the only source for the item→site-schema axis. |
+| `tools/ssdi-ts/` | Working SEER Staging REST API client + 3NF export. It remains the only producer for the item→site-schema axis until its Phase 1 port. The SQL Server loader is replaced by the dual-dialect Python `dict load`. |
+| `src/python/sdc_cdm/naaccr/` | Stdlib-only SEER NAACCR client, deterministic CSV contract, transactional loader, and counts-only verifier. |
 | `tools/load_athena_vocab.py` | Three DB backends, freshness guards, CDM 5.4 column metadata, 8 tests. **The only vocabulary loader** — the C# `ImportCsv.cs` is a single-table stub and is deleted, not merged. |
 | `database/schemas/naaccr/ddl/` | The `data_dictionary_version` dimension, staging-table catalog, `item_role` — real modelling. |
 | `.../sqlserver/2_naaccr_omop_vocab_sqlserver.sql` | 665 lines, and we have decided to **keep** it. |
@@ -327,7 +328,9 @@ resource glob in `BuildSchema()` (`SdcCdmInSqlite.cs:127-135`).
 | `build` | apply `database/schemas/*/ddl/<dialect>/` per manifest | DDL, Python-ordered |
 | `vocab load` | Athena bundle → `omop.concept` et al. | **Python only** — `tools/load_athena_vocab.py` promoted; no C# path |
 | `constants resolve` | populate `etl.concept_constant` by `(vocabulary_id, concept_code)` lookup | Python |
-| `dict load` | imsweb base dictionary + section CSV → `naaccr.naaccr_item`; SEER 3NF CSVs → `naaccr.staging_schema` / `schema_item` / `schema_item_code` / `schema_item_requirement`. Item defs load **first** so the `schema_item → naaccr_item` FK resolves. | Python (CSV/XML streaming) |
+| `dict fetch` | SEER\*API `/rest/naaccr/*` → the item, allowed-code, registry-requirement, and shared version CSVs under `out-egs/`. | Python stdlib HTTP + CSV |
+| `dict load` | Dictionary CSVs → `naaccr_item` and its two children; SEER staging CSVs → `staging_schema`, `schema_item`, codes, requirements, and lookup tables. Item definitions load first so every `schema_item` resolves. | Python batched inserts, one transaction |
+| `dict verify` | Counts-only checks for the declared dictionary version and section distribution. | Python, offline SQL counts |
 | `maps build` | layered concept-map build | set-based SQL, Python-driven |
 | `ingest` | HL7 → `intake` (blob + envelope) → `naaccr` + `sdc` | **Python parser** + `load_envelope.sql` |
 | `bridge` | `naaccr` + `sdc` → `omop` | set-based SQL, Python-driven |
@@ -415,12 +418,12 @@ database/
                          4_condition_and_episode.sql
                          9_validate.sql
   seed/concept_map_overrides.csv           curated layer-2 map
-      naaccr_item_section_overrides.csv    section fallback for items the imsweb CSV lacks
       cdm_source.csv
 src/csharp/{SdcCdm.Sdc,SdcCdm.Sdc.Tests}/  SDC XML import only — no CLI, no pipeline projects
-src/python/sdc_cdm/{envelope,hl7v2,cli,db,vocab,export}/  + tests/   the implementation
-tools/ssdi-ts/                             SEER dictionary export (unchanged)
-tools/naaccr-dict/data/                    vendored imsweb base dictionary + items-extra-info.csv
+src/python/sdc_cdm/{envelope,hl7v2,cli,db,naaccr,vocab,export}/ + tests/
+tools/ssdi-ts/                             SEER staging export until its Python port
+expectations/naaccr-25.json                counts and section-label acceptance anchor
+sample_data/test-fixtures/naaccr-dict/     raw API excerpt + derived CSV fixture
 notebooks/                                 recreated from scratch (see below)
 sample_data/                               single source of fixtures
 docs/{REBUILD_PLAN,SCHEMA_ARCHITECTURE,ROADMAP,TEST_PLAN}.md
@@ -471,47 +474,40 @@ under?"* — so the rebuild records both rather than picking one.
 
 #### Axis A — Vol II record-layout section
 
-One value per item per dictionary version, on the existing `naaccr_item.section`
-(`1_naaccr_sqlite_ddl.sql:59`, present in every dialect DDL, written by no code path today —
-`tools/ssdi-ts/src/create-ssdi.ts:143` emits only `item_num`, `name`, `xml_id`, `unit`,
-`decimal_places`).
+One value per item per dictionary version remains on `naaccr_item.section`. The source is SEER\*API:
+`/rest/naaccr/versions` discovers versions, `/rest/naaccr/{version}` returns a thin index, and one
+`/rest/naaccr/{version}/{id-or-item}` request returns each full DTO. Retired index entries omit `id`
+and are fetched by item number. The complete fetch is therefore N+1 detail work, bounded at eight
+concurrent requests and restored to numeric item order before CSV output.
 
-The imsweb `naaccr-dictionary-<ver>.xml` `ItemDef` **has no section attribute** — NAACCR 25 carries
-only `naaccrId`, `naaccrNum`, `naaccrName`, `length`, `recordTypes`, `parentXmlElement`, `dataType`
-and `padding` across its 780 items. The section map lives in a *different* imsweb repo:
-`imsweb/layout`, at `src/main/resources/layout/fixed/naaccr/items-extra-info.csv` — 895 headerless
-rows of `naaccrId,short_label,section`, no quoting and no embedded commas. `dict load` joins it to
-the base dictionary on `naaccrId` → `naaccr_item.xml_id`, and also lands the second column in a new
-`naaccr_item.short_label`.
+The DTO directly supplies `section`, `data_type`, length, XML identifiers, record types, alternate
+names, source of standard, free-text allowable values, descriptive fields, implementation and
+retirement versions, and source timestamps. `record_types` and `alternate_names` remain compact JSON
+arrays. Structured `allowed_codes` fan out by zero-based array ordinal so repeated codes survive;
+the four `*_collect` values fan out as source text rather than Boolean flags. No `short_label` column
+or section override file is needed.
 
-Both source files are vendored under the dictionary loader's `data/` with a checksum, so `dict load`
-is offline and reproducible. **The licensing question the earlier `.context` plan left open is
-closed:** `imsweb/layout` and `imsweb/naaccr-xml` both ship a 3-clause-BSD `LICENSE` (IMS Inc.,
-2015), so redistribution is permitted with the notice retained.
+**Version anchor.** NAACCR 25 has 946 items: 780 non-retired items with `xml_id` and `section`, and
+166 retired items without either. Its 17 populated sections are: Stage/Prognostic Factors 355,
+Demographic 71, Treatment-1st Course 71, Edit Overrides/Conversion History/System Admin 68,
+Follow-up/Recurrence/Death 34, Pathology 30, Treatment-Subsequent & Other 30, Hospital-Specific 29,
+Cancer Identification 23, Patient-Confidential 22, Other-Confidential 11, Text-Diagnosis 9, Record
+ID 8, Text-Treatment 7, Hospital-Confidential 6, Special Use 4, and Text-Miscellaneous 2. The same
+anchor has 3,900 allowed-code rows and 3,122 registry-requirement rows.
 
-**Version anchor, and its honest limit.** Anchor at **NAACCR 25** (`naaccr-dictionary-250.xml`),
-where the CSV covers 780 of 780 items — zero misses, 17 distinct sections (`Stage/Prognostic
-Factors` 396, `Treatment-1st Course` 91, `Demographic` 85, …). The CSV *lags* newer dictionaries: at
-NAACCR 27 it misses 51 of 822 items (`geoAddrAtDxCity`, `rectalTumorLocation`,
-`overRideSexAssignedAtBirth`, …). So a later anchor needs a fallback — a tracked
-`database/seed/naaccr_item_section_overrides.csv` (`xml_id,section`) applied after the CSV join,
-with `validate` counting NULL sections against a threshold. Do not silently ship NULLs.
-
-**What the dictionary cannot give.** `alignment`, `trim` and start-column data exist only in the
-fixed-column layouts, and those stop at `naaccr-18-layout.xml` — NAACCR retired the flat record
-layout after v18. Either backfill them from the v18 layout for items that still exist, or leave them
-NULL and say so; do not imply the base dictionary supplies them. Likewise `dataType` is declared on
-only 526 of 780 ItemDefs — NULL there means "not declared upstream", not "not loaded".
+**Honest nulls.** Six non-retired v25 items omit `item_data_type`, so the acceptance rule does not
+require that field. `padding`, `alignment`, and `trim` remain NULL because no NAACCR-published source
+supplies them; they existed only in the fixed-column layouts retired after v18.
 
 #### Axis B — site-specific staging schema
 
 No change of shape. `naaccr.schema_item` (with its `item_role` input/output split) →
 `naaccr.staging_schema` stays the SSDI-sourced many-to-many, which is the right model: one item
 number legitimately belongs to many site schemas, so this can never be a column on `naaccr_item`.
-`tools/ssdi-ts` stays the loader.
+`tools/ssdi-ts` remains the SSDI CSV producer until its port; Python `dict load` is the only loader.
 
 The rebuild's contribution is making it actually *load* and *resolve*: the SSDI export and the
-item-def seed must share one `dd_version_id` generation, and `validate` asserts zero orphan
+item-definition seed share one `data_dictionary_version.csv` row, and `dict load` asserts zero orphan
 `schema_item.item_num`. Record the canonical lookup in `SCHEMA_ARCHITECTURE.md`:
 
 ```sql
@@ -847,8 +843,8 @@ resolver; SEER dictionary loader for **both** dialects.
 *Accept when:* every constant resolves from a loaded Athena bundle; deleting one required concept
 makes `constants resolve` exit non-zero with the missing `(vocabulary_id, concept_code)` named; the
 NAACCR dictionary loads into SQLite from the same 3NF CSVs SQL Server uses, with matching row counts;
-`naaccr.naaccr_item` seeds with non-null `xml_id` **and** non-null `section` for 100% of items at the
-declared version anchor, and `SELECT section, COUNT(*) … GROUP BY 1` returns the 17 expected
+`naaccr.naaccr_item` seeds with non-null `xml_id` **and** non-null `section` for 100% of non-retired
+items at the declared version anchor, and `SELECT section, COUNT(*) … GROUP BY 1` returns the 17 expected
 sections; every `schema_item.item_num` resolves to a `naaccr_item` row with zero orphans.
 
 **Phase 2 — concept maps.** Layered build, coverage view, one-time seed conversion from the mapping
@@ -913,7 +909,7 @@ with a one-line note saying why.
 | Phase | Retire | Retarget | Add |
 |---|---|---|---|
 | **0** skeleton | `SCHEMA-05` (C# `BuildSchema()` ↔ raw-DDL drift check — there is no C# schema builder any more) | `TEST_PLAN.md:20` bridge glob → `{sqlite,sqlserver}`; `SCHEMA-02` DDL parity → two dialects; `SCHEMA-04` → whatever survives of `update-ddl-files.py`; `CLEAN-03` → the three-job topology; `CLEAN-02` shared golden files → `contracts/golden/`, Python-only | manifest ordering is the single apply order; `build` twice is a no-op (the `CREATE INDEX` regression); migration-ledger skip works |
-| **1** vocab + dict | `VocabImporterTests.cs` — deleted with `ImportCsv.cs`, not ported; the Python loader's 8 tests already cover strictly more | `SCHEMA-03` (bridge concept literals exist) → `constants resolve` fails loudly on a missing `(vocabulary_id, concept_code)` | `section` non-null for 100% of items at the anchor and the 17 expected values; zero orphan `schema_item.item_num`; dictionary row counts match across dialects |
+| **1** vocab + dict | `VocabImporterTests.cs` — deleted with `ImportCsv.cs`, not ported; the Python loader tests cover the active contract | `SCHEMA-03` (bridge concept literals exist) → `constants resolve` fails loudly on a missing `(vocabulary_id, concept_code)`; `SCHEMA-01` / `SCHEMA-02` cover both active dialects and documented storage normalization | `DICT-01..15`: `section` non-null for 100% of non-retired items at the anchor and the 17 expected values; zero orphan `schema_item.item_num`; API/CSV behavior; retry and auth; idempotent load and rollback; dictionary row counts match across dialects |
 | **2** concept maps | `PY-04` (`test_convert_naaccr_omop_maps.py` — the converter is deleted after the one-time seed conversion) | the `NAACCR`/`OMOP` map IDs at the layered build | coverage by layer **and by section**; layer 2 beats layer 1 on an edited override row; layer-3 mints stable across two rebuilds; no non-standard concept in a `*_concept_id` slot |
 | **3** intake | **all of §6 "Python port parity"** — `PY-01`/`PY-02` guard drift from a C# importer that no longer exists; `PY-03` (`test_obx_parser.py`) is deleted with `ccr_labreport_to_naaccr.py` | the 9 `IMP-HL7` IDs in §1.1, from `SdcCdm.NAACCRVolVImporter.ImportNaaccrVolV` to the Python parser; `CLEAN-01` fixture dedup now that `sample_data/` is the single source | golden-envelope conformance + serialization fixed point; partial dates; provenance walk to `raw_blob`; duplicate bytes stored-flagged-not-loaded; two authorities → two patients; malformed message → `parse_status='failed'` |
 | **4** bridge | — | the 11 `OMOP` IDs in §3 at the split scripts; the 6 `NAACCR` IDs in §2 | domain routing (coded/numeric/text); the two-slot contract; person/period/`cdm_source`; `9_validate.sql` against `validate_thresholds.csv`; every stage idempotent twice |
@@ -953,7 +949,7 @@ at the new import-side assertion rather than deleting them.
 | **Concept identity differs by dialect** (accepted, not a defect). | A SQL Server export and a SQLite export of the same message are not concept-comparable. | Documented in `SCHEMA_ARCHITECTURE.md`, recorded per row in `mapping_layer`, carried in export `manifest.json`, excluded from test assertions. |
 | **Seven phases is a lot of runway.** Phases 3–5 depend on 0–2 landing. | Stalling mid-rebuild leaves two half-migrated layouts. | Each phase lands on `main` by fast-forward, so a stall leaves trunk holding every completed phase. Phases 1–2 alone fix the `concept_id = 0` problem. Do not start Phase 3 until 0–2 are on `main`. |
 | **Dropping PostgreSQL strands a deployment.** Assumes the container was dev convenience, not a target. | Someone deploying on Postgres cannot follow the rebuild. | Confirmed with the working group before Phase 0. If it becomes a real target, fund it properly (manifest entry, CI job, `intake`/`etl` DDL). |
-| **`items-extra-info.csv` is a third-party library resource**, not a NAACCR artifact, and lags: 51 of NAACCR 27's 822 items are absent. | `section` silently NULLs, breaking the layer-3 concept-class derivation. | Vendor with a checksum and fail `dict load` on drift; `naaccr_item_section_overrides.csv` is the escape hatch; `validate` counts NULL sections. NAACCR DD API is the fallback source. |
+| **SEER\*API dictionary refresh requires an authorized key and N+1 detail requests.** | A revoked key or API change can block a refresh. | Keep fetch separate from build/load, retain deterministic gitignored CSVs for local use, commit a raw 12-item fixture for offline CI, retry transient failures, and require an owned key-rotation policy before scheduling refreshes. |
 | **`4_condition_and_episode.sql` is thinly specified.** Thin condition + episode grouping is a deliberate scope cut. | The episode grain (one per accession) may not survive multi-tumor reports. | Keep it in its own script so it can be replaced without touching measurement routing. Revisit with the ICD-O-3 roadmap work. |
 
 ---
@@ -970,7 +966,10 @@ Python not installed.
 python -m sdc_cdm build   --dialect sqlite --db out/demo.db
 python -m sdc_cdm vocab load --vocab-dir database/vocab
 python -m sdc_cdm constants resolve
-python -m sdc_cdm dict load  --csv-dir out-egs
+python -m sdc_cdm dict fetch --dialect sqlite --version 25
+python -m sdc_cdm dict load  --dialect sqlite --db out/demo.db --csv-dir out-egs
+python -m sdc_cdm dict verify --dialect sqlite --db out/demo.db \
+  --expect expectations/naaccr-25.json
 python -m sdc_cdm maps build
 python -m sdc_cdm ingest sample_data/naaccr_v2/*.hl7
 python -m sdc_cdm bridge

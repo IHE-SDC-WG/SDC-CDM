@@ -9,13 +9,20 @@ from pathlib import Path
 
 from sdc_cdm.cdm.tables import TABLE_SPECS
 from sdc_cdm.cli.build import BuildRunner
+from sdc_cdm.cli.dictionary import (
+    configure_dict_fetch,
+    configure_dict_load,
+    configure_dict_verify,
+    run_dict_fetch,
+    run_dict_load,
+    run_dict_verify,
+)
 from sdc_cdm.cli.target import add_target_arguments, open_backend
 from sdc_cdm.db.errors import MigrationHashMismatch, SdcCdmError, UsageError
 from sdc_cdm.db.manifest import load_manifest
 from sdc_cdm.vocab.constants import resolve_constants
 from sdc_cdm.vocab.extract import inspect_extract
 from sdc_cdm.vocab.loader import load_vocab
-
 
 _Configure = Callable[[argparse.ArgumentParser], None]
 _Handler = Callable[[argparse.Namespace], int]
@@ -129,6 +136,24 @@ def _run_constants_resolve(args: argparse.Namespace) -> int:
 # group on first use.
 _VERBS: tuple[tuple[tuple[str, ...], str, _Configure, _Handler], ...] = (
     (("build",), "apply the ordered database manifest", _configure_build, _run_build),
+    (
+        ("dict", "fetch"),
+        "fetch the NAACCR dictionary from SEER",
+        configure_dict_fetch,
+        run_dict_fetch,
+    ),
+    (
+        ("dict", "load"),
+        "load NAACCR dictionary CSVs",
+        configure_dict_load,
+        run_dict_load,
+    ),
+    (
+        ("dict", "verify"),
+        "verify loaded NAACCR dictionary counts",
+        configure_dict_verify,
+        run_dict_verify,
+    ),
     (
         ("vocab", "load"),
         "load an Athena extract into a fresh OMOP vocabulary",

@@ -1,0 +1,25 @@
+{
+  "item_number": "570",
+  "item_name": "Abstracted By",
+  "item_data_type": "text",
+  "item_length": "3",
+  "xml_naaccr_id": "abstractedBy",
+  "xml_parent_id": "Tumor",
+  "record_types": [
+    "A",
+    "C",
+    "I",
+    "M"
+  ],
+  "section": "Hospital-Specific",
+  "source_of_standard": "CoC",
+  "date_created": "2011-11-09T09:47:21Z",
+  "date_modified": "2022-05-27T07:24:12Z",
+  "description": "An alphanumeric code assigned by the reporting facility that identifies the individual abstracting the case.",
+  "npcr_collect": "No recommendation",
+  "coc_collect": "Required",
+  "seer_collect": "Required",
+  "cccr_collect": "No recommendation",
+  "format": "No special characters",
+  "allowable_values": "Letters and numbers"
+}

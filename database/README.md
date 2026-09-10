@@ -54,6 +54,24 @@ The control file is `out/demo.db`; attached schema files are written beside it a
 Only SQLite and SQL Server are executable dialects. Files listed under the manifest's `excluded`
 array are references or later-phase inputs and are never applied by `build`.
 
+## NAACCR Dictionary Data
+
+`sdc-cdm dict fetch` obtains the full item dictionary from SEER\*API and writes deterministic CSVs
+to repository-root `out-egs/`. `dict load` resolves the shared dictionary version, loads item
+definitions before SSDI schema membership, validates constraints, and commits the generation as one
+unit. `dict verify` checks counts and the section distribution without making network requests.
+
+```bash
+python -m sdc_cdm dict fetch --dialect sqlite --version 25
+python -m sdc_cdm dict load --dialect sqlite --db out/demo.db
+python -m sdc_cdm dict verify --dialect sqlite --db out/demo.db \
+  --expect expectations/naaccr-25.json
+```
+
+Only `dict fetch` requires `SEER_API_KEY`. See
+[`schemas/naaccr/DICTIONARY_LOAD.md`](schemas/naaccr/DICTIONARY_LOAD.md) for the API call order,
+CSV fields, SSDI producer order, SQL Server invocation, and current-version query.
+
 ## OMOP Vocabulary Data
 
 The OMOP DDL creates empty vocabulary tables. Download an OHDSI Athena bundle,

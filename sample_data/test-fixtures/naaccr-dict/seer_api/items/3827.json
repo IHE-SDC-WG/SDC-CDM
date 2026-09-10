@@ -1,0 +1,46 @@
+{
+  "item_number": "3827",
+  "item_name": "Estrogen Receptor Summary",
+  "item_data_type": "digits",
+  "item_length": "1",
+  "year_implemented": "2018",
+  "version_implemented": "18",
+  "xml_naaccr_id": "estrogenReceptorSummary",
+  "xml_parent_id": "Tumor",
+  "record_types": [
+    "A",
+    "C",
+    "I",
+    "M"
+  ],
+  "section": "Stage/Prognostic Factors",
+  "source_of_standard": "NAACCR",
+  "date_created": "2017-11-14T17:03:29Z",
+  "date_modified": "2022-05-27T07:24:10Z",
+  "description": "ER (Estrogen Receptor) Summary is a summary of results of the estrogen receptor (ER) assay.",
+  "rationale": "This data item is required for prognostic stage grouping in AJCC 8th edition, Chapter 48, *Breast*. It was previously collected as Breast CS SSF # 1.",
+  "npcr_collect": "Required, site specific",
+  "coc_collect": "Required, site specific",
+  "seer_collect": "Required, site specific",
+  "cccr_collect": "Required, site specific; when available",
+  "code_note": "Each Site-Specific Data Item (SSDI) applies only to selected primary sites, histologies, and years of diagnosis. Depending on applicability and standard-setter requirements, SSDIs may be left blank.",
+  "allowable_values": "0, 1, 7, 9",
+  "allowed_codes": [
+    {
+      "code": "0",
+      "description": "ER negative (0.0% or less than 1%)"
+    },
+    {
+      "code": "1",
+      "description": "ER positive"
+    },
+    {
+      "code": "7",
+      "description": "Test ordered, results not in chart"
+    },
+    {
+      "code": "9",
+      "description": "Not documented in medical record  \n Cannot be determined (indeterminate)  \n ER (Estrogen Receptor) Summary status not assessed or unknown if assessed"
+    }
+  ]
+}

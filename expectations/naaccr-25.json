@@ -1,0 +1,34 @@
+{
+  "algorithm": "eod_public",
+  "version": "3.3",
+  "naaccr_version": "25",
+  "checks": {
+    "item_count": 946,
+    "live_item_count": 780,
+    "retired_item_count": 166,
+    "live_items_missing_section": 0,
+    "section_count": 17,
+    "allowed_code_count": 3900,
+    "registry_requirement_count": 3122,
+    "schema_item_orphan_count": 0
+  },
+  "sections": {
+    "Cancer Identification": 23,
+    "Demographic": 71,
+    "Edit Overrides/Conversion History/System Admin": 68,
+    "Follow-up/Recurrence/Death": 34,
+    "Hospital-Confidential": 6,
+    "Hospital-Specific": 29,
+    "Other-Confidential": 11,
+    "Pathology": 30,
+    "Patient-Confidential": 22,
+    "Record ID": 8,
+    "Special Use": 4,
+    "Stage/Prognostic Factors": 355,
+    "Text-Diagnosis": 9,
+    "Text-Miscellaneous": 2,
+    "Text-Treatment": 7,
+    "Treatment-1st Course": 71,
+    "Treatment-Subsequent & Other": 30
+  }
+}

@@ -18,12 +18,15 @@ def _run_build(control_path: Path, *, dry_run: bool = False):
 
 
 def test_expected_commands_are_registered() -> None:
-    assert {
+    assert registered_commands() == (
         "build",
+        "dict fetch",
+        "dict load",
+        "dict verify",
         "vocab load",
         "vocab check",
         "constants resolve",
-    }.issubset(registered_commands())
+    )
     with pytest.raises(SystemExit) as exc_info:
         main(["ingest"])
     assert exc_info.value.code == 2

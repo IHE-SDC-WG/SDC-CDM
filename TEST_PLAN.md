@@ -258,10 +258,11 @@ importer or direct inserts, run the bridge, assert on `omop.*`.
   second run creates no duplicate objects.
 - [x] **BUILD-02** The migration ledger records applied hashes and the second build reports
   every unchanged file as skipped.
-- [x] **SCHEMA-01** SQLite five-schema attach builds all DDLs and OMOP stays vanilla
-  (`test_three_schema_sqlite.py`).
-- [ ] **SCHEMA-02** DDL parity: the set of tables/columns in the two supported dialects,
-  SQLite and SQL Server, is identical after name and type normalization.
+- [x] **SCHEMA-01** Manifest builds create all five schemas in SQLite and SQL Server, while OMOP
+  stays vanilla. SQLite uses attached files; the SQL Server job executes the same Python suite.
+- [x] **SCHEMA-02** Dictionary tables written by `dict load` use aligned table and column names in
+  both dialects. Tests normalize checked `INTEGER` to `BIT`, generated integer syntax, Unicode text
+  storage, and the intentional SQLite `INTEGER` versus SQL Server `SMALLINT` registry identity.
 - [x] **SCHEMA-03** Essential concept resolution: every `concept_id` literal referenced by
   the bridge ETLs resolves through `etl.concept_constant`, and `constants resolve` fails
   by name when a tracked vocabulary/code pair is missing.
@@ -291,6 +292,41 @@ edit; Athena import and concept resolution are covered by `src/python/tests/test
 - [x] **CONST-04** Re-running constant resolution produces the same six mappings.
 - [x] **CONST-05** Every 4-or-more-digit integer literal in both bridge ETLs is pinned to the
   expected set and appears in `etl.concept_constant` after resolution.
+
+### 5.1 NAACCR dictionary
+
+Fixture: `sample_data/test-fixtures/naaccr-dict/`; live count anchor:
+`expectations/naaccr-25.json`.
+
+- [x] **DICT-01** Client calls versions, the thin index, then one detail endpoint per item, using
+  `entry.get('id') or entry['item']` for retired entries.
+- [x] **DICT-02** Detail fetch concurrency defaults to 8, is capped at 16, and output ordering is
+  deterministic by numeric item number.
+- [x] **DICT-03** HTTP 429/500/502/503/504, URL errors, and timeouts retry four times with backoff;
+  `Retry-After` takes precedence.
+- [x] **DICT-04** HTTP 401/403/404 do not retry, and the SEER error envelope message reaches the
+  caller.
+- [x] **DICT-05** `dict fetch` without `SEER_API_KEY` exits 2 before any request.
+- [x] **DICT-06** CSV output is UTF-8 without BOM, LF, always quoted, null-preserving, and retains
+  embedded newlines, quotes, commas, non-ASCII text, and compact JSON arrays.
+- [x] **DICT-07** CI recomputes the four committed dictionary CSVs byte-for-byte from raw fixture
+  JSON without an API key.
+- [x] **DICT-08** Both DDLs contain the 17 SEER fields, two child tables, filtered current-version
+  index, and aligned loader columns; a stale SQLite item table requests a rebuild.
+- [x] **DICT-09** Before its transaction, load rejects any `schema_item.item_num` absent from the
+  dictionary and names the first offenders.
+- [x] **DICT-10** The same CSV set loads in SQLite and SQL Server with matching table counts and
+  zero foreign-key orphans.
+- [x] **DICT-11** A repeated code within one item survives as two rows with distinct `code_seq`
+  values.
+- [x] **DICT-12** Registry collection requirements retain their source text rather than coercing it
+  to a Boolean.
+- [x] **DICT-13** Loading the same generation twice keeps the same version ID and row counts; only
+  one current row exists per algorithm.
+- [x] **DICT-14** A failure during generation B restores generation A, including its current flag,
+  and leaves no B version row.
+- [x] **DICT-15** `dict verify` prints each expected and actual count plus PASS/FAIL, checks section
+  labels and counts, and reports the first failed check.
 
 ---
 

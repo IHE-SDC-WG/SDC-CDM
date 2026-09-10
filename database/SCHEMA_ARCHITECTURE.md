@@ -25,15 +25,33 @@ regression fixtures seed the matching OMOP person explicitly.
 
 `naaccr` is authoritative for the NAACCR dictionary and raw captured answers.
 
-- `data_dictionary_version` scopes the dictionary by algorithm and version.
-- `naaccr_item`, `staging_schema`, `schema_item`, value-set, requirement, registry, and staging
-  lookup tables hold dictionary metadata.
+- `data_dictionary_version` scopes the dictionary by algorithm and version. A filtered unique index
+  permits one `is_current = 1` row per algorithm.
+- `naaccr_item` holds SEER\*API item definitions. `naaccr_item_allowed_code` preserves each
+  structured code by array ordinal, including repeated codes, and
+  `naaccr_item_registry_requirement` stores the four registries' source collection text.
+- `staging_schema`, `schema_item`, schema-scoped value-set and requirement tables, `registry`, and
+  staging lookup tables hold the site-specific SSDI axis.
 - `naaccr_value` stores one row per logical answered item, including `item_num`, OBX sub-ID,
   coded, numeric, and text values, source units, observation date, dictionary version, and source
   report identifiers.
 - `naaccr_concept_map` and `naaccr_value_concept_map` map item and item-value pairs to OMOP
   concepts. They are keyed independently of dictionary version because the bridge joins by item
   number and code.
+
+The dictionary and SSDI CSVs share one `data_dictionary_version.csv` row, so the loader injects one
+`dd_version_id` into both axes. `dict load` replaces the selected generation in one transaction and
+promotes it only after demoting the prior current row for the same algorithm. The canonical current
+lookup is:
+
+```sql
+SELECT dd_version_id
+FROM naaccr.data_dictionary_version
+WHERE algorithm = ? AND is_current = 1;
+```
+
+Fetch, CSV, load, and verification details are in
+[`schemas/naaccr/DICTIONARY_LOAD.md`](schemas/naaccr/DICTIONARY_LOAD.md).
 
 `naaccr_value.sdc_report_id` is a logical pointer to the source `sdc.sdc_report` row.
 `report_accession` remains as a denormalized business key, but the bridge joins by report ID so
@@ -119,9 +137,9 @@ JOIN sdc.sdc_report sr
 JOIN naaccr.naaccr_item ni
   ON CAST(ni.item_num AS TEXT) = m.measurement_source_value
  AND ni.dd_version_id = (
-       SELECT MAX(dd_version_id)
+       SELECT dd_version_id
        FROM naaccr.data_dictionary_version
-       WHERE is_current = 1
+       WHERE algorithm = 'eod_public' AND is_current = 1
      )
 WHERE m.meas_event_field_concept_id = 1147289;
 ```
@@ -132,6 +150,15 @@ WHERE m.meas_event_field_concept_id = 1147289;
   file `demo.db`, the files are `demo.etl.db`, `demo.intake.db`, `demo.omop.db`,
   `demo.naaccr.db`, and `demo.sdc.db`.
 - **SQL Server:** `etl`, `intake`, `omop`, `naaccr`, and `sdc` are real schemas in one database.
+
+SCHEMA-02 treats these storage differences as equivalent after normalization:
+
+| Logical field | SQLite | SQL Server | Test normalization |
+|---|---|---|---|
+| `registry.id`, `schema_item_requirement.registry_id` | `INTEGER` | `SMALLINT` | Integer identity/reference |
+| Boolean flags | checked `INTEGER` | `BIT` | `0` / `1` |
+| Generated identifiers | `AUTOINCREMENT` | `IDENTITY` | Generated integer |
+| Variable text and JSON text | `TEXT` | `NVARCHAR(n)` / `NVARCHAR(MAX)` | Unicode string |
 
 `database/manifest.json` is the only complete apply inventory. For both dialects it orders files
 by `etl`, `intake`, `omop`, `naaccr`, then `sdc`. Re-running `build` skips unchanged files by

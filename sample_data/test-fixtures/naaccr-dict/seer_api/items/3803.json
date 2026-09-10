@@ -1,0 +1,44 @@
+{
+  "item_number": "3803",
+  "item_name": "Adenoid Cystic Basaloid Pattern",
+  "item_data_type": "text",
+  "item_length": "5",
+  "xml_naaccr_id": "adenoidCysticBasaloidPattern",
+  "xml_parent_id": "Tumor",
+  "record_types": [
+    "A",
+    "C",
+    "I",
+    "M"
+  ],
+  "section": "Stage/Prognostic Factors",
+  "source_of_standard": "NAACCR",
+  "date_created": "2017-11-15T02:42:33Z",
+  "date_modified": "2023-06-29T02:58:44.245661Z",
+  "description": "Adenoid Cystic Basaloid Pattern, the presence of a basaloid pattern on pathological examination, is a prognostic factor for adenoid cystic carcinoma of the lacrimal gland.",
+  "rationale": "Adenoid Cystic Basaloid Pattern is a Registry Data Collection Variable in AJCC 8. This data item was previously collected as Lacrimal Gland, CS SSF# 6.",
+  "npcr_collect": "No recommendation",
+  "coc_collect": "Required, site specific",
+  "seer_collect": "Required, site specific",
+  "cccr_collect": "No recommendation",
+  "code_note": "Each Site-Specific Data Item (SSDI) applies only to selected primary sites, histologies, and years of diagnosis. Depending on applicability and standard-setter requirements, SSDIs may be left blank.",
+  "allowable_values": "0.0-100.0, XXX.5, XXX.8, XXX.9",
+  "allowed_codes": [
+    {
+      "code": "0.0-100.0",
+      "description": "0.0 to 100.0 percent basaloid pattern"
+    },
+    {
+      "code": "XXX.5",
+      "description": "Basaloid pattern present, percentage not stated"
+    },
+    {
+      "code": "XXX.8",
+      "description": "Not applicable: Information not collected for this case\r\n\r\n  \r\n(If this item is required by your standard setter, use of code XXX.8 will result in an edit error.)"
+    },
+    {
+      "code": "XXX.9",
+      "description": "Not documented in medical record\r\n\r\n  \r\nAdenoid Cystic Basaloid Pattern not assessed or unknown if assessed"
+    }
+  ]
+}

@@ -1,0 +1,59 @@
+[
+  {
+    "id": "addrAtDxCountry",
+    "item": "102",
+    "name": "Addr at DX--Country"
+  },
+  {
+    "id": "abstractedBy",
+    "item": "570",
+    "name": "Abstracted By"
+  },
+  {
+    "item": "605",
+    "name": "Inpatient Status"
+  },
+  {
+    "id": "derivedPediatricM",
+    "item": "1144",
+    "name": "Derived Pediatric M"
+  },
+  {
+    "id": "rxDateDxStgProc",
+    "item": "1280",
+    "name": "RX Date DX/Stg Proc"
+  },
+  {
+    "item": "1500",
+    "name": "First Course Calc Method"
+  },
+  {
+    "id": "addrCurrentCountry",
+    "item": "1832",
+    "name": "Addr Current--Country"
+  },
+  {
+    "item": "2785",
+    "name": "CS PostRx Mets at DX"
+  },
+  {
+    "id": "derivedSeerPathStgGrp",
+    "item": "3605",
+    "name": "Derived SEER Path Stg Grp"
+  },
+  {
+    "id": "adenoidCysticBasaloidPattern",
+    "item": "3803",
+    "name": "Adenoid Cystic Basaloid Pattern"
+  },
+  {
+    "id": "estrogenReceptorSummary",
+    "item": "3827",
+    "name": "Estrogen Receptor Summary"
+  },
+  {
+    "id": "lnDistantMediastinalScalene",
+    "item": "3875",
+    "name": "LN Distant: Mediastinal, Scalene"
+  }
+]
