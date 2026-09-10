@@ -6,7 +6,7 @@
 
 SET NOCOUNT ON;
 
-DECLARE @FIELD_NOTE_ID BIGINT = 1147289;
+DECLARE @FIELD_NOTE_ID BIGINT = 1147289; -- TODO(phase-4): read field_note_note_id.
 
 -----------------------------
 -- 1) Notes expected vs actual
@@ -222,7 +222,7 @@ SELECT 'Measurements missing Registry type concept' AS section,
 FROM omop.measurement m
 LEFT JOIN omop.concept c
   ON c.concept_id = m.measurement_type_concept_id
- AND c.concept_id = 32879
+ AND c.concept_id = 32879 -- TODO(phase-4): use measurement_type_registry.
  AND c.domain_id = 'Type Concept'
  AND c.vocabulary_id = 'Type Concept'
 WHERE m.meas_event_field_concept_id = @FIELD_NOTE_ID

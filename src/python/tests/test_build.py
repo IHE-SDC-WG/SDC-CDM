@@ -23,6 +23,9 @@ def test_expected_commands_are_registered() -> None:
         "dict fetch",
         "dict load",
         "dict verify",
+        "vocab load",
+        "vocab check",
+        "constants resolve",
     )
     with pytest.raises(SystemExit) as exc_info:
         main(["ingest"])

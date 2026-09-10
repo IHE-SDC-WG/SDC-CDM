@@ -55,9 +55,9 @@ def _backend(dialect: str, tmp_path: Path) -> Iterator[DatabaseBackend]:
     if dialect == "sqlite":
         backend: DatabaseBackend = SQLiteBackend(tmp_path / "dictionary.db")
     else:
-        connection_string = os.environ.get("SDC_CDM_SQLSERVER_DSN")
+        connection_string = os.environ.get("SDC_CDM_SQLSERVER_CONNECTION_STRING")
         if not connection_string:
-            pytest.skip("SDC_CDM_SQLSERVER_DSN is not set")
+            pytest.skip("SDC_CDM_SQLSERVER_CONNECTION_STRING is not set")
         backend = SqlServerBackend(connection_string)
     try:
         yield backend

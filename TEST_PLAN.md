@@ -263,12 +263,35 @@ importer or direct inserts, run the bridge, assert on `omop.*`.
 - [x] **SCHEMA-02** Dictionary tables written by `dict load` use aligned table and column names in
   both dialects. Tests normalize checked `INTEGER` to `BIT`, generated integer syntax, Unicode text
   storage, and the intentional SQLite `INTEGER` versus SQL Server `SMALLINT` registry identity.
-- [ ] **SCHEMA-03** Essential concept seeding: every `concept_id` literal referenced by the
-  bridge ETLs exists in the seeded `omop.concept` rows.
+- [x] **SCHEMA-03** Essential concept resolution: every `concept_id` literal referenced by
+  the bridge ETLs resolves through `etl.concept_constant`, and `constants resolve` fails
+  by name when a tracked vocabulary/code pair is missing.
 - (retired) **SCHEMA-04** Phase 0 removed the `update-ddl-files.py` tombstone; there is no
   generated DDL output to compare.
 - (retired) **SCHEMA-05** Phase 0 removed the full C# schema builder. The manifest is now
   the only complete database apply order; the surviving C# store builds only its SDC tables.
+
+The former `VocabImporterTests` surface is retired. No vocabulary content remains there to
+edit; Athena import and concept resolution are covered by `src/python/tests/test_vocab.py`.
+
+- [x] **VOCAB-01** Extract preflight requires all nine Athena files, exact headers, and
+  parseable values, then reports each row count without opening a database.
+- [x] **VOCAB-02** A fresh manifest-built target loads all nine tables, preserves values,
+  and reports vocabulary versions on SQLite and SQL Server.
+- [x] **VOCAB-03** Row counts, required concept pairs, 13 reference queries, and dialect FK
+  checks run before commit; a rejected load rolls back every vocabulary row.
+- [x] **VOCAB-04** A load refuses any target where one of the nine vocabulary tables already
+  contains rows.
+- [x] **VOCAB-05** The shared batch path handles date/decimal conversion and a
+  `drug_strength` row whose first numeric field is NULL on both dialects.
+- [x] **CONST-01** All six tracked vocabulary/code pairs resolve into
+  `etl.concept_constant`.
+- [x] **CONST-02** A missing pair exits 1, names the pair and remedy command, and does not
+  modify `etl.concept_constant`.
+- [x] **CONST-03** Ambiguous valid candidates fail and name every candidate concept ID.
+- [x] **CONST-04** Re-running constant resolution produces the same six mappings.
+- [x] **CONST-05** Every 4-or-more-digit integer literal in both bridge ETLs is pinned to the
+  expected set and appears in `etl.concept_constant` after resolution.
 
 ### 5.1 NAACCR dictionary
 

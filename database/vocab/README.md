@@ -58,9 +58,9 @@ nine-table load.
 From the repository root:
 
 ```bash
-python3 tools/load_athena_vocab.py \
-  --vocab-dir database/vocab \
-  --check-only
+python -m sdc_cdm vocab check \
+  --dialect sqlite \
+  --vocab-dir database/vocab
 ```
 
 The check verifies all required files and headers, parses every row, and reports
@@ -68,18 +68,22 @@ the row counts without connecting to a database.
 
 ## Load SQLite
 
-Create the database through the manifest first. For SQLite, pass the physical OMOP database
-file to the vocabulary loader, not the control, ETL, intake, SDC, or NAACCR file:
+Create the database through the manifest first, then pass the same control
+database to the vocabulary loader:
 
 ```bash
 python -m sdc_cdm build --dialect sqlite --db quickstart.db
 ```
 
 ```bash
-python3 tools/load_athena_vocab.py \
+python -m sdc_cdm vocab load \
   --dialect sqlite \
-  --vocab-dir database/vocab \
-  --sqlite-db quickstart.omop.db
+  --db quickstart.db \
+  --vocab-dir database/vocab
+
+python -m sdc_cdm constants resolve \
+  --dialect sqlite \
+  --db quickstart.db
 ```
 
 A fresh manifest build leaves the OMOP vocabulary tables empty. The loader
@@ -89,20 +93,26 @@ existing rows.
 ## Load SQL Server
 
 Install a system ODBC manager and a Microsoft SQL Server ODBC driver for your
-platform first. Then install the optional Python drivers, provide an ODBC
-connection string through the task-specific environment variable, and run:
+platform first. Then install the optional Python driver and provide a complete
+connection string either as an argument or through the shared environment
+variable:
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-python3 -m pip install -r tools/requirements-vocab.txt
+python3 -m pip install ".[sqlserver]"
 
-export ATHENA_SQLSERVER_CONNECTION_STRING='DRIVER={ODBC Driver 18 for SQL Server};SERVER=localhost;DATABASE=cdm;UID=user;PWD=password;TrustServerCertificate=yes'
-python3 tools/load_athena_vocab.py \
+export SDC_CDM_SQLSERVER_CONNECTION_STRING='DRIVER={ODBC Driver 18 for SQL Server};SERVER=localhost;DATABASE=cdm;UID=user;PWD=password;TrustServerCertificate=yes'
+python -m sdc_cdm vocab load \
   --dialect sqlserver \
-  --vocab-dir database/vocab \
-  --schema omop
+  --vocab-dir database/vocab
+
+python -m sdc_cdm constants resolve \
+  --dialect sqlserver
 ```
+
+Use `--connection-string` on either command to override the environment
+variable.
 
 ## Safety and Load Order
 
@@ -114,11 +124,13 @@ For this repository, use the following order:
 
 1. Build the `etl`, `intake`, `omop`, `naaccr`, and `sdc` schemas from the manifest.
 2. Load the Athena vocabulary files with this loader.
-3. Apply repo-specific NAACCR vocabulary additions where the database path
+3. Resolve the tracked concept pairs with `sdc-cdm constants resolve`.
+4. Apply repo-specific NAACCR vocabulary additions where the database path
    requires them.
-4. Import the source report data.
-5. Run the NAACCR-to-OMOP bridge.
+5. Import the source report data.
+6. Run the NAACCR-to-OMOP bridge.
 
 The load runs in a transaction, checks source and database row counts, verifies
-the bridge concept IDs, checks vocabulary references, and reports the loaded
-versions from `VOCABULARY.csv`.
+the tracked vocabulary/code pairs, checks vocabulary references, and reports
+the loaded versions from `VOCABULARY.csv`. Constant resolution fails without
+modifying `etl.concept_constant` if any tracked pair is missing or ambiguous.

@@ -5,7 +5,9 @@ from __future__ import annotations
 import argparse
 import sys
 from collections.abc import Callable, Sequence
+from pathlib import Path
 
+from sdc_cdm.cdm.tables import TABLE_SPECS
 from sdc_cdm.cli.build import BuildRunner
 from sdc_cdm.cli.dictionary import (
     configure_dict_fetch,
@@ -18,6 +20,9 @@ from sdc_cdm.cli.dictionary import (
 from sdc_cdm.cli.target import add_target_arguments, open_backend
 from sdc_cdm.db.errors import MigrationHashMismatch, SdcCdmError, UsageError
 from sdc_cdm.db.manifest import load_manifest
+from sdc_cdm.vocab.constants import resolve_constants
+from sdc_cdm.vocab.extract import inspect_extract
+from sdc_cdm.vocab.loader import load_vocab
 
 _Configure = Callable[[argparse.ArgumentParser], None]
 _Handler = Callable[[argparse.Namespace], int]
@@ -55,6 +60,77 @@ def _run_build(args: argparse.Namespace) -> int:
     return 0
 
 
+def _configure_vocab_source(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--vocab-dir",
+        type=Path,
+        default=Path("database/vocab"),
+        help="directory containing the extracted Athena files",
+    )
+    parser.add_argument(
+        "--delimiter",
+        choices=("tab", "comma"),
+        default="tab",
+        help="extract delimiter (default: tab)",
+    )
+
+
+def _configure_vocab_load(parser: argparse.ArgumentParser) -> None:
+    _configure_vocab_source(parser)
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=10_000,
+        help="rows per database batch (default: 10000)",
+    )
+
+
+def _configure_vocab_check(parser: argparse.ArgumentParser) -> None:
+    _configure_vocab_source(parser)
+
+
+def _configure_constants_resolve(_parser: argparse.ArgumentParser) -> None:
+    pass
+
+
+def _delimiter(name: str) -> str:
+    return "\t" if name == "tab" else ","
+
+
+def _run_vocab_load(args: argparse.Namespace) -> int:
+    with open_backend(args, read_only=False) as backend:
+        report = load_vocab(
+            backend,
+            args.vocab_dir,
+            _delimiter(args.delimiter),
+            batch_size=args.batch_size,
+        )
+    print("Athena vocabulary load completed.")
+    for spec in TABLE_SPECS:
+        print(f"  {spec.table_name}: {report.row_counts[spec.table_name]} rows")
+    print("Loaded vocabulary versions:")
+    for vocabulary_id, version in report.vocabulary_versions:
+        print(f"  {vocabulary_id}: {version or '(not supplied)'}")
+    return 0
+
+
+def _run_vocab_check(args: argparse.Namespace) -> int:
+    counts = inspect_extract(args.vocab_dir, _delimiter(args.delimiter))
+    print("Athena extract is valid.")
+    for spec in TABLE_SPECS:
+        print(f"  {spec.file_name}: {counts[spec.table_name]} rows")
+    return 0
+
+
+def _run_constants_resolve(args: argparse.Namespace) -> int:
+    with open_backend(args, read_only=False) as backend:
+        resolved = resolve_constants(backend)
+    print("OMOP concept constants resolved.")
+    for constant in resolved:
+        print(f"  {constant.constant_name}: {constant.concept_id}")
+    return 0
+
+
 # (verb path, help text, argument configuration, handler). Siblings append one
 # tuple each; a multi-word path such as ("vocab", "load") creates the "vocab"
 # group on first use.
@@ -77,6 +153,24 @@ _VERBS: tuple[tuple[tuple[str, ...], str, _Configure, _Handler], ...] = (
         "verify loaded NAACCR dictionary counts",
         configure_dict_verify,
         run_dict_verify,
+    ),
+    (
+        ("vocab", "load"),
+        "load an Athena extract into a fresh OMOP vocabulary",
+        _configure_vocab_load,
+        _run_vocab_load,
+    ),
+    (
+        ("vocab", "check"),
+        "validate and count an Athena extract",
+        _configure_vocab_check,
+        _run_vocab_check,
+    ),
+    (
+        ("constants", "resolve"),
+        "resolve tracked OMOP concept constants",
+        _configure_constants_resolve,
+        _run_constants_resolve,
     ),
 )
 

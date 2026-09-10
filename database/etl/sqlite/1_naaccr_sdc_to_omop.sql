@@ -31,7 +31,7 @@ SELECT
     sr.person_id,
     COALESCE(rd.observation_date, DATE('now')),
     COALESCE(rd.observation_date, DATE('now')),
-    32817,
+    32817, -- TODO(phase-4): read note_type_ehr from etl.concept_constant.
     0,
     'Synoptic Report',
     COALESCE(NULLIF(TRIM(sr.report_text), ''), 'Synoptic report'),
@@ -67,7 +67,7 @@ SELECT
     COALESCE(ncm.concept_id, 0),
     COALESCE(nv.observation_date, DATE('now')),
     COALESCE(nv.observation_date, DATE('now')),
-    32879, -- Registry OMOP Type Concept; seed the Type Concept vocabulary before bridging.
+    32879, -- TODO(phase-4): read measurement_type_registry from etl.concept_constant.
     NULL,
     nv.value_num,
     nvcm.concept_id,
@@ -83,7 +83,7 @@ SELECT
     NULL,
     COALESCE(NULLIF(nv.value_text, ''), nv.value_code),
     n.note_id,
-    1147289
+    1147289 -- TODO(phase-4): read field_note_note_id from etl.concept_constant.
 FROM (
     SELECT
         nv.*,
@@ -112,7 +112,7 @@ WHERE nv.occurrence_n > (
     SELECT COUNT(*)
     FROM omop.measurement m
     WHERE m.measurement_event_id = n.note_id
-      AND m.meas_event_field_concept_id = 1147289
+      AND m.meas_event_field_concept_id = 1147289 -- TODO(phase-4): use field_note_note_id.
       AND m.measurement_source_value = CAST(nv.item_num AS TEXT)
       AND m.value_as_concept_id IS nvcm.concept_id
       AND m.value_as_number IS nv.value_num
