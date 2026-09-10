@@ -45,21 +45,23 @@ all retained, unexecuted upstream reference files as excluded.
 
 ## NAACCR dictionary
 
-The dictionary comes from SEER\*API `/rest/naaccr/*`. Fetch writes four deterministic CSVs under
-gitignored repository-root `out-egs/`; load uses one transaction and the same CSVs for SQLite or SQL
-Server; verify compares counts with the committed NAACCR 25 expectations.
+The item dictionary and SSDI staging metadata come from SEER\*API. The Python fetch commands write
+one shared, deterministic CSV generation under gitignored repository-root `out-egs/`; load uses one
+transaction and the same files for SQLite or SQL Server. Verify compares counts with the committed
+NAACCR 25 expectations.
 
 ```bash
 export SEER_API_KEY='your key'
 python -m sdc_cdm dict fetch --dialect sqlite --version 25
+python -m sdc_cdm ssdi fetch --dialect sqlite --naaccr-version 25
 python -m sdc_cdm dict load --dialect sqlite --db out/demo.db
 python -m sdc_cdm dict verify --dialect sqlite --db out/demo.db \
   --expect expectations/naaccr-25.json
 ```
 
-`dict fetch` inherits `--dialect` for a uniform command shape but does not connect to a database.
-The full API sequence, CSV contract, optional SSDI export, SQL Server commands, and rebuild guidance
-are in
+Both fetch commands inherit `--dialect` for a uniform command shape but do not connect to a
+database. The API sequence, flag mapping, 12-file SSDI contract, SQL Server commands, and rebuild
+guidance are in
 [`database/schemas/naaccr/DICTIONARY_LOAD.md`](database/schemas/naaccr/DICTIONARY_LOAD.md).
 
 ## Tool support
@@ -69,6 +71,7 @@ are in
 | Python `sdc_cdm build` | Supported | Supported |
 | Python `sdc_cdm dict load` / `dict verify` | Supported | Supported |
 | Python `sdc_cdm dict fetch` | Network-only; target ignored | Network-only; target ignored |
+| Python `sdc_cdm ssdi fetch` | Network-only; target ignored | Network-only; target ignored |
 | C# SDC XML importer | Supported | Not supported |
 
 The C# project is deliberately limited to SDC XML template and response persistence. It uses

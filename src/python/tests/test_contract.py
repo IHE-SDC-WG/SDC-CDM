@@ -1,10 +1,36 @@
 from __future__ import annotations
 
 import json
+import subprocess
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[3]
+
+
+def test_node_producer_files_are_fully_retired() -> None:
+    tracked = subprocess.run(
+        ["git", "ls-files"],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.splitlines()
+    forbidden = [
+        path
+        for path in tracked
+        if (ROOT / path).is_file()
+        and (
+            path.endswith((".ts", "/package.json", "/package-lock.json"))
+            or path in {"package.json", "package-lock.json"}
+        )
+    ]
+    assert forbidden == []
+    assert all(
+        "node_modules/" not in (ROOT / path).read_text(encoding="utf-8")
+        for path in tracked
+        if path.endswith(".gitignore") and (ROOT / path).is_file()
+    )
 
 
 def test_envelope_schema_is_strict_and_versioned() -> None:
