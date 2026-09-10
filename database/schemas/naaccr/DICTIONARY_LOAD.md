@@ -1,8 +1,9 @@
 # NAACCR dictionary and SSDI fetch, load, and verification
 
 The Python `dict` and `ssdi` commands fetch two parts of one versioned NAACCR data set from
-SEER\*API. Both producers write deterministic CSVs for the same Python loader. The API key is used
-only by the two fetch commands; builds, loads, verification, and tests remain offline.
+SEER\*API. Both producers write deterministic CSVs, each with its own generation stamp, for the same
+Python loader. The API key is used only by the two fetch commands; builds, loads, verification, and
+tests remain offline.
 
 ## Fetch commands and flags
 
@@ -14,9 +15,10 @@ They require `SEER_API_KEY` and exit 2 before any request when it is missing.
 | `dict fetch` | `--version`, default `25` | `--algorithm`, default `eod_public` | `--staging-version`, default `3.3` | `--csv-dir`, default repository-root `out-egs/` |
 | `ssdi fetch` | required `--naaccr-version` | `--algorithm`, default `eod_public` | `--staging-version`, default `3.3` | `--csv-dir`, default repository-root `out-egs/` |
 
-`SSDI_ALGORITHM` and `SSDI_VERSION` are not read. Pass non-default values as flags to both commands
-so they write the same `data_dictionary_version.csv` row. `SEER_API_KEY` is the only fetch
-credential.
+`SSDI_ALGORITHM` and `SSDI_VERSION` are not read. Pass non-default values as flags to both commands.
+`dict fetch` records its generation in `data_dictionary_version.csv` and `ssdi fetch` records its
+generation in `ssdi_version.csv`; `dict load` refuses a directory whose two stamps disagree on
+algorithm, staging version, or NAACCR version. `SEER_API_KEY` is the only fetch credential.
 
 ```bash
 export SEER_API_KEY='your key'
@@ -68,7 +70,7 @@ All CSVs use UTF-8 without a BOM, LF endings, always-quoted fields, empty cells 
 values, and atomic replacement. Embedded newlines and quotes are retained. Table row cells use
 compact JSON arrays, including `null` positions.
 
-`dict fetch` writes three dictionary files plus the shared version row:
+`dict fetch` writes three dictionary files plus the dictionary generation row that it alone owns:
 
 | File | Contents |
 | --- | --- |
@@ -81,7 +83,7 @@ compact JSON arrays, including `null` positions.
 
 | File | Contents |
 | --- | --- |
-| `data_dictionary_version.csv` | The same one-row generation record |
+| `ssdi_version.csv` | One-row SSDI generation stamp with the same four columns; must match `data_dictionary_version.csv` |
 | `staging_schema.csv` | Numeric schema ID, API schema ID, and name |
 | `schema_selection_rule.csv` | Site, histology, behavior, sex, discriminators, and diagnosis-year ranges |
 | `naaccr_item.csv` | SSDI input and NAACCR output items with unit and decimal metadata |
@@ -98,6 +100,10 @@ Only inputs carrying `metadata.name == "SSDI"` become `schema_item` input rows. 
 outputs are included unless the same schema and item already appeared as an input. Non-NAACCR
 outputs do not become item rows, but their tables remain involved. No flat compatibility files or
 `--flat` mode are provided.
+
+Each producer removes its own stamp before rewriting its data files and writes the stamp last, so an
+interrupted refresh leaves a set that `dict load` rejects as incomplete rather than a mixed
+generation.
 
 The complete fetched output stays in gitignored `out-egs/`. The repository contains only small,
 independently synthetic test fixtures under `sample_data/test-fixtures/ssdi/` and a reduced
@@ -144,9 +150,10 @@ new columns and tables when `build` runs again.
 
 ## Transaction and current-version rules
 
-If any SSDI CSV is present, `dict load` requires the complete 11-file SSDI set in addition to the
-shared version row. A dictionary-only load is valid when none is present. The loader validates CSV
-headers, target columns, and every `schema_item.item_num` before opening its transaction.
+If any SSDI CSV is present, `dict load` requires the complete 12-file SSDI set, including
+`ssdi_version.csv`, in addition to `data_dictionary_version.csv`. A dictionary-only load is valid
+when none is present. The loader validates CSV headers, target columns, agreement between the two
+generation stamps, and every `schema_item.item_num` before opening its transaction.
 
 Within one transaction it resolves the version row, demotes the previous current row for that
 algorithm, clears the selected generation child-first, loads item definitions before staging

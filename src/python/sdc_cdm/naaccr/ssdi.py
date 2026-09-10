@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from sdc_cdm.naaccr.client import BASE_URL, SeerApiClient, SeerApiError
-from sdc_cdm.naaccr.columns import VERSION_COLUMNS, VERSION_FILE
+from sdc_cdm.naaccr.columns import SSDI_VERSION_FILE, VERSION_COLUMNS
 from sdc_cdm.naaccr.csv_io import DEFAULT_CSV_DIR, write_csv
 
 STAGING_SCHEMA_COLUMNS = ("schema_id_number", "schema_id", "schema_name")
@@ -83,7 +83,7 @@ SSDI_CONTRACT: dict[str, tuple[str, ...]] = {
     "staging_table_row.csv": STAGING_TABLE_ROW_COLUMNS,
     "schema_involved_table.csv": SCHEMA_INVOLVED_TABLE_COLUMNS,
 }
-SSDI_FILES = (VERSION_FILE, *SSDI_CONTRACT)
+SSDI_FILES = (SSDI_VERSION_FILE, *SSDI_CONTRACT)
 STATIC_REGISTRIES = (
     ("SEER", "SEER"),
     ("NPCR", "NPCR"),
@@ -508,10 +508,14 @@ def write_ssdi_csvs(
         raise SeerApiError("staging table order does not match the schema payloads")
     table_by_id = _table_map(table_ids, tables)
     rows = _producer_rows(ordered_schemas, table_ids, table_by_id, links)
+    # dict fetch owns data_dictionary_version.csv; this stamp records the SSDI
+    # generation and dict load requires the two to agree. It is removed first
+    # and written last so an interrupted refresh leaves an incomplete set.
+    (output_dir / SSDI_VERSION_FILE).unlink(missing_ok=True)
     for filename, columns in SSDI_CONTRACT.items():
         write_csv(output_dir / filename, columns, rows[filename])
     write_csv(
-        output_dir / VERSION_FILE,
+        output_dir / SSDI_VERSION_FILE,
         VERSION_COLUMNS,
         [
             (

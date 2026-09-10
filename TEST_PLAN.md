@@ -309,6 +309,10 @@ count anchor: `expectations/naaccr-25.json`.
   byte-for-byte. Coverage includes numeric schema ordering, missing schema IDs, shared and non-SSDI
   input tables, input/output item collisions, non-NAACCR outputs, case-insensitive description
   columns, lowercase Booleans, compact escaped JSON, and retained null cell positions.
+- [x] **DICT-17** `ssdi fetch` writes `ssdi_version.csv` rather than the dictionary's shared row.
+  `dict load` rejects a directory whose two stamps disagree on algorithm, staging version, or NAACCR
+  version before opening a transaction, treats a missing stamp as an incomplete SSDI set, and an
+  interrupted refresh by either producer leaves no stamp.
 
 ---
 

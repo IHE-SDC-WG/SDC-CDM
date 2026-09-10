@@ -18,7 +18,8 @@ DTOs with six and seven fields, a retired item with `record_types`, and a live i
 `item_data_type`. The excerpt does not represent all 17 NAACCR sections.
 
 `csv/` contains the four files derived from those JSON responses plus a small synthetic SSDI
-CSV set used to prove the shared `dd_version_id` and zero-orphan checks. Tests regenerate the
-four API-derived CSVs without a key and compare their bytes with the committed files.
+CSV set, stamped by an agreeing `ssdi_version.csv`, used to prove the shared `dd_version_id`,
+generation-agreement, and zero-orphan checks. Tests regenerate the four API-derived CSVs without
+a key and compare their bytes with the committed files.
 `broken_csv/` changes only the staging membership by adding item `999999`; it exercises the
 pre-transaction orphan preflight.

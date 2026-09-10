@@ -506,8 +506,9 @@ No change of shape. `naaccr.schema_item` (with its `item_role` input/output spli
 number legitimately belongs to many site schemas, so this can never be a column on `naaccr_item`.
 Python `ssdi fetch` produces the SSDI CSVs; Python `dict load` is the only loader.
 
-The rebuild's contribution is making it actually *load* and *resolve*: the SSDI export and the
-item-definition seed share one `data_dictionary_version.csv` row, and `dict load` asserts zero orphan
+The rebuild's contribution is making it actually *load* and *resolve*: the SSDI export
+(`ssdi_version.csv`) and the item-definition seed (`data_dictionary_version.csv`) each carry a
+generation stamp that `dict load` requires to agree, and `dict load` asserts zero orphan
 `schema_item.item_num`. Record the canonical lookup in `SCHEMA_ARCHITECTURE.md`:
 
 ```sql

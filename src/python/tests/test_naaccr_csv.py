@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+import pytest
 from sdc_cdm.naaccr.client import SeerApiClient
 from sdc_cdm.naaccr.columns import (
     ALLOWED_CODE_FILE,
@@ -116,3 +117,23 @@ def test_fixture_covers_the_declared_shapes_without_claiming_all_sections() -> N
     assert any(
         item.get("xml_naaccr_id") and not item.get("item_data_type") for item in items
     )
+
+
+def test_interrupted_dictionary_refresh_leaves_no_version_row(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    stale = tmp_path / VERSION_FILE
+    stale.write_text("stale\n", encoding="utf-8")
+
+    def fail_first_write(*_args: object, **_kwargs: object) -> int:
+        raise OSError("disk full")
+
+    monkeypatch.setattr("sdc_cdm.naaccr.fetch.write_csv", fail_first_write)
+    with pytest.raises(OSError, match="disk full"):
+        fetch_dictionary(
+            SeerApiClient("fixture-key", transport=_RawFixtureTransport()),
+            naaccr_version="25",
+            output_dir=tmp_path,
+        )
+
+    assert not stale.exists()

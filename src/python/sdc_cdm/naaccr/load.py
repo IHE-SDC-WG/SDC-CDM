@@ -16,6 +16,7 @@ from sdc_cdm.naaccr.columns import (
     DICTIONARY_FILE,
     REGISTRY_REQUIREMENT_COLUMNS,
     REGISTRY_REQUIREMENT_FILE,
+    SSDI_VERSION_FILE,
     VERSION_COLUMNS,
     VERSION_FILE,
 )
@@ -27,6 +28,7 @@ from sdc_cdm.naaccr.ssdi import (
     SCHEMA_ITEM_COLUMNS,
     SELECTION_RULE_COLUMNS,
     SSDI_CONTRACT,
+    SSDI_FILES,
     SSDI_ITEM_COLUMNS,
     STAGING_SCHEMA_COLUMNS,
     STAGING_TABLE_COLUMN_COLUMNS,
@@ -210,11 +212,15 @@ def _read_sources(csv_dir: Path) -> _Sources:
         raise VocabularyError(f"{csv_dir / DICTIONARY_FILE} has no rows")
 
     present_ssdi = {
-        filename for filename in SSDI_CONTRACT if (csv_dir / filename).is_file()
+        filename for filename in SSDI_FILES if (csv_dir / filename).is_file()
     }
-    if present_ssdi and len(present_ssdi) != len(SSDI_CONTRACT):
-        missing = sorted(set(SSDI_CONTRACT) - present_ssdi)
+    if present_ssdi and len(present_ssdi) != len(SSDI_FILES):
+        missing = sorted(set(SSDI_FILES) - present_ssdi)
         raise VocabularyError("incomplete SSDI CSV set; missing: " + ", ".join(missing))
+    if present_ssdi:
+        _require_same_generation(
+            version, read_single_row(csv_dir, SSDI_VERSION_FILE, VERSION_COLUMNS)
+        )
     ssdi = (
         {
             filename: read_csv(csv_dir, filename, columns)
@@ -230,6 +236,29 @@ def _read_sources(csv_dir: Path) -> _Sources:
         allowed_codes=allowed_codes,
         registry_requirements=registry_requirements,
         ssdi=ssdi,
+    )
+
+
+def _generation(row: dict[str, str]) -> tuple[str, str, str]:
+    return (row["algorithm"], row["version"], row["naaccr_version"])
+
+
+def _describe_generation(row: dict[str, str]) -> str:
+    return f"{row['algorithm']}/{row['version']} (NAACCR {row['naaccr_version']})"
+
+
+def _require_same_generation(
+    dictionary_row: dict[str, str], ssdi_row: dict[str, str]
+) -> None:
+    """Reject a directory whose dictionary and SSDI stamps disagree."""
+
+    if _generation(dictionary_row) == _generation(ssdi_row):
+        return
+    raise VocabularyError(
+        f"{SSDI_VERSION_FILE} generation {_describe_generation(ssdi_row)} does not "
+        f"match {VERSION_FILE} generation {_describe_generation(dictionary_row)}; "
+        "re-run dict fetch and ssdi fetch with the same --algorithm, "
+        "--staging-version, and NAACCR version"
     )
 
 
@@ -584,7 +613,7 @@ def load_dictionary(
     *,
     csv_dir: Path = DEFAULT_CSV_DIR,
 ) -> LoadResult:
-    """Replace one dictionary generation atomically from the shared CSV set."""
+    """Replace one dictionary generation atomically from one agreeing CSV set."""
 
     _preflight_target(backend)
     sources = _read_sources(csv_dir)

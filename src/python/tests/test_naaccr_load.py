@@ -18,6 +18,7 @@ from sdc_cdm.db.sqlserver_backend import SqlServerBackend
 from sdc_cdm.naaccr.columns import (
     ALLOWED_CODE_COLUMNS,
     ALLOWED_CODE_FILE,
+    SSDI_VERSION_FILE,
     VERSION_COLUMNS,
     VERSION_FILE,
 )
@@ -42,11 +43,9 @@ def _copy_fixture(
 ) -> Path:
     target = tmp_path / f"csv-{version}"
     shutil.copytree(source, target)
-    write_csv(
-        target / VERSION_FILE,
-        VERSION_COLUMNS,
-        [(algorithm, version, "25", "https://api.seer.cancer.gov/rest/naaccr/25")],
-    )
+    row = (algorithm, version, "25", "https://api.seer.cancer.gov/rest/naaccr/25")
+    write_csv(target / VERSION_FILE, VERSION_COLUMNS, [row])
+    write_csv(target / SSDI_VERSION_FILE, VERSION_COLUMNS, [row])
     return target
 
 
@@ -269,6 +268,71 @@ def test_ssdi_item_missing_only_from_dictionary_gets_a_counted_stub(
             "WHERE dd_version_id = ? AND item_num = 999998",
             (result.dd_version_id,),
         ) == ("Loud stub", "mm", 1)
+
+
+def test_missing_ssdi_version_stamp_is_an_incomplete_set(tmp_path: Path) -> None:
+    csv_dir = _copy_fixture(tmp_path, algorithm="missing_stamp")
+    (csv_dir / SSDI_VERSION_FILE).unlink()
+
+    with SQLiteBackend(tmp_path / "missing.db") as backend:
+        BuildRunner(load_manifest(), backend).run()
+        with pytest.raises(
+            VocabularyError, match="incomplete SSDI CSV set.*ssdi_version"
+        ):
+            load_dictionary(backend, csv_dir=csv_dir)
+
+
+_STAGING_API = "https://api.seer.cancer.gov/rest/staging"
+
+
+@pytest.mark.parametrize(
+    "ssdi_row",
+    (
+        ("eod_public", "3.3", "26", f"{_STAGING_API}/eod_public/3.3"),
+        ("tnm", "3.3", "25", f"{_STAGING_API}/tnm/3.3"),
+        ("eod_public", "3.4", "25", f"{_STAGING_API}/eod_public/3.4"),
+    ),
+    ids=("naaccr_version", "algorithm", "staging_version"),
+)
+def test_mismatched_ssdi_generation_is_rejected_before_transaction(
+    tmp_path: Path, ssdi_row: tuple[str, str, str, str]
+) -> None:
+    mismatched = tmp_path / "mismatched"
+    shutil.copytree(FIXTURE_CSV, mismatched)
+    write_csv(mismatched / SSDI_VERSION_FILE, VERSION_COLUMNS, [ssdi_row])
+
+    with SQLiteBackend(tmp_path / "mismatch.db") as backend:
+        BuildRunner(load_manifest(), backend).run()
+        valid = load_dictionary(backend, csv_dir=FIXTURE_CSV)
+        before = backend.fetch_one(
+            "SELECT COUNT(*) FROM naaccr.naaccr_item WHERE dd_version_id = ?",
+            (valid.dd_version_id,),
+        )[0]
+
+        with pytest.raises(
+            VocabularyError, match=r"ssdi_version\.csv generation .* does not match"
+        ):
+            load_dictionary(backend, csv_dir=mismatched)
+
+        assert (
+            backend.fetch_one(
+                "SELECT COUNT(*) FROM naaccr.naaccr_item WHERE dd_version_id = ?",
+                (valid.dd_version_id,),
+            )[0]
+            == before
+        )
+        assert (
+            backend.fetch_one(
+                "SELECT is_current FROM naaccr.data_dictionary_version "
+                "WHERE dd_version_id = ?",
+                (valid.dd_version_id,),
+            )[0]
+            == 1
+        )
+        assert (
+            backend.fetch_one("SELECT COUNT(*) FROM naaccr.data_dictionary_version")[0]
+            == 1
+        )
 
 
 def test_stale_sqlite_dictionary_shape_requests_a_rebuild(tmp_path: Path) -> None:
