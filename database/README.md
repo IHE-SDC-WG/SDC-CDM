@@ -56,21 +56,25 @@ array are references or later-phase inputs and are never applied by `build`.
 
 ## NAACCR Dictionary Data
 
-`sdc-cdm dict fetch` obtains the full item dictionary from SEER\*API and writes deterministic CSVs
-to repository-root `out-egs/`. `dict load` resolves the shared dictionary version, loads item
-definitions before SSDI schema membership, validates constraints, and commits the generation as one
-unit. `dict verify` checks counts and the section distribution without making network requests.
+`dict fetch` obtains the full item dictionary from SEER\*API and `ssdi fetch` obtains the
+site-specific staging metadata. Both write deterministic CSVs to repository-root `out-egs/`, each
+with its own generation stamp. `dict load` requires the two stamps to agree, resolves the dictionary
+version, loads item definitions before SSDI schema membership, validates constraints, and commits
+the generation as one unit. `dict verify` checks counts and the section distribution without making
+network requests.
 
 ```bash
+export SEER_API_KEY='your key'
 python -m sdc_cdm dict fetch --dialect sqlite --version 25
+python -m sdc_cdm ssdi fetch --dialect sqlite --naaccr-version 25
 python -m sdc_cdm dict load --dialect sqlite --db out/demo.db
 python -m sdc_cdm dict verify --dialect sqlite --db out/demo.db \
   --expect expectations/naaccr-25.json
 ```
 
-Only `dict fetch` requires `SEER_API_KEY`. See
+Both fetch commands require `SEER_API_KEY`; load and verify are offline. See
 [`schemas/naaccr/DICTIONARY_LOAD.md`](schemas/naaccr/DICTIONARY_LOAD.md) for the API call order,
-CSV fields, SSDI producer order, SQL Server invocation, and current-version query.
+CSV fields, SSDI producer order, generation stamps, SQL Server invocation, and current-version query.
 
 ## OMOP Vocabulary Data
 

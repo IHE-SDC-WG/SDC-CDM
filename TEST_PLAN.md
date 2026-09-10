@@ -295,8 +295,8 @@ edit; Athena import and concept resolution are covered by `src/python/tests/test
 
 ### 5.1 NAACCR dictionary
 
-Fixture: `sample_data/test-fixtures/naaccr-dict/`; live count anchor:
-`expectations/naaccr-25.json`.
+Fixtures: `sample_data/test-fixtures/naaccr-dict/` and `sample_data/test-fixtures/ssdi/`; live
+count anchor: `expectations/naaccr-25.json`.
 
 - [x] **DICT-01** Client calls versions, the thin index, then one detail endpoint per item, using
   `entry.get('id') or entry['item']` for retired entries.
@@ -327,6 +327,15 @@ Fixture: `sample_data/test-fixtures/naaccr-dict/`; live count anchor:
   and leaves no B version row.
 - [x] **DICT-15** `dict verify` prints each expected and actual count plus PASS/FAIL, checks section
   labels and counts, and reports the first failed check.
+- [x] **DICT-16** `ssdi fetch` validates NAACCR before staging calls, fetches each schema and unique
+  involved table once with bounded concurrency, and regenerates all 12 committed synthetic CSVs
+  byte-for-byte. Coverage includes numeric schema ordering, missing schema IDs, shared and non-SSDI
+  input tables, input/output item collisions, non-NAACCR outputs, case-insensitive description
+  columns, lowercase Booleans, compact escaped JSON, and retained null cell positions.
+- [x] **DICT-17** `ssdi fetch` writes `ssdi_version.csv` rather than the dictionary's shared row.
+  `dict load` rejects a directory whose two stamps disagree on algorithm, staging version, or NAACCR
+  version before opening a transaction, treats a missing stamp as an incomplete SSDI set, and an
+  interrupted refresh by either producer leaves no stamp.
 
 ---
 
@@ -338,7 +347,8 @@ The Python ports must not drift from the C# importers.
   `contracts/golden/`. These contract files are Python-only after Phase 0.
 - [ ] **PY-02** *(regression, review finding #5)* Python port handles non-integer OBX-3
   identifiers the same way the C# fix does.
-- [x] **PY-03** OBX parser unit tests (`test_obx_parser.py`).
+- (retired) **PY-03** The former public CCR JSON importer and its eight-test module were removed;
+  its private project now owns that coverage.
 - [x] **PY-04** NAACCR→OMOP map conversion tests (`test_convert_naaccr_omop_maps.py`).
 
 ---

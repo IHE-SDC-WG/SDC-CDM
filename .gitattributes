@@ -1,3 +1,4 @@
 # SEER DTO text can contain trailing spaces inside quoted multiline CSV fields.
 sample_data/test-fixtures/naaccr-dict/csv/*.csv -whitespace
 sample_data/test-fixtures/naaccr-dict/broken_csv/*.csv -whitespace
+sample_data/test-fixtures/ssdi/csv/*.csv -whitespace

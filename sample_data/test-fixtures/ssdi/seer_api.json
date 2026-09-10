@@ -1,0 +1,113 @@
+{
+  "/rest/naaccr/versions": [
+    {"version": "25"},
+    {"version": "26"}
+  ],
+  "/rest/staging/eod_public/3.3/schemas": [
+    {"id": "schema-b"},
+    {"id": "schema-without-number"},
+    {"id": "schema-a"},
+    {"id": "schema-a"}
+  ],
+  "/rest/staging/eod_public/3.3/schema/schema-a": {
+    "id": "schema-a",
+    "name": "Schema A",
+    "schema_selection_table": "selection-shared",
+    "inputs": [
+      {"key": "context", "name": "Context", "table": "extra-a", "metadata": []},
+      {"key": "item100", "name": "Item 100", "naaccr_item": 100, "naaccr_xml_id": "item100", "table": "codes-a", "used_for_staging": true, "unit": "mm", "decimal_places": 1, "metadata": [{"name": "SSDI"}, {"name": "SEER_REQUIRED"}]},
+      {"key": "item200", "name": "Item 200", "naaccr_item": 200, "naaccr_xml_id": "item200", "table": "codes-shared", "default": "0", "metadata": [{"name": "SSDI"}, {"name": "NPCR_REQUIRED"}]}
+    ],
+    "outputs": [
+      {"key": "collision", "name": "Collision output", "naaccr_item": 100, "naaccr_xml_id": "item100", "table": "output-collision"},
+      {"key": "ajcc_id", "name": "Nonnumeric output", "naaccr_item": "not-naaccr", "table": "nonnumeric-output"},
+      {"key": "naaccr_schema_id", "default": "10"}
+    ]
+  },
+  "/rest/staging/eod_public/3.3/schema/schema-b": {
+    "id": "schema-b",
+    "name": "Schema B, quoted",
+    "schema_selection_table": "selection-shared",
+    "inputs": [
+      {"key": "context", "name": "Other context", "table": "extra-b", "metadata": [{"name": "NOT_SSDI"}]},
+      {"key": "item200", "name": "Item 200 alternate", "naaccr_item": 200, "naaccr_xml_id": "item200", "table": "codes-shared", "unit": "cm", "decimal_places": 2, "metadata": [{"name": "SSDI"}, {"name": "CCCR_REQUIRED"}]},
+      {"key": "item150", "name": "Item 150", "naaccr_item": 150, "naaccr_xml_id": "item150", "table": "codes-b", "used_for_staging": false, "metadata": [{"name": "SSDI"}, {"name": "COC_REQUIRED"}]}
+    ],
+    "outputs": [
+      {"key": "collision", "name": "Collision output", "naaccr_item": 200, "naaccr_xml_id": "item200", "table": "output-collision"},
+      {"key": "derived", "name": "Derived 900", "naaccr_item": 900, "naaccr_xml_id": "derived900", "table": "output-codes", "default": "X"},
+      {"key": "naaccr_schema_id", "default": "20"}
+    ]
+  },
+  "/rest/staging/eod_public/3.3/schema/schema-without-number": {
+    "id": "schema-without-number",
+    "name": "Skipped schema",
+    "schema_selection_table": "must-not-fetch",
+    "inputs": [],
+    "outputs": []
+  },
+  "/rest/staging/eod_public/3.3/table/selection-shared": {
+    "id": "selection-shared",
+    "name": "Selection",
+    "definition": [
+      {"key": "hist", "name": "Histology"},
+      {"key": "site", "name": "Site"},
+      {"key": "year_dx", "name": "Year"}
+    ],
+    "rows": [["8000-8999", "C000-C009", "2024+"]]
+  },
+  "/rest/staging/eod_public/3.3/table/codes-a": {
+    "id": "codes-a",
+    "name": "Codes A",
+    "description": "Description with \"quotes\"",
+    "rationale": "Line one\nline two",
+    "definition": [
+      {"key": "code", "name": "Code"},
+      {"key": "DeScRiPtIoN", "name": "Description"},
+      {"key": "note", "name": "Note"}
+    ],
+    "rows": [["A", "Alpha, one", null], ["B", "Beta \"quoted\"", "after null"]]
+  },
+  "/rest/staging/eod_public/3.3/table/codes-shared": {
+    "id": "codes-shared",
+    "name": "Shared codes",
+    "definition": [{"key": "code"}, {"key": "description"}],
+    "rows": [["0", "Zero"]]
+  },
+  "/rest/staging/eod_public/3.3/table/output-collision": {
+    "id": "output-collision",
+    "name": "Ignored collision codes",
+    "definition": [{"key": "code"}, {"key": "description"}],
+    "rows": [["C", "Must not become a schema item code"]]
+  },
+  "/rest/staging/eod_public/3.3/table/nonnumeric-output": {
+    "id": "nonnumeric-output",
+    "name": "Nonnumeric output table",
+    "definition": [{"key": "code"}],
+    "rows": [["AJCC"]]
+  },
+  "/rest/staging/eod_public/3.3/table/codes-b": {
+    "id": "codes-b",
+    "name": "Codes B",
+    "definition": [{"key": "code"}, {"key": "DESCRIPTION"}],
+    "rows": [["é", "Unicode"]]
+  },
+  "/rest/staging/eod_public/3.3/table/output-codes": {
+    "id": "output-codes",
+    "name": "Output codes",
+    "definition": [{"key": "code"}, {"key": "description"}],
+    "rows": [["X", "Derived X"]]
+  },
+  "/rest/staging/eod_public/3.3/table/extra-a": {
+    "id": "extra-a",
+    "name": "Formerly omitted A",
+    "definition": [{"key": "code"}],
+    "rows": [["EA", null, "tail"]]
+  },
+  "/rest/staging/eod_public/3.3/table/extra-b": {
+    "id": "extra-b",
+    "name": "Formerly omitted B",
+    "definition": [],
+    "rows": []
+  }
+}

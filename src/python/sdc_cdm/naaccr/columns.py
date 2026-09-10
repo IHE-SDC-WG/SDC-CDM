@@ -7,6 +7,7 @@ from collections.abc import Iterable, Mapping, Sequence
 from typing import Any
 
 VERSION_FILE = "data_dictionary_version.csv"
+SSDI_VERSION_FILE = "ssdi_version.csv"
 DICTIONARY_FILE = "naaccr_item_dictionary.csv"
 ALLOWED_CODE_FILE = "naaccr_item_allowed_code.csv"
 REGISTRY_REQUIREMENT_FILE = "naaccr_item_registry_requirement.csv"

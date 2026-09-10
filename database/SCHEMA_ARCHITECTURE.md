@@ -39,8 +39,9 @@ regression fixtures seed the matching OMOP person explicitly.
   concepts. They are keyed independently of dictionary version because the bridge joins by item
   number and code.
 
-The dictionary and SSDI CSVs share one `data_dictionary_version.csv` row, so the loader injects one
-`dd_version_id` into both axes. `dict load` replaces the selected generation in one transaction and
+`dict fetch` stamps its CSVs with `data_dictionary_version.csv` and `ssdi fetch` stamps its CSVs with
+`ssdi_version.csv`; `dict load` requires the two stamps to agree and injects one `dd_version_id` into
+both axes. `dict load` replaces the selected generation in one transaction and
 promotes it only after demoting the prior current row for the same algorithm. The canonical current
 lookup is:
 

@@ -1,0 +1,5 @@
+"item_num","name","xml_id","unit","decimal_places"
+"100","Item 100","item100","mm","1"
+"150","Item 150","item150","",""
+"200","Item 200","item200","cm","2"
+"900","Derived 900","derived900","",""
