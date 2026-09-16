@@ -4,8 +4,15 @@
   Purpose
   - Register a custom vocabulary for NAACCR 2026
   - Create custom concept classes and relationships needed for NAACCR items/values
-  - Persistently assign custom concept_ids for NAACCR items and their allowed values
+  - Assign custom concept_ids for NAACCR items and their allowed values. omop.concept is
+    the persistence: existing NAACCR2026 concepts are reused and only missing ones are
+    minted, so re-running the script mints nothing new.
   - Populate concept, concept_relationship, and source_to_concept_map
+
+  Ownership
+  - This script does not create or write the NAACCR item / value mapping tables. Those
+    are owned by the manifest DDL for concept maps and populated by `maps build`.
+  - Item and value concepts are staged in session temp tables for the duration of one run.
 
   Assumptions
   - OMOP CDM v5.4 schema (incl. vocabulary tables) exists in omop
@@ -13,7 +20,9 @@
   - This script uses literal schema-qualified object names.
 
   Custom concept_id range used here: [2,000,000,000 .. 2,099,999,999]
-  Rationale: stay below SQL Server INT max (2,147,483,647) and avoid collisions
+  Rationale: stay below SQL Server INT max (2,147,483,647) and avoid collisions.
+  The NAACCR_LOCAL mint range used by `maps build` is [2,100,000,000 .. 2,199,999,999]
+  and is disjoint from this one.
 */
 
 ------------------------------------------------------------
@@ -24,14 +33,6 @@
 ------------------------------------------------------------
 -- Note: In this environment, concept_id is an INT. We must assign IDs below INT max.
 ------------------------------------------------------------
-
--- Upgrade mapping tables created by an earlier revision before the main batch is compiled.
-IF OBJECT_ID('naaccr.NAACCR_CONCEPT_MAP', 'U') IS NOT NULL
-   AND COL_LENGTH('naaccr.NAACCR_CONCEPT_MAP', 'domain_id') IS NULL
-BEGIN
-  ALTER TABLE naaccr.NAACCR_CONCEPT_MAP ADD domain_id NVARCHAR(20) NULL;
-END;
-GO
 
 -- Vocabulary entry for NAACCR 2026
 IF NOT EXISTS (SELECT 1
@@ -232,44 +233,52 @@ BEGIN
 END;
 
 ------------------------------------------------------------
--- 2) Persistent mapping tables for assigned concept_ids
+-- 2) Session staging for item / value concepts
+--    omop.concept is the persistence; these temp tables exist only for this run.
 ------------------------------------------------------------
-IF OBJECT_ID('naaccr.NAACCR_CONCEPT_MAP', 'U') IS NULL
-BEGIN
-  CREATE TABLE naaccr.NAACCR_CONCEPT_MAP
-  (
-    item_num INT NOT NULL PRIMARY KEY,
-    concept_id BIGINT NOT NULL,
-    concept_code NVARCHAR(50) NOT NULL,
-    concept_name NVARCHAR(255) NOT NULL,
-    domain_id NVARCHAR(20) NULL,
-    created_utc DATETIME2(3) NOT NULL DEFAULT SYSUTCDATETIME()
-  );
-END;
+DROP TABLE IF EXISTS #naaccr_item_concept;
+DROP TABLE IF EXISTS #naaccr_value_concept;
 
-UPDATE m
-SET domain_id = COALESCE(c.domain_id, N'Observation')
-FROM naaccr.NAACCR_CONCEPT_MAP m
-LEFT JOIN omop.concept c ON c.concept_id = m.concept_id
-WHERE m.domain_id IS NULL;
+CREATE TABLE #naaccr_item_concept
+(
+  item_num INT NOT NULL PRIMARY KEY,
+  concept_id BIGINT NOT NULL,
+  concept_code NVARCHAR(50) NOT NULL,
+  concept_name NVARCHAR(255) NULL
+);
 
-IF OBJECT_ID('naaccr.NAACCR_VALUE_CONCEPT_MAP', 'U') IS NULL
-BEGIN
-  CREATE TABLE naaccr.NAACCR_VALUE_CONCEPT_MAP
-  (
-    item_num INT NOT NULL,
-    code NVARCHAR(255) NOT NULL,
-    concept_id BIGINT NOT NULL,
-    concept_code NVARCHAR(100) NOT NULL,
-    concept_name NVARCHAR(MAX) NULL,
-    created_utc DATETIME2(3) NOT NULL DEFAULT SYSUTCDATETIME(),
-    CONSTRAINT PK_NAACCR_VALUE_CONCEPT_MAP PRIMARY KEY (item_num, code)
-  );
-END;
+CREATE TABLE #naaccr_value_concept
+(
+  item_num INT NOT NULL,
+  code NVARCHAR(255) NOT NULL,
+  concept_id BIGINT NOT NULL,
+  concept_code NVARCHAR(100) NOT NULL,
+  concept_name NVARCHAR(MAX) NULL,
+  PRIMARY KEY (item_num, code)
+);
 
 ------------------------------------------------------------
 -- 3) Assign concept_ids for NAACCR items (naaccr.NAACCR_ITEM)
+--    Items are version-independent, so collapse NAACCR_ITEM across dd_version_id.
 ------------------------------------------------------------
+-- Reuse concepts already minted on a previous run.
+;WITH
+  items
+  AS
+  (
+    SELECT item_num, MAX(name) AS name
+    FROM naaccr.NAACCR_ITEM
+    GROUP BY item_num
+  )
+INSERT INTO #naaccr_item_concept
+  (item_num, concept_id, concept_code, concept_name)
+SELECT i.item_num, c.concept_id, c.concept_code, i.name
+FROM items i
+  JOIN omop.concept c
+  ON c.vocabulary_id = 'NAACCR2026'
+    AND c.concept_class_id = 'NAACCR Item'
+    AND c.concept_code = CAST(i.item_num AS NVARCHAR(50));
+
 DECLARE @nextItemId  BIGINT;
 
 SELECT @nextItemId = ISNULL(MAX(c.concept_id), @customLow) + 1
@@ -277,16 +286,23 @@ FROM omop.concept c
 WHERE c.concept_id BETWEEN @customLow AND @customHigh;
 
 ;WITH
+  items
+  AS
+  (
+    SELECT item_num, MAX(name) AS name
+    FROM naaccr.NAACCR_ITEM
+    GROUP BY item_num
+  ),
   missing_items
   AS
   (
-    SELECT ni.item_num,
-      ni.name,
-      CAST(ni.item_num AS NVARCHAR(50)) AS concept_code
-    FROM naaccr.NAACCR_ITEM ni
-      LEFT JOIN naaccr.NAACCR_CONCEPT_MAP m
-      ON m.item_num = ni.item_num
-    WHERE m.item_num IS NULL
+    SELECT i.item_num,
+      i.name,
+      CAST(i.item_num AS NVARCHAR(50)) AS concept_code
+    FROM items i
+    WHERE NOT EXISTS (SELECT 1
+      FROM #naaccr_item_concept t
+      WHERE t.item_num = i.item_num)
   ),
   numbered
   AS
@@ -295,12 +311,12 @@ WHERE c.concept_id BETWEEN @customLow AND @customHigh;
       @nextItemId + ROW_NUMBER() OVER (ORDER BY item_num) - 1 AS concept_id
     FROM missing_items
   )
-INSERT INTO naaccr.NAACCR_CONCEPT_MAP
-  (item_num, concept_id, concept_code, concept_name, domain_id)
-SELECT item_num, concept_id, concept_code, name, N'Observation'
+INSERT INTO #naaccr_item_concept
+  (item_num, concept_id, concept_code, concept_name)
+SELECT item_num, concept_id, concept_code, name
 FROM numbered;
 
--- Upsert item concepts into OMOP concept table
+-- Persist newly minted item concepts into OMOP concept table
 INSERT INTO omop.concept
 (
   concept_id, concept_name, domain_id, vocabulary_id, concept_class_id,
@@ -308,7 +324,7 @@ INSERT INTO omop.concept
 )
 SELECT m.concept_id,
   LEFT(REPLACE(REPLACE(m.concept_name, CHAR(13), N' '), CHAR(10), N' '), 255) AS concept_name,
-  COALESCE(m.domain_id, N'Observation') AS domain_id,
+  N'Observation' AS domain_id,
   'NAACCR2026'  AS vocabulary_id,
   'NAACCR Item' AS concept_class_id,
   NULL          AS standard_concept,
@@ -316,7 +332,7 @@ SELECT m.concept_id,
   CAST('2026-01-01' AS DATE) AS valid_start_date,
   CAST('2099-12-31' AS DATE) AS valid_end_date,
   NULL AS invalid_reason
-FROM naaccr.NAACCR_CONCEPT_MAP m
+FROM #naaccr_item_concept m
 LEFT JOIN omop.concept c ON c.concept_id = m.concept_id
 WHERE c.concept_id IS NULL;
 
@@ -324,6 +340,26 @@ WHERE c.concept_id IS NULL;
 -- 4) Assign concept_ids for NAACCR value codes (naaccr.SCHEMA_ITEM_CODE)
 --    Note: codes are defined at (item_num, code) granularity
 ------------------------------------------------------------
+-- Reuse concepts already minted on a previous run.
+;WITH
+  src_values AS (
+    SELECT
+      sic.item_num,
+      COALESCE(sic.code, N'') AS code,
+      MAX(COALESCE(NULLIF(sic.description, N''), N'')) AS concept_name,
+      CONCAT(CAST(sic.item_num AS NVARCHAR(50)), N'^', COALESCE(sic.code, N'')) AS concept_code
+    FROM naaccr.SCHEMA_ITEM_CODE sic
+    GROUP BY sic.item_num, COALESCE(sic.code, N'')
+  )
+INSERT INTO #naaccr_value_concept
+  (item_num, code, concept_id, concept_code, concept_name)
+SELECT v.item_num, v.code, c.concept_id, c.concept_code, v.concept_name
+FROM src_values v
+  JOIN omop.concept c
+  ON c.vocabulary_id = 'NAACCR2026'
+    AND c.concept_class_id = 'NAACCR Value'
+    AND c.concept_code = v.concept_code;
+
 DECLARE @nextValueId BIGINT;
 SELECT @nextValueId = ISNULL(MAX(c.concept_id), @customLow) + 1
 FROM omop.concept c
@@ -344,9 +380,9 @@ WHERE c.concept_id BETWEEN @customLow AND @customHigh;
   (
     SELECT v.*
     FROM src_values v
-      LEFT JOIN naaccr.NAACCR_VALUE_CONCEPT_MAP m
-      ON m.item_num = v.item_num AND m.code = v.code
-    WHERE m.item_num IS NULL
+    WHERE NOT EXISTS (SELECT 1
+      FROM #naaccr_value_concept t
+      WHERE t.item_num = v.item_num AND t.code = v.code)
   ),
   numbered_vals
   AS
@@ -355,19 +391,12 @@ WHERE c.concept_id BETWEEN @customLow AND @customHigh;
       @nextValueId + ROW_NUMBER() OVER (ORDER BY item_num, code) - 1 AS concept_id
     FROM missing_values
   )
-MERGE naaccr.NAACCR_VALUE_CONCEPT_MAP AS target
-USING numbered_vals AS src
-ON target.item_num = src.item_num AND target.code = src.code
-WHEN NOT MATCHED THEN
-  INSERT (item_num, code, concept_id, concept_code, concept_name)
-  VALUES (src.item_num, src.code, src.concept_id, src.concept_code, src.concept_name)
-WHEN MATCHED THEN
-  UPDATE SET
-    target.concept_name = CASE WHEN ISNULL(target.concept_name, N'') = N'' THEN src.concept_name ELSE target.concept_name END,
-    target.concept_code = src.concept_code
-;
+INSERT INTO #naaccr_value_concept
+  (item_num, code, concept_id, concept_code, concept_name)
+SELECT item_num, code, concept_id, concept_code, concept_name
+FROM numbered_vals;
 
--- Upsert value concepts into OMOP concept table
+-- Persist newly minted value concepts into OMOP concept table
 INSERT INTO omop.concept
 (
   concept_id, concept_name, domain_id, vocabulary_id, concept_class_id,
@@ -383,7 +412,7 @@ SELECT m.concept_id,
   CAST('2026-01-01' AS DATE),
   CAST('2099-12-31' AS DATE),
   NULL
-FROM naaccr.NAACCR_VALUE_CONCEPT_MAP m
+FROM #naaccr_value_concept m
 LEFT JOIN omop.concept c ON c.concept_id = m.concept_id
 WHERE c.concept_id IS NULL;
 
@@ -393,7 +422,7 @@ WHERE c.concept_id IS NULL;
     m.concept_id,
     -- Normalize CR/LF to spaces and cap length to 1000
     LEFT(REPLACE(REPLACE(m.concept_name, CHAR(13), N' '), CHAR(10), N' '), 1000) AS full_name
-  FROM naaccr.NAACCR_VALUE_CONCEPT_MAP m
+  FROM #naaccr_value_concept m
   WHERE NULLIF(m.concept_name, N'') IS NOT NULL
 )
 INSERT INTO omop.concept_synonym (concept_id, concept_synonym_name, language_concept_id)
@@ -419,8 +448,8 @@ SELECT i.concept_id AS concept_id_1,
   CAST('2026-01-01' AS DATE),
   CAST('2099-12-31' AS DATE),
   NULL
-FROM naaccr.NAACCR_CONCEPT_MAP i
-  JOIN naaccr.NAACCR_VALUE_CONCEPT_MAP v
+FROM #naaccr_item_concept i
+  JOIN #naaccr_value_concept v
   ON v.item_num = i.item_num
 LEFT JOIN omop.concept_relationship cr
   ON cr.concept_id_1 = i.concept_id
@@ -439,8 +468,8 @@ SELECT v.concept_id AS concept_id_1,
   CAST('2026-01-01' AS DATE),
   CAST('2099-12-31' AS DATE),
   NULL
-FROM naaccr.NAACCR_CONCEPT_MAP i
-  JOIN naaccr.NAACCR_VALUE_CONCEPT_MAP v
+FROM #naaccr_item_concept i
+  JOIN #naaccr_value_concept v
   ON v.item_num = i.item_num
 LEFT JOIN omop.concept_relationship cr
   ON cr.concept_id_1 = v.concept_id
@@ -466,7 +495,7 @@ SELECT CAST(item_num AS NVARCHAR(50)) AS source_code,
   CAST('2026-01-01' AS DATE),
   CAST('2099-12-31' AS DATE),
   NULL
-FROM naaccr.NAACCR_CONCEPT_MAP m
+FROM #naaccr_item_concept m
 LEFT JOIN omop.source_to_concept_map s2c
   ON s2c.source_code = CAST(m.item_num AS NVARCHAR(50))
  AND s2c.source_vocabulary_id = 'NAACCR2026'
@@ -487,11 +516,14 @@ SELECT CONCAT(CAST(v.item_num AS NVARCHAR(50)), N':', v.code) AS source_code,
   CAST('2026-01-01' AS DATE),
   CAST('2099-12-31' AS DATE),
   NULL
-FROM naaccr.NAACCR_VALUE_CONCEPT_MAP v
+FROM #naaccr_value_concept v
 LEFT JOIN omop.source_to_concept_map s2c
   ON s2c.source_code = CONCAT(CAST(v.item_num AS NVARCHAR(50)), N':', v.code)
  AND s2c.source_vocabulary_id = 'NAACCR2026'
 WHERE s2c.source_code IS NULL;
+
+DROP TABLE IF EXISTS #naaccr_item_concept;
+DROP TABLE IF EXISTS #naaccr_value_concept;
 
 ------------------------------------------------------------
 -- 7) Seed registry concepts (SEER, NPCR, COC, CCCR) from naaccr.REGISTRY

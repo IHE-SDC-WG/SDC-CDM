@@ -599,7 +599,9 @@ counts rather than silently accepting local IDs in standard slots, which is the 
 
 `2_naaccr_omop_vocab_sqlserver.sql` is **kept as a SQL-Server-only supplement**, not retired and not
 ported. It continues to seed its `NAACCR2026` vocabulary, `omop.concept`, and
-`omop.source_to_concept_map`, and it continues to populate both maps on that dialect.
+`omop.source_to_concept_map`. Since Phase 2.0 (#117) it no longer creates or writes either map
+table — those are owned by manifest DDL (`2_naaccr_concept_maps_sqlserver.sql`) and populated by
+`maps build` — and it re-derives its item and value concepts from `omop.concept` on each run.
 
 The consequence must be stated plainly in `SCHEMA_ARCHITECTURE.md` rather than discovered later:
 **concept identity legitimately differs by dialect.** A SQL Server deployment may resolve a given

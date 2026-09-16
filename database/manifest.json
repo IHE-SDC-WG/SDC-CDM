@@ -84,6 +84,11 @@
         "schema": "naaccr"
       },
       {
+        "path": "database/schemas/naaccr/ddl/sqlserver/2_naaccr_concept_maps_sqlserver.sql",
+        "reapply_on_change": true,
+        "schema": "naaccr"
+      },
+      {
         "path": "database/schemas/sdc/ddl/sqlserver/1_sdc_sqlserver_ddl.sql",
         "reapply_on_change": true,
         "schema": "sdc"
@@ -109,7 +114,7 @@
     },
     {
       "path": "database/schemas/naaccr/ddl/sqlserver/2_naaccr_omop_vocab_sqlserver.sql",
-      "reason": "Concept-map seeding belongs to Phase 2 maps build, not schema DDL."
+      "reason": "SQL-Server-only NAACCR2026 vocabulary supplement (omop.vocabulary, concept, concept_relationship, source_to_concept_map), run by hand. Map tables are owned by manifest DDL (2_naaccr_concept_maps_sqlserver.sql) and populated by maps build."
     },
     {
       "path": "database/schemas/naaccr/ddl/sqlserver/report_naaccr_omop_vocab_ingestion.sql",

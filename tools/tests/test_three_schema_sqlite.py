@@ -26,12 +26,24 @@ def test_cross_dialect_schema_contracts() -> None:
         assert "obx_sub_id" in ddl_path.read_text().lower()
         assert "value_text" in ddl
 
+    sqlserver_maps = (
+        ROOT
+        / "database/schemas/naaccr/ddl/sqlserver/2_naaccr_concept_maps_sqlserver.sql"
+    ).read_text()
+    assert "target_domain_id NVARCHAR(20)" in sqlserver_maps
+    assert "mapping_layer NVARCHAR(20) NOT NULL" in sqlserver_maps
+    assert "CREATE OR ALTER VIEW naaccr.concept_map_coverage" in sqlserver_maps
+    assert "domain_id NVARCHAR(20)" not in sqlserver_maps.replace("target_domain_id", "")
+
+    # The NAACCR2026 supplement seeds vocabulary only; the map tables are owned by
+    # manifest DDL and `maps build`. source_to_concept_map is still seeded.
     sqlserver_vocab = (
         ROOT
         / "database/schemas/naaccr/ddl/sqlserver/2_naaccr_omop_vocab_sqlserver.sql"
-    ).read_text()
-    assert "COL_LENGTH('naaccr.NAACCR_CONCEPT_MAP', 'domain_id')" in sqlserver_vocab
-    assert "domain_id NVARCHAR(20)" in sqlserver_vocab
+    ).read_text().lower()
+    assert "naaccr_concept_map" not in sqlserver_vocab
+    assert "naaccr_value_concept_map" not in sqlserver_vocab
+    assert "source_to_concept_map" in sqlserver_vocab
 
     sqlserver_bridge = (
         ROOT / "database/etl/sqlserver/1_naaccr_sdc_to_omop.sql"
