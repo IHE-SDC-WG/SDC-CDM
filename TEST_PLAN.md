@@ -219,10 +219,13 @@ importer or direct inserts, run the bridge, assert on `omop.*`.
   note → sdc_report and measurement_source_value → naaccr_item, with no stored cross-schema FK.
 - [ ] **OMOP-08** End-to-end: HL7v2 fixture → import → bridge → expected OMOP rows
   (golden-file comparison). Repeat from the FHIR fixture and assert equivalence.
-- [ ] **OMOP-09** *(regression, review finding #3)* The SQL Server bridge ETL only
-  references objects the SQL Server DDLs actually create — a dry parse/execution against a
-  schema built from `database/schemas/*/ddl/sqlserver/` succeeds (`naaccr_concept_map`
-  and `naaccr_value_concept_map` must exist there).
+- [x] **OMOP-09** *(regression, review finding #3)* The SQL Server bridge ETL only
+  references objects the manifest-built SQL Server DDL creates: `naaccr_concept_map`,
+  `naaccr_value_concept_map`, and `local_concept_allocation` come from
+  `2_naaccr_concept_maps_sqlserver.sql`, not from the excluded NAACCR2026 supplement, so
+  `test_bridge_no_double_count` runs the bridge on both dialects with no test-side table
+  stubs. `test_concept_map_ddl` pins the two-slot column contract and the
+  `concept_map_coverage` view in both dialects.
 - [ ] **OMOP-10** *(regression, review finding #4)* The validation script
   (`validate_naaccr_sdc_to_omop.sql`) passes against a database produced by the shipped
   ETL — its type-concept filters and expected tables (`episode`/`episode_event`) must

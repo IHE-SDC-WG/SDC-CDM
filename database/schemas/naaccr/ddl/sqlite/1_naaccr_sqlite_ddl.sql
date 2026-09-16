@@ -230,22 +230,117 @@ CREATE TABLE IF NOT EXISTS naaccr.schema_involved_table (
 -- same OMOP concept regardless of dictionary version, and the ETL bridge joins on
 -- item_num / (item_num, code) alone. So they are keyed on item_num only and reference
 -- naaccr_item logically (no composite FK).
+--
+-- Two-slot contract (Phase 2): source_concept_id is the NAACCR source concept (Athena
+-- NAACCR or a NAACCR_LOCAL mint) and is never 0; concept_id is the standard OMOP target,
+-- 0 when no standard target exists. mapping_layer records which build layer produced the
+-- row. created_at is written by Python as ISO-8601 UTC in both dialects (no DB default).
+-- Rows are derived by `maps build`; the tables carry no dictionary version.
 CREATE TABLE IF NOT EXISTS naaccr.naaccr_concept_map (
     item_num INTEGER NOT NULL PRIMARY KEY,
+    source_concept_id INTEGER NOT NULL CHECK (source_concept_id <> 0),
     concept_id INTEGER NOT NULL,
+    target_domain_id TEXT NULL,
     concept_code TEXT NULL,
     concept_name TEXT NULL,
-    domain_id TEXT NULL
+    mapping_layer TEXT NOT NULL
+        CHECK (mapping_layer IN ('athena_standard', 'curated_override', 'local_mint')),
+    created_at TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS naaccr.naaccr_value_concept_map (
     item_num INTEGER NOT NULL,
     code TEXT NOT NULL,
+    source_concept_id INTEGER NOT NULL CHECK (source_concept_id <> 0),
     concept_id INTEGER NOT NULL,
+    target_domain_id TEXT NULL,
     concept_code TEXT NULL,
     concept_name TEXT NULL,
+    mapping_layer TEXT NOT NULL
+        CHECK (mapping_layer IN ('athena_standard', 'curated_override', 'local_mint')),
+    created_at TEXT NOT NULL,
     PRIMARY KEY (item_num, code)
 );
+
+-- Append-only ledger of locally minted NAACCR_LOCAL concept ids, so layer-3 mints keep
+-- the same id across rebuilds. Ids are allocated from 2,100,000,000 through
+-- 2,199,999,999 (the SQL-Server-only NAACCR2026 supplement owns 2,000,000,000 through
+-- 2,099,999,999). item_num = 0 and code = '' are sentinels for kinds without an item or
+-- code, so UNIQUE (concept_kind, item_num, code) behaves the same in both dialects
+-- (SQLite treats NULLs as distinct in UNIQUE; SQL Server does not).
+-- allocated_at is written by Python as ISO-8601 UTC.
+CREATE TABLE IF NOT EXISTS naaccr.local_concept_allocation (
+    concept_id INTEGER NOT NULL PRIMARY KEY
+        CHECK (concept_id BETWEEN 2100000000 AND 2199999999),
+    concept_kind TEXT NOT NULL
+        CHECK (concept_kind IN ('vocabulary', 'concept_class', 'item', 'value')),
+    item_num INTEGER NOT NULL DEFAULT 0,
+    code TEXT NOT NULL DEFAULT '',
+    concept_code TEXT NOT NULL,
+    concept_name TEXT NULL,
+    allocated_at TEXT NOT NULL,
+    CHECK (
+        (concept_kind IN ('vocabulary', 'concept_class') AND item_num = 0 AND code = '')
+        OR (concept_kind = 'item' AND item_num <> 0 AND code = '')
+        OR (concept_kind = 'value' AND item_num <> 0)
+    ),
+    UNIQUE (concept_kind, item_num, code),
+    UNIQUE (concept_code)
+);
+
+-- Coverage by (algorithm, scope, section, mapping_layer). dd_version_id is taken from the
+-- single is_current row per algorithm (enforced by idx_dd_version_current_algorithm),
+-- never from MAX(dd_version_id). Retired items (year_retired IS NOT NULL) are excluded.
+-- scope is 'item' or 'value'; mapping_layer is 'unmapped' for rows with no map entry.
+-- The view cannot read the exclusions CSV; `maps coverage` reports exclusions separately.
+-- DROP + CREATE (not IF NOT EXISTS) so a changed definition takes effect when this file is
+-- reapplied. The body stays unqualified: a view in an attached database may only
+-- reference objects in that database.
+DROP VIEW IF EXISTS naaccr.concept_map_coverage;
+CREATE VIEW naaccr.concept_map_coverage AS
+WITH current_version AS (
+    SELECT algorithm, dd_version_id
+    FROM data_dictionary_version
+    WHERE is_current = 1
+),
+item_scope AS (
+    SELECT cv.algorithm,
+           'item' AS scope,
+           ni.section,
+           COALESCE(m.mapping_layer, 'unmapped') AS mapping_layer
+    FROM current_version cv
+    JOIN naaccr_item ni
+      ON ni.dd_version_id = cv.dd_version_id
+     AND ni.year_retired IS NULL
+    LEFT JOIN naaccr_concept_map m
+      ON m.item_num = ni.item_num
+),
+value_scope AS (
+    SELECT cv.algorithm,
+           'value' AS scope,
+           ni.section,
+           COALESCE(m.mapping_layer, 'unmapped') AS mapping_layer
+    FROM current_version cv
+    JOIN naaccr_item ni
+      ON ni.dd_version_id = cv.dd_version_id
+     AND ni.year_retired IS NULL
+    JOIN (
+        SELECT DISTINCT dd_version_id, item_num, code
+        FROM naaccr_item_allowed_code
+    ) ac
+      ON ac.dd_version_id = ni.dd_version_id
+     AND ac.item_num = ni.item_num
+    LEFT JOIN naaccr_value_concept_map m
+      ON m.item_num = ac.item_num
+     AND m.code = ac.code
+)
+SELECT algorithm, scope, section, mapping_layer, COUNT(*) AS item_count
+FROM (
+    SELECT algorithm, scope, section, mapping_layer FROM item_scope
+    UNION ALL
+    SELECT algorithm, scope, section, mapping_layer FROM value_scope
+) scoped
+GROUP BY algorithm, scope, section, mapping_layer;
 
 CREATE TABLE IF NOT EXISTS naaccr.naaccr_value (
     naaccr_value_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,

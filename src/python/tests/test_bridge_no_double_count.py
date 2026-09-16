@@ -26,33 +26,6 @@ def _insert_id(
     return int(backend.execute(sqlserver_sql, parameters, return_scalar=True))
 
 
-def _ensure_bridge_map_tables(backend: DatabaseBackend) -> None:
-    if backend.dialect != "sqlserver":
-        return
-    # TODO(phase-2): maps build will own these tables. Phase 0's SQL Server
-    # dictionary DDL does not create them, but the existing bridge reads them.
-    sql = """
-    IF OBJECT_ID('naaccr.naaccr_concept_map', 'U') IS NULL
-    BEGIN
-        CREATE TABLE naaccr.naaccr_concept_map (
-            item_num INT NOT NULL,
-            concept_id INT NULL
-        );
-    END
-    GO
-    IF OBJECT_ID('naaccr.naaccr_value_concept_map', 'U') IS NULL
-    BEGIN
-        CREATE TABLE naaccr.naaccr_value_concept_map (
-            item_num INT NOT NULL,
-            code NVARCHAR(255) NOT NULL,
-            concept_id INT NULL
-        );
-    END
-    GO
-    """
-    backend.execute_units(split_script(backend.dialect, sql).executable)
-
-
 def _seed_bridge_vocabulary(backend: DatabaseBackend) -> None:
     concepts = (
         (0, "Unknown", "Metadata", "None", "Undefined", "0"),
@@ -238,7 +211,6 @@ def test_bridge_reruns_do_not_double_count(
 
     with backend:
         BuildRunner(load_manifest(), backend).run()
-        _ensure_bridge_map_tables(backend)
         _seed_bridge_vocabulary(backend)
         patient_id, accession = _seed_source_rows(backend)
 
