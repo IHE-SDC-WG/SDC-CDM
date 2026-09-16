@@ -23,7 +23,6 @@ storage/
 # Database files
 *.db
 
-node_modules/
 out-egs
 tmp/
 

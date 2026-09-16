@@ -117,7 +117,7 @@ class SeerApiClient:
         concurrency: int = 8,
     ):
         if not api_key:
-            raise UsageError("dict fetch requires SEER_API_KEY")
+            raise UsageError("fetch requires SEER_API_KEY")
         self.transport = transport or UrllibJsonTransport(api_key)
         self.concurrency = max(1, min(int(concurrency), 16))
 
@@ -160,6 +160,69 @@ class SeerApiClient:
             raise SeerApiError(
                 "SEER NAACCR detail response has an invalid item_number"
             ) from exc
+
+    def schema_index(self, algorithm: str, version: str) -> list[dict[str, Any]]:
+        path = self._staging_path(algorithm, version, "schemas")
+        return self._object_list(self.transport(path), "staging schema index")
+
+    def schema(self, algorithm: str, version: str, schema_id: str) -> dict[str, Any]:
+        path = self._staging_path(algorithm, version, "schema", schema_id)
+        payload = self.transport(path)
+        if not isinstance(payload, dict):
+            raise SeerApiError("SEER staging schema response must be an object")
+        return payload
+
+    def schemas(self, algorithm: str, version: str) -> list[dict[str, Any]]:
+        """Fetch every projected staging schema once with bounded concurrency."""
+
+        index = self.schema_index(algorithm, version)
+        schema_ids: list[str] = []
+        seen: set[str] = set()
+        for entry in index:
+            schema_id = entry.get("id")
+            if schema_id in (None, ""):
+                raise SeerApiError("SEER staging schema index entry is missing id")
+            text_id = str(schema_id)
+            if text_id not in seen:
+                schema_ids.append(text_id)
+                seen.add(text_id)
+
+        with ThreadPoolExecutor(max_workers=self.concurrency) as executor:
+            return list(
+                executor.map(
+                    lambda schema_id: self.schema(algorithm, version, schema_id),
+                    schema_ids,
+                )
+            )
+
+    def table(self, algorithm: str, version: str, table_id: str) -> dict[str, Any]:
+        path = self._staging_path(algorithm, version, "table", table_id)
+        payload = self.transport(path)
+        if not isinstance(payload, dict):
+            raise SeerApiError("SEER staging table response must be an object")
+        return payload
+
+    def tables(
+        self, algorithm: str, version: str, table_ids: list[str]
+    ) -> list[dict[str, Any]]:
+        """Fetch each requested staging table once and retain caller order."""
+
+        unique_ids = list(dict.fromkeys(table_ids))
+        with ThreadPoolExecutor(max_workers=self.concurrency) as executor:
+            return list(
+                executor.map(
+                    lambda table_id: self.table(algorithm, version, table_id),
+                    unique_ids,
+                )
+            )
+
+    @staticmethod
+    def _staging_path(algorithm: str, version: str, *parts: str) -> str:
+        encoded = [
+            urllib.parse.quote(str(value), safe="")
+            for value in (algorithm, version, *parts)
+        ]
+        return "/rest/staging/" + "/".join(encoded)
 
     @staticmethod
     def _object_list(payload: Any, label: str) -> list[dict[str, Any]]:

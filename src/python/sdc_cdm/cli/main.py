@@ -13,9 +13,11 @@ from sdc_cdm.cli.dictionary import (
     configure_dict_fetch,
     configure_dict_load,
     configure_dict_verify,
+    configure_ssdi_fetch,
     run_dict_fetch,
     run_dict_load,
     run_dict_verify,
+    run_ssdi_fetch,
 )
 from sdc_cdm.cli.target import add_target_arguments, open_backend
 from sdc_cdm.db.errors import MigrationHashMismatch, SdcCdmError, UsageError
@@ -153,6 +155,12 @@ _VERBS: tuple[tuple[tuple[str, ...], str, _Configure, _Handler], ...] = (
         "verify loaded NAACCR dictionary counts",
         configure_dict_verify,
         run_dict_verify,
+    ),
+    (
+        ("ssdi", "fetch"),
+        "fetch the SSDI staging tables from SEER",
+        configure_ssdi_fetch,
+        run_ssdi_fetch,
     ),
     (
         ("vocab", "load"),

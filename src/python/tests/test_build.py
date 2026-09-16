@@ -23,6 +23,7 @@ def test_expected_commands_are_registered() -> None:
         "dict fetch",
         "dict load",
         "dict verify",
+        "ssdi fetch",
         "vocab load",
         "vocab check",
         "constants resolve",
@@ -30,6 +31,23 @@ def test_expected_commands_are_registered() -> None:
     with pytest.raises(SystemExit) as exc_info:
         main(["ingest"])
     assert exc_info.value.code == 2
+
+
+@pytest.mark.parametrize(
+    ("dialect", "message"),
+    (("sqlite", "requires --db"), ("sqlserver", "requires --connection-string")),
+)
+def test_database_targets_have_no_implicit_connection_details(
+    dialect: str,
+    message: str,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.delenv("SDC_CDM_SQLSERVER_CONNECTION_STRING", raising=False)
+    with pytest.raises(SystemExit) as exc_info:
+        main(["build", "--dialect", dialect])
+    assert exc_info.value.code == 2
+    assert message in capsys.readouterr().err
 
 
 def test_list_does_not_require_a_database(capsys: pytest.CaptureFixture[str]) -> None:

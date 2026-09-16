@@ -49,6 +49,11 @@ def write_dictionary_csvs(
     requirement_rows = registry_requirement_rows(items)
     source_api = f"{BASE_URL}/rest/staging/{algorithm}/{algorithm_version}"
 
+    # dict fetch owns this generation row; ssdi fetch writes ssdi_version.csv
+    # and dict load requires the two to agree. The row is removed first and
+    # written last so an interrupted refresh leaves nothing loadable. No data
+    # file carries a version id; dict load injects the id resolved from this row.
+    (output_dir / VERSION_FILE).unlink(missing_ok=True)
     write_csv(output_dir / DICTIONARY_FILE, DICTIONARY_COLUMNS, item_rows)
     write_csv(output_dir / ALLOWED_CODE_FILE, ALLOWED_CODE_COLUMNS, code_rows)
     write_csv(
@@ -56,8 +61,6 @@ def write_dictionary_csvs(
         REGISTRY_REQUIREMENT_COLUMNS,
         requirement_rows,
     )
-    # This shared row is written last. The SSDI files and dictionary files have
-    # no independent version id; dict load injects the id resolved from this row.
     write_csv(
         output_dir / VERSION_FILE,
         VERSION_COLUMNS,
