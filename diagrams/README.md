@@ -1,6 +1,6 @@
 # Diagrams
 
-Mermaid `erDiagram` sources for the data model. `.mmd` source only — no rendered images are
+Mermaid sources for the data model and its data flows. `.mmd` source only — no rendered images are
 committed. GitHub renders `.mmd` files natively; you can also paste one into
 [mermaid.live](https://mermaid.live).
 
@@ -11,7 +11,8 @@ The directory name predates the `intake` and `etl` schemas and is retained to av
 
 | File | Covers |
 | --- | --- |
-| [`three-schema-overview.mmd`](three-schema/three-schema-overview.mmd) | Orientation map across all five schemas. Key tables only; start here. |
+| [`three-schema-data-flow.mmd`](three-schema/three-schema-data-flow.mmd) | High-level clinical data flow through the three core schemas, with `intake` and `etl` as supporting context. Start here. |
+| [`three-schema-overview.mmd`](three-schema/three-schema-overview.mmd) | Entity-relationship orientation map across all five schemas. Key tables only. |
 | [`naaccr.mmd`](three-schema/naaccr.mmd) | All 15 `naaccr` tables: versioned dictionary, staging catalog, concept maps, captured values. |
 | [`sdc.mmd`](three-schema/sdc.mmd) | All 9 `sdc` tables: form design, template instances, `sdc_report`, `sdc_form_answer`. |
 | [`naaccr-sdc-to-omop-bridge.mmd`](three-schema/naaccr-sdc-to-omop-bridge.mmd) | The `naaccr` + `sdc` → stock OMOP transform: what it reads, what it writes, and the guards. |
@@ -24,6 +25,9 @@ deliberately vanilla, so these stay accurate as-is.
 
 ## Conventions
 
+- **Flowchart arrows carry meaning.** Solid arrows show data being written, read, or transformed.
+  Dotted arrows show logical identity or provenance links that are not enforced cross-schema foreign
+  keys, or mark a current system boundary.
 - **Line style carries meaning.** Solid (`||--o{`) is an enforced foreign key. **Dotted
   (`||..o{`) is a logical pointer or key join with no enforced FK.** Every cross-schema link is
   dotted: this model has no crosswalk table and adds no columns to OMOP core, so those
