@@ -1,0 +1,77 @@
+flowchart LR
+  %% High-level data-flow view of the three clinical schemas, with intake and ETL
+  %% shown as supporting context. Solid arrows show data flow. Dotted arrows show
+  %% logical identity/provenance links or a current system boundary.
+
+  ecp["eCP / HL7 v2<br/>inbound data"]
+  sdc_xml["SDC XML<br/>templates and submissions"]
+
+  subgraph intake["Supporting: intake schema"]
+    direction TB
+    inbound["inbound_message<br/>raw payload + canonical envelope"]
+    patient["patient<br/>local patient identity"]
+    diagnostics["inbound_message_diagnostic<br/>parse warnings and errors"]
+
+    inbound --> diagnostics
+    inbound --> patient
+  end
+
+  subgraph sdc["Core: sdc schema"]
+    direction TB
+    report["sdc_report<br/>report header + accession"]
+    templates["template_*<br/>form structure and instances"]
+    answers["sdc_form_answer<br/>SDC XML answers"]
+    no_omop["Current boundary:<br/>SDC XML answers do not flow to OMOP"]
+
+    templates --> answers
+    answers -.-> no_omop
+  end
+
+  subgraph naaccr["Core: naaccr schema"]
+    direction TB
+    values["naaccr_value<br/>captured item answers"]
+    maps["naaccr_concept_map<br/>naaccr_value_concept_map"]
+    dictionary["NAACCR dictionary<br/>item and code definitions"]
+
+    dictionary --> values
+    dictionary --> maps
+  end
+
+  bridge["Separate batch bridge<br/>reads SDC + NAACCR<br/>not part of build"]
+  person_transform["Later 1:1<br/>person transform"]
+
+  subgraph omop["Core: omop schema (stock CDM 5.4)"]
+    direction TB
+    omop_person["person"]
+    note["note<br/>report + accession provenance"]
+    measurement["measurement<br/>item + value provenance"]
+
+    omop_person --> note
+    omop_person --> measurement
+    note -->|"measurement_event_id = note_id"| measurement
+  end
+
+  subgraph etl["Supporting: etl schema"]
+    direction TB
+    manifest["database/manifest.json"]
+    records["schema_migration + run<br/>build and execution bookkeeping"]
+
+    manifest --> records
+  end
+
+  ecp --> inbound
+  inbound -->|"canonical envelope"| report
+  inbound -->|"canonical envelope"| values
+  patient -.->|"logical person_id"| report
+  patient -.->|"logical person_id"| values
+  patient -.-> person_transform
+  person_transform -.-> omop_person
+
+  report -.->|"sdc_report_id"| values
+  report -->|"report header"| bridge
+  values -->|"captured answers"| bridge
+  maps -->|"OMOP concept identifiers"| bridge
+  bridge -->|"one note per report"| note
+  bridge -->|"one measurement per bridgeable value"| measurement
+
+  sdc_xml --> templates
