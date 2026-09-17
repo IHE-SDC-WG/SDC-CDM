@@ -352,7 +352,8 @@ The Python ports must not drift from the C# importers.
   identifiers the same way the C# fix does.
 - (retired) **PY-03** The former public CCR JSON importer and its eight-test module were removed;
   its private project now owns that coverage.
-- [x] **PY-04** NAACCR→OMOP map conversion tests (`test_convert_naaccr_omop_maps.py`).
+- (retired) **PY-04** The one-time legacy map conversion produced the tracked seeds; its converter
+  and test were then removed.
 
 ---
 

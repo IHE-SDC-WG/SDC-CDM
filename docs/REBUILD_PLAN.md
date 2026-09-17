@@ -432,9 +432,9 @@ The Python CLI exposes the full verb set above. The C# project is a library plus
 import; it has no CLI and no pipeline verbs.
 
 **Deleted outright:** `phenoml-workflows/` (deleted in Phase 0; mapping absorbed into Phase 4 SQL,
-review role replaced by the tracked overrides CSV), `NAACCRtoOMOPmaps/*.xlsx` and
-`tools/convert_naaccr_omop_maps.py`
-(after the one-time seed conversion), the whole PostgreSQL dialect (`database/etl/postgresql/`,
+review role replaced by the tracked overrides CSV), the legacy NAACCR spreadsheet converter and
+its input workbooks (after the one-time seed conversion), the whole PostgreSQL dialect
+(`database/etl/postgresql/`,
 `database/schemas/{naaccr,sdc}/ddl/postgresql/`, `database/Dockerfile`,
 `database/docker-compose.yml`, `database/.env.example` — see "PostgreSQL is removed, not deferred"
 above), the CCR JSON path (`tools/ccr_labreport_to_naaccr.py` + `tools/tests/test_obx_parser.py`,
@@ -560,10 +560,10 @@ than letting it be implicit.
    `naaccr.local_concept_allocation` so IDs survive rebuilds. Generalize the allocation logic
    already in `database/schemas/naaccr/ddl/sqlserver/2_naaccr_omop_vocab_sqlserver.sql:237-268`
    to both dialects. Derive the mint's `concept_class_id` from `naaccr_item.section` +
-   `parent_xml_element` rather than a flat `'NAACCR Item'` — this reconstructs the
-   `STAGE_PROGNOSTIC_FAC` / `TREATMENT_1ST_COURSE` / `DEMOGRAPHIC_TUMOR` class strings already baked
-   into `naaccr_omop_extension_mapping_spec.json`, from a real source this time, which matters
-   because this plan deletes that JSON (see the one-time conversion below).
+   `parent_xml_element` rather than a flat `'NAACCR Item'`. This reconstructs the
+   `STAGE_PROGNOSTIC_FAC` / `TREATMENT_1ST_COURSE` / `DEMOGRAPHIC_TUMOR` class strings that the
+   retired legacy mapping inventory had stored. Phase 2.1 removed that inventory after converting
+   its review data into tracked seeds.
 
 `naaccr.concept_map_coverage` view emits items total / mapped per layer / unmapped, so coverage is
 a number CI can assert on and regressions are visible. Break it down **by section** as well as by
@@ -625,25 +625,25 @@ concept or a `NAACCR_LOCAL` mint. Therefore:
 `omop_concept_id`, `omop_source_concept_id`, `target_domain_id`, `rationale`, `reviewer`,
 `reviewed_at`.
 
-**One-time conversion, then retire the artifacts.** Convert
-`naaccr_omop_extension_mapping_spec.json` (780 rows; the inventory is worth keeping, the mappings are
-not) into two tracked seeds:
+**One-time conversion completed.** Phase 2.1 converted the 780-row legacy mapping inventory into
+two tracked seeds:
 
-- `database/seed/concept_map_overrides.csv` — skeleton rows with `omop_concept_id` blank where
-  unreviewed (which is all 780 today), so the file starts as an honest to-do list rather than a
-  pretend mapping.
-- `database/seed/naaccr_item_exclusions.csv` — the 74 items explicitly flagged `is_mappable: false`.
+- `database/seed/concept_map_overrides.csv`: 706 non-excluded skeleton rows with
+  `omop_concept_id` blank, so every imported row remained inactive pending review.
+- `database/seed/naaccr_item_exclusions.csv`: the 74 items explicitly flagged
+  `is_mappable: false`.
 
-Then drop the JSON, `tools/convert_naaccr_omop_maps.py`, and the `NAACCRtoOMOPmaps/*.xlsx` workbooks.
+The old JSON inventory, its converter and test, and the input workbooks were then deleted.
 
-Field-name trap in the converter: the spec's `concept_id` field holds a NAACCR
-**item number** (e.g. `442` / `ambiguousTerminologyDx`), and its `domain_id` holds an invented value
-(`DIGITS`, `TEXT`) that is not an OMOP domain. Map them to `item_num` and drop the fake domain.
+The retired input had a field-name trap: `concept_id` held a NAACCR **item number**
+(e.g. `442` / `ambiguousTerminologyDx`), while `domain_id` held an invented value (`DIGITS`,
+`TEXT`) rather than an OMOP domain. The conversion mapped the former to `item_num` and dropped the
+latter.
 
 **Layer-3 gating.** Mint a local concept for any item that has captured values and no layer-1 or
-layer-2 map, **except** those in `naaccr_item_exclusions.csv`. Do not gate on the spec's
-`is_mappable` flag directly — it is `None` for 478 of 780 rows, so gating on it would suppress
-minting for most of the dictionary.
+layer-2 map, **except** those in `naaccr_item_exclusions.csv`. The retired input left
+`is_mappable` null for 478 of 780 rows, so the active build must use the exclusions seed rather
+than that historical flag.
 
 ### OMOP breadth, domain-routed
 
@@ -912,7 +912,7 @@ with a one-line note saying why.
 |---|---|---|---|
 | **0** skeleton | `SCHEMA-05` (C# `BuildSchema()` ↔ raw-DDL drift check — there is no C# schema builder any more) | `TEST_PLAN.md:20` bridge glob → `{sqlite,sqlserver}`; `SCHEMA-02` DDL parity → two dialects; `SCHEMA-04` → whatever survives of `update-ddl-files.py`; `CLEAN-03` → the three-job topology; `CLEAN-02` shared golden files → `contracts/golden/`, Python-only | manifest ordering is the single apply order; `build` twice is a no-op (the `CREATE INDEX` regression); migration-ledger skip works |
 | **1** vocab + dict | `VocabImporterTests.cs` — deleted with `ImportCsv.cs`, not ported; the Python loader tests cover the active contract | `SCHEMA-03` (bridge concept literals exist) → `constants resolve` fails loudly on a missing `(vocabulary_id, concept_code)`; `SCHEMA-01` / `SCHEMA-02` cover both active dialects and documented storage normalization | `DICT-01..15`: `section` non-null for 100% of non-retired items at the anchor and the 17 expected values; zero orphan `schema_item.item_num`; API/CSV behavior; retry and auth; idempotent load and rollback; dictionary row counts match across dialects |
-| **2** concept maps | `PY-04` (`test_convert_naaccr_omop_maps.py` — the converter is deleted after the one-time seed conversion) | the `NAACCR`/`OMOP` map IDs at the layered build | coverage by layer **and by section**; layer 2 beats layer 1 on an edited override row; layer-3 mints stable across two rebuilds; no non-standard concept in a `*_concept_id` slot |
+| **2** concept maps | `PY-04` (the one-time converter test was retired after its conversion code was deleted) | the `NAACCR`/`OMOP` map IDs at the layered build | coverage by layer **and by section**; layer 2 beats layer 1 on an edited override row; layer-3 mints stable across two rebuilds; no non-standard concept in a `*_concept_id` slot |
 | **3** intake | `PY-01`/`PY-02` after their assertions move to the active parser; `PY-03` is already retired because the private project owns the former CCR path | the 9 `IMP-HL7` IDs in §1.1, from `SdcCdm.NAACCRVolVImporter.ImportNaaccrVolV` to the Python parser; `CLEAN-01` fixture dedup now that `sample_data/` is the single source | golden-envelope conformance + serialization fixed point; partial dates; provenance walk to `raw_blob`; duplicate bytes stored-flagged-not-loaded; two authorities → two patients; malformed message → `parse_status='failed'` |
 | **4** bridge | — | the 11 `OMOP` IDs in §3 at the split scripts; the 6 `NAACCR` IDs in §2 | domain routing (coded/numeric/text); the two-slot contract; person/period/`cdm_source`; `9_validate.sql` against `validate_thresholds.csv`; every stage idempotent twice |
 | **5** export | — | **move `EXP-01`–`EXP-04` to roadmap, do not retarget them** — all four are FHIR round-trips against `ExportFhirCpds`, not CSV-bundle tests; see below | a fresh set of CSV-export IDs: export → fresh-schema round-trip equality; manifest row counts and sha256; PHI grep returns zero; header order matches the shared CDM 5.4 `TABLE_SPECS` |
