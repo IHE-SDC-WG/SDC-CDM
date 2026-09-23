@@ -425,7 +425,8 @@ CREATE TABLE IF NOT EXISTS naaccr.naaccr_value (
     sdc_report_id INTEGER NULL,
     report_accession TEXT NULL,
     schema_id_number TEXT NULL,
-    item_num INTEGER NOT NULL,
+    item_num INTEGER NULL,
+    ecp_code TEXT NULL,
     obx_sub_id TEXT NULL,
     value_code TEXT NULL,
     value_num REAL NULL,
@@ -434,7 +435,11 @@ CREATE TABLE IF NOT EXISTS naaccr.naaccr_value (
     observation_date TEXT NULL,
     -- Gap #1: the dictionary version this answer was coded against. Nullable so existing
     -- import paths that do not yet supply it keep working; populate going forward.
-    dd_version_id INTEGER NULL REFERENCES data_dictionary_version(dd_version_id)
+    dd_version_id INTEGER NULL REFERENCES data_dictionary_version(dd_version_id),
+    CONSTRAINT ck_naaccr_value_identifier CHECK (
+        (item_num IS NOT NULL AND ecp_code IS NULL)
+        OR (item_num IS NULL AND ecp_code IS NOT NULL AND length(ecp_code) BETWEEN 1 AND 50)
+    )
 );
 
 CREATE INDEX IF NOT EXISTS naaccr.idx_naaccr_value_person_episode
@@ -443,6 +448,8 @@ CREATE INDEX IF NOT EXISTS naaccr.idx_naaccr_value_report_item
     ON naaccr_value (report_accession, item_num);
 CREATE INDEX IF NOT EXISTS naaccr.idx_naaccr_value_item_code
     ON naaccr_value (item_num, value_code);
+CREATE INDEX IF NOT EXISTS naaccr.idx_naaccr_value_report_ecp
+    ON naaccr_value (report_accession, ecp_code);
 CREATE INDEX IF NOT EXISTS naaccr.idx_naaccr_value_sdc_report
     ON naaccr_value (sdc_report_id);
 

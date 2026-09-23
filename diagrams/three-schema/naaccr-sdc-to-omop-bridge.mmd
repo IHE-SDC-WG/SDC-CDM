@@ -25,7 +25,7 @@ erDiagram
   %%   - sdc_report.is_duplicate_accession != 0   (re-imported message)
   %%   - sdc_report.person_id IS NULL
   %%   - naaccr_value.sdc_report_id IS NULL
-  %% Idempotency is occurrence-aware: for each (sdc_report_id, item_num, value_code,
+  %% Idempotency is occurrence-aware: for each (sdc_report_id, item_num, ecp_code, value_code,
   %% value_num, value_text, value_unit_source) tuple the bridge ROW_NUMBER()s the source rows and inserts only those
   %% beyond the COUNT(*) already in omop.measurement. So legitimate duplicate identical
   %% values are preserved, re-runs are no-ops, and partial loads self-repair.
@@ -46,6 +46,7 @@ erDiagram
     INTEGER person_id
     INTEGER sdc_report_id
     INTEGER item_num
+    TEXT ecp_code
     TEXT obx_sub_id
     TEXT value_code
     REAL value_num
@@ -79,8 +80,8 @@ erDiagram
     TEXT note_source_value
   }
 
-  %% Written by INSERT 2. measurement_source_value carries the NAACCR item number as
-  %% text; coded answers land in value_as_concept_id and numeric answers in
+  %% Written by INSERT 2. measurement_source_value carries the full CAP ecp_code
+  %% or the verified NAACCR item number; coded answers land in value_as_concept_id and numeric answers in
   %% value_as_number. value_source_value carries companion text when present,
   %% otherwise it carries the raw code.
   OMOP_MEASUREMENT {
@@ -104,7 +105,7 @@ erDiagram
   %% Relationships
   SDC_REPORT ||..o{ NAACCR_VALUE : "sdc_report_id (logical, the bridge join key)"
   SDC_REPORT ||..o| OMOP_NOTE : "1 note per (person_id, report_accession), 0 if guarded; note_source_value = report_accession"
-  NAACCR_VALUE ||..o| OMOP_MEASUREMENT : "1 per bridgeable value; measurement_source_value = item_num"
+  NAACCR_VALUE ||..o| OMOP_MEASUREMENT : "1 per bridgeable value; source value = ecp_code or item_num"
   OMOP_NOTE ||--o{ OMOP_MEASUREMENT : "measurement_event_id = note_id (meas_event_field_concept_id 1147289)"
-  NAACCR_CONCEPT_MAP ||..o{ OMOP_MEASUREMENT : "item_num -> measurement_concept_id, measurement_source_concept_id"
-  NAACCR_VALUE_CONCEPT_MAP ||..o{ OMOP_MEASUREMENT : "(item_num, value_code) -> value_as_concept_id"
+  NAACCR_CONCEPT_MAP ||..o{ OMOP_MEASUREMENT : "verified item_num -> measurement_concept_id, measurement_source_concept_id"
+  NAACCR_VALUE_CONCEPT_MAP ||..o{ OMOP_MEASUREMENT : "verified (item_num, value_code) -> value_as_concept_id"

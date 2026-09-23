@@ -80,7 +80,8 @@ def report_coverage(
         "FROM naaccr.naaccr_value value "
         "LEFT JOIN naaccr.naaccr_item item ON item.item_num = value.item_num "
         "AND item.dd_version_id = ? "
-        "WHERE item.item_num IS NULL) foreign_items", (generation,),
+        "WHERE value.item_num IS NOT NULL AND item.item_num IS NULL) foreign_items",
+        (generation,),
     )[0])
     checks = dict(sorted(counts.items()))
     comparisons: list[tuple[str, int, int, bool]] = []

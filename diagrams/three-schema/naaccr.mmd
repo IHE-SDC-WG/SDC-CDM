@@ -148,7 +148,7 @@ erDiagram
     TEXT concept_name
   }
 
-  %% Captured answers, NAACCR staging shape: one row per answered item.
+  %% Captured answers: one row per answered CAP code or verified NAACCR item.
   NAACCR_VALUE {
     INTEGER naaccr_value_id PK
     INTEGER person_id
@@ -157,6 +157,7 @@ erDiagram
     TEXT report_accession
     TEXT schema_id_number
     INTEGER item_num
+    TEXT ecp_code
     TEXT obx_sub_id
     TEXT value_code
     REAL value_num
@@ -187,6 +188,6 @@ erDiagram
 
   NAACCR_ITEM ||..o| NAACCR_CONCEPT_MAP : "item_num (version-independent)"
   NAACCR_ITEM ||..o{ NAACCR_VALUE_CONCEPT_MAP : "item_num (version-independent)"
-  NAACCR_ITEM ||..o{ NAACCR_VALUE : "item_num"
+  NAACCR_ITEM ||..o{ NAACCR_VALUE : "verified item_num only"
   STAGING_SCHEMA ||..o{ NAACCR_VALUE : "schema_id_number (no FK)"
   SDC_REPORT ||..o{ NAACCR_VALUE : "sdc_report_id (cross-schema, no FK)"

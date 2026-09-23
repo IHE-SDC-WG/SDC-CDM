@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import uuid
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterator
@@ -261,6 +262,39 @@ def test_coverage_expectation_requires_matching_naaccr_version(dialect: str, tmp
         assert report_coverage(
             backend, algorithm="eod_public", csv_dir=seeds, expectation_path=expected,
         ).comparisons == (("item_total", 9, 9, True),)
+
+
+@pytest.mark.parametrize("dialect", ("sqlite", "sqlserver"))
+def test_foreign_item_count_ignores_ecp_only_answers(dialect: str, tmp_path: Path) -> None:
+    seeds = _seed_dir(tmp_path)
+    with _backend(dialect, tmp_path) as backend:
+        _prepare(backend, tmp_path)
+        build_concept_maps(backend, algorithm="eod_public", csv_dir=seeds)
+        baseline = report_coverage(
+            backend, algorithm="eod_public", csv_dir=seeds,
+        ).checks["foreign_captured_item_numbers"]
+        episode_key = f"coverage-{uuid.uuid4().hex}"
+        try:
+            backend.execute(
+                "INSERT INTO naaccr.naaccr_value "
+                "(person_id, episode_key, ecp_code) VALUES (1, ?, 'CAP.1')",
+                (episode_key,),
+            )
+            assert report_coverage(
+                backend, algorithm="eod_public", csv_dir=seeds,
+            ).checks["foreign_captured_item_numbers"] == baseline
+            backend.execute(
+                "INSERT INTO naaccr.naaccr_value "
+                "(person_id, episode_key, item_num) VALUES (1, ?, 9999999)",
+                (episode_key,),
+            )
+            assert report_coverage(
+                backend, algorithm="eod_public", csv_dir=seeds,
+            ).checks["foreign_captured_item_numbers"] == baseline + 1
+        finally:
+            backend.execute(
+                "DELETE FROM naaccr.naaccr_value WHERE episode_key = ?", (episode_key,),
+            )
 
 
 @pytest.mark.parametrize("dialect", ("sqlite", "sqlserver"))

@@ -11,7 +11,8 @@ BEGIN
     sdc_report_id INT NULL,
     report_accession NVARCHAR(100) NULL,
     schema_id_number NVARCHAR(255) NULL,
-    item_num INT NOT NULL,
+    item_num INT NULL,
+    ecp_code NVARCHAR(50) NULL,
     obx_sub_id NVARCHAR(255) NULL,
     value_code NVARCHAR(255) NULL,
     value_num FLOAT NULL,
@@ -20,7 +21,11 @@ BEGIN
     observation_date DATE NULL,
     -- Gap #1: the dictionary version this answer was coded against. Nullable so existing
     -- import paths that do not yet supply it keep working; populate going forward.
-    dd_version_id INT NULL
+    dd_version_id INT NULL,
+    CONSTRAINT CK_naaccr_value_identifier CHECK (
+      (item_num IS NOT NULL AND ecp_code IS NULL)
+      OR (item_num IS NULL AND ecp_code IS NOT NULL AND LEN(ecp_code) > 0)
+    )
   );
 
   CREATE INDEX IX_naaccr_value_person_episode
@@ -29,6 +34,8 @@ BEGIN
     ON naaccr.naaccr_value (report_accession, item_num);
   CREATE INDEX IX_naaccr_value_item_code
     ON naaccr.naaccr_value (item_num, value_code);
+  CREATE INDEX IX_naaccr_value_report_ecp
+    ON naaccr.naaccr_value (report_accession, ecp_code);
   CREATE INDEX IX_naaccr_value_sdc_report
     ON naaccr.naaccr_value (sdc_report_id);
 END

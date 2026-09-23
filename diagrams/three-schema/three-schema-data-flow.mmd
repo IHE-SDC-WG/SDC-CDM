@@ -29,11 +29,11 @@ flowchart LR
 
   subgraph naaccr["Core: naaccr schema"]
     direction TB
-    values["naaccr_value<br/>captured item answers"]
+    values["naaccr_value<br/>CAP code or NAACCR item answers"]
     maps["naaccr_concept_map<br/>naaccr_value_concept_map"]
     dictionary["NAACCR dictionary<br/>item and code definitions"]
 
-    dictionary --> values
+    dictionary -.->|"verified item_num only"| values
     dictionary --> maps
   end
 
@@ -70,7 +70,7 @@ flowchart LR
   report -.->|"sdc_report_id"| values
   report -->|"report header"| bridge
   values -->|"captured answers"| bridge
-  maps -->|"OMOP concept identifiers"| bridge
+  maps -->|"verified NAACCR item mappings"| bridge
   bridge -->|"one note per report"| note
   bridge -->|"one measurement per bridgeable value"| measurement
 

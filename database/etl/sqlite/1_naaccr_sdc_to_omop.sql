@@ -11,7 +11,7 @@ PRAGMA foreign_keys = ON;
   bridge runs. Reports with a NULL/empty accession, and value rows whose
   sdc_report_id is NULL, never bridge.
 
-  Measurement de-duplication is occurrence-aware: for each report/item/value
+  Measurement de-duplication is occurrence-aware: for each report/identifier/value
   tuple, the bridge inserts only source occurrences beyond the number already
   present in OMOP. This preserves legitimate identical values, keeps re-runs
   idempotent, and repairs partial loads.
@@ -77,7 +77,7 @@ SELECT
     sr.provider_id,
     sr.visit_occurrence_id,
     NULL,
-    CAST(nv.item_num AS TEXT),
+    COALESCE(nv.ecp_code, CAST(nv.item_num AS TEXT)),
     ncm.concept_id,
     nv.value_unit_source,
     NULL,
@@ -89,7 +89,7 @@ FROM (
         nv.*,
         ROW_NUMBER() OVER (
             PARTITION BY
-                nv.sdc_report_id, nv.item_num, nv.value_code, nv.value_num,
+                nv.sdc_report_id, nv.item_num, nv.ecp_code, nv.value_code, nv.value_num,
                 nv.value_text, nv.value_unit_source
             ORDER BY nv.naaccr_value_id
         ) AS occurrence_n
@@ -104,16 +104,16 @@ JOIN omop.note n
     ON n.person_id = sr.person_id
    AND n.note_source_value = sr.report_accession
 LEFT JOIN naaccr.naaccr_concept_map ncm
-    ON ncm.item_num = nv.item_num
+    ON nv.item_num IS NOT NULL AND ncm.item_num = nv.item_num
 LEFT JOIN naaccr.naaccr_value_concept_map nvcm
-    ON nvcm.item_num = nv.item_num
+    ON nv.item_num IS NOT NULL AND nvcm.item_num = nv.item_num
    AND nvcm.code = COALESCE(nv.value_code, '')
 WHERE nv.occurrence_n > (
     SELECT COUNT(*)
     FROM omop.measurement m
     WHERE m.measurement_event_id = n.note_id
       AND m.meas_event_field_concept_id = 1147289 -- TODO(phase-4): use field_note_note_id.
-      AND m.measurement_source_value = CAST(nv.item_num AS TEXT)
+      AND m.measurement_source_value = COALESCE(nv.ecp_code, CAST(nv.item_num AS TEXT))
       AND m.value_as_concept_id IS nvcm.concept_id
       AND m.value_as_number IS nv.value_num
       AND m.value_source_value IS COALESCE(NULLIF(nv.value_text, ''), nv.value_code)

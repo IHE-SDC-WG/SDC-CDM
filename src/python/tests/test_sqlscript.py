@@ -47,7 +47,7 @@ def test_real_manifest_script_counts_are_pinned() -> None:
             "database/schemas/omop/ddl/sqlite/2_OMOPCDM_sqlite_5.4_primary_keys.sql": (0, 0),
             "database/schemas/omop/ddl/sqlite/3_OMOPCDM_sqlite_5.4_constraints.sql": (0, 0),
             "database/schemas/omop/ddl/sqlite/4_OMOPCDM_sqlite_5.4_indices.sql": (70, 0),
-            "database/schemas/naaccr/ddl/sqlite/1_naaccr_sqlite_ddl.sql": (35, 2),
+            "database/schemas/naaccr/ddl/sqlite/1_naaccr_sqlite_ddl.sql": (36, 2),
             "database/schemas/sdc/ddl/sqlite/1_sdc_sqlite_ddl.sql": (12, 2),
         },
         "sqlserver": {

@@ -24,6 +24,10 @@ Value handling:
 | text | `measurement.value_source_value`; companion text takes precedence over the raw code |
 
 CAP OBX segments sharing an OBX-4 sub-ID are staged as one logical `naaccr_value`.
+The full OBX-3.1 question identifier is stored in `ecp_code`; `item_num` is NULL unless
+a crosswalk has established a genuine NAACCR item number. NAACCR concept maps apply only
+to rows with `item_num` set. The bridge writes `ecp_code` to
+`measurement_source_value` for CAP rows.
 The coded component populates `value_code`, the numeric component populates `value_num`,
 and a nonnumeric ST companion populates `value_text`.
 
@@ -43,6 +47,7 @@ with a key join:
 SELECT
   m.measurement_id,
   n.note_source_value AS report_accession,
+  nv.ecp_code,
   ni.name AS naaccr_item_name
 FROM omop.measurement m
 JOIN omop.note n
@@ -51,8 +56,12 @@ JOIN sdc.sdc_report sr
   ON sr.report_accession = n.note_source_value
  AND sr.person_id = n.person_id
  AND sr.is_duplicate_accession = 0
-JOIN naaccr.naaccr_item ni
-  ON CAST(ni.item_num AS TEXT) = m.measurement_source_value
+JOIN naaccr.naaccr_value nv
+  ON nv.sdc_report_id = sr.sdc_report_id
+ AND COALESCE(nv.ecp_code, CAST(nv.item_num AS TEXT)) = m.measurement_source_value
+LEFT JOIN naaccr.naaccr_item ni
+  ON nv.item_num IS NOT NULL
+ AND ni.item_num = nv.item_num
  AND ni.dd_version_id = (
        SELECT MAX(dd_version_id)
        FROM naaccr.data_dictionary_version
@@ -61,6 +70,10 @@ JOIN naaccr.naaccr_item ni
      )
 WHERE m.meas_event_field_concept_id = 1147289;
 ```
+
+Repeated answers with the same source identifier can produce multiple candidate
+`naaccr_value` rows in this query. The current bridge does not store a row-level
+answer pointer in OMOP.
 
 ## Importer boundary
 

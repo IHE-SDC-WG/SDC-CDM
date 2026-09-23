@@ -40,6 +40,16 @@ def test_envelope_schema_is_strict_and_versioned() -> None:
     assert schema["additionalProperties"] is False
     assert schema["properties"]["envelope_version"] == {"const": "1"}
     assert schema["properties"]["values"]["items"]["additionalProperties"] is False
+    identifiers = schema["properties"]["values"]["items"]
+    assert identifiers["oneOf"] == [
+        {"required": ["ecp_code"]},
+        {"required": ["item_num"]},
+    ]
+    assert identifiers["properties"]["ecp_code"] == {
+        "maxLength": 50,
+        "minLength": 1,
+        "type": "string",
+    }
     assert schema["properties"]["values"]["items"]["properties"]["value_num"]["type"] == [
         "string",
         "null",
@@ -98,3 +108,16 @@ def test_the_envelope_and_the_snapshots_disagree_about_value_num_on_purpose() ->
     )
     assert isinstance(item_2129["value_num"], float)
     assert "value_num_note" in snapshot["source"]
+
+
+def test_corrected_cap_identifiers_are_separate_from_historical_snapshots() -> None:
+    expected = json.loads(
+        (ROOT / "contracts/expected/obx-Adrenal.identifiers.json").read_text()
+    )
+    assert expected["naaccr_value_count"] == 19
+    assert {row["ecp_code"] for row in expected["rows"]} == {
+        "2118.1000043",
+        "2129.1000043",
+        "820404.1000043",
+    }
+    assert all(row["item_num"] is None for row in expected["rows"])

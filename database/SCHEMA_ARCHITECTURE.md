@@ -32,7 +32,8 @@ regression fixtures seed the matching OMOP person explicitly.
   `naaccr_item_registry_requirement` stores the four registries' source collection text.
 - `staging_schema`, `schema_item`, schema-scoped value-set and requirement tables, `registry`, and
   staging lookup tables hold the site-specific SSDI axis.
-- `naaccr_value` stores one row per logical answered item, including `item_num`, OBX sub-ID,
+- `naaccr_value` stores one row per logical answered item, with either a verified NAACCR
+  `item_num` or the full CAP OBX-3.1 `ecp_code`, plus OBX sub-ID,
   coded, numeric, and text values, source units, observation date, dictionary version, and source
   report identifiers.
 - `naaccr_concept_map` and `naaccr_value_concept_map` map item and item-value pairs to OMOP
@@ -122,7 +123,8 @@ columns, and does not run as part of `build`.
 OMOP rows point back to source records using standard columns:
 
 - `omop.note.note_source_value` stores the report accession.
-- `omop.measurement.measurement_source_value` stores the NAACCR item number.
+- `omop.measurement.measurement_source_value` stores the full CAP `ecp_code` for eCP
+  answers or the NAACCR `item_num` for verified NAACCR answers.
 - `omop.measurement.measurement_event_id` points to `omop.note.note_id` when
   `meas_event_field_concept_id = 1147289` (`note.note_id`).
 - Numeric answers use `value_as_number`; coded answers use `value_as_concept_id`; companion text
@@ -136,6 +138,7 @@ SELECT m.measurement_id,
        m.value_as_number,
        m.value_source_value,
        sr.report_accession,
+       nv.ecp_code,
        ni.name AS naaccr_item_name
 FROM omop.measurement m
 JOIN omop.note n
@@ -144,8 +147,12 @@ JOIN sdc.sdc_report sr
   ON sr.report_accession = n.note_source_value
  AND sr.person_id = n.person_id
  AND sr.is_duplicate_accession = 0
-JOIN naaccr.naaccr_item ni
-  ON CAST(ni.item_num AS TEXT) = m.measurement_source_value
+JOIN naaccr.naaccr_value nv
+  ON nv.sdc_report_id = sr.sdc_report_id
+ AND COALESCE(nv.ecp_code, CAST(nv.item_num AS TEXT)) = m.measurement_source_value
+LEFT JOIN naaccr.naaccr_item ni
+  ON nv.item_num IS NOT NULL
+ AND ni.item_num = nv.item_num
  AND ni.dd_version_id = (
        SELECT dd_version_id
        FROM naaccr.data_dictionary_version
@@ -153,6 +160,9 @@ JOIN naaccr.naaccr_item ni
      )
 WHERE m.meas_event_field_concept_id = 1147289;
 ```
+
+For repeated answers sharing an identifier, this returns candidate source rows;
+there is no row-level answer pointer in OMOP yet.
 
 ## Physical model and build order
 
