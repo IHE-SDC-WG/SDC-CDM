@@ -126,7 +126,7 @@ and `git blame` survive — the blame trail is how anyone will ever find out *wh
 | The OBX-4 grouping rule | Re-derived three times already in this repo. Port it to the parsers verbatim. |
 | Occurrence-aware idempotency SQL | The one genuinely well-built part of the current bridge. |
 | `sample_data/` | Real HL7 messages, SDC templates, FHIR bundles. |
-| `SdcImporterTests.cs@c29d01dc6a042b13217bbb511864b98aa714aee5:41-154` | The behavioural contract: 19 values → 19 measurements, items 2129 and 820404. **This is `ImportNaaccrVolV_ExecutesWithoutError` — an HL7 test, on the path C# is losing.** It must be **ported to pytest**, assertion for assertion, not simply kept. Porting it is how Phase 3 proves the Python parser matches the behaviour being retired. |
+| `SdcImporterTests.cs@c29d01dc6a042b13217bbb511864b98aa714aee5:41-154` | The historical behavioural contract: 19 values → 19 measurements, CAP codes `2129.1000043` and `820404.1000043`. Its numeric `item_num` assertions record the retired importer's identifier error. Phase 3 ports the grouping and count assertions to pytest using the corrected `ecp_code` shape. |
 | `TEST_PLAN.md` | ~85 catalogued test IDs. Retarget, don't discard. |
 | Git history | Why `sdc_report_id` and not accession; why SQLitePCLRaw is pinned; the 17 review findings. |
 
@@ -156,6 +156,9 @@ hardcoded concept IDs, and the PostgreSQL dialect with its container wiring.
 `contracts/envelope.schema.json` — a versioned JSON Schema, the single boundary between parsing and
 persistence:
 
+Each answer carries either a verified NAACCR `item_num` or a full CAP OBX-3.1
+`ecp_code`. The numeric prefix of a CAP code is never inferred as a NAACCR item.
+
 ```json
 {
   "envelope_version": "1",
@@ -170,7 +173,7 @@ persistence:
                "observation_date": { "y": 2024, "m": 11, "d": 8, "precision": "day" },
                "narrative": "…",
                "tumor_site": "…", "procedure": "…", "laterality": "…" },
-  "values":  [ { "item_num": 2129, "obx_sub_id": "2131", "value_code": "…",
+  "values":  [ { "ecp_code": "2129.1000043", "obx_sub_id": "2131", "value_code": "…",
                  "value_num": "10.0", "value_text": null,
                  "unit_source": "cm",
                  "observation_date": { "y": 2024, "m": 11, "d": 8, "precision": "day" } } ],
@@ -587,7 +590,7 @@ The maps therefore carry both IDs explicitly, and the ETL uses them in the right
 |---|---|---|
 | `*_source_concept_id` | the NAACCR **source** concept | `naaccr_concept_map.source_concept_id` |
 | `*_concept_id` | the **standard** concept | `naaccr_concept_map.concept_id`, resolved through `concept_relationship` `'Maps to'` at map-build time |
-| `*_source_value` | the raw NAACCR item number / code | unchanged |
+| `*_source_value` | the full CAP code or verified NAACCR item number | `ecp_code` or `item_num` |
 
 The same contract applies to `value_as_concept_id` vs the value map's source concept, and to
 `condition_concept_id` / `condition_source_concept_id`.
@@ -875,7 +878,8 @@ assigning authorities produce two `intake.patient` rows; a deliberately malforme
 `load_envelope.sql` carries a non-null `dd_version_id`; a fixture carrying the staging-selection
 inputs yields a non-null `schema_id_number` that resolves to a `staging_schema` row, and one lacking
 them yields NULL plus a diagnostic; **`SdcImporterTests.cs@c29d01dc6a042b13217bbb511864b98aa714aee5:41-154` is ported to pytest** and its
-assertions (19 values → 19 measurements, both OBX-4 grouped shapes) pass against the Python parser —
+count and grouping assertions (19 values → 19 measurements, both OBX-4 grouped shapes) pass using
+the corrected CAP identifier expectations in `contracts/expected/` —
 this is the phase's proof that nothing was lost in retiring the C# HL7 path.
 
 **Phase 4 — bridge broadening.** person/period/cdm_source, domain routing, thin condition + episode,
@@ -1012,8 +1016,8 @@ dotnet test src/csharp/SdcCdm.Sdc.Tests
 - **Person identity.** `omop.person` count equals `intake.patient` count; the same PID-3 under two
   different assigning authorities yields two patients, not one.
 - **Existing coverage retained, in the new language.** `SdcImporterTests.cs@c29d01dc6a042b13217bbb511864b98aa714aee5:41-154` asserts 19
-  `naaccr_value` rows → 19 `omop.measurement` rows with both OBX-4 grouped shapes (item 2129
-  code+number, item 820404 code+text). Because it exercises the HL7 path, it cannot stay in C#: port
-  it to pytest assertion for assertion and require the port to pass before the C# HL7 importer is
-  deleted. It is the current behavioural contract and the only thing standing between this rebuild
-  and a silent regression.
+  `naaccr_value` rows → 19 `omop.measurement` rows with both OBX-4 grouped shapes (CAP code
+  `2129.1000043` code+number, CAP code `820404.1000043` code+text). Because it exercises the HL7 path, it cannot stay in C#: port
+  its count and grouping assertions to pytest, correcting the identifier shape to full CAP codes
+  in `ecp_code` and NULL `item_num`. The retired C# snapshots remain historical evidence; the
+  corrected expected identifiers are in `contracts/expected/obx-Adrenal.identifiers.json`.

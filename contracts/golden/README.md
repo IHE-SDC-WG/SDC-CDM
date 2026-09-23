@@ -5,6 +5,10 @@ has an oracle after the C# code is gone. Every value here was read out of
 `SdcCdmLib/SdcCdm.Tests/SdcImporterTests.cs` at commit `c29d01dc6a042b13217bbb511864b98aa714aee5`;
 `git show` that path to see the original assertions.
 
+The historical snapshots also preserve a known identifier error: `item_num` contains CAP eCC
+code prefixes. They must not be used as the expected identifier shape for the Phase 3 parser.
+The corrected expectation is in `contracts/expected/obx-Adrenal.identifiers.json`.
+
 ## These are database snapshots, not envelopes
 
 Each file describes rows **after** load or bridge, so its field types are the *column* types in

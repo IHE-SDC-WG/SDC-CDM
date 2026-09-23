@@ -1,0 +1,24 @@
+{
+  "fixture": "sample_data/naaccr_v2/obx-Adrenal.hl7",
+  "naaccr_value_count": 19,
+  "rows": [
+    {
+      "ecp_code": "2118.1000043",
+      "item_num": null,
+      "meaning": "Tumor Site"
+    },
+    {
+      "ecp_code": "2129.1000043",
+      "item_num": null,
+      "obx_sub_id": "2131",
+      "value_code": "2131.1000043",
+      "value_num": 10.0
+    },
+    {
+      "ecp_code": "820404.1000043",
+      "item_num": null,
+      "value_code": "45594.1000043",
+      "value_text": "Capsular invasion and sinusoidal vascular invasion identified"
+    }
+  ]
+}

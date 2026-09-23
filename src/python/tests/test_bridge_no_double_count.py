@@ -214,6 +214,18 @@ def test_bridge_reruns_do_not_double_count(
         _seed_bridge_vocabulary(backend)
         patient_id, accession = _seed_source_rows(backend)
 
+        for item_num, ecp_code in ((None, None), (2118, "2118.1000043")):
+            with pytest.raises(Exception):
+                backend.execute(
+                    "INSERT INTO naaccr.naaccr_value "
+                    "(person_id, episode_key, item_num, ecp_code) VALUES (?, ?, ?, ?)",
+                    (patient_id, f"invalid-{accession}", item_num, ecp_code),
+                )
+        assert backend.fetch_one(
+            "SELECT COUNT(*) FROM naaccr.naaccr_value WHERE episode_key = ?",
+            (f"invalid-{accession}",),
+        )[0] == 0
+
         _apply_bridge(backend)
         note_row = backend.fetch_one(
             "SELECT note_id FROM omop.note WHERE person_id = ? AND note_source_value = ?",
@@ -281,3 +293,46 @@ def test_bridge_reruns_do_not_double_count(
             "AND measurement_type_concept_id <> 32879",
             (note_id,),
         )[0] == 0
+
+        # CAP Tumor Site happens to share the numeric prefix 2118 with an
+        # unrelated NAACCR dictionary item. Only the genuine item may map.
+        backend.execute(
+            "INSERT INTO naaccr.naaccr_concept_map "
+            "(item_num, source_concept_id, concept_id, mapping_layer, created_at) "
+            "VALUES (2118, 32879, 32879, 'athena_standard', '2026-06-22')"
+        )
+        backend.execute(
+            "INSERT INTO naaccr.naaccr_value_concept_map "
+            "(item_num, code, source_concept_id, concept_id, mapping_layer, created_at) "
+            "VALUES (2118, 'X', 32879, 32879, 'athena_standard', '2026-06-22')"
+        )
+        for _ in range(2):
+            backend.execute(
+                "INSERT INTO naaccr.naaccr_value ("
+                "person_id, episode_key, sdc_report_id, report_accession, ecp_code, "
+                "obx_sub_id, value_code, value_num, observation_date"
+                ") VALUES (?, ?, ?, ?, '2118.1000043', '2131', 'X', 10, '2026-06-22')",
+                (patient_id, f"episode-{accession}", report_id, accession),
+            )
+        backend.execute(
+            "INSERT INTO naaccr.naaccr_value ("
+            "person_id, episode_key, sdc_report_id, report_accession, item_num, "
+            "value_code, observation_date"
+            ") VALUES (?, ?, ?, ?, 2118, 'X', '2026-06-22')",
+            (patient_id, f"episode-{accession}", report_id, accession),
+        )
+        _apply_bridge(backend)
+        _apply_bridge(backend)
+        collision_rows = backend.fetch_all(
+            "SELECT measurement_source_value, measurement_concept_id, "
+            "measurement_source_concept_id, value_as_concept_id, value_as_number "
+            "FROM omop.measurement WHERE measurement_event_id = ? "
+            "AND measurement_source_value IN ('2118', '2118.1000043') "
+            "ORDER BY measurement_source_value, measurement_id",
+            (note_id,),
+        )
+        assert [tuple(row) for row in collision_rows] == [
+            ("2118", 32879, 32879, 32879, None),
+            ("2118.1000043", 0, None, None, 10.0),
+            ("2118.1000043", 0, None, None, 10.0),
+        ]

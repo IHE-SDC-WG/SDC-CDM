@@ -1,15 +1,22 @@
 from __future__ import annotations
 
 import hashlib
+import os
 import sqlite3
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 
 import pytest
 
-from sdc_cdm.cli.build import BuildRunner, BuildStatus
+from sdc_cdm.cli.build import BuildAction, BuildRunner, BuildStatus
 from sdc_cdm.cli.main import main, registered_commands
+from sdc_cdm.db.backend import DatabaseBackend
 from sdc_cdm.db.manifest import load_manifest
+from sdc_cdm.db.paths import repository_path
 from sdc_cdm.db.sqlite_backend import SQLiteBackend, schema_database_path
+from sdc_cdm.db.sqlscript import split_script
+from sdc_cdm.db.sqlserver_backend import SqlServerBackend
 
 
 def _run_build(control_path: Path, *, dry_run: bool = False):
@@ -74,6 +81,141 @@ def test_build_twice_is_a_no_op(tmp_path: Path) -> None:
         assert backend.table_exists("omop", "measurement")
         assert backend.table_exists("naaccr", "naaccr_value")
         assert backend.table_exists("sdc", "sdc_report")
+
+
+@contextmanager
+def _backend(dialect: str, tmp_path: Path) -> Iterator[DatabaseBackend]:
+    if dialect == "sqlite":
+        backend: DatabaseBackend = SQLiteBackend(tmp_path / "legacy.db")
+    else:
+        connection_string = os.environ.get("SDC_CDM_SQLSERVER_CONNECTION_STRING")
+        if not connection_string:
+            pytest.skip("SDC_CDM_SQLSERVER_CONNECTION_STRING is not set")
+        backend = SqlServerBackend(connection_string)
+    try:
+        yield backend
+    finally:
+        backend.close()
+
+
+_LEGACY_VALUE_DDL = {
+    "sqlite": (
+        "CREATE TABLE naaccr.naaccr_value ("
+        "naaccr_value_id INTEGER PRIMARY KEY, person_id INTEGER NOT NULL, "
+        "episode_key TEXT NOT NULL, item_num INTEGER NOT NULL)"
+    ),
+    "sqlserver": (
+        "CREATE TABLE naaccr.naaccr_value ("
+        "naaccr_value_id INT IDENTITY(1,1) NOT NULL PRIMARY KEY, "
+        "person_id INT NOT NULL, episode_key NVARCHAR(100) NOT NULL, "
+        "item_num INT NOT NULL)"
+    ),
+}
+
+_INSERT_LEGACY_ROW = (
+    "INSERT INTO naaccr.naaccr_value (person_id, episode_key, item_num) "
+    "VALUES (1, 'legacy', 2118)"
+)
+
+
+@contextmanager
+def _legacy_value_table(backend: DatabaseBackend) -> Iterator[str]:
+    """Build, swap in the pre-ecp_code table, and restore it afterwards.
+
+    The restore matters on SQL Server, where every test shares one database.
+    Yields the NAACCR DDL path the upgrade forces.
+    """
+
+    BuildRunner(load_manifest(), backend).run()
+    ddl_path = BuildRunner._NAACCR_VALUE_DDL[backend.dialect]
+    backend.execute("DROP TABLE naaccr.naaccr_value")
+    backend.execute(_LEGACY_VALUE_DDL[backend.dialect])
+    try:
+        yield ddl_path
+    finally:
+        if backend.table_exists("naaccr", "naaccr_value"):
+            backend.execute("DROP TABLE naaccr.naaccr_value")
+        sql = repository_path(ddl_path).read_text(encoding="utf-8")
+        backend.execute_units(split_script(backend.dialect, sql).executable)
+
+
+def _status_of(actions: list[BuildAction], path: str) -> BuildStatus:
+    return next(action.status for action in actions if action.path == path)
+
+
+@pytest.mark.parametrize("dialect", ("sqlite", "sqlserver"))
+def test_empty_legacy_value_table_upgrades_even_when_hashes_are_accepted(
+    dialect: str, tmp_path: Path
+) -> None:
+    with _backend(dialect, tmp_path) as backend, _legacy_value_table(
+        backend
+    ) as ddl_path:
+        preview = BuildRunner(load_manifest(), backend).run(dry_run=True)
+        assert _status_of(preview, ddl_path) is BuildStatus.WOULD_REAPPLY
+        runner = BuildRunner(load_manifest(), backend, accept_changed_hashes=True)
+        actions = runner.run()
+        assert _status_of(actions, ddl_path) is BuildStatus.REAPPLIED
+        assert runner._naaccr_value_shape() == (True, True)
+        assert backend.fetch_one("SELECT COUNT(*) FROM naaccr.naaccr_value")[0] == 0
+
+
+@pytest.mark.parametrize("dialect", ("sqlite", "sqlserver"))
+def test_empty_legacy_value_table_without_a_ledger_row_is_applied(
+    dialect: str, tmp_path: Path
+) -> None:
+    with _backend(dialect, tmp_path) as backend, _legacy_value_table(
+        backend
+    ) as ddl_path:
+        backend.execute(
+            "DELETE FROM etl.schema_migration WHERE migration_path = ?", (ddl_path,)
+        )
+        preview = BuildRunner(load_manifest(), backend).run(dry_run=True)
+        assert _status_of(preview, ddl_path) is BuildStatus.WOULD_APPLY
+        runner = BuildRunner(load_manifest(), backend)
+        actions = runner.run()
+        assert _status_of(actions, ddl_path) is BuildStatus.APPLIED
+        assert runner._naaccr_value_shape() == (True, True)
+
+
+@pytest.mark.parametrize("dialect", ("sqlite", "sqlserver"))
+def test_populated_legacy_value_table_fails_without_changing_rows(
+    dialect: str, tmp_path: Path
+) -> None:
+    with _backend(dialect, tmp_path) as backend, _legacy_value_table(backend):
+        backend.execute(_INSERT_LEGACY_ROW)
+        run_count = backend.fetch_one("SELECT COUNT(*) FROM etl.run")[0]
+        with pytest.raises(RuntimeError, match="1 legacy row.*ambiguous"):
+            BuildRunner(load_manifest(), backend).run(dry_run=True)
+        with pytest.raises(RuntimeError, match="1 legacy row.*ambiguous"):
+            BuildRunner(load_manifest(), backend).run()
+        assert tuple(
+            backend.fetch_one(
+                "SELECT person_id, episode_key, item_num FROM naaccr.naaccr_value"
+            )
+        ) == (1, "legacy", 2118)
+        assert backend.fetch_one("SELECT COUNT(*) FROM etl.run")[0] == run_count
+
+
+@pytest.mark.parametrize("dialect", ("sqlite", "sqlserver"))
+def test_row_added_after_the_early_check_blocks_the_drop(
+    dialect: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    with _backend(dialect, tmp_path) as backend, _legacy_value_table(backend):
+        prepare_for_writes = backend.prepare_for_writes
+
+        def prepare_then_race() -> None:
+            # An importer lands between the early count and the drop.
+            prepare_for_writes()
+            backend.execute(_INSERT_LEGACY_ROW)
+
+        monkeypatch.setattr(backend, "prepare_for_writes", prepare_then_race)
+        with pytest.raises(RuntimeError, match="1 legacy row.*ambiguous"):
+            BuildRunner(load_manifest(), backend).run()
+        assert tuple(
+            backend.fetch_one(
+                "SELECT person_id, episode_key, item_num FROM naaccr.naaccr_value"
+            )
+        ) == (1, "legacy", 2118)
 
 
 def test_dry_run_against_a_new_database_writes_nothing_to_disk(tmp_path: Path) -> None:

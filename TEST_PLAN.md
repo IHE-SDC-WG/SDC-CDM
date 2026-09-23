@@ -70,7 +70,7 @@ Fixtures: `sample_data/naaccr_v2/24-11-000312-2.txt.hl7`, `obx-Adrenal.hl7`
 - [ ] **IMP-HL7-03** OBR creates one `sdc.sdc_report` with the OBR accession as
   `report_accession` and report LOINC `60568-3`.
 - [ ] **IMP-HL7-04** Each logical answer yields one `naaccr.naaccr_value` row with the right
-  `item_num`, `obx_sub_id`, `value_code`/`value_num`/`value_text`, `report_accession`, and
+  full OBX-3.1 `ecp_code`, NULL `item_num`, `obx_sub_id`, `value_code`/`value_num`/`value_text`, `report_accession`, and
   the originating `sdc_report_id`. CWE plus numeric/text OBX components sharing OBX-4 are
   combined. A missing OBR-3 accession is stored as NULL (not `''`).
   *(coverage regression: Phase 0 deleted `SdcImporterTests.cs` and the C# HL7 importer.)*
@@ -81,7 +81,7 @@ Fixtures: `sample_data/naaccr_v2/24-11-000312-2.txt.hl7`, `obx-Adrenal.hl7`
   (`is_duplicate_accession = 1`, `first_seen_report_id` points at the original) instead of
   silently duplicating or erroring.
 - [ ] **IMP-HL7-07** *(regression, review finding #5)* An OBX-3 question identifier that is
-  not a plain integer prefix (e.g. a LOINC code) is either imported or rejected **with a
+  not a CAP eCC/eCP code (e.g. a LOINC code) is either imported or rejected **with a
   logged warning** so an answer is not silently omitted from `naaccr.naaccr_value`.
 - [ ] **IMP-HL7-08** Malformed message (missing MSH / truncated segment) throws or returns
   an error; the database is left without a half-written report.
@@ -173,11 +173,12 @@ shape**, so the OMOP bridge only has to be tested once.
 - [ ] **NAACCR-02** *(from FHIR)* Importing the CPDS bundle for the same case yields
   equivalent `naaccr_value` rows to NAACCR-01 where items overlap.
 - [ ] **NAACCR-03** *(from SDC XML)* Importing `ADRENAL_GLAND.xml` yields answers joinable
-  to the NAACCR dictionary via the `item_num.suffix` question-identifier convention
-  (e.g. `2129.1000043`).
+  to the NAACCR dictionary only through a verified crosswalk. CAP question identifiers
+  such as `2129.1000043` remain in `ecp_code` until then.
 - [ ] **NAACCR-04** *(from CCDA — blocked)* Same golden comparison once the importer exists.
-- [ ] **NAACCR-05** Dictionary integrity: every `naaccr_value.item_num` written by any
-  importer exists in `naaccr.naaccr_item` (or is explicitly reported as unmapped).
+- [ ] **NAACCR-05** Dictionary integrity: every non-NULL `naaccr_value.item_num` written by any
+  importer exists in `naaccr.naaccr_item` (or is explicitly reported as unmapped);
+  `ecp_code` rows cannot join by their numeric prefix.
 - [ ] **NAACCR-06** Concept-map coverage: every item/value pair used by the fixtures has a
   row in `naaccr_concept_map` / `naaccr_value_concept_map`, or appears in an "unmapped"
   report — so bridge output never silently maps to concept 0 for known items.
@@ -195,7 +196,8 @@ importer or direct inserts, run the bridge, assert on `omop.*`.
 - [ ] **OMOP-02** One `omop.note` per `sdc_report`, with `note_source_value` =
   `report_accession` and the report narrative as note text.
 - [ ] **OMOP-03** One `omop.measurement`/`observation` per answered item, with
-  `*_source_value` = the item code, mapped `*_concept_id` from `naaccr_concept_map`,
+  `*_source_value` = the full CAP code or verified NAACCR item number, and NAACCR
+  mapped `*_concept_id` only for rows with `item_num`,
   and `*_event_id` pointing at the note (event field concept `1147289` for
   measurement→note anchoring).
 - [ ] **OMOP-04** Value typing: coded answers → `value_as_concept_id` (via
@@ -215,8 +217,9 @@ importer or direct inserts, run the bridge, assert on `omop.*`.
   stored as NULL, and legacy `''` covered by the ETL's `NULLIF` guard) never bridge: no `''`
   note is created and their values do not fan out across reports.
 - [ ] **OMOP-07** Back-reference join from `SCHEMA_ARCHITECTURE.md` works: from an OMOP
-  measurement you can recover the report and NAACCR item name via
-  note → sdc_report and measurement_source_value → naaccr_item, with no stored cross-schema FK.
+  measurement you can recover the report and source identifier via
+  note → sdc_report → naaccr_value; recover a NAACCR item name only for rows with
+  `item_num`, with no stored cross-schema FK.
 - [ ] **OMOP-08** End-to-end: HL7v2 fixture → import → bridge → expected OMOP rows
   (golden-file comparison). Repeat from the FHIR fixture and assert equivalence.
 - [x] **OMOP-09** *(regression, review finding #3)* The SQL Server bridge ETL only
@@ -352,8 +355,9 @@ count anchor: `expectations/naaccr-25.json`.
 
 The Python ports must not drift from the C# importers.
 
-- [ ] **PY-01** Python HL7v2 importer produces the frozen `naaccr_value` output in
-  `contracts/golden/`. These contract files are Python-only after Phase 0.
+- [ ] **PY-01** Python HL7v2 importer retains the frozen `naaccr_value` count and
+  grouping behavior in `contracts/golden/`, but produces the corrected identifiers in
+  `contracts/expected/`. The golden files record the retired importer's prefix error.
 - [ ] **PY-02** *(regression, review finding #5)* Python port handles non-integer OBX-3
   identifiers the same way the C# fix does.
 - (retired) **PY-03** The former public CCR JSON importer and its eight-test module were removed;
@@ -394,7 +398,7 @@ time**, so no new golden files are needed for the core oracle tests (SDCOM-03/04
 - [ ] **SDCOM-03** *(question inventory oracle → strengthens IMP-SDC-03/04)* Deserialize the
   form with the OM, enumerate its Question/ListItem nodes via `SdcUtil`, and assert the
   importer wrote **exactly one** `sdc_form_answer` per answered question, **none** for
-  unanswered ones, and that the `item_num.suffix` question identifiers match the OM-derived
+  unanswered ones, and that the full question identifiers match the OM-derived
   set. No hand-maintained expected list — the OM is the expected list.
 - [ ] **SDCOM-04** *(answer value oracle, review finding #1)* For every answered
   `Response`/selected `ListItem`/`ResponseUnits` the OM exposes, the value that lands in

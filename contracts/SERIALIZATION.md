@@ -15,3 +15,8 @@ Envelope JSON uses this profile so conforming implementations produce byte-ident
 Decimal source values, including `value_num`, are JSON strings. Preserve the exact source lexeme,
 including trailing zeroes and exponent notation. Parsers must not convert those strings through a
 binary floating-point type before serialization.
+
+Each `values[]` answer has exactly one question identifier. CAP eCC/eCP answers carry the full
+OBX-3.1 identifier as `ecp_code` (for example, `2118.1000043`) and omit `item_num`.
+`item_num` is reserved for a verified NAACCR data item number. A CAP code's numeric prefix is
+never a NAACCR item number by inference.

@@ -58,6 +58,7 @@ erDiagram
     INTEGER person_id
     INTEGER sdc_report_id
     INTEGER item_num
+    TEXT ecp_code
     TEXT obx_sub_id
     TEXT value_code
     REAL value_num
@@ -122,7 +123,7 @@ erDiagram
   NAACCR_DATA_DICTIONARY_VERSION ||--o{ NAACCR_ITEM : "dd_version_id"
   NAACCR_DATA_DICTIONARY_VERSION ||--o{ NAACCR_VALUE : "dd_version_id (stamp)"
   NAACCR_ITEM ||..o| NAACCR_CONCEPT_MAP : "item_num (version-independent)"
-  NAACCR_ITEM ||..o{ NAACCR_VALUE : "item_num"
+  NAACCR_ITEM ||..o{ NAACCR_VALUE : "verified item_num only"
 
   SDC_TEMPLATE_SDC ||--o{ SDC_TEMPLATE_INSTANCE : "template_sdc_id"
   SDC_TEMPLATE_INSTANCE ||--o{ SDC_FORM_ANSWER : "path B: SDC XML answers"
