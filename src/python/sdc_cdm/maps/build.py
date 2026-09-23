@@ -69,6 +69,7 @@ def _preflight(backend: DatabaseBackend) -> None:
     required = {
         "naaccr_concept_map": {"item_num"} | set(MAP_COLUMNS),
         "naaccr_value_concept_map": {"item_num", "code"} | set(MAP_COLUMNS),
+        "concept_map_build_state": {"singleton_id", "algorithm", "dd_version_id", "built_at"},
         "local_concept_allocation": {"concept_id", "concept_kind", "item_num", "code", "concept_code"},
     }
     for table, columns in required.items():
@@ -330,8 +331,17 @@ def build_concept_maps(
                     "naaccr", "naaccr_value_concept_map", ("item_num", "code") + MAP_COLUMNS, value_rows,
                 )
                 _validate_rows(backend, len(items), len(values))
+                backend.execute_uncommitted("DELETE FROM naaccr.concept_map_build_state")
+                backend.execute_uncommitted(
+                    "INSERT INTO naaccr.concept_map_build_state "
+                    "(singleton_id, algorithm, dd_version_id, built_at) VALUES (1, ?, ?, ?)",
+                    (selected_algorithm, generation, now),
+                )
                 verify_constraints(backend, "omop", ("concept", "vocabulary", "concept_class"))
-                verify_constraints(backend, "naaccr", ("naaccr_concept_map", "naaccr_value_concept_map", "local_concept_allocation"))
+                verify_constraints(backend, "naaccr", (
+                    "naaccr_concept_map", "naaccr_value_concept_map",
+                    "local_concept_allocation", "concept_map_build_state",
+                ))
         run_log.finish(run_id)
         return BuildReport(selected_algorithm, generation, dict(item_layers), dict(value_layers),
                            allocations["new"], allocations["reused"], ambiguous,

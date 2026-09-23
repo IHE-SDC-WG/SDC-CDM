@@ -4,7 +4,11 @@
 non-excluded NAACCR item and distinct allowed value. Map rows use that ID in
 `source_concept_id`. `concept_id` holds a valid standard OMOP target or zero.
 The map tables have no dictionary version, so each build replaces their rows
-for the selected current algorithm.
+for the selected current algorithm. A singleton build record stores the
+algorithm and dictionary generation used for those rows. Coverage requires a
+matching current generation, including when several algorithms are current.
+After updating an existing database, rerun `sdc-cdm build` to add the record,
+then `maps build` to populate it before running coverage.
 
 Run these commands against the same database, after `sdc-cdm build`:
 
@@ -52,11 +56,13 @@ exclusion, schema-specific value-code collision, and captured foreign-item
 counts. An expectation JSON can pin aggregate `checks` for a measured run:
 
 ```json
-{"algorithm":"eod_public","checks":{"item_total":780,"item_athena_standard":0}}
+{"algorithm":"eod_public","naaccr_version":"25","checks":{"item_total":780,"item_athena_standard":0}}
 ```
 
 The tracked NAACCR 25 expectation was measured from the current SEER dictionary
 with a synthetic OMOP vocabulary fixture that deliberately lacks `NAACCR`.
 Replace its layer counts after a real NAACCR-containing bundle is measured.
+With `--expect`, coverage prints expected and actual values plus PASS/FAIL for
+every requested check, then exits 1 if any check fails.
 Keep Athena downloads, fetched SEER rows, credentials,
 and record-level reports in gitignored local storage.

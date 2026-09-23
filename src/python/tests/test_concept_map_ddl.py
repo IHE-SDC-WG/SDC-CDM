@@ -95,6 +95,7 @@ def test_concept_map_ddl_and_coverage_view(dialect: str, tmp_path: Path) -> None
         for table in (
             "naaccr_concept_map",
             "naaccr_value_concept_map",
+            "concept_map_build_state",
             "local_concept_allocation",
         ):
             assert backend.table_exists("naaccr", table), table
@@ -105,6 +106,9 @@ def test_concept_map_ddl_and_coverage_view(dialect: str, tmp_path: Path) -> None
         assert ALLOCATION_CONTRACT <= _columns(backend, "local_concept_allocation")
         assert "domain_id" not in _columns(backend, "naaccr_concept_map")
         assert _columns(backend, "concept_map_coverage") == COVERAGE_COLUMNS
+        assert {"singleton_id", "algorithm", "dd_version_id", "built_at"} <= _columns(
+            backend, "concept_map_build_state"
+        )
 
         # Unique names and ids keep reruns against a persistent SQL Server database
         # collision-free; the maps carry no algorithm key.
@@ -199,6 +203,17 @@ def test_concept_map_ddl_and_coverage_view(dialect: str, tmp_path: Path) -> None
             (mapped,),
         )[0]
         assert stored == created_at
+
+        assert backend.fetch_one(
+            "SELECT COUNT(*) FROM naaccr.concept_map_coverage WHERE algorithm = ?",
+            (algorithm,),
+        )[0] == 0
+        backend.execute("DELETE FROM naaccr.concept_map_build_state")
+        backend.execute(
+            "INSERT INTO naaccr.concept_map_build_state "
+            "(singleton_id, algorithm, dd_version_id, built_at) VALUES (1, ?, ?, ?)",
+            (algorithm, dd_version_id, created_at),
+        )
 
         rows = backend.fetch_all(
             "SELECT scope, section, mapping_layer, item_count "

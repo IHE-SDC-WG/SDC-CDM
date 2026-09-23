@@ -562,7 +562,6 @@ The target and reported layer are selected in this order:
    `naaccr.local_concept_allocation`. Classes derive from section and parent XML
    element. Full allowed value codes stay in the ledger; their OMOP concept codes
    use a bounded deterministic digest.
-   its review data into tracked seeds.
 
 `naaccr.concept_map_coverage` view emits items total / mapped per layer / unmapped, so coverage is
 a number CI can assert on and regressions are visible. Break it down **by section** as well as by

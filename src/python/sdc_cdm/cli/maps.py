@@ -48,6 +48,10 @@ def run_maps_coverage(args: argparse.Namespace) -> int:
         print(f"{scope} | {section} | {layer} | {count}")
     for name in ("excluded_items", "schema_value_collisions", "foreign_captured_item_numbers"):
         print(f"{name} | {report.checks[name]}")
+    if args.expect:
+        print("check | expected | actual | PASS/FAIL")
+        for name, expected, actual, passed in report.comparisons:
+            print(f"{name} | {expected} | {actual} | {'PASS' if passed else 'FAIL'}")
     if report.failures:
         raise VocabularyError(f"maps coverage FAIL: {report.failures[0]}")
     if args.expect:

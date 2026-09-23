@@ -244,7 +244,9 @@ importer or direct inserts, run the bridge, assert on `omop.*`.
 - [x] **MAPS-06** Multiple classes have distinct allocations and local IDs remain within SQL Server `INT`.
 - [x] **MAPS-07** Long allowed codes retain their full ledger key and use bounded OMOP concept codes.
 - [x] **MAPS-08** Unknown active overrides report physical CSV lines, including after multiline fields.
-- [x] **MAPS-09** Coverage groups by section and layer; a wrong expectation fails.
+- [x] **MAPS-09** Coverage groups by section and layer, rejects a different built
+  algorithm or dictionary generation, validates the expected NAACCR version, and prints
+  every expected and actual check with PASS/FAIL before a failing exit.
 - [x] **MAPS-10** Old SQLite map schemas request a rebuild. A dedicated SQL Server CI database is configured; that arm remains to be verified by CI.
 
 ---

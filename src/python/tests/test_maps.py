@@ -45,7 +45,7 @@ def _backend(dialect: str, tmp_path: Path) -> Iterator[DatabaseBackend]:
 def _seed_dir(tmp_path: Path, *, override_rows: list[tuple[object, ...]] | None = None,
               exclusion_rows: list[tuple[object, ...]] | None = None) -> Path:
     directory = tmp_path / "seeds"
-    directory.mkdir(exist_ok=True)
+    directory.mkdir(parents=True, exist_ok=True)
     write_csv(directory / "concept_map_overrides.csv", OVERRIDE_COLUMNS, override_rows or [])
     write_csv(directory / "naaccr_item_exclusions.csv", EXCLUSION_COLUMNS, exclusion_rows or [])
     return directory
@@ -65,7 +65,9 @@ def _prepare(backend: DatabaseBackend, tmp_path: Path) -> None:
 
 
 @pytest.mark.parametrize("dialect", ("sqlite", "sqlserver"))
-def test_local_sources_athena_targets_rebuild_and_coverage(dialect: str, tmp_path: Path) -> None:
+def test_local_sources_athena_targets_rebuild_and_coverage(
+    dialect: str, tmp_path: Path, capsys: pytest.CaptureFixture[str],
+) -> None:
     seeds = _seed_dir(tmp_path)
     with _backend(dialect, tmp_path) as backend:
         _prepare(backend, tmp_path)
@@ -99,13 +101,166 @@ def test_local_sources_athena_targets_rebuild_and_coverage(dialect: str, tmp_pat
         assert coverage.checks["value_total"] < 121  # repeated allowed codes collapse
         assert coverage.checks["value_athena_standard"] == 1
         expected = tmp_path / "expect.json"
-        expected.write_text(json.dumps({"algorithm": coverage.algorithm, "checks": {"item_total": 1}}))
-        assert report_coverage(backend, csv_dir=seeds, expectation_path=expected).failures
+        expected.write_text(json.dumps({
+            "algorithm": coverage.algorithm, "naaccr_version": "25",
+            "checks": {"item_total": 1, "value_total": coverage.checks["value_total"]},
+        }))
+        comparison = report_coverage(backend, csv_dir=seeds, expectation_path=expected)
+        assert comparison.comparisons == (
+            ("item_total", 1, 9, False),
+            ("value_total", coverage.checks["value_total"], coverage.checks["value_total"], True),
+        )
+        assert comparison.failures == ("item_total: expected 1, got 9",)
         if dialect == "sqlite":
             assert main([
                 "maps", "coverage", "--dialect", "sqlite", "--db", str(tmp_path / "maps.db"),
                 "--seed-dir", str(seeds), "--expect", str(expected),
             ]) == 1
+            output = capsys.readouterr()
+            assert "check | expected | actual | PASS/FAIL" in output.out
+            assert "item_total | 1 | 9 | FAIL" in output.out
+            assert (
+                f"value_total | {coverage.checks['value_total']} | "
+                f"{coverage.checks['value_total']} | PASS"
+            ) in output.out
+            assert "maps coverage FAIL: item_total: expected 1, got 9" in output.err
+            expected.write_text(json.dumps({
+                "algorithm": coverage.algorithm, "naaccr_version": "25",
+                "checks": {"item_total": coverage.checks["item_total"]},
+            }))
+            assert main([
+                "maps", "coverage", "--dialect", "sqlite", "--db", str(tmp_path / "maps.db"),
+                "--seed-dir", str(seeds), "--expect", str(expected),
+            ]) == 0
+            output = capsys.readouterr()
+            assert "item_total | 9 | 9 | PASS" in output.out
+            assert "maps coverage PASS" in output.out
+
+
+@pytest.mark.parametrize("dialect", ("sqlite", "sqlserver"))
+def test_coverage_requires_matching_build_and_current_generation(dialect: str, tmp_path: Path) -> None:
+    seeds = _seed_dir(tmp_path)
+    with _backend(dialect, tmp_path) as backend:
+        _prepare(backend, tmp_path)
+        first = build_concept_maps(backend, algorithm="eod_public", csv_dir=seeds)
+        original_count = backend.fetch_one("SELECT COUNT(*) FROM naaccr.naaccr_concept_map")[0]
+        assert original_count > 0
+        assert tuple(backend.fetch_one(
+            "SELECT algorithm, dd_version_id FROM naaccr.concept_map_build_state"
+        )[:2]) == ("eod_public", first.dd_version_id)
+
+        # A second current algorithm can share item numbers with the global map tables.
+        backend.execute(
+            "INSERT INTO naaccr.data_dictionary_version "
+            "(algorithm, version, naaccr_version, is_current) VALUES (?, ?, ?, 1)",
+            ("other", "1", "25"),
+        )
+        other = int(backend.fetch_one(
+            "SELECT dd_version_id FROM naaccr.data_dictionary_version "
+            "WHERE algorithm = 'other' AND version = '1'"
+        )[0])
+        backend.execute(
+            "INSERT INTO naaccr.naaccr_item "
+            "(dd_version_id, item_num, name, section, parent_xml_element) "
+            "VALUES (?, 3827, 'Other algorithm item', 'Stage/Prognostic Factors', 'Tumor')",
+            (other,),
+        )
+        try:
+            with pytest.raises(VocabularyError, match="recorded build is eod_public/"):
+                report_coverage(backend, algorithm="other", csv_dir=seeds)
+            assert backend.fetch_one(
+                "SELECT COUNT(*) FROM naaccr.concept_map_coverage WHERE algorithm = 'other'"
+            )[0] == 0
+            assert report_coverage(backend, algorithm="eod_public", csv_dir=seeds).checks["item_total"] == 9
+
+            build_concept_maps(backend, algorithm="other", csv_dir=seeds)
+            assert report_coverage(backend, algorithm="other", csv_dir=seeds).checks["item_total"] == 1
+            with pytest.raises(VocabularyError, match="recorded build is other/"):
+                report_coverage(backend, algorithm="eod_public", csv_dir=seeds)
+            assert backend.fetch_one(
+                "SELECT COUNT(*) FROM naaccr.concept_map_coverage WHERE algorithm = 'eod_public'"
+            )[0] == 0
+
+            build_concept_maps(backend, algorithm="eod_public", csv_dir=seeds)
+            backend.execute(
+                "UPDATE naaccr.data_dictionary_version SET is_current = 0 "
+                "WHERE algorithm = 'eod_public' AND dd_version_id = ?", (first.dd_version_id,),
+            )
+            backend.execute(
+                "INSERT INTO naaccr.data_dictionary_version "
+                "(algorithm, version, naaccr_version, is_current) VALUES (?, ?, ?, 1)",
+                ("eod_public", "next", "26"),
+            )
+            newer = int(backend.fetch_one(
+                "SELECT dd_version_id FROM naaccr.data_dictionary_version "
+                "WHERE algorithm = 'eod_public' AND version = 'next'"
+            )[0])
+            try:
+                with pytest.raises(VocabularyError, match="maps coverage requires maps build"):
+                    report_coverage(backend, algorithm="eod_public", csv_dir=seeds)
+                assert backend.fetch_one(
+                    "SELECT COUNT(*) FROM naaccr.concept_map_coverage WHERE algorithm = 'eod_public'"
+                )[0] == 0
+            finally:
+                backend.execute(
+                    "UPDATE naaccr.data_dictionary_version SET is_current = 0 "
+                    "WHERE dd_version_id = ?", (newer,),
+                )
+                backend.execute(
+                    "UPDATE naaccr.data_dictionary_version SET is_current = 1 "
+                    "WHERE dd_version_id = ?", (first.dd_version_id,),
+                )
+                backend.execute(
+                    "DELETE FROM naaccr.data_dictionary_version WHERE dd_version_id = ?", (newer,),
+                )
+
+            backend.execute("DELETE FROM naaccr.concept_map_build_state")
+            with pytest.raises(VocabularyError, match="recorded build is none"):
+                report_coverage(backend, algorithm="eod_public", csv_dir=seeds)
+            build_concept_maps(backend, algorithm="eod_public", csv_dir=seeds)
+
+            bad_seeds = _seed_dir(
+                tmp_path / "bad", override_rows=[
+                    (3827, "", 999999999, "", "invalid target", "tester", "2026-09-23"),
+                ],
+            )
+            with pytest.raises(VocabularyError, match="not a valid standard OMOP concept"):
+                build_concept_maps(backend, algorithm="eod_public", csv_dir=bad_seeds)
+            assert tuple(backend.fetch_one(
+                "SELECT algorithm, dd_version_id FROM naaccr.concept_map_build_state"
+            )[:2]) == ("eod_public", first.dd_version_id)
+            assert backend.fetch_one("SELECT COUNT(*) FROM naaccr.naaccr_concept_map")[0] == original_count
+            assert report_coverage(backend, algorithm="eod_public", csv_dir=seeds).checks["item_total"] == 9
+        finally:
+            backend.execute(
+                "DELETE FROM naaccr.naaccr_item WHERE dd_version_id = ?", (other,),
+            )
+            backend.execute(
+                "DELETE FROM naaccr.data_dictionary_version WHERE dd_version_id = ?", (other,),
+            )
+
+
+@pytest.mark.parametrize("dialect", ("sqlite", "sqlserver"))
+def test_coverage_expectation_requires_matching_naaccr_version(dialect: str, tmp_path: Path) -> None:
+    seeds = _seed_dir(tmp_path)
+    with _backend(dialect, tmp_path) as backend:
+        _prepare(backend, tmp_path)
+        build_concept_maps(backend, algorithm="eod_public", csv_dir=seeds)
+        expected = tmp_path / "expect.json"
+        expected.write_text(json.dumps({"algorithm": "eod_public", "checks": {"item_total": 9}}))
+        with pytest.raises(VocabularyError, match="must contain naaccr_version"):
+            report_coverage(backend, algorithm="eod_public", csv_dir=seeds, expectation_path=expected)
+        expected.write_text(json.dumps({
+            "algorithm": "eod_public", "naaccr_version": "26", "checks": {"item_total": 9},
+        }))
+        with pytest.raises(VocabularyError, match="expected NAACCR version 26, found 25"):
+            report_coverage(backend, algorithm="eod_public", csv_dir=seeds, expectation_path=expected)
+        expected.write_text(json.dumps({
+            "algorithm": "eod_public", "naaccr_version": "25", "checks": {"item_total": 9},
+        }))
+        assert report_coverage(
+            backend, algorithm="eod_public", csv_dir=seeds, expectation_path=expected,
+        ).comparisons == (("item_total", 9, 9, True),)
 
 
 @pytest.mark.parametrize("dialect", ("sqlite", "sqlserver"))
@@ -176,3 +331,14 @@ def test_old_sqlite_missing_map_table_requests_rebuild(tmp_path: Path) -> None:
         backend.execute("DROP TABLE naaccr.naaccr_concept_map")
         with pytest.raises(VocabularyError, match="rebuild required"):
             build_concept_maps(backend, csv_dir=seeds)
+
+
+def test_old_sqlite_missing_build_state_requests_rebuild(tmp_path: Path) -> None:
+    seeds = _seed_dir(tmp_path)
+    with _backend("sqlite", tmp_path) as backend:
+        _prepare(backend, tmp_path)
+        backend.execute("DROP TABLE naaccr.concept_map_build_state")
+        with pytest.raises(VocabularyError, match="rebuild required"):
+            build_concept_maps(backend, csv_dir=seeds)
+        with pytest.raises(VocabularyError, match="rebuild required"):
+            report_coverage(backend, csv_dir=seeds)
