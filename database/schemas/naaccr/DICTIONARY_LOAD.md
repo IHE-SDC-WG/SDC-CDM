@@ -168,6 +168,44 @@ FROM naaccr.data_dictionary_version
 WHERE algorithm = ? AND is_current = 1;
 ```
 
+## Value-code collisions across staging schemas
+
+`naaccr_value_concept_map` is keyed `(item_num, code)`, but SSDI answer sets are schema-specific:
+`schema_item_code` is keyed `(dd_version_id, schema_id_number, item_num, code)`. One value concept
+can therefore stand for several site-specific meanings (#100). The `naaccr.value_code_collision`
+view lists, for each algorithm's `is_current` generation, every `(item_num, code)` whose
+descriptions differ across schemas, with `schema_count`, `description_count`, `obsolete_count`,
+two sample meanings (`description_min`, `description_max`), and the map row the pair currently
+resolves to, if any.
+
+Descriptions are trimmed and case-folded before counting, and NULL or blank descriptions are
+ignored, so the count can be lower than the raw 155 colliding pairs recorded in #100 for
+`eod_public` 3.3. The value-map key stays `(item_num, code)` in Phase 2 (#92); `maps coverage`
+(#119) prints these rows.
+
+```sql
+SELECT item_num, code, schema_count, description_count, obsolete_count
+FROM naaccr.value_code_collision
+WHERE algorithm = 'eod_public'
+ORDER BY schema_count DESC;
+```
+
+Against a live `eod_public` load, item 772 code `100` should be near the top with about 106
+distinct descriptions, and code `700` should report a nonzero `obsolete_count`.
+
+### SSDI Manual Appendix A
+
+SSDI Manual v3.3 Appendix A lists, per schema, the Schema ID, selection criteria, staging systems,
+EOD schema, SSDIs with their active years, and grade table. Two findings:
+
+- Year-split schemas already have distinct Schema IDs (Brain `00721` for 2018-2022 vs `09721` for
+  2023+; CNS Other `00722` vs `09722`), so `schema_id_number` separates versioned meanings and the
+  view needs no extra version axis.
+- Per-item active years within a schema (Breast 3828 2018-2022, 3894/3895 2018-2025, 1178/1179
+  2026+) and grade tables bounded by diagnosis year (Table 23 has 2018-2022 and 2023+ variants)
+  are not captured by `schema_item` or `schema_item_code`. That is a dictionary-layer gap, not a
+  map-key gap, and is left for a follow-up issue.
+
 ## NAACCR 25 acceptance anchor
 
 `expectations/naaccr-25.json` contains counts and section labels only. The live anchor is 946 items:

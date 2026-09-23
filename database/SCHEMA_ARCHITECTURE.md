@@ -37,7 +37,9 @@ regression fixtures seed the matching OMOP person explicitly.
   report identifiers.
 - `naaccr_concept_map` and `naaccr_value_concept_map` map item and item-value pairs to OMOP
   concepts. They are keyed independently of dictionary version because the bridge joins by item
-  number and code.
+  number and code. The value map is keyed `(item_num, code)` while `schema_item_code` is
+  schema-scoped, so `naaccr.value_code_collision` lists current-generation pairs whose
+  descriptions differ across schemas (#100); `concept_map_coverage` reports coverage by layer.
 
 `dict fetch` stamps its CSVs with `data_dictionary_version.csv` and `ssdi fetch` stamps its CSVs with
 `ssdi_version.csv`; `dict load` requires the two stamps to agree and injects one `dd_version_id` into
