@@ -76,6 +76,60 @@ def test_build_twice_is_a_no_op(tmp_path: Path) -> None:
         assert backend.table_exists("sdc", "sdc_report")
 
 
+def test_empty_legacy_value_table_upgrades_even_when_hashes_are_accepted(
+    tmp_path: Path,
+) -> None:
+    control_path = tmp_path / "legacy.db"
+    _run_build(control_path)
+    with SQLiteBackend(control_path) as backend:
+        backend.execute("DROP TABLE naaccr.naaccr_value")
+        backend.execute(
+            "CREATE TABLE naaccr.naaccr_value ("
+            "naaccr_value_id INTEGER PRIMARY KEY, person_id INTEGER NOT NULL, "
+            "episode_key TEXT NOT NULL, item_num INTEGER NOT NULL)"
+        )
+        preview = BuildRunner(load_manifest(), backend).run(dry_run=True)
+        assert any(action.status is BuildStatus.WOULD_REAPPLY for action in preview)
+        actions = BuildRunner(
+            load_manifest(), backend, accept_changed_hashes=True
+        ).run()
+        assert any(action.status is BuildStatus.REAPPLIED for action in actions)
+        columns = {
+            row[1]: row[3]
+            for row in backend.fetch_all("PRAGMA naaccr.table_info(naaccr_value)")
+        }
+        assert columns["item_num"] == 0
+        assert "ecp_code" in columns
+        assert backend.fetch_one("SELECT COUNT(*) FROM naaccr.naaccr_value")[0] == 0
+
+
+def test_populated_legacy_value_table_fails_without_changing_rows(
+    tmp_path: Path,
+) -> None:
+    control_path = tmp_path / "legacy.db"
+    _run_build(control_path)
+    with SQLiteBackend(control_path) as backend:
+        backend.execute("DROP TABLE naaccr.naaccr_value")
+        backend.execute(
+            "CREATE TABLE naaccr.naaccr_value ("
+            "naaccr_value_id INTEGER PRIMARY KEY, person_id INTEGER NOT NULL, "
+            "episode_key TEXT NOT NULL, item_num INTEGER NOT NULL)"
+        )
+        backend.execute(
+            "INSERT INTO naaccr.naaccr_value (person_id, episode_key, item_num) "
+            "VALUES (1, 'legacy', 2118)"
+        )
+        run_count = backend.fetch_one("SELECT COUNT(*) FROM etl.run")[0]
+        with pytest.raises(RuntimeError, match="1 legacy row.*ambiguous"):
+            BuildRunner(load_manifest(), backend).run(dry_run=True)
+        with pytest.raises(RuntimeError, match="1 legacy row.*ambiguous"):
+            BuildRunner(load_manifest(), backend).run()
+        assert backend.fetch_one(
+            "SELECT person_id, episode_key, item_num FROM naaccr.naaccr_value"
+        ) == (1, "legacy", 2118)
+        assert backend.fetch_one("SELECT COUNT(*) FROM etl.run")[0] == run_count
+
+
 def test_dry_run_against_a_new_database_writes_nothing_to_disk(tmp_path: Path) -> None:
     control_path = tmp_path / "unbuilt" / "demo.db"
 

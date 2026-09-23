@@ -16,10 +16,11 @@ SELECT
 FROM sdc.sdc_report sr
 ORDER BY sr.created_datetime DESC;
 
--- 2. Raw NAACCR answers for a report.
+-- 2. Raw answers for a report. CAP rows have ecp_code and no NAACCR item name.
 SELECT
   nv.report_accession,
   nv.item_num,
+  nv.ecp_code,
   ni.name AS item_name,
   nv.obx_sub_id,
   nv.value_code,
@@ -28,7 +29,7 @@ SELECT
   nv.value_unit_source
 FROM naaccr.naaccr_value nv
 LEFT JOIN naaccr.naaccr_item ni
-  ON ni.item_num = nv.item_num
+  ON nv.item_num IS NOT NULL AND ni.item_num = nv.item_num
  AND ni.dd_version_id = COALESCE(
        nv.dd_version_id,
        (SELECT MAX(dd_version_id)
@@ -43,7 +44,7 @@ ORDER BY nv.naaccr_value_id;
 SELECT
   m.measurement_id,
   n.note_source_value AS report_accession,
-  m.measurement_source_value AS item_num,
+  m.measurement_source_value AS source_identifier,
   m.value_as_number,
   m.value_as_concept_id,
   m.value_source_value,
@@ -72,9 +73,9 @@ JOIN sdc.sdc_report sr
  AND sr.is_duplicate_accession = 0
 JOIN naaccr.naaccr_value nv
   ON nv.sdc_report_id = sr.sdc_report_id
- AND CAST(nv.item_num AS TEXT) = m.measurement_source_value
+ AND COALESCE(nv.ecp_code, CAST(nv.item_num AS TEXT)) = m.measurement_source_value
 LEFT JOIN naaccr.naaccr_item ni
-  ON ni.item_num = nv.item_num
+  ON nv.item_num IS NOT NULL AND ni.item_num = nv.item_num
  AND ni.dd_version_id = COALESCE(
        nv.dd_version_id,
        (SELECT MAX(dd_version_id)

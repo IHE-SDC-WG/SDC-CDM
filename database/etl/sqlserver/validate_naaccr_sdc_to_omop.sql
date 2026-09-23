@@ -78,6 +78,8 @@ SELECT 'Measurements: bridgeable raw values vs actual' AS section,
 ;WITH bridge_values AS (
     SELECT n.note_id,
            nv.item_num,
+           nv.ecp_code,
+           COALESCE(nv.ecp_code, CAST(nv.item_num AS varchar(50))) AS source_identifier,
            nv.value_code,
            nv.value_num,
            COALESCE(NULLIF(nv.value_text, ''), nv.value_code) AS value_source_value,
@@ -97,11 +99,13 @@ SELECT 'Measurements: bridgeable raw values vs actual' AS section,
       ON n.person_id = sr.person_id
      AND n.note_source_value = sr.report_accession
     LEFT JOIN naaccr.naaccr_value_concept_map nvcm
-      ON nvcm.item_num = nv.item_num
+      ON nv.item_num IS NOT NULL AND nvcm.item_num = nv.item_num
      AND nvcm.code = COALESCE(nv.value_code, '')
 ), raw_value_groups AS (
     SELECT note_id,
            item_num,
+           ecp_code,
+           source_identifier,
            value_code,
            value_num,
            MIN(CONVERT(nvarchar(4000), value_source_value)) AS value_source_value,
@@ -111,11 +115,13 @@ SELECT 'Measurements: bridgeable raw values vs actual' AS section,
            COUNT(*) AS raw_value_count
     FROM bridge_values
     GROUP BY
-        note_id, item_num, value_code, value_num,
+        note_id, item_num, ecp_code, source_identifier, value_code, value_num,
         value_source_hash, value_unit_source, value_as_concept_id
 ), value_group_counts AS (
     SELECT rvg.note_id,
            rvg.item_num,
+           rvg.ecp_code,
+           rvg.source_identifier,
            rvg.value_code,
            rvg.value_num,
            rvg.value_source_value,
@@ -127,7 +133,7 @@ SELECT 'Measurements: bridgeable raw values vs actual' AS section,
              FROM omop.measurement m
              WHERE m.measurement_event_id = rvg.note_id
                AND m.meas_event_field_concept_id = @FIELD_NOTE_ID
-               AND m.measurement_source_value = CAST(rvg.item_num AS varchar(50))
+               AND m.measurement_source_value = rvg.source_identifier
                AND (m.value_as_concept_id = rvg.value_as_concept_id
                     OR (m.value_as_concept_id IS NULL AND rvg.value_as_concept_id IS NULL))
                AND HASHBYTES(
@@ -148,6 +154,7 @@ SELECT CASE
        END AS section,
        note_id,
        item_num,
+       ecp_code,
        value_code,
        value_num,
        value_source_value,
@@ -158,7 +165,7 @@ SELECT CASE
 FROM value_group_counts
 WHERE measurement_count <> raw_value_count
 ORDER BY CASE WHEN measurement_count > raw_value_count THEN 0 ELSE 1 END,
-         note_id, item_num, value_code, value_num, value_source_value, value_unit_source;
+         note_id, item_num, ecp_code, value_code, value_num, value_source_value, value_unit_source;
 
 --------------------------------------------------------------
 -- 4) Raw rows that cannot bridge
@@ -169,6 +176,7 @@ SELECT TOP 20 'Unbridgeable raw rows' AS section,
        nv.person_id,
        nv.report_accession,
        nv.item_num,
+       nv.ecp_code,
        CASE
          WHEN nv.sdc_report_id IS NULL THEN 'no report link'
          WHEN sr.sdc_report_id IS NULL THEN 'orphan report link'

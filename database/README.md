@@ -54,6 +54,17 @@ The control file is `out/demo.db`; attached schema files are written beside it a
 Only SQLite and SQL Server are executable dialects. Files listed under the manifest's `excluded`
 array are references or later-phase inputs and are never applied by `build`.
 
+### Upgrading the eCP identifier columns
+
+`naaccr.naaccr_value` now stores either a full CAP `ecp_code` or a verified NAACCR
+`item_num`. A build replaces an empty legacy value table with the new schema. If the
+legacy table has rows, build and dry run stop and report the ambiguous row count.
+The old importer discarded the suffix of OBX-3.1, so those rows cannot be
+converted from `item_num` alone. Preserve the database and original messages,
+recover the complete CAP codes, and reload the values into the new schema.
+Clearing or replacing legacy rows is an operator step; `build` does not delete them.
+`--accept-changed-hashes` does not bypass this check.
+
 ## NAACCR Dictionary Data
 
 `dict fetch` obtains the full item dictionary from SEER\*API and `ssdi fetch` obtains the

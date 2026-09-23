@@ -350,7 +350,24 @@
     "values": {
       "items": {
         "additionalProperties": false,
+        "oneOf": [
+          {
+            "required": [
+              "ecp_code"
+            ]
+          },
+          {
+            "required": [
+              "item_num"
+            ]
+          }
+        ],
         "properties": {
+          "ecp_code": {
+            "maxLength": 50,
+            "minLength": 1,
+            "type": "string"
+          },
           "item_num": {
             "minimum": 0,
             "type": "integer"
@@ -397,9 +414,6 @@
             ]
           }
         },
-        "required": [
-          "item_num"
-        ],
         "type": "object"
       },
       "minItems": 1,
