@@ -150,8 +150,10 @@ GO
 -- schema_item_code is keyed per staging schema, so one pair can carry several site-specific
 -- meanings. Lists, for each algorithm's is_current generation, every (item_num, code) whose
 -- trimmed, case-folded descriptions differ across schemas; NULL/blank descriptions are ignored.
--- description_min/max are two guaranteed-different meanings (no list aggregation: group_concat
--- and STRING_AGG are not portable). The LEFT JOIN shows any existing map row. SSDI year-split
+-- description_min/max are two guaranteed-different, nonblank meanings: the MIN and MAX of the
+-- same normalized expression, each shown as a trimmed original description (no list
+-- aggregation: group_concat and STRING_AGG are not portable). The LEFT JOIN shows any existing
+-- map row. SSDI year-split
 -- schemas already carry distinct schema_id_numbers (Brain 00721 for 2018-2022 vs 09721 for
 -- 2023+), so versioned meanings separate by schema. `maps coverage` (#119) reports this view.
 -- Lives in this file, not 0_, because it reads naaccr_value_concept_map (created above) and
@@ -171,8 +173,8 @@ collisions AS (
            COUNT(DISTINCT NULLIF(UPPER(LTRIM(RTRIM(sic.description))), '')) AS description_count,
            SUM(CASE WHEN UPPER(sic.description) LIKE '%OBSOLETE%' THEN 1 ELSE 0 END)
                AS obsolete_count,
-           MIN(sic.description) AS description_min,
-           MAX(sic.description) AS description_max
+           MIN(NULLIF(UPPER(LTRIM(RTRIM(sic.description))), '')) AS norm_min,
+           MAX(NULLIF(UPPER(LTRIM(RTRIM(sic.description))), '')) AS norm_max
     FROM current_version cv
     JOIN naaccr.SCHEMA_ITEM_CODE sic
       ON sic.dd_version_id = cv.dd_version_id
@@ -181,7 +183,18 @@ collisions AS (
 )
 SELECT c.algorithm, c.dd_version_id, c.item_num, c.code,
        c.schema_count, c.description_count, c.obsolete_count,
-       c.description_min, c.description_max,
+       (SELECT MIN(LTRIM(RTRIM(s.description)))
+        FROM naaccr.SCHEMA_ITEM_CODE s
+        WHERE s.dd_version_id = c.dd_version_id
+          AND s.item_num = c.item_num
+          AND s.code = c.code
+          AND UPPER(LTRIM(RTRIM(s.description))) = c.norm_min) AS description_min,
+       (SELECT MIN(LTRIM(RTRIM(s.description)))
+        FROM naaccr.SCHEMA_ITEM_CODE s
+        WHERE s.dd_version_id = c.dd_version_id
+          AND s.item_num = c.item_num
+          AND s.code = c.code
+          AND UPPER(LTRIM(RTRIM(s.description))) = c.norm_max) AS description_max,
        m.source_concept_id, m.concept_id, m.mapping_layer
 FROM collisions c
 LEFT JOIN naaccr.naaccr_value_concept_map m

@@ -307,6 +307,10 @@ def test_value_code_collision_view(dialect: str, tmp_path: Path) -> None:
                 ("S2", colliding, "3", "  same "),
                 ("S1", colliding, "4", None),
                 ("S2", colliding, "4", "Named"),
+                ("S1", colliding, "5", " A"),
+                ("S2", colliding, "5", "0"),
+                ("S3", colliding, "5", "a"),
+                ("S4", colliding, "5", "   "),
                 ("S1", single, "1", "Only"),
             ],
         )
@@ -349,9 +353,13 @@ def test_value_code_collision_view(dialect: str, tmp_path: Path) -> None:
         assert [row[:6] + row[8:] for row in rows] == [
             (current_id, colliding, "1", 3, 2, 0, local_id, 0, "local_mint"),
             (current_id, colliding, "2", 2, 2, 1, None, None, None),
+            (current_id, colliding, "5", 4, 2, 0, None, None, None),
         ]
-        # Collation decides whether "*" sorts before letters, so compare as a set.
-        assert [set(row[6:8]) for row in rows] == [
+        # Collation decides whether "*" sorts before letters, so compare as a set. Samples are
+        # trimmed originals of two distinct normalized meanings; SQL Server's case-insensitive
+        # collation may return either "A" or "a" for code 5, so that row compares case-folded.
+        assert [set(row[6:8]) for row in rows[:2]] == [
             {"Alpha", "Beta"},
             {"Live meaning", "**OBSOLETE** - Please use 600"},
         ]
+        assert {sample.upper() for sample in rows[2][6:8]} == {"0", "A"}

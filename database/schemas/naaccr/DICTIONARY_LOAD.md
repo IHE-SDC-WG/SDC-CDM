@@ -175,8 +175,8 @@ WHERE algorithm = ? AND is_current = 1;
 can therefore stand for several site-specific meanings (#100). The `naaccr.value_code_collision`
 view lists, for each algorithm's `is_current` generation, every `(item_num, code)` whose
 descriptions differ across schemas, with `schema_count`, `description_count`, `obsolete_count`,
-two sample meanings (`description_min`, `description_max`), and the map row the pair currently
-resolves to, if any.
+two sample meanings (`description_min`, `description_max`: trimmed original descriptions of two
+distinct normalized meanings), and the map row the pair currently resolves to, if any.
 
 Descriptions are trimmed and case-folded before counting, and NULL or blank descriptions are
 ignored, so the count can be lower than the raw 155 colliding pairs recorded in #100 for
