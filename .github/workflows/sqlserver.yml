@@ -67,9 +67,12 @@ jobs:
           fi
           /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -Q "CREATE DATABASE sdc_cdm_test"
           /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -Q "CREATE DATABASE sdc_cdm_vocab_test"
+          /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -Q "CREATE DATABASE sdc_cdm_maps_test"
           connection_string="DRIVER={ODBC Driver 18 for SQL Server};SERVER=localhost,1433;DATABASE=sdc_cdm_test;UID=sa;PWD=${MSSQL_SA_PASSWORD};Encrypt=yes;TrustServerCertificate=yes"
           vocab_connection_string="DRIVER={ODBC Driver 18 for SQL Server};SERVER=localhost,1433;DATABASE=sdc_cdm_vocab_test;UID=sa;PWD=${MSSQL_SA_PASSWORD};Encrypt=yes;TrustServerCertificate=yes"
+          maps_connection_string="DRIVER={ODBC Driver 18 for SQL Server};SERVER=localhost,1433;DATABASE=sdc_cdm_maps_test;UID=sa;PWD=${MSSQL_SA_PASSWORD};Encrypt=yes;TrustServerCertificate=yes"
           echo "SDC_CDM_SQLSERVER_CONNECTION_STRING=$connection_string" >> "$GITHUB_ENV"
           echo "SDC_CDM_VOCAB_SQLSERVER_CONNECTION_STRING=$vocab_connection_string" >> "$GITHUB_ENV"
+          echo "SDC_CDM_MAPS_SQLSERVER_CONNECTION_STRING=$maps_connection_string" >> "$GITHUB_ENV"
       - name: Run Python tests against SQLite and SQL Server
         run: python -m pytest -ra

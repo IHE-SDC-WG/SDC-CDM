@@ -81,7 +81,16 @@ python -m sdc_cdm vocab load \
   --db quickstart.db \
   --vocab-dir database/vocab
 
+python -m sdc_cdm dict load \
+  --dialect sqlite \
+  --db quickstart.db \
+  --csv-dir .context/naaccr-25
+
 python -m sdc_cdm constants resolve \
+  --dialect sqlite \
+  --db quickstart.db
+
+python -m sdc_cdm maps build \
   --dialect sqlite \
   --db quickstart.db
 ```
@@ -107,7 +116,14 @@ python -m sdc_cdm vocab load \
   --dialect sqlserver \
   --vocab-dir database/vocab
 
+python -m sdc_cdm dict load \
+  --dialect sqlserver \
+  --csv-dir .context/naaccr-25
+
 python -m sdc_cdm constants resolve \
+  --dialect sqlserver
+
+python -m sdc_cdm maps build \
   --dialect sqlserver
 ```
 
@@ -124,11 +140,14 @@ For this repository, use the following order:
 
 1. Build the `etl`, `intake`, `omop`, `naaccr`, and `sdc` schemas from the manifest.
 2. Load the Athena vocabulary files with this loader.
-3. Resolve the tracked concept pairs with `sdc-cdm constants resolve`.
-4. Apply repo-specific NAACCR vocabulary additions where the database path
-   requires them.
-5. Import the source report data.
-6. Run the NAACCR-to-OMOP bridge.
+3. Load the current NAACCR dictionary with `sdc-cdm dict load`.
+4. Resolve the tracked concept pairs with `sdc-cdm constants resolve`.
+5. Build local NAACCR source concepts and targets with `sdc-cdm maps build`.
+6. Import the source report data and run the NAACCR-to-OMOP bridge.
+
+The Athena extract may lack `NAACCR`. In that case `maps build` still creates
+local source concepts and reports zero `athena_standard` targets. See
+[`CONCEPT_MAPS.md`](../schemas/naaccr/CONCEPT_MAPS.md).
 
 The load runs in a transaction, checks source and database row counts, verifies
 the tracked vocabulary/code pairs, checks vocabulary references, and reports

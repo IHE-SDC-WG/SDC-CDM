@@ -58,6 +58,17 @@ def read_csv(
     required: bool = True,
 ) -> list[dict[str, str]]:
     """Read one contract CSV, trimming every field like fast-csv's trim mode."""
+    return [row for _line, row in read_csv_with_lines(directory, filename, columns, required=required)]
+
+
+def read_csv_with_lines(
+    directory: Path,
+    filename: str,
+    columns: Sequence[str],
+    *,
+    required: bool = True,
+) -> list[tuple[int, dict[str, str]]]:
+    """Read CSV records with their physical ending line, including quoted newlines."""
 
     path = directory / filename
     if not path.is_file():
@@ -72,13 +83,14 @@ def read_csv(
                 raise VocabularyError(
                     f"{path} columns must be {tuple(columns)!r}, got {actual!r}"
                 )
-            rows: list[dict[str, str]] = []
-            for line_number, row in enumerate(reader, start=2):
+            rows: list[tuple[int, dict[str, str]]] = []
+            for row in reader:
+                line_number = reader.line_num
                 if None in row:
                     raise VocabularyError(f"{path}:{line_number} has extra fields")
-                rows.append(
-                    {column: (row.get(column) or "").strip() for column in columns}
-                )
+                rows.append((line_number, {
+                    column: (row.get(column) or "").strip() for column in columns
+                }))
             return rows
     except UnicodeDecodeError as exc:
         raise VocabularyError(f"{path} is not UTF-8: {exc}") from exc

@@ -62,9 +62,22 @@ BEGIN
 END
 GO
 
+-- The map tables have one active build. This record is replaced in the same
+-- transaction as their rows, so coverage can reject another current generation.
+IF OBJECT_ID('naaccr.concept_map_build_state', 'U') IS NULL
+BEGIN
+  CREATE TABLE naaccr.concept_map_build_state (
+    singleton_id INT NOT NULL PRIMARY KEY CHECK (singleton_id = 1),
+    algorithm NVARCHAR(255) NOT NULL,
+    dd_version_id INT NOT NULL,
+    built_at NVARCHAR(40) NOT NULL
+  );
+END
+GO
+
 -- Append-only ledger of locally minted NAACCR_LOCAL concept ids, so layer-3 mints keep
 -- the same id across rebuilds. Ids are allocated from 2,100,000,000 through
--- 2,199,999,999 (the NAACCR2026 supplement owns 2,000,000,000 through 2,099,999,999).
+-- 2,147,483,647 (the NAACCR2026 supplement owns 2,000,000,000 through 2,099,999,999).
 -- item_num = 0 and code = '' are sentinels for kinds without an item or code, so the
 -- UNIQUE key behaves the same in both dialects. allocated_at is written by Python as
 -- ISO-8601 UTC.
@@ -80,11 +93,12 @@ BEGIN
     allocated_at NVARCHAR(40) NOT NULL,
     CONSTRAINT PK_local_concept_allocation PRIMARY KEY (concept_id),
     CONSTRAINT CK_local_concept_allocation_range
-      CHECK (concept_id BETWEEN 2100000000 AND 2199999999),
+      CHECK (concept_id BETWEEN 2100000000 AND 2147483647),
     CONSTRAINT CK_local_concept_allocation_kind
       CHECK (concept_kind IN ('vocabulary', 'concept_class', 'item', 'value')),
     CONSTRAINT CK_local_concept_allocation_sentinels CHECK (
-        (concept_kind IN ('vocabulary', 'concept_class') AND item_num = 0 AND code = '')
+        (concept_kind = 'vocabulary' AND item_num = 0 AND code = '')
+        OR (concept_kind = 'concept_class' AND item_num = 0 AND code <> '')
         OR (concept_kind = 'item' AND item_num <> 0 AND code = '')
         OR (concept_kind = 'value' AND item_num <> 0)
     ),
@@ -95,16 +109,20 @@ END
 GO
 
 -- Coverage by (algorithm, scope, section, mapping_layer). dd_version_id is taken from the
--- single is_current row per algorithm (enforced by idx_dd_version_current_algorithm),
--- never from MAX(dd_version_id). Retired items (year_retired IS NOT NULL) are excluded.
+-- single is_current row per algorithm (enforced by idx_dd_version_current_algorithm)
+-- only when it matches the recorded map build. Retired items are excluded.
 -- scope is 'item' or 'value'; mapping_layer is 'unmapped' for rows with no map entry.
 -- The view cannot read the exclusions CSV; `maps coverage` reports exclusions separately.
 -- CREATE OR ALTER must open its batch, hence the GO above.
 CREATE OR ALTER VIEW naaccr.concept_map_coverage AS
 WITH current_version AS (
-    SELECT algorithm, dd_version_id
-    FROM naaccr.DATA_DICTIONARY_VERSION
-    WHERE is_current = 1
+    SELECT dd.algorithm, dd.dd_version_id
+    FROM naaccr.DATA_DICTIONARY_VERSION dd
+    JOIN naaccr.concept_map_build_state built
+      ON built.singleton_id = 1
+     AND built.algorithm = dd.algorithm
+     AND built.dd_version_id = dd.dd_version_id
+    WHERE dd.is_current = 1
 ),
 item_scope AS (
     SELECT cv.algorithm,
@@ -199,5 +217,11 @@ SELECT c.algorithm, c.dd_version_id, c.item_num, c.code,
 FROM collisions c
 LEFT JOIN naaccr.naaccr_value_concept_map m
   ON m.item_num = c.item_num
- AND m.code = c.code;
+ AND m.code = c.code
+ AND EXISTS (
+     SELECT 1 FROM naaccr.concept_map_build_state built
+     WHERE built.singleton_id = 1
+       AND built.algorithm = c.algorithm
+       AND built.dd_version_id = c.dd_version_id
+ );
 GO

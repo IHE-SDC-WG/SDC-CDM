@@ -24,8 +24,8 @@ correct its CSV row and rerun both commands.
 `concept_map_overrides.csv` is the reviewed layer-2 input. A row is active only
 when `omop_concept_id` is non-blank; rows with a blank target remain inactive
 skeletons. A blank `code` denotes an item-level row. A blank
-`omop_source_concept_id` tells the map builder to inherit the layer-1 source
-concept, or to create the layer-3 source concept when no source concept exists.
+`omop_concept_id` is not a target. Source concepts always come from the local
+allocation ledger, even when Athena provides a standard target.
 
 `naaccr_item_exclusions.csv` lists NAACCR items that are excluded from mapping
 and local concept creation, together with the recorded reason.

@@ -109,6 +109,7 @@ def test_concept_map_ddl_and_coverage_view(dialect: str, tmp_path: Path) -> None
         for table in (
             "naaccr_concept_map",
             "naaccr_value_concept_map",
+            "concept_map_build_state",
             "local_concept_allocation",
         ):
             assert backend.table_exists("naaccr", table), table
@@ -119,6 +120,9 @@ def test_concept_map_ddl_and_coverage_view(dialect: str, tmp_path: Path) -> None
         assert ALLOCATION_CONTRACT <= _columns(backend, "local_concept_allocation")
         assert "domain_id" not in _columns(backend, "naaccr_concept_map")
         assert _columns(backend, "concept_map_coverage") == COVERAGE_COLUMNS
+        assert {"singleton_id", "algorithm", "dd_version_id", "built_at"} <= _columns(
+            backend, "concept_map_build_state"
+        )
         assert _columns(backend, "value_code_collision") == COLLISION_COLUMNS
 
         # Unique names and ids keep reruns against a persistent SQL Server database
@@ -215,6 +219,17 @@ def test_concept_map_ddl_and_coverage_view(dialect: str, tmp_path: Path) -> None
         )[0]
         assert stored == created_at
 
+        assert backend.fetch_one(
+            "SELECT COUNT(*) FROM naaccr.concept_map_coverage WHERE algorithm = ?",
+            (algorithm,),
+        )[0] == 0
+        backend.execute("DELETE FROM naaccr.concept_map_build_state")
+        backend.execute(
+            "INSERT INTO naaccr.concept_map_build_state "
+            "(singleton_id, algorithm, dd_version_id, built_at) VALUES (1, ?, ?, ?)",
+            (algorithm, dd_version_id, created_at),
+        )
+
         rows = backend.fetch_all(
             "SELECT scope, section, mapping_layer, item_count "
             "FROM naaccr.concept_map_coverage WHERE algorithm = ? "
@@ -284,7 +299,7 @@ def test_value_code_collision_view(dialect: str, tmp_path: Path) -> None:
             return dd_version_id
 
         # The superseded generation goes in first: only one row per algorithm may be current.
-        add_generation(
+        old_id = add_generation(
             "old",
             0,
             [
@@ -337,6 +352,27 @@ def test_value_code_collision_view(dialect: str, tmp_path: Path) -> None:
                 "local_mint",
                 created_at,
             ),
+        )
+
+        assert backend.fetch_one(
+            "SELECT source_concept_id FROM naaccr.value_code_collision "
+            "WHERE algorithm = ? AND item_num = ? AND code = '1'",
+            (algorithm, colliding),
+        )[0] is None
+        backend.execute("DELETE FROM naaccr.concept_map_build_state")
+        backend.execute(
+            "INSERT INTO naaccr.concept_map_build_state "
+            "(singleton_id, algorithm, dd_version_id, built_at) VALUES (1, ?, ?, ?)",
+            (algorithm, old_id, created_at),
+        )
+        assert backend.fetch_one(
+            "SELECT source_concept_id FROM naaccr.value_code_collision "
+            "WHERE algorithm = ? AND item_num = ? AND code = '1'",
+            (algorithm, colliding),
+        )[0] is None
+        backend.execute(
+            "UPDATE naaccr.concept_map_build_state SET dd_version_id = ? "
+            "WHERE singleton_id = 1", (current_id,),
         )
 
         rows = [

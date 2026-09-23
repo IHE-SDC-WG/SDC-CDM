@@ -1,0 +1,20 @@
+{
+  "algorithm": "eod_public",
+  "naaccr_version": "25",
+  "vocabulary_measurement": "synthetic OMOP fixture without NAACCR; no SSDI or captured records",
+  "checks": {
+    "excluded_items": 74,
+    "foreign_captured_item_numbers": 0,
+    "item_athena_standard": 0,
+    "item_curated_override": 0,
+    "item_local_mint": 706,
+    "item_total": 780,
+    "item_unmapped": 74,
+    "schema_value_collisions": 0,
+    "value_athena_standard": 0,
+    "value_curated_override": 0,
+    "value_local_mint": 3723,
+    "value_total": 3883,
+    "value_unmapped": 160
+  }
+}

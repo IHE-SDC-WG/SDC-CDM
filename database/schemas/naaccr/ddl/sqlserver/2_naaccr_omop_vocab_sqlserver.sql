@@ -21,7 +21,7 @@
 
   Custom concept_id range used here: [2,000,000,000 .. 2,099,999,999]
   Rationale: stay below SQL Server INT max (2,147,483,647) and avoid collisions.
-  The NAACCR_LOCAL mint range used by `maps build` is [2,100,000,000 .. 2,199,999,999]
+  The NAACCR_LOCAL mint range used by `maps build` is [2,100,000,000 .. 2,147,483,647]
   and is disjoint from this one.
 */
 

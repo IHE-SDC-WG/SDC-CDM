@@ -177,11 +177,13 @@ view lists, for each algorithm's `is_current` generation, every `(item_num, code
 descriptions differ across schemas, with `schema_count`, `description_count`, `obsolete_count`,
 two sample meanings (`description_min`, `description_max`: trimmed original descriptions of two
 distinct normalized meanings), and the map row the pair currently resolves to, if any.
+Map fields are populated only when the singleton build record matches that current
+algorithm and dictionary generation.
 
 Descriptions are trimmed and case-folded before counting, and NULL or blank descriptions are
 ignored, so the count can be lower than the raw 155 colliding pairs recorded in #100 for
-`eod_public` 3.3. The value-map key stays `(item_num, code)` in Phase 2 (#92); `maps coverage`
-(#119) prints these rows.
+`eod_public` 3.3. The value-map key stays `(item_num, code)` in Phase 2 (#92).
+`maps coverage` (#119) reports a separate aggregate collision count.
 
 ```sql
 SELECT item_num, code, schema_count, description_count, obsolete_count
