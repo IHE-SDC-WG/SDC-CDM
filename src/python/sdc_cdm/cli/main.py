@@ -20,6 +20,9 @@ from sdc_cdm.cli.dictionary import (
     run_ssdi_fetch,
 )
 from sdc_cdm.cli.target import add_target_arguments, open_backend
+from sdc_cdm.cli.maps import (
+    configure_maps_build, configure_maps_coverage, run_maps_build, run_maps_coverage,
+)
 from sdc_cdm.db.errors import MigrationHashMismatch, SdcCdmError, UsageError
 from sdc_cdm.db.manifest import load_manifest
 from sdc_cdm.vocab.constants import resolve_constants
@@ -180,6 +183,8 @@ _VERBS: tuple[tuple[tuple[str, ...], str, _Configure, _Handler], ...] = (
         _configure_constants_resolve,
         _run_constants_resolve,
     ),
+    (("maps", "build"), "build NAACCR concept maps", configure_maps_build, run_maps_build),
+    (("maps", "coverage"), "report concept map coverage", configure_maps_coverage, run_maps_coverage),
 )
 
 _TARGET = argparse.ArgumentParser(add_help=False)

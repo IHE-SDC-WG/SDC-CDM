@@ -547,22 +547,21 @@ versioned dictionary: layer 3 below reads `naaccr_item.section`, whose PK is
 section from the `is_current` dictionary generation. Record that choice in the build script rather
 than letting it be implicit.
 
-`database/maps/<dialect>/1_build_concept_maps.sql` runs three layers in order:
+`sdc-cdm maps build` runs Python-controlled SQL inside one transaction. Every
+eligible item and allowed value first receives a `NAACCR_LOCAL` source concept.
+The target and reported layer are selected in this order:
 
-1. **Athena standard.** Join `naaccr.naaccr_item.item_num` → `omop.concept.concept_code` where
-   `vocabulary_id = 'NAACCR'`, then follow `concept_relationship` `'Maps to'` to the standard
-   concept. Value codes match the `item#code` concept-code pattern. This is the interoperable
-   layer and should cover the bulk of registry items.
+1. **Athena standard.** Follow valid `Maps to` relationships from Athena `NAACCR`
+   concepts to standard targets. Decimal item codes are matched. `item@code` is
+   provisional for values until measured in a real NAACCR-containing bundle.
 2. **Curated overrides** from `database/seed/concept_map_overrides.csv`, upserted over layer 1 only
    where explicitly marked as an override. This is where reviewed human decisions land.
-3. **Local mint** for items still unmapped and flagged mappable: allocate a stable ID in the
-   2,000,000,000+ range into a `NAACCR_LOCAL` vocabulary, recording the allocation in
-   `naaccr.local_concept_allocation` so IDs survive rebuilds. Generalize the allocation logic
-   already in `database/schemas/naaccr/ddl/sqlserver/2_naaccr_omop_vocab_sqlserver.sql:237-268`
-   to both dialects. Derive the mint's `concept_class_id` from `naaccr_item.section` +
-   `parent_xml_element` rather than a flat `'NAACCR Item'`. This reconstructs the
-   `STAGE_PROGNOSTIC_FAC` / `TREATMENT_1ST_COURSE` / `DEMOGRAPHIC_TUMOR` class strings that the
-   retired legacy mapping inventory had stored. Phase 2.1 removed that inventory after converting
+3. **Local mint** is the reported layer when no target exists. The standard target
+   is zero while the local source remains nonzero. IDs are allocated from
+   2,100,000,000 through 2,147,483,647 and recorded in
+   `naaccr.local_concept_allocation`. Classes derive from section and parent XML
+   element. Full allowed value codes stay in the ledger; their OMOP concept codes
+   use a bounded deterministic digest.
    its review data into tracked seeds.
 
 `naaccr.concept_map_coverage` view emits items total / mapped per layer / unmapped, so coverage is
@@ -605,9 +604,9 @@ table — those are owned by manifest DDL (`2_naaccr_concept_maps_sqlserver.sql`
 `maps build` — and it re-derives its item and value concepts from `omop.concept` on each run.
 
 The consequence must be stated plainly in `SCHEMA_ARCHITECTURE.md` rather than discovered later:
-**concept identity legitimately differs by dialect.** A SQL Server deployment may resolve a given
-NAACCR item to a `NAACCR2026` concept where a SQLite deployment resolves it to an Athena `NAACCR`
-concept or a `NAACCR_LOCAL` mint. Therefore:
+**Local concept identity depends on each database's allocation history.** Both
+dialects use `NAACCR_LOCAL` as the map source. The SQL Server-only `NAACCR2026`
+supplement remains independent of these map tables. Therefore:
 
 - The `mapping_layer` column is what makes this auditable — you can always see which layer produced
   a given row on a given deployment.
@@ -622,7 +621,7 @@ concept or a `NAACCR_LOCAL` mint. Therefore:
 `phenoml-workflows/` is retired; layer 2 is a tracked CSV and git is the review trail.
 
 `database/seed/concept_map_overrides.csv` columns: `item_num`, `code` (blank for item-level),
-`omop_concept_id`, `omop_source_concept_id`, `target_domain_id`, `rationale`, `reviewer`,
+`omop_concept_id`, `target_domain_id`, `rationale`, `reviewer`,
 `reviewed_at`.
 
 **One-time conversion completed.** Phase 2.1 converted the 780-row legacy mapping inventory into
@@ -640,8 +639,9 @@ The retired input had a field-name trap: `concept_id` held a NAACCR **item numbe
 `TEXT`) rather than an OMOP domain. The conversion mapped the former to `item_num` and dropped the
 latter.
 
-**Layer-3 gating.** Mint a local concept for any item that has captured values and no layer-1 or
-layer-2 map, **except** those in `naaccr_item_exclusions.csv`. The retired input left
+**Local-source gating.** Mint a local concept for every current non-retired item
+and distinct allowed value, **except** items in `naaccr_item_exclusions.csv`.
+The retired input left
 `is_mappable` null for 478 of 780 rows, so the active build must use the exclusions seed rather
 than that historical flag.
 
@@ -965,14 +965,19 @@ Python not installed.
 **Full pipeline — one path:**
 
 ```bash
-python -m sdc_cdm build   --dialect sqlite --db out/demo.db
-python -m sdc_cdm vocab load --vocab-dir database/vocab
-python -m sdc_cdm constants resolve
-python -m sdc_cdm dict fetch --dialect sqlite --version 25
-python -m sdc_cdm dict load  --dialect sqlite --db out/demo.db --csv-dir out-egs
+python -m sdc_cdm build --dialect sqlite --db out/demo.db
+python -m sdc_cdm vocab load --dialect sqlite --db out/demo.db \
+  --vocab-dir database/vocab
+python -m sdc_cdm dict fetch --dialect sqlite --version 25 \
+  --csv-dir .context/naaccr-25
+python -m sdc_cdm dict load --dialect sqlite --db out/demo.db \
+  --csv-dir .context/naaccr-25
 python -m sdc_cdm dict verify --dialect sqlite --db out/demo.db \
   --expect expectations/naaccr-25.json
-python -m sdc_cdm maps build
+python -m sdc_cdm constants resolve --dialect sqlite --db out/demo.db
+python -m sdc_cdm maps build --dialect sqlite --db out/demo.db
+python -m sdc_cdm maps coverage --dialect sqlite --db out/demo.db \
+  --expect expectations/concept-maps-naaccr-25.json
 python -m sdc_cdm ingest sample_data/naaccr_v2/*.hl7
 python -m sdc_cdm bridge
 python -m sdc_cdm validate

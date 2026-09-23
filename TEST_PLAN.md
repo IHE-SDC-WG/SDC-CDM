@@ -226,12 +226,26 @@ importer or direct inserts, run the bridge, assert on `omop.*`.
   `test_bridge_no_double_count` runs the bridge on both dialects with no test-side table
   stubs. `test_concept_map_ddl` pins the two-slot column contract and the
   `concept_map_coverage` view in both dialects.
+
 - [ ] **OMOP-10** *(regression, review finding #4)* The validation script
   (`validate_naaccr_sdc_to_omop.sql`) passes against a database produced by the shipped
   ETL — its type-concept filters and expected tables (`episode`/`episode_event`) must
   match what the ETL actually writes.
 - [ ] **OMOP-11** Person linkage: measurements/notes carry the `person_id` created at
   import; no orphan rows referencing missing persons (FK check with constraints applied).
+
+### Phase 2.2 concept map checks
+
+- [x] **MAPS-01** Fresh SQLite fixture builds local item and value source concepts.
+- [x] **MAPS-02** Athena `Maps to` targets use the standard slot; ambiguous targets choose the lowest ID.
+- [x] **MAPS-03** Target-only overrides replace Athena targets, including an explicit zero target.
+- [x] **MAPS-04** Excluded items and their values receive no map rows.
+- [x] **MAPS-05** Rebuilds and deleted map rows reuse ledger source IDs.
+- [x] **MAPS-06** Multiple classes have distinct allocations and local IDs remain within SQL Server `INT`.
+- [x] **MAPS-07** Long allowed codes retain their full ledger key and use bounded OMOP concept codes.
+- [x] **MAPS-08** Unknown active overrides report physical CSV lines, including after multiline fields.
+- [x] **MAPS-09** Coverage groups by section and layer; a wrong expectation fails.
+- [x] **MAPS-10** Old SQLite map schemas request a rebuild. A dedicated SQL Server CI database is configured; that arm remains to be verified by CI.
 
 ---
 

@@ -64,7 +64,7 @@ GO
 
 -- Append-only ledger of locally minted NAACCR_LOCAL concept ids, so layer-3 mints keep
 -- the same id across rebuilds. Ids are allocated from 2,100,000,000 through
--- 2,199,999,999 (the NAACCR2026 supplement owns 2,000,000,000 through 2,099,999,999).
+-- 2,147,483,647 (the NAACCR2026 supplement owns 2,000,000,000 through 2,099,999,999).
 -- item_num = 0 and code = '' are sentinels for kinds without an item or code, so the
 -- UNIQUE key behaves the same in both dialects. allocated_at is written by Python as
 -- ISO-8601 UTC.
@@ -80,11 +80,12 @@ BEGIN
     allocated_at NVARCHAR(40) NOT NULL,
     CONSTRAINT PK_local_concept_allocation PRIMARY KEY (concept_id),
     CONSTRAINT CK_local_concept_allocation_range
-      CHECK (concept_id BETWEEN 2100000000 AND 2199999999),
+      CHECK (concept_id BETWEEN 2100000000 AND 2147483647),
     CONSTRAINT CK_local_concept_allocation_kind
       CHECK (concept_kind IN ('vocabulary', 'concept_class', 'item', 'value')),
     CONSTRAINT CK_local_concept_allocation_sentinels CHECK (
-        (concept_kind IN ('vocabulary', 'concept_class') AND item_num = 0 AND code = '')
+        (concept_kind = 'vocabulary' AND item_num = 0 AND code = '')
+        OR (concept_kind = 'concept_class' AND item_num = 0 AND code <> '')
         OR (concept_kind = 'item' AND item_num <> 0 AND code = '')
         OR (concept_kind = 'value' AND item_num <> 0)
     ),

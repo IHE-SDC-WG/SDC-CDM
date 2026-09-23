@@ -37,7 +37,11 @@ regression fixtures seed the matching OMOP person explicitly.
   report identifiers.
 - `naaccr_concept_map` and `naaccr_value_concept_map` map item and item-value pairs to OMOP
   concepts. They are keyed independently of dictionary version because the bridge joins by item
-  number and code.
+  number and code. `maps build` gives every eligible key a stable `NAACCR_LOCAL`
+  `source_concept_id`; `concept_id` is a valid standard target or zero. A target
+  can come from a reviewed override or a valid Athena `Maps to` relationship.
+  The append-only allocation ledger preserves local IDs across rebuilds of one
+  database. IDs are not promised to match independently built databases.
 
 `dict fetch` stamps its CSVs with `data_dictionary_version.csv` and `ssdi fetch` stamps its CSVs with
 `ssdi_version.csv`; `dict load` requires the two stamps to agree and injects one `dd_version_id` into

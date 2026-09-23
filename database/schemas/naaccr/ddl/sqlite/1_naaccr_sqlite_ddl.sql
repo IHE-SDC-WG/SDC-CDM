@@ -264,14 +264,14 @@ CREATE TABLE IF NOT EXISTS naaccr.naaccr_value_concept_map (
 
 -- Append-only ledger of locally minted NAACCR_LOCAL concept ids, so layer-3 mints keep
 -- the same id across rebuilds. Ids are allocated from 2,100,000,000 through
--- 2,199,999,999 (the SQL-Server-only NAACCR2026 supplement owns 2,000,000,000 through
+-- 2,147,483,647 (the SQL-Server-only NAACCR2026 supplement owns 2,000,000,000 through
 -- 2,099,999,999). item_num = 0 and code = '' are sentinels for kinds without an item or
 -- code, so UNIQUE (concept_kind, item_num, code) behaves the same in both dialects
 -- (SQLite treats NULLs as distinct in UNIQUE; SQL Server does not).
 -- allocated_at is written by Python as ISO-8601 UTC.
 CREATE TABLE IF NOT EXISTS naaccr.local_concept_allocation (
     concept_id INTEGER NOT NULL PRIMARY KEY
-        CHECK (concept_id BETWEEN 2100000000 AND 2199999999),
+        CHECK (concept_id BETWEEN 2100000000 AND 2147483647),
     concept_kind TEXT NOT NULL
         CHECK (concept_kind IN ('vocabulary', 'concept_class', 'item', 'value')),
     item_num INTEGER NOT NULL DEFAULT 0,
@@ -280,7 +280,8 @@ CREATE TABLE IF NOT EXISTS naaccr.local_concept_allocation (
     concept_name TEXT NULL,
     allocated_at TEXT NOT NULL,
     CHECK (
-        (concept_kind IN ('vocabulary', 'concept_class') AND item_num = 0 AND code = '')
+        (concept_kind = 'vocabulary' AND item_num = 0 AND code = '')
+        OR (concept_kind = 'concept_class' AND item_num = 0 AND code <> '')
         OR (concept_kind = 'item' AND item_num <> 0 AND code = '')
         OR (concept_kind = 'value' AND item_num <> 0)
     ),
