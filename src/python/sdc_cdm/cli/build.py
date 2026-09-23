@@ -115,16 +115,44 @@ class BuildRunner:
         if not valid:
             raise RuntimeError("naaccr.naaccr_value identifier check is missing")
 
-    def _execute_entry(
-        self, entry: ManifestEntry, *, replace_empty_legacy_value: bool = False
-    ) -> str:
+    def _legacy_value_decision(self, entry: ManifestEntry) -> MigrationDecision:
+        # An empty legacy table is always rebuilt; whether that is a first apply
+        # or a reapply depends only on the ledger, as in any other entry.
+        if self.ledger.get(entry.path) is not None:
+            return MigrationDecision.REAPPLY
+        return MigrationDecision.APPLY
+
+    def _execute_entry(self, entry: ManifestEntry) -> str:
         path = repository_path(entry.path)
         digest = _sha256(path)
         split = split_script(self.backend.dialect, path.read_text(encoding="utf-8"))
-        units = split.executable
-        if replace_empty_legacy_value:
-            units = ("DROP TABLE naaccr.naaccr_value", *units)
-        self.backend.execute_units(units)
+        self.backend.execute_units(split.executable)
+        return digest
+
+    def _replace_empty_legacy_value(self, entry: ManifestEntry) -> str:
+        """Drop and recreate an empty legacy table in one transaction.
+
+        The emptiness check that gates the drop runs under the same lock as the
+        drop, so rows a concurrent importer adds after the early check are
+        rejected instead of lost. SQLite's BEGIN IMMEDIATE already holds the
+        write lock on every attached database; SQL Server takes an exclusive
+        table lock that also blocks a concurrent ALTER or DROP until commit.
+        """
+
+        path = repository_path(entry.path)
+        digest = _sha256(path)
+        split = split_script(self.backend.dialect, path.read_text(encoding="utf-8"))
+        with self.backend.transaction():
+            if self.backend.dialect == "sqlserver":
+                self.backend.fetch_one(
+                    "SELECT COUNT(*) FROM naaccr.naaccr_value WITH (TABLOCKX, HOLDLOCK)"
+                )
+            count = self._legacy_naaccr_value_count()
+            self._reject_populated_legacy_value(count)
+            if count == 0:
+                self.backend.execute_uncommitted("DROP TABLE naaccr.naaccr_value")
+            for unit in split.executable:
+                self.backend.execute_uncommitted(unit)
         return digest
 
     def _dry_run(self, entries: tuple[ManifestEntry, ...]) -> list[BuildAction]:
@@ -145,7 +173,7 @@ class BuildRunner:
                 entry.path == self._NAACCR_VALUE_DDL[self.backend.dialect]
                 and legacy_count == 0
             ):
-                decision = MigrationDecision.REAPPLY
+                decision = self._legacy_value_decision(entry)
             status = {
                 MigrationDecision.APPLY: BuildStatus.WOULD_APPLY,
                 MigrationDecision.SKIP: BuildStatus.SKIPPED,
@@ -198,11 +226,7 @@ class BuildRunner:
                 if replace_empty_legacy_value:
                     # No clinical rows can be lost. The revised DDL creates the new
                     # table and indexes in both dialects.
-                    decision = (
-                        MigrationDecision.REAPPLY
-                        if self.ledger.get(entry.path) is not None
-                        else MigrationDecision.APPLY
-                    )
+                    decision = self._legacy_value_decision(entry)
                     legacy_count = None
                 if decision is MigrationDecision.SKIP:
                     actions.append(BuildAction(entry.path, BuildStatus.SKIPPED))
@@ -211,9 +235,10 @@ class BuildRunner:
                     self.ledger.record(entry.path, digest, run_id)
                     actions.append(BuildAction(entry.path, BuildStatus.HASH_ACCEPTED))
                     continue
-                self._execute_entry(
-                    entry, replace_empty_legacy_value=replace_empty_legacy_value
-                )
+                if replace_empty_legacy_value:
+                    self._replace_empty_legacy_value(entry)
+                else:
+                    self._execute_entry(entry)
                 self.ledger.record(entry.path, digest, run_id)
                 status = (
                     BuildStatus.REAPPLIED
