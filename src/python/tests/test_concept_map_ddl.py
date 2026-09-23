@@ -36,6 +36,20 @@ ALLOCATION_CONTRACT = {
     "allocated_at",
 }
 COVERAGE_COLUMNS = {"algorithm", "scope", "section", "mapping_layer", "item_count"}
+COLLISION_COLUMNS = {
+    "algorithm",
+    "dd_version_id",
+    "item_num",
+    "code",
+    "schema_count",
+    "description_count",
+    "obsolete_count",
+    "description_min",
+    "description_max",
+    "source_concept_id",
+    "concept_id",
+    "mapping_layer",
+}
 NAACCR_DDL = {
     "sqlite": "database/schemas/naaccr/ddl/sqlite/1_naaccr_sqlite_ddl.sql",
     "sqlserver": "database/schemas/naaccr/ddl/sqlserver/2_naaccr_concept_maps_sqlserver.sql",
@@ -105,6 +119,7 @@ def test_concept_map_ddl_and_coverage_view(dialect: str, tmp_path: Path) -> None
         assert ALLOCATION_CONTRACT <= _columns(backend, "local_concept_allocation")
         assert "domain_id" not in _columns(backend, "naaccr_concept_map")
         assert _columns(backend, "concept_map_coverage") == COVERAGE_COLUMNS
+        assert _columns(backend, "value_code_collision") == COLLISION_COLUMNS
 
         # Unique names and ids keep reruns against a persistent SQL Server database
         # collision-free; the maps carry no algorithm key.
@@ -212,3 +227,139 @@ def test_concept_map_ddl_and_coverage_view(dialect: str, tmp_path: Path) -> None
             ("value", "Demographic", "local_mint", 1),
             ("value", "Demographic", "unmapped", 2),
         ]
+
+
+@pytest.mark.parametrize("dialect", ("sqlite", "sqlserver"))
+def test_value_code_collision_view(dialect: str, tmp_path: Path) -> None:
+    with _backend(dialect, tmp_path) as backend:
+        BuildRunner(load_manifest(), backend).run()
+
+        token = uuid.uuid4().hex[:6]
+        algorithm = f"collision_{token}"
+        base = 1_000_000 + int(token, 16)
+        colliding, single, old_only = base + 1, base + 2, base + 3
+        local_id = 2_100_000_000 + base
+        created_at = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+        def add_generation(
+            version: str,
+            is_current: int,
+            codes: list[tuple[str, int, str, str | None]],
+        ) -> int:
+            dd_version_id = _insert_id(
+                backend,
+                "INSERT INTO naaccr.data_dictionary_version "
+                "(algorithm, version, is_current) VALUES (?, ?, ?)",
+                "INSERT INTO naaccr.data_dictionary_version "
+                "(algorithm, version, is_current) "
+                "OUTPUT INSERTED.dd_version_id VALUES (?, ?, ?)",
+                (algorithm, version, is_current),
+            )
+            for item_num in (colliding, single, old_only):
+                backend.execute(
+                    "INSERT INTO naaccr.naaccr_item (dd_version_id, item_num, name) "
+                    "VALUES (?, ?, ?)",
+                    (dd_version_id, item_num, f"Item {item_num}"),
+                )
+            schema_items = sorted({(schema, item_num) for schema, item_num, _, _ in codes})
+            for schema in sorted({schema for schema, _ in schema_items}):
+                backend.execute(
+                    "INSERT INTO naaccr.staging_schema "
+                    "(dd_version_id, schema_id_number, schema_id) VALUES (?, ?, ?)",
+                    (dd_version_id, schema, f"schema_{schema}"),
+                )
+            for schema, item_num in schema_items:
+                backend.execute(
+                    "INSERT INTO naaccr.schema_item "
+                    "(dd_version_id, schema_id_number, item_num) VALUES (?, ?, ?)",
+                    (dd_version_id, schema, item_num),
+                )
+            for schema, item_num, code, description in codes:
+                backend.execute(
+                    "INSERT INTO naaccr.schema_item_code "
+                    "(dd_version_id, schema_id_number, item_num, code, description) "
+                    "VALUES (?, ?, ?, ?, ?)",
+                    (dd_version_id, schema, item_num, code, description),
+                )
+            return dd_version_id
+
+        # The superseded generation goes in first: only one row per algorithm may be current.
+        add_generation(
+            "old",
+            0,
+            [
+                ("S1", colliding, "1", "Old Alpha"),
+                ("S4", colliding, "1", "Old Gamma"),
+                ("S1", old_only, "9", "First"),
+                ("S2", old_only, "9", "Second"),
+            ],
+        )
+        current_id = add_generation(
+            "current",
+            1,
+            [
+                ("S1", colliding, "1", "Alpha"),
+                ("S2", colliding, "1", "Beta"),
+                ("S3", colliding, "1", "Alpha"),
+                ("S1", colliding, "2", "Live meaning"),
+                ("S2", colliding, "2", "**OBSOLETE** - Please use 600"),
+                ("S1", colliding, "3", "Same"),
+                ("S2", colliding, "3", "  same "),
+                ("S1", colliding, "4", None),
+                ("S2", colliding, "4", "Named"),
+                ("S1", colliding, "5", " A"),
+                ("S2", colliding, "5", "0"),
+                ("S3", colliding, "5", "a"),
+                ("S4", colliding, "5", "   "),
+                ("S1", single, "1", "Only"),
+            ],
+        )
+
+        backend.execute(
+            "INSERT INTO naaccr.local_concept_allocation "
+            "(concept_id, concept_kind, item_num, code, concept_code, concept_name, "
+            "allocated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (local_id, "value", colliding, "1", f"{colliding}^1", "Alpha", created_at),
+        )
+        backend.execute(
+            "INSERT INTO naaccr.naaccr_value_concept_map "
+            "(item_num, code, source_concept_id, concept_id, target_domain_id, "
+            "concept_code, concept_name, mapping_layer, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                colliding,
+                "1",
+                local_id,
+                0,
+                "Meas Value",
+                f"{colliding}^1",
+                "Alpha",
+                "local_mint",
+                created_at,
+            ),
+        )
+
+        rows = [
+            tuple(row)
+            for row in backend.fetch_all(
+                "SELECT dd_version_id, item_num, code, schema_count, description_count, "
+                "obsolete_count, description_min, description_max, source_concept_id, "
+                "concept_id, mapping_layer "
+                "FROM naaccr.value_code_collision WHERE algorithm = ? "
+                "ORDER BY item_num, code",
+                (algorithm,),
+            )
+        ]
+        assert [row[:6] + row[8:] for row in rows] == [
+            (current_id, colliding, "1", 3, 2, 0, local_id, 0, "local_mint"),
+            (current_id, colliding, "2", 2, 2, 1, None, None, None),
+            (current_id, colliding, "5", 4, 2, 0, None, None, None),
+        ]
+        # Collation decides whether "*" sorts before letters, so compare as a set. Samples are
+        # trimmed originals of two distinct normalized meanings; SQL Server's case-insensitive
+        # collation may return either "A" or "a" for code 5, so that row compares case-folded.
+        assert [set(row[6:8]) for row in rows[:2]] == [
+            {"Alpha", "Beta"},
+            {"Live meaning", "**OBSOLETE** - Please use 600"},
+        ]
+        assert {sample.upper() for sample in rows[2][6:8]} == {"0", "A"}
