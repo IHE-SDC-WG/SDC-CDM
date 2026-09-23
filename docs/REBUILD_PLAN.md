@@ -567,7 +567,9 @@ The target and reported layer are selected in this order:
 a number CI can assert on and regressions are visible. Break it down **by section** as well as by
 layer: "396 `Stage/Prognostic Factors` items, N mapped" is an actionable number for the working
 group, where a single global percentage is not. This is what makes the Athena-coverage risk below
-measurable rather than rhetorical.
+measurable rather than rhetorical. `naaccr.value_code_collision` (#100) lists `(item_num, code)`
+pairs whose meaning differs across staging schemas; the key stays `(item_num, code)` in Phase 2,
+and `maps coverage` (#119) reports these rows.
 
 #### The two-slot contract (fixes a live bug)
 

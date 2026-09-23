@@ -225,8 +225,7 @@ importer or direct inserts, run the bridge, assert on `omop.*`.
   `2_naaccr_concept_maps_sqlserver.sql`, not from the excluded NAACCR2026 supplement, so
   `test_bridge_no_double_count` runs the bridge on both dialects with no test-side table
   stubs. `test_concept_map_ddl` pins the two-slot column contract and the
-  `concept_map_coverage` view in both dialects.
-
+  `concept_map_coverage` and `value_code_collision` views in both dialects.
 - [ ] **OMOP-10** *(regression, review finding #4)* The validation script
   (`validate_naaccr_sdc_to_omop.sql`) passes against a database produced by the shipped
   ETL — its type-concept filters and expected tables (`episode`/`episode_event`) must
@@ -355,6 +354,12 @@ count anchor: `expectations/naaccr-25.json`.
   `dict load` rejects a directory whose two stamps disagree on algorithm, staging version, or NAACCR
   version before opening a transaction, treats a missing stamp as an incomplete SSDI set, and an
   interrupted refresh by either producer leaves no stamp.
+- [x] **DICT-18** `naaccr.value_code_collision` lists, in both dialects, each current-generation
+  `(item_num, code)` whose trimmed, case-folded `schema_item_code` descriptions differ across
+  schemas, with schema, description, and OBSOLETE counts and any matching build's value-map row. Superseded
+  generations, single-schema codes, NULL descriptions, and whitespace or case differences do not
+  count. The `naaccr-dict` fixture's second schema, `00580`, produces one collision through
+  `dict load`.
 
 ---
 

@@ -1,3 +1,4 @@
 "schema_id_number","item_num","item_role","used_for_staging","default_value","description","rationale","additional_info","table_notes","coding_guidelines"
 "00460","3827","input","True","","Fixture input","","","",""
 "00460","3605","output","False","","Fixture output","","","",""
+"00580","3827","input","True","","Fixture input B","","","",""

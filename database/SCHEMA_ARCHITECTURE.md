@@ -41,7 +41,12 @@ regression fixtures seed the matching OMOP person explicitly.
   `source_concept_id`; `concept_id` is a valid standard target or zero. A target
   can come from a reviewed override or a valid Athena `Maps to` relationship.
   The append-only allocation ledger preserves local IDs across rebuilds of one
-  database. IDs are not promised to match independently built databases.
+  database. IDs are not promised to match independently built databases. The
+  singleton build record ties the map rows to their current dictionary generation.
+  The value map is keyed `(item_num, code)` while `schema_item_code` is
+  schema-scoped, so `naaccr.value_code_collision` lists current-generation pairs
+  whose descriptions differ across schemas (#100); `concept_map_coverage` reports
+  coverage by layer for the generation that built the map rows.
 
 `dict fetch` stamps its CSVs with `data_dictionary_version.csv` and `ssdi fetch` stamps its CSVs with
 `ssdi_version.csv`; `dict load` requires the two stamps to agree and injects one `dd_version_id` into

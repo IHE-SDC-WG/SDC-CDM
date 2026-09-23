@@ -21,5 +21,7 @@ DTOs with six and seven fields, a retired item with `record_types`, and a live i
 CSV set, stamped by an agreeing `ssdi_version.csv`, used to prove the shared `dd_version_id`,
 generation-agreement, and zero-orphan checks. Tests regenerate the four API-derived CSVs without
 a key and compare their bytes with the committed files.
-`broken_csv/` changes only the staging membership by adding item `999999`; it exercises the
-pre-transaction orphan preflight.
+The second SSDI schema, `00580`, repeats item 3827 with one shared and one conflicting code
+description so the load test can check `naaccr.value_code_collision`.
+`broken_csv/` mirrors `csv/` and changes only the staging membership by adding item `999999`;
+it exercises the pre-transaction orphan preflight.
