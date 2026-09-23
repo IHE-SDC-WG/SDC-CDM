@@ -33,6 +33,7 @@ def test_cross_dialect_schema_contracts() -> None:
     assert "target_domain_id NVARCHAR(20)" in sqlserver_maps
     assert "mapping_layer NVARCHAR(20) NOT NULL" in sqlserver_maps
     assert "CREATE OR ALTER VIEW naaccr.concept_map_coverage" in sqlserver_maps
+    assert "CREATE OR ALTER VIEW naaccr.value_code_collision" in sqlserver_maps
     assert "domain_id NVARCHAR(20)" not in sqlserver_maps.replace("target_domain_id", "")
 
     # The NAACCR2026 supplement seeds vocabulary only; the map tables are owned by

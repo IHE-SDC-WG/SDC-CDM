@@ -80,7 +80,7 @@ def test_fixture_loads_in_both_dialects_and_is_idempotent(
         assert second.row_counts["naaccr_item"] == 12
         assert second.row_counts["naaccr_item_allowed_code"] == 121
         assert second.row_counts["naaccr_item_registry_requirement"] == 36
-        assert second.row_counts["schema_item"] == 2
+        assert second.row_counts["schema_item"] == 3
         assert second.stub_item_count == 0
         assert (
             int(
@@ -149,6 +149,13 @@ def test_fixture_loads_in_both_dialects_and_is_idempotent(
             (first.dd_version_id,),
         )
         assert tuple(metadata) == ("percent", 0)
+        # Schema 00580 gives code 1 a second meaning and repeats code 0 verbatim.
+        collisions = backend.fetch_all(
+            "SELECT item_num, code, schema_count, description_count, concept_id "
+            "FROM naaccr.value_code_collision WHERE algorithm = ?",
+            (algorithm,),
+        )
+        assert [tuple(row) for row in collisions] == [(3827, "1", 2, 2, None)]
         # The SQL Server drift fix is executable, not only a text assertion.
         backend.fetch_all(
             f"SELECT schema_selection_rule_id FROM "
