@@ -48,6 +48,22 @@ CREATE TABLE IF NOT EXISTS intake.inbound_envelope (
 CREATE INDEX IF NOT EXISTS intake.idx_inbound_envelope_message
     ON inbound_envelope (inbound_message_id);
 
+-- Logical cross-schema links to one sdc_report and its NAACCR values.
+CREATE TABLE IF NOT EXISTS intake.envelope_load (
+    inbound_envelope_id INTEGER NOT NULL PRIMARY KEY REFERENCES inbound_envelope(inbound_envelope_id),
+    sdc_report_id INTEGER NOT NULL,
+    person_id INTEGER NOT NULL REFERENCES patient(patient_id),
+    episode_key TEXT NOT NULL,
+    dd_version_id INTEGER NOT NULL,
+    loaded_datetime TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+
+CREATE TABLE IF NOT EXISTS intake.envelope_value (
+    inbound_envelope_id INTEGER NOT NULL REFERENCES inbound_envelope(inbound_envelope_id),
+    naaccr_value_id INTEGER NOT NULL,
+    PRIMARY KEY (inbound_envelope_id, naaccr_value_id)
+);
+
 CREATE TABLE IF NOT EXISTS intake.inbound_message_diagnostic (
     inbound_message_diagnostic_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     inbound_message_id INTEGER NOT NULL REFERENCES inbound_message(inbound_message_id),

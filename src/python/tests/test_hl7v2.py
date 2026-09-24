@@ -91,6 +91,20 @@ def test_invalid_date_is_null_and_diagnostic() -> None:
     assert diagnostics[0]["code"] == "INVALID_DATE"
 
 
+def test_orc_episode_identifier_and_non_cap_warning() -> None:
+    raw = SYNTHETIC.read_bytes().replace(
+        b"ORC|RE||SYN-ACC-1", b"ORC|RE||SYN-ACC-1|EP-7^^SYNTHLAB"
+    ).replace(
+        b"20791.100004300^Tumor Size^CAPECP", b"77777-7^Other measurement^LN"
+    )
+    envelopes = parse_hl7(raw)
+    assert all(row["episode"] == {
+        "episode_source_value": "EP-7", "assigning_authority": "SYNTHLAB"
+    } for row in envelopes)
+    assert any(item["code"] == "NON_CAP_IDENTIFIER" for item in envelopes[1]["diagnostics"])
+    assert "values" not in envelopes[1]
+
+
 def test_missing_obx_date_uses_obr_date_with_diagnostic() -> None:
     raw = SYNTHETIC.read_bytes().replace(b"F|||202609241235-0400", b"F|||")
     envelopes = parse_hl7(raw)

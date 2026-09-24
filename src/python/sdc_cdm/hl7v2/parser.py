@@ -263,6 +263,9 @@ def parse_hl7(raw: bytes) -> list[dict[str, Any]]:
         patient["gender"] = pid.field(8)
     sha = hashlib.sha256(raw).hexdigest()
     raw_info = {"sha256": sha, "byte_length": len(raw), "media_type": MEDIA_TYPE}
+    orc = next((item for item in segments if item.name == "ORC"), None)
+    episode_source = _component(orc.field(4), 1) if orc else ""
+    episode_authority = _component(orc.field(4), 3) if orc else ""
     obrs = [i for i, item in enumerate(segments) if item.name == "OBR"]
     if not obrs:
         raise Hl7ParseError("OBR segment is missing")
@@ -291,6 +294,10 @@ def parse_hl7(raw: bytes) -> list[dict[str, Any]]:
             "patient": patient,
             "report": report,
         }
+        if episode_source:
+            envelope["episode"] = {"episode_source_value": episode_source}
+            if episode_authority:
+                envelope["episode"]["assigning_authority"] = episode_authority
         if report.get("report_loinc") not in NARRATIVE_LOINCS:
             values = _values(observations, report.get("observation_date"), diagnostics)
             if values:

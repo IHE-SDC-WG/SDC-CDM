@@ -58,34 +58,34 @@ sample_data/         single source of truth for fixtures (see Cleanup)
 
 ## 1. Import tests
 
-### 1.1 HL7v2 (NAACCR Vol V) (Python importer planned)
+### 1.1 HL7v2 (NAACCR Vol V) (Python intake and loader)
 
-Fixtures: `sample_data/naaccr_v2/24-11-000312-2.txt.hl7`, `obx-Adrenal.hl7`
+Fixtures: synthetic `contracts/fixtures/two-obr-synthetic.hl7` plus the committed
+`sample_data/naaccr_v2/24-11-000312-2.txt.hl7` and `obx-Adrenal.hl7` profiles.
 
-- [ ] **IMP-HL7-01** Import completes without error on a valid Vol V message.
-  *(coverage regression: Phase 0 deleted `SdcImporterTests.cs` and the C# HL7 importer;
-  its output is frozen under `contracts/golden/` for the Python port.)*
-- [ ] **IMP-HL7-02** PID segment creates exactly one `person` with correct source values
-  (MRN, birth date, gender mapping).
-- [ ] **IMP-HL7-03** OBR creates one `sdc.sdc_report` with the OBR accession as
-  `report_accession` and report LOINC `60568-3`.
-- [ ] **IMP-HL7-04** Each logical answer yields one `naaccr.naaccr_value` row with the right
+- [x] **IMP-HL7-01** Intake and load complete on both committed Vol V profiles and the
+  synthetic two-OBR message. Raw bytes remain available after a failed parse.
+- [x] **IMP-HL7-02** PID creates one authority-qualified `intake.patient` identity with
+  source identifier, birth date components, and source gender. OMOP `person` mapping is later work.
+- [x] **IMP-HL7-03** Each OBR creates its own `sdc.sdc_report` with accession and LOINC;
+  the narrative OBR and synoptic OBR remain distinct and have ordered envelope provenance.
+- [x] **IMP-HL7-04** Each logical answer yields one `naaccr.naaccr_value` row with the right
   full OBX-3.1 `ecp_code`, NULL `item_num`, `obx_sub_id`, `value_code`/`value_num`/`value_text`, `report_accession`, and
   the originating `sdc_report_id`. CWE plus numeric/text OBX components sharing OBX-4 are
   combined. A missing OBR-3 accession is stored as NULL (not `''`).
   *(coverage regression: Phase 0 deleted `SdcImporterTests.cs` and the C# HL7 importer.)*
-- [ ] **IMP-HL7-05** The eCP path does not create `sdc.sdc_form_answer`, `template_sdc`, or
+- [x] **IMP-HL7-05** The eCP path does not create `sdc.sdc_form_answer`, `template_sdc`, or
   `template_instance` rows; those tables are reserved for SDC XML form intake.
   *(coverage regression: Phase 0 deleted `SdcImporterTests.cs` and the C# HL7 importer.)*
-- [ ] **IMP-HL7-06** Re-importing the same message flags the report
-  (`is_duplicate_accession = 1`, `first_seen_report_id` points at the original) instead of
-  silently duplicating or erroring.
-- [ ] **IMP-HL7-07** *(regression, review finding #5)* An OBX-3 question identifier that is
+- [x] **IMP-HL7-06** Re-importing identical bytes marks the inbound message as a duplicate
+  and skips loading its reports and values. Corrected bytes with the same accession remain
+  separate intake events; repeat accession and LOINC carry report-level duplicate provenance.
+- [x] **IMP-HL7-07** *(regression, review finding #5)* An OBX-3 question identifier that is
   not a CAP eCC/eCP code (e.g. a LOINC code) is either imported or rejected **with a
   logged warning** so an answer is not silently omitted from `naaccr.naaccr_value`.
-- [ ] **IMP-HL7-08** Malformed message (missing MSH / truncated segment) throws or returns
-  an error; the database is left without a half-written report.
-- [ ] **IMP-HL7-09** Units on numeric OBX values land in `value_unit_source`.
+- [x] **IMP-HL7-08** Malformed message records a failed parse and diagnostic without
+  a half-written report; exact raw bytes remain stored.
+- [x] **IMP-HL7-09** Units on numeric OBX values land in `value_unit_source`.
 
 ### 1.2 HL7 FHIR (CPDS bundles and mCODE) — `SdcCdm.FHIR.Importers.ImportFhir`
 
@@ -165,7 +165,7 @@ Fixtures: `sample_data/sdc_xml/ADRENAL_GLAND.xml`, templates in `sample_data/sdc
 These verify that **every import source converges to the same canonical NAACCR + SDC
 shape**, so the OMOP bridge only has to be tested once.
 
-- [ ] **NAACCR-01** *(from HL7v2)* Importing `obx-Adrenal.hl7` yields the expected
+- [x] **NAACCR-01** *(from HL7v2)* Importing `obx-Adrenal.hl7` yields the expected
   `naaccr_value` rows, including grouped code/number and code/text answers, source units,
   OBX-14 dates, and OBX-4 sub-IDs.
   *(coverage regression: Phase 0 deleted `SdcImporterTests.cs` and the C# HL7 importer;
@@ -193,8 +193,8 @@ importer or direct inserts, run the bridge, assert on `omop.*`.
 - [x] **OMOP-01** Three-schema layout + minimal bridge smoke test
   (`tools/tests/test_three_schema_sqlite.py`): OMOP tables carry **no** `sdc_*` columns;
   a seeded report/raw value produces a note + measurement.
-- [ ] **OMOP-02** One `omop.note` per `sdc_report`, with `note_source_value` =
-  `report_accession` and the report narrative as note text.
+- [ ] **OMOP-02** Phase 4 combines related OBR reports into one `omop.note`, anchored
+  to the synoptic report and retaining explicit provenance to each contributing report.
 - [ ] **OMOP-03** One `omop.measurement`/`observation` per answered item, with
   `*_source_value` = the full CAP code or verified NAACCR item number, and NAACCR
   source IDs in `*_source_concept_id` and standard targets in `*_concept_id`

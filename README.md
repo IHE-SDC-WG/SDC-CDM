@@ -64,6 +64,27 @@ database. The API sequence, flag mapping, 12-file SSDI contract, SQL Server comm
 guidance are in
 [`database/schemas/naaccr/DICTIONARY_LOAD.md`](database/schemas/naaccr/DICTIONARY_LOAD.md).
 
+## HL7 v2 intake
+
+After building the database and loading a current NAACCR dictionary version, retain and parse
+each ER7 file, then load its OBR envelopes. `intake ingest` prints the message ID for `intake load`.
+
+```bash
+python -m sdc_cdm intake ingest --dialect sqlite --db out/demo.db path/to/message.hl7
+python -m sdc_cdm intake load --dialect sqlite --db out/demo.db --algorithm eod_public 1
+```
+
+The algorithm must match a current row in `naaccr.data_dictionary_version`; replace the example
+message ID `1` with the ID printed by intake. SQL Server accepts the same commands with
+`--dialect sqlserver` and the connection string described above. One inbound message stores its
+exact bytes and one ordered envelope per OBR. Loading produces one `sdc_report` per envelope;
+the narrative and synoptic reports remain separate. `intake.envelope_load` and
+`intake.envelope_value` give explicit source links. Identical-byte resends are recorded but do not
+produce another report or value. Source date precision and offsets remain in the envelope;
+`naaccr_value.observation_date` receives only the calendar day when one was supplied. Staging
+schema selection currently accepts complete NAACCR item inputs and one unambiguous exact rule;
+otherwise `schema_id_number` stays null with an intake diagnostic.
+
 ## Tool support
 
 | Tool | SQLite | SQL Server |
@@ -72,6 +93,7 @@ guidance are in
 | Python `sdc_cdm dict load` / `dict verify` | Supported | Supported |
 | Python `sdc_cdm dict fetch` | Network-only; target ignored | Network-only; target ignored |
 | Python `sdc_cdm ssdi fetch` | Network-only; target ignored | Network-only; target ignored |
+| Python `sdc_cdm intake ingest` / `intake load` | Supported | Supported |
 | C# SDC XML importer | Supported | Not supported |
 
 The C# project is deliberately limited to SDC XML template and response persistence. It uses
