@@ -4,6 +4,8 @@ import json
 import subprocess
 from pathlib import Path
 
+from jsonschema import Draft202012Validator
+
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -57,7 +59,37 @@ def test_envelope_schema_is_strict_and_versioned() -> None:
 
 
 def _goldens() -> list[Path]:
-    return sorted((ROOT / "contracts/golden").glob("*.json"))
+    return sorted(
+        path for path in (ROOT / "contracts/golden").glob("*.json")
+        if not path.name.endswith(".envelope.json")
+    )
+
+
+def test_two_obr_envelopes_share_one_raw_message_and_validate() -> None:
+    schema = json.loads((ROOT / "contracts/envelope.schema.json").read_text())
+    Draft202012Validator.check_schema(schema)
+    paths = sorted((ROOT / "contracts/golden").glob("*.envelope.json"))
+    assert [path.name for path in paths] == [
+        "two-obr-synthetic.1.envelope.json",
+        "two-obr-synthetic.2.envelope.json",
+    ]
+    envelopes = []
+    for path in paths:
+        raw = path.read_bytes()
+        envelope = json.loads(raw)
+        Draft202012Validator(schema).validate(envelope)
+        assert raw == (json.dumps(envelope, ensure_ascii=False, sort_keys=True, indent=2) + "\n").encode()
+        envelopes.append(envelope)
+    assert [item["source"]["obr_ordinal"] for item in envelopes] == [1, 2]
+    assert len({item["raw"]["sha256"] for item in envelopes}) == 1
+    assert [item["report"]["report_loinc"] for item in envelopes] == ["35265-8", "60569-1"]
+    assert envelopes[0]["report"]["narrative"] == "Synthetic diagnosis\nsecond line"
+    assert envelopes[0]["report"]["observation_date"]["precision"] == "hour"
+    assert envelopes[1]["report"]["observation_date"]["precision"] == "minute"
+    assert envelopes[1]["values"][0]["value_num"] == "1.20"
+
+    episode = {**envelopes[1], "episode": {"episode_source_value": "SYN-TUMOR-1"}}
+    Draft202012Validator(schema).validate(episode)
 
 
 def test_every_frozen_contract_names_its_source_commit_and_fixture() -> None:

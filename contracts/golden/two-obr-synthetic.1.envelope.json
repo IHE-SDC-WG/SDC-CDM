@@ -1,0 +1,39 @@
+{
+  "envelope_version": "1",
+  "patient": {
+    "assigning_authority": "SYNTHLAB",
+    "birth_date": {
+      "d": null,
+      "m": null,
+      "precision": "year",
+      "y": 1957
+    },
+    "gender": "F",
+    "person_source_value": "SYN-P001"
+  },
+  "raw": {
+    "byte_length": 773,
+    "media_type": "application/hl7-v2+er7",
+    "sha256": "a874cd9670502bd134b3368d94922847cfd1d1fcd309fe20c1984f72f753324b"
+  },
+  "report": {
+    "accession": "SYN-ACC-1",
+    "narrative": "Synthetic diagnosis\nsecond line",
+    "observation_date": {
+      "d": 24,
+      "hh": 12,
+      "m": 9,
+      "mi": null,
+      "precision": "hour",
+      "ss": null,
+      "y": 2026
+    },
+    "report_loinc": "35265-8"
+  },
+  "source": {
+    "format": "hl7v2",
+    "message_control_id": "SYN-2OBR",
+    "obr_ordinal": 1,
+    "sending_facility": "SYNTHLAB"
+  }
+}

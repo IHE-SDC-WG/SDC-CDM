@@ -80,6 +80,7 @@ def test_build_twice_is_a_no_op(tmp_path: Path) -> None:
         assert migration_count == len(load_manifest().entries_for("sqlite"))
         assert run_count == 2
         assert backend.table_exists("intake", "inbound_message")
+        assert backend.table_exists("intake", "inbound_envelope")
         assert backend.table_exists("omop", "measurement")
         assert backend.table_exists("naaccr", "naaccr_value")
         assert backend.table_exists("sdc", "sdc_report")

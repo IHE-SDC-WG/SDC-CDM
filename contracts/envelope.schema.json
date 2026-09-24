@@ -12,6 +12,12 @@
           "$ref": "#/$defs/day_date"
         },
         {
+          "$ref": "#/$defs/hour_date"
+        },
+        {
+          "$ref": "#/$defs/minute_date"
+        },
+        {
           "$ref": "#/$defs/second_date"
         }
       ]
@@ -42,6 +48,104 @@
         "d",
         "m",
         "precision",
+        "y"
+      ],
+      "type": "object"
+    },
+    "hour_date": {
+      "additionalProperties": false,
+      "properties": {
+        "d": {
+          "maximum": 31,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "hh": {
+          "maximum": 23,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "m": {
+          "maximum": 12,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "mi": {
+          "type": "null"
+        },
+        "precision": {
+          "const": "hour"
+        },
+        "ss": {
+          "type": "null"
+        },
+        "tz": {
+          "pattern": "^[+-](?:0[0-9]|1[0-4]):[0-5][0-9]$",
+          "type": "string"
+        },
+        "y": {
+          "maximum": 9999,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "d",
+        "hh",
+        "m",
+        "mi",
+        "precision",
+        "ss",
+        "y"
+      ],
+      "type": "object"
+    },
+    "minute_date": {
+      "additionalProperties": false,
+      "properties": {
+        "d": {
+          "maximum": 31,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "hh": {
+          "maximum": 23,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "m": {
+          "maximum": 12,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "mi": {
+          "maximum": 59,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "precision": {
+          "const": "minute"
+        },
+        "ss": {
+          "type": "null"
+        },
+        "tz": {
+          "pattern": "^[+-](?:0[0-9]|1[0-4]):[0-5][0-9]$",
+          "type": "string"
+        },
+        "y": {
+          "maximum": 9999,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "d",
+        "hh",
+        "m",
+        "mi",
+        "precision",
+        "ss",
         "y"
       ],
       "type": "object"
@@ -190,6 +294,32 @@
     "envelope_version": {
       "const": "1"
     },
+    "episode": {
+      "additionalProperties": false,
+      "properties": {
+        "assigning_authority": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "episode_source_value": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "sequence_number": {
+          "minimum": 1,
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "episode_source_value"
+      ],
+      "type": "object"
+    },
     "patient": {
       "additionalProperties": false,
       "properties": {
@@ -334,6 +464,10 @@
             "string",
             "null"
           ]
+        },
+        "obr_ordinal": {
+          "minimum": 1,
+          "type": "integer"
         },
         "sending_facility": {
           "type": [

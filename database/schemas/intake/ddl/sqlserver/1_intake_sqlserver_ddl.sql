@@ -38,6 +38,25 @@ BEGIN
 END
 GO
 
+-- One byte stream may contain several OBR reports. The parent envelope_json
+-- columns predate this table and remain nullable for existing databases; new
+-- ingestion writes canonical envelopes here only.
+IF OBJECT_ID('intake.inbound_envelope', 'U') IS NULL
+BEGIN
+    CREATE TABLE intake.inbound_envelope (
+        inbound_envelope_id BIGINT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        inbound_message_id BIGINT NOT NULL
+            REFERENCES intake.inbound_message(inbound_message_id),
+        ordinal INT NOT NULL CHECK (ordinal > 0),
+        envelope_json NVARCHAR(MAX) NOT NULL,
+        envelope_version NVARCHAR(20) NOT NULL,
+        CONSTRAINT UQ_inbound_envelope_message_ordinal UNIQUE (inbound_message_id, ordinal)
+    );
+    CREATE INDEX IX_inbound_envelope_message
+        ON intake.inbound_envelope(inbound_message_id);
+END
+GO
+
 IF OBJECT_ID('intake.inbound_message_diagnostic', 'U') IS NULL
 BEGIN
     CREATE TABLE intake.inbound_message_diagnostic (
