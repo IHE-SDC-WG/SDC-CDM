@@ -15,6 +15,10 @@ from sdc_cdm.db.sqlscript import split_script
 from sdc_cdm.db.sqlserver_backend import SqlServerBackend
 
 
+SOURCE_CONCEPT_ID = 9
+STANDARD_TARGET_CONCEPT_ID = 10
+
+
 def _insert_id(
     backend: DatabaseBackend,
     sqlite_sql: str,
@@ -28,18 +32,26 @@ def _insert_id(
 
 def _seed_bridge_vocabulary(backend: DatabaseBackend) -> None:
     concepts = (
-        (0, "Unknown", "Metadata", "None", "Undefined", "0"),
-        (1, "Metadata domain", "Metadata", "None", "Undefined", "1"),
-        (2, "Type Concept domain", "Metadata", "None", "Undefined", "2"),
-        (3, "None vocabulary", "Metadata", "None", "Undefined", "3"),
-        (4, "Type Concept vocabulary", "Metadata", "None", "Undefined", "4"),
-        (5, "CDM vocabulary", "Metadata", "None", "Undefined", "5"),
-        (6, "Undefined concept class", "Metadata", "None", "Undefined", "6"),
-        (7, "Type Concept class", "Metadata", "None", "Undefined", "7"),
-        (8, "Field concept class", "Metadata", "None", "Undefined", "8"),
-        (32817, "EHR", "Type Concept", "Type Concept", "Type Concept", "EHR"),
-        (32879, "Registry", "Type Concept", "Type Concept", "Type Concept", "Registry"),
-        (1147289, "note.note_id", "Metadata", "CDM", "Field", "note.note_id"),
+        (0, "Unknown", "Metadata", "None", "Undefined", "0", None),
+        (1, "Metadata domain", "Metadata", "None", "Undefined", "1", None),
+        (2, "Type Concept domain", "Metadata", "None", "Undefined", "2", None),
+        (3, "None vocabulary", "Metadata", "None", "Undefined", "3", None),
+        (4, "Type Concept vocabulary", "Metadata", "None", "Undefined", "4", None),
+        (5, "CDM vocabulary", "Metadata", "None", "Undefined", "5", None),
+        (6, "Undefined concept class", "Metadata", "None", "Undefined", "6", None),
+        (7, "Type Concept class", "Metadata", "None", "Undefined", "7", None),
+        (8, "Field concept class", "Metadata", "None", "Undefined", "8", None),
+        (
+            SOURCE_CONCEPT_ID, "NAACCR source", "Metadata", "None", "Undefined",
+            "source", None,
+        ),
+        (
+            STANDARD_TARGET_CONCEPT_ID, "Standard target", "Metadata", "None",
+            "Undefined", "target", "S",
+        ),
+        (32817, "EHR", "Type Concept", "Type Concept", "Type Concept", "EHR", None),
+        (32879, "Registry", "Type Concept", "Type Concept", "Type Concept", "Registry", None),
+        (1147289, "note.note_id", "Metadata", "CDM", "Field", "note.note_id", None),
     )
     if backend.dialect == "sqlserver":
         # CONCEPT and its three metadata tables have circular foreign keys.
@@ -53,8 +65,8 @@ def _seed_bridge_vocabulary(backend: DatabaseBackend) -> None:
         backend.execute(
             "INSERT INTO omop.concept ("
             "concept_id, concept_name, domain_id, vocabulary_id, concept_class_id, "
-            "concept_code, valid_start_date, valid_end_date"
-            ") VALUES (?, ?, ?, ?, ?, ?, '1970-01-01', '2099-12-31')",
+            "concept_code, standard_concept, valid_start_date, valid_end_date"
+            ") VALUES (?, ?, ?, ?, ?, ?, ?, '1970-01-01', '2099-12-31')",
             concept,
         )
 
@@ -213,6 +225,32 @@ def test_bridge_reruns_do_not_double_count(
         BuildRunner(load_manifest(), backend).run()
         _seed_bridge_vocabulary(backend)
         patient_id, accession = _seed_source_rows(backend)
+        assert backend.fetch_one(
+            "SELECT standard_concept FROM omop.concept WHERE concept_id = ?",
+            (SOURCE_CONCEPT_ID,),
+        )[0] is None
+        assert backend.fetch_one(
+            "SELECT standard_concept FROM omop.concept WHERE concept_id = ?",
+            (STANDARD_TARGET_CONCEPT_ID,),
+        )[0] == "S"
+        backend.execute(
+            "INSERT INTO naaccr.naaccr_concept_map "
+            "(item_num, source_concept_id, concept_id, mapping_layer, created_at) "
+            "VALUES (100, ?, ?, 'athena_standard', '2026-06-22')",
+            (SOURCE_CONCEPT_ID, STANDARD_TARGET_CONCEPT_ID),
+        )
+        backend.execute(
+            "INSERT INTO naaccr.naaccr_value_concept_map "
+            "(item_num, code, source_concept_id, concept_id, mapping_layer, created_at) "
+            "VALUES (100, 'A', ?, ?, 'athena_standard', '2026-06-22')",
+            (SOURCE_CONCEPT_ID, STANDARD_TARGET_CONCEPT_ID),
+        )
+        backend.execute(
+            "INSERT INTO naaccr.naaccr_value_concept_map "
+            "(item_num, code, source_concept_id, concept_id, mapping_layer, created_at) "
+            "VALUES (200, 'B', ?, 0, 'local_mint', '2026-06-22')",
+            (SOURCE_CONCEPT_ID,),
+        )
 
         for item_num, ecp_code in ((None, None), (2118, "2118.1000043")):
             with pytest.raises(Exception):
@@ -236,15 +274,20 @@ def test_bridge_reruns_do_not_double_count(
         measurements = backend.fetch_all(
             "SELECT measurement_source_value, value_source_value, "
             "measurement_type_concept_id, measurement_event_id, "
-            "meas_event_field_concept_id FROM omop.measurement "
+            "meas_event_field_concept_id, measurement_concept_id, "
+            "measurement_source_concept_id, value_as_concept_id FROM omop.measurement "
             "WHERE measurement_event_id = ? ORDER BY measurement_id",
             (note_id,),
         )
         assert [tuple(row) for row in measurements] == [
-            ("100", "A", 32879, note_id, 1147289),
-            ("200", "B", 32879, note_id, 1147289),
-            ("400", "D", 32879, note_id, 1147289),
-            ("400", "D", 32879, note_id, 1147289),
+            (
+                "100", "A", 32879, note_id, 1147289,
+                STANDARD_TARGET_CONCEPT_ID, SOURCE_CONCEPT_ID,
+                STANDARD_TARGET_CONCEPT_ID,
+            ),
+            ("200", "B", 32879, note_id, 1147289, 0, 0, None),
+            ("400", "D", 32879, note_id, 1147289, 0, 0, None),
+            ("400", "D", 32879, note_id, 1147289, 0, 0, None),
         ]
 
         for _ in range(2):
@@ -299,12 +342,14 @@ def test_bridge_reruns_do_not_double_count(
         backend.execute(
             "INSERT INTO naaccr.naaccr_concept_map "
             "(item_num, source_concept_id, concept_id, mapping_layer, created_at) "
-            "VALUES (2118, 32879, 32879, 'athena_standard', '2026-06-22')"
+            "VALUES (2118, ?, ?, 'athena_standard', '2026-06-22')",
+            (SOURCE_CONCEPT_ID, STANDARD_TARGET_CONCEPT_ID),
         )
         backend.execute(
             "INSERT INTO naaccr.naaccr_value_concept_map "
             "(item_num, code, source_concept_id, concept_id, mapping_layer, created_at) "
-            "VALUES (2118, 'X', 32879, 32879, 'athena_standard', '2026-06-22')"
+            "VALUES (2118, 'X', ?, ?, 'athena_standard', '2026-06-22')",
+            (SOURCE_CONCEPT_ID, STANDARD_TARGET_CONCEPT_ID),
         )
         for _ in range(2):
             backend.execute(
@@ -332,7 +377,23 @@ def test_bridge_reruns_do_not_double_count(
             (note_id,),
         )
         assert [tuple(row) for row in collision_rows] == [
-            ("2118", 32879, 32879, 32879, None),
-            ("2118.1000043", 0, None, None, 10.0),
-            ("2118.1000043", 0, None, None, 10.0),
+            (
+                "2118", STANDARD_TARGET_CONCEPT_ID, SOURCE_CONCEPT_ID,
+                STANDARD_TARGET_CONCEPT_ID, None,
+            ),
+            ("2118.1000043", 0, 0, None, 10.0),
+            ("2118.1000043", 0, 0, None, 10.0),
         ]
+        assert backend.fetch_one(
+            "SELECT COUNT(*) FROM omop.measurement m "
+            "LEFT JOIN omop.concept item_target "
+            "ON item_target.concept_id = m.measurement_concept_id "
+            "LEFT JOIN omop.concept value_target "
+            "ON value_target.concept_id = m.value_as_concept_id "
+            "WHERE m.measurement_event_id = ? AND ("
+            "(m.measurement_concept_id <> 0 AND "
+            "(item_target.standard_concept IS NULL OR item_target.standard_concept <> 'S')) "
+            "OR (m.value_as_concept_id IS NOT NULL AND "
+            "(value_target.standard_concept IS NULL OR value_target.standard_concept <> 'S'))) ",
+            (note_id,),
+        )[0] == 0

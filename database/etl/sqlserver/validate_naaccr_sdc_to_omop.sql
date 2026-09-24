@@ -88,7 +88,7 @@ SELECT 'Measurements: bridgeable raw values vs actual' AS section,
              COALESCE(NULLIF(nv.value_text, ''), nv.value_code, NCHAR(0))
            ) AS value_source_hash,
            nv.value_unit_source,
-           nvcm.concept_id AS value_as_concept_id
+           NULLIF(nvcm.concept_id, 0) AS value_as_concept_id -- TODO(phase-4): route coded values by target domain.
     FROM naaccr.naaccr_value nv
     JOIN sdc.sdc_report sr
       ON sr.sdc_report_id = nv.sdc_report_id

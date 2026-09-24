@@ -70,7 +70,7 @@ SELECT
     32879, -- TODO(phase-4): read measurement_type_registry from etl.concept_constant.
     NULL,
     nv.value_num,
-    nvcm.concept_id,
+    NULLIF(nvcm.concept_id, 0), -- TODO(phase-4): route coded values by target domain.
     NULL,
     NULL,
     NULL,
@@ -78,7 +78,7 @@ SELECT
     sr.visit_occurrence_id,
     NULL,
     COALESCE(nv.ecp_code, CAST(nv.item_num AS TEXT)),
-    ncm.concept_id,
+    COALESCE(ncm.source_concept_id, 0),
     nv.value_unit_source,
     NULL,
     COALESCE(NULLIF(nv.value_text, ''), nv.value_code),
@@ -114,7 +114,7 @@ WHERE nv.occurrence_n > (
     WHERE m.measurement_event_id = n.note_id
       AND m.meas_event_field_concept_id = 1147289 -- TODO(phase-4): use field_note_note_id.
       AND m.measurement_source_value = COALESCE(nv.ecp_code, CAST(nv.item_num AS TEXT))
-      AND m.value_as_concept_id IS nvcm.concept_id
+      AND m.value_as_concept_id IS NULLIF(nvcm.concept_id, 0) -- TODO(phase-4): route coded values by target domain.
       AND m.value_as_number IS nv.value_num
       AND m.value_source_value IS COALESCE(NULLIF(nv.value_text, ''), nv.value_code)
       AND m.unit_source_value IS nv.value_unit_source
