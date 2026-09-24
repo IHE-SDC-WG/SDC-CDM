@@ -197,12 +197,14 @@ importer or direct inserts, run the bridge, assert on `omop.*`.
   `report_accession` and the report narrative as note text.
 - [ ] **OMOP-03** One `omop.measurement`/`observation` per answered item, with
   `*_source_value` = the full CAP code or verified NAACCR item number, and NAACCR
-  mapped `*_concept_id` only for rows with `item_num`,
-  and `*_event_id` pointing at the note (event field concept `1147289` for
+  source IDs in `*_source_concept_id` and standard targets in `*_concept_id`
+  only for rows with `item_num`; unmapped items use zero in both concept slots.
+  `*_event_id` points at the note (event field concept `1147289` for
   measurement→note anchoring).
-- [ ] **OMOP-04** Value typing: coded answers → `value_as_concept_id` (via
-  `naaccr_value_concept_map`), numeric → `value_as_number` + `unit_source_value`,
-  text → `value_as_string` (observation) — one test per shape.
+- [ ] **OMOP-04** Value typing: coded answers use the standard target from
+  `naaccr_value_concept_map` in `value_as_concept_id`, or NULL when its target is
+  zero or absent; numeric → `value_as_number` + `unit_source_value`, text →
+  `value_as_string` (observation) — one test per shape.
 - [x] **OMOP-05** *(regression, review finding #2a)* Duplicate-accession reports
   (`is_duplicate_accession = 1`) do **not** fan out: measurement count equals distinct
   answer count, not N×M across re-imported reports sharing an accession.
@@ -235,6 +237,10 @@ importer or direct inserts, run the bridge, assert on `omop.*`.
   match what the ETL actually writes.
 - [ ] **OMOP-11** Person linkage: measurements/notes carry the `person_id` created at
   import; no orphan rows referencing missing persons (FK check with constraints applied).
+- [ ] **OMOP-12** Bridge standard target slots (`measurement_concept_id` and
+  `value_as_concept_id`) contain only standard concepts when nonzero/non-NULL.
+  `measurement_source_concept_id` is a separate source slot and may contain a
+  nonstandard NAACCR concept.
 
 ### Phase 2.2 concept map checks
 
