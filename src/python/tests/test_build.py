@@ -36,6 +36,8 @@ def test_expected_commands_are_registered() -> None:
         "constants resolve",
         "maps build",
         "maps coverage",
+        "intake ingest",
+        "intake load",
     )
     with pytest.raises(SystemExit) as exc_info:
         main(["ingest"])

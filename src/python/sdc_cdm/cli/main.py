@@ -20,6 +20,7 @@ from sdc_cdm.cli.dictionary import (
     run_ssdi_fetch,
 )
 from sdc_cdm.cli.target import add_target_arguments, open_backend
+from sdc_cdm.cli.intake import configure_ingest, configure_load, run_ingest, run_load
 from sdc_cdm.cli.maps import (
     configure_maps_build, configure_maps_coverage, run_maps_build, run_maps_coverage,
 )
@@ -185,6 +186,8 @@ _VERBS: tuple[tuple[tuple[str, ...], str, _Configure, _Handler], ...] = (
     ),
     (("maps", "build"), "build NAACCR concept maps", configure_maps_build, run_maps_build),
     (("maps", "coverage"), "report concept map coverage", configure_maps_coverage, run_maps_coverage),
+    (("intake", "ingest"), "retain and parse HL7 byte streams", configure_ingest, run_ingest),
+    (("intake", "load"), "load OBR envelopes into SDC and NAACCR", configure_load, run_load),
 )
 
 _TARGET = argparse.ArgumentParser(add_help=False)

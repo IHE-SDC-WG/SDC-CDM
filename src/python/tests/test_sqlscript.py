@@ -42,7 +42,7 @@ def test_real_manifest_script_counts_are_pinned() -> None:
     expected = {
         "sqlite": {
             "database/schemas/etl/ddl/sqlite/1_etl_sqlite_ddl.sql": (5, 2),
-            "database/schemas/intake/ddl/sqlite/1_intake_sqlite_ddl.sql": (9, 2),
+            "database/schemas/intake/ddl/sqlite/1_intake_sqlite_ddl.sql": (11, 2),
             "database/schemas/omop/ddl/sqlite/1_OMOPCDM_sqlite_5.4_ddl.sql": (40, 2),
             "database/schemas/omop/ddl/sqlite/2_OMOPCDM_sqlite_5.4_primary_keys.sql": (0, 0),
             "database/schemas/omop/ddl/sqlite/3_OMOPCDM_sqlite_5.4_constraints.sql": (0, 0),
@@ -52,7 +52,7 @@ def test_real_manifest_script_counts_are_pinned() -> None:
         },
         "sqlserver": {
             "database/schemas/etl/ddl/sqlserver/1_etl_sqlserver_ddl.sql": (4, 4),
-            "database/schemas/intake/ddl/sqlserver/1_intake_sqlserver_ddl.sql": (5, 5),
+            "database/schemas/intake/ddl/sqlserver/1_intake_sqlserver_ddl.sql": (7, 7),
             "database/schemas/omop/ddl/sqlserver/1_OMOPCDM_sqlserver_5.4_ddl.sql": (2, 1),
             "database/schemas/omop/ddl/sqlserver/2_OMOPCDM_sqlserver_5.4_primary_keys.sql": (1, 0),
             "database/schemas/omop/ddl/sqlserver/3_OMOPCDM_sqlserver_5.4_constraints.sql": (1, 0),

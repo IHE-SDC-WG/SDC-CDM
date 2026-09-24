@@ -57,6 +57,32 @@ BEGIN
 END
 GO
 
+-- Logical cross-schema links to one sdc_report and its NAACCR values.
+IF OBJECT_ID('intake.envelope_load', 'U') IS NULL
+BEGIN
+    CREATE TABLE intake.envelope_load (
+        inbound_envelope_id BIGINT NOT NULL PRIMARY KEY
+            REFERENCES intake.inbound_envelope(inbound_envelope_id),
+        sdc_report_id BIGINT NOT NULL,
+        person_id INT NOT NULL,
+        episode_key NVARCHAR(100) NOT NULL,
+        dd_version_id INT NOT NULL,
+        loaded_datetime DATETIME2(3) NOT NULL DEFAULT SYSUTCDATETIME()
+    );
+END
+GO
+
+IF OBJECT_ID('intake.envelope_value', 'U') IS NULL
+BEGIN
+    CREATE TABLE intake.envelope_value (
+        inbound_envelope_id BIGINT NOT NULL
+            REFERENCES intake.inbound_envelope(inbound_envelope_id),
+        naaccr_value_id BIGINT NOT NULL,
+        PRIMARY KEY (inbound_envelope_id, naaccr_value_id)
+    );
+END
+GO
+
 IF OBJECT_ID('intake.inbound_message_diagnostic', 'U') IS NULL
 BEGIN
     CREATE TABLE intake.inbound_message_diagnostic (
