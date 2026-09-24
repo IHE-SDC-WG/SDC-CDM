@@ -290,6 +290,24 @@ def test_bridge_reruns_do_not_double_count(
             ("400", "D", 32879, note_id, 1147289, 0, 0, None),
         ]
 
+        # An older bridge stored zero for a local-only coded value. A rerun
+        # must count that row as the same occurrence as the new NULL form.
+        backend.execute(
+            "UPDATE omop.measurement SET value_as_concept_id = 0 "
+            "WHERE measurement_event_id = ? AND measurement_source_value = '200'",
+            (note_id,),
+        )
+        _apply_bridge(backend)
+        assert backend.fetch_one(
+            "SELECT COUNT(*) FROM omop.measurement WHERE measurement_event_id = ?",
+            (note_id,),
+        )[0] == 4
+        backend.execute(
+            "UPDATE omop.measurement SET value_as_concept_id = NULL "
+            "WHERE measurement_event_id = ? AND measurement_source_value = '200'",
+            (note_id,),
+        )
+
         for _ in range(2):
             _apply_bridge(backend)
             assert backend.fetch_one(

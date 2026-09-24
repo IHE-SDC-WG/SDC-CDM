@@ -134,8 +134,8 @@ SELECT 'Measurements: bridgeable raw values vs actual' AS section,
              WHERE m.measurement_event_id = rvg.note_id
                AND m.meas_event_field_concept_id = @FIELD_NOTE_ID
                AND m.measurement_source_value = rvg.source_identifier
-               AND (m.value_as_concept_id = rvg.value_as_concept_id
-                    OR (m.value_as_concept_id IS NULL AND rvg.value_as_concept_id IS NULL))
+               AND (NULLIF(m.value_as_concept_id, 0) = rvg.value_as_concept_id
+                    OR (NULLIF(m.value_as_concept_id, 0) IS NULL AND rvg.value_as_concept_id IS NULL))
                AND HASHBYTES(
                      'SHA2_256',
                      COALESCE(m.value_source_value, NCHAR(0))

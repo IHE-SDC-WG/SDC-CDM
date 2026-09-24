@@ -124,8 +124,8 @@ WHERE nv.occurrence_n > (
       AND m.meas_event_field_concept_id = 1147289 -- TODO(phase-4): use field_note_note_id.
       AND m.measurement_source_value = COALESCE(nv.ecp_code, CAST(nv.item_num AS varchar(50)))
       AND (
-          m.value_as_concept_id = NULLIF(nvcm.concept_id, 0) -- TODO(phase-4): route coded values by target domain.
-          OR (m.value_as_concept_id IS NULL AND NULLIF(nvcm.concept_id, 0) IS NULL)
+          NULLIF(m.value_as_concept_id, 0) = NULLIF(nvcm.concept_id, 0) -- TODO(phase-4): route coded values by target domain.
+          OR (NULLIF(m.value_as_concept_id, 0) IS NULL AND NULLIF(nvcm.concept_id, 0) IS NULL)
       )
       AND (
           m.value_as_number = nv.value_num
