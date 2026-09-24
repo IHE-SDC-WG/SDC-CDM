@@ -1,0 +1,59 @@
+{
+  "envelope_version": "1",
+  "patient": {
+    "assigning_authority": "SYNTHLAB",
+    "birth_date": {
+      "d": null,
+      "m": null,
+      "precision": "year",
+      "y": 1957
+    },
+    "gender": "F",
+    "person_source_value": "SYN-P001"
+  },
+  "raw": {
+    "byte_length": 773,
+    "media_type": "application/hl7-v2+er7",
+    "sha256": "a874cd9670502bd134b3368d94922847cfd1d1fcd309fe20c1984f72f753324b"
+  },
+  "report": {
+    "accession": "SYN-ACC-1",
+    "observation_date": {
+      "d": 24,
+      "hh": 12,
+      "m": 9,
+      "mi": 35,
+      "precision": "minute",
+      "ss": null,
+      "tz": "-04:00",
+      "y": 2026
+    },
+    "report_loinc": "60569-1",
+    "template_id": "175.100004300",
+    "template_source": "CAP eCP",
+    "template_version": "4.005.001.REL"
+  },
+  "source": {
+    "format": "hl7v2",
+    "message_control_id": "SYN-2OBR",
+    "obr_ordinal": 2,
+    "sending_facility": "SYNTHLAB"
+  },
+  "values": [
+    {
+      "ecp_code": "20791.100004300",
+      "observation_date": {
+        "d": 24,
+        "hh": 12,
+        "m": 9,
+        "mi": 35,
+        "precision": "minute",
+        "ss": null,
+        "tz": "-04:00",
+        "y": 2026
+      },
+      "unit_source": "cm",
+      "value_num": "1.20"
+    }
+  ]
+}

@@ -10,7 +10,7 @@ requires-python = ">=3.11"
 
 [project.optional-dependencies]
 sqlserver = ["pyodbc>=5,<6"]
-test = ["pytest>=8,<9"]
+test = ["pytest>=8,<9", "jsonschema>=4,<5"]
 
 [project.scripts]
 sdc-cdm = "sdc_cdm.cli.main:main"

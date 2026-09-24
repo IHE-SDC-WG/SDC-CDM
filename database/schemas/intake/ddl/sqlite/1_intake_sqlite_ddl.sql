@@ -33,6 +33,21 @@ CREATE INDEX IF NOT EXISTS intake.idx_inbound_message_sha256
 CREATE INDEX IF NOT EXISTS intake.idx_inbound_message_control_id
     ON inbound_message (message_control_id);
 
+-- One byte stream may contain several OBR reports. The parent envelope_json
+-- columns predate this table and remain nullable for existing databases; new
+-- ingestion writes canonical envelopes here only.
+CREATE TABLE IF NOT EXISTS intake.inbound_envelope (
+    inbound_envelope_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    inbound_message_id INTEGER NOT NULL REFERENCES inbound_message(inbound_message_id),
+    ordinal INTEGER NOT NULL CHECK (ordinal > 0),
+    envelope_json TEXT NOT NULL,
+    envelope_version TEXT NOT NULL,
+    UNIQUE (inbound_message_id, ordinal)
+);
+
+CREATE INDEX IF NOT EXISTS intake.idx_inbound_envelope_message
+    ON inbound_envelope (inbound_message_id);
+
 CREATE TABLE IF NOT EXISTS intake.inbound_message_diagnostic (
     inbound_message_diagnostic_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     inbound_message_id INTEGER NOT NULL REFERENCES inbound_message(inbound_message_id),

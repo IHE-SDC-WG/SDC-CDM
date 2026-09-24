@@ -154,7 +154,9 @@ hardcoded concept IDs, and the PostgreSQL dialect with its container wiring.
 ### The envelope contract
 
 `contracts/envelope.schema.json` — a versioned JSON Schema, the single boundary between parsing and
-persistence:
+persistence. One HL7 OBR group produces one envelope. Envelopes are stored in
+OBR order beneath one byte-preserving inbound message, so narrative and
+synoptic OBRs retain their distinct report LOINCs:
 
 Each answer carries either a verified NAACCR `item_num` or a full CAP OBX-3.1
 `ecp_code`. The numeric prefix of a CAP code is never inferred as a NAACCR item.
@@ -211,9 +213,11 @@ Every date in the envelope is an object, never a string:
 { "y": 1957, "m": 3, "d": null, "precision": "month" }
 ```
 
-- `precision` ∈ `year` | `month` | `day` | `second`. Components below the stated precision are
+- `precision` ∈ `year` | `month` | `day` | `hour` | `minute` | `second`. Components below the stated precision are
   `null`, never zero and never absent.
-- `second` precision adds `"hh"`, `"mi"`, `"ss"` and an optional `"tz"` offset in `±HH:MM`. HL7
+- `hour` and `minute` precision retain the known time components and leave
+  later components null. `second` precision adds all of `"hh"`, `"mi"`, and
+  `"ss"`. An optional `"tz"` offset uses `±HH:MM`. HL7
   timezone offsets are preserved verbatim, not normalized to UTC — normalizing loses the sending
   facility's local reading, which matters for a date-only observation.
 - The loader materializes SQL dates from these: `person` gets its three columns filled to the
@@ -267,13 +271,19 @@ A conformance test round-trips every golden envelope through
 | `is_content_duplicate`, `first_seen_inbound_message_id` | set when `raw_sha256` already exists; self-FK to the original |
 | `received_datetime`, `received_by` | who/what submitted it |
 | `message_control_id`, `sending_facility`, `message_profile` | MSH-10 / MSH-4 / MSH-21, denormalized for triage |
-| `envelope_json`, `envelope_version` | the canonical parse result |
+| `envelope_json`, `envelope_version` | legacy nullable columns; new ingestion writes ordered `intake.inbound_envelope` rows |
 | `parser_name`, `parser_version` | **which parser and which version produced this envelope** — the forensic key when a parse bug is found later and you need to identify exactly which stored messages are affected, and the discriminator for envelopes submitted by out-of-tree parsers |
 | `parse_status`, `parse_error` | `parsed` / `failed` / `quarantined` |
 
 `intake.inbound_message_diagnostic` — one row per warning, FK to the message. This replaces the
 `Console.WriteLine` warnings at `ImportNaaccrVolV.cs:541` (non-integer item number) and `:571`
 (repeated OBX-4 component), which are currently unrecoverable after the run.
+
+`intake.inbound_envelope` has one row per OBR, with a one-based ordinal unique
+within the parent inbound message, the canonical JSON, and envelope version.
+One raw byte stream is stored once per receipt even when it contains several
+OBRs. `contracts/SERIALIZATION.md` defines the episode-key precedence for the
+loader; source episode identity is optional in the envelope.
 
 `naaccr.naaccr_value` and `sdc.sdc_report` each gain `inbound_message_id`. The full provenance walk
 becomes: `omop.measurement` → `omop.note` → `sdc.sdc_report` → `intake.inbound_message.raw_blob`.

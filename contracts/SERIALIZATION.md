@@ -20,3 +20,27 @@ Each `values[]` answer has exactly one question identifier. CAP eCC/eCP answers 
 OBX-3.1 identifier as `ecp_code` (for example, `2118.1000043`) and omit `item_num`.
 `item_num` is reserved for a verified NAACCR data item number. A CAP code's numeric prefix is
 never a NAACCR item number by inference.
+
+For HL7 v2, each OBR group emits one envelope. `source.obr_ordinal` is its
+one-based position in the message. Envelopes from the same byte stream repeat
+the same `raw.sha256` and are stored in ordinal order beneath one
+`intake.inbound_message`. A narrative OBR keeps its own `report_loinc` and
+`report.narrative`; a synoptic OBR keeps its own `report_loinc` and answers.
+
+Date precision is `year`, `month`, `day`, `hour`, `minute`, or `second`.
+Components below the stated precision are null. An HL7 timezone offset, when
+present, is preserved as `±HH:MM` without UTC conversion. Parsing a timestamp
+must not fill missing minutes or seconds with zero.
+
+The optional `episode` object carries a source episode identifier and its
+optional authority and sequence. Loaders derive the non-null
+`naaccr_value.episode_key` in this order:
+
+1. `e:` followed by SHA-256 of NFC-normalized
+   `assigning_authority + U+001F + episode_source_value + U+001F + sequence_number`;
+   absent authority and sequence use empty strings.
+2. Otherwise, `a:` followed by SHA-256 of NFC-normalized `report.accession`.
+3. Otherwise, `m:` followed by `raw.sha256`.
+
+Hashes are lowercase hexadecimal. This keeps the key within SQL Server's
+100-character column limit and makes identical source identities deterministic.
