@@ -223,6 +223,42 @@ def test_row_added_after_the_early_check_blocks_the_drop(
         ) == (1, "legacy", 2118)
 
 
+_ENVELOPE_PROVENANCE = {
+    "database/schemas/naaccr/ddl/sqlserver/1_naaccr_sqlserver_ddl.sql":
+        ("naaccr", "naaccr_value", "IX_naaccr_value_inbound_envelope"),
+    "database/schemas/sdc/ddl/sqlserver/1_sdc_sqlserver_ddl.sql":
+        ("sdc", "sdc_report", "IX_sdc_report_inbound_envelope"),
+}
+
+
+def test_sqlserver_rebuild_adds_envelope_provenance_to_existing_tables(tmp_path: Path) -> None:
+    with _backend("sqlserver", tmp_path) as backend:
+        BuildRunner(load_manifest(), backend).run()
+        try:
+            # Recreate a database built before inbound_envelope_id existed.
+            for path, (schema, table, index) in _ENVELOPE_PROVENANCE.items():
+                backend.execute(f"DROP INDEX {index} ON {schema}.{table}")
+                backend.execute(f"ALTER TABLE {schema}.{table} DROP COLUMN inbound_envelope_id")
+                backend.execute(
+                    "UPDATE etl.schema_migration SET file_sha256 = ? WHERE migration_path = ?",
+                    ("0" * 64, path),
+                )
+            actions = BuildRunner(load_manifest(), backend).run()
+        finally:
+            BuildRunner(load_manifest(), backend).run()
+        for path, (schema, table, index) in _ENVELOPE_PROVENANCE.items():
+            assert _status_of(actions, path) is BuildStatus.REAPPLIED
+            assert tuple(backend.fetch_one(
+                "SELECT TYPE_NAME(c.system_type_id), c.is_nullable FROM sys.columns c "
+                "WHERE c.object_id = OBJECT_ID(?) AND c.name = 'inbound_envelope_id'",
+                (f"{schema}.{table}",),
+            )) == ("bigint", True)
+            assert backend.fetch_one(
+                "SELECT COUNT(*) FROM sys.indexes WHERE object_id = OBJECT_ID(?) AND name = ?",
+                (f"{schema}.{table}", index),
+            )[0] == 1
+
+
 def test_dry_run_against_a_new_database_writes_nothing_to_disk(tmp_path: Path) -> None:
     control_path = tmp_path / "unbuilt" / "demo.db"
 

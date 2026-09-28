@@ -927,8 +927,9 @@ rebuild stalls after them.
 
 ### Test artifacts per phase
 
-`TEST_PLAN.md` catalogues **126 test IDs across 19 prefixes**, counting retired IDs and each
-`IMP-*` source separately. It is updated in the same phase that
+`TEST_PLAN.md` catalogues **126 test IDs across 19 prefixes**. The count includes retired IDs and
+the lettered `OMOP-06a` / `OMOP-06b` (124 without them), and treats each `IMP-*` source as its own
+prefix. It is updated in the same phase that
 invalidates it — a phase whose test IDs are not retargeted is not done. "Retire" means delete the ID
 with a one-line note saying why.
 

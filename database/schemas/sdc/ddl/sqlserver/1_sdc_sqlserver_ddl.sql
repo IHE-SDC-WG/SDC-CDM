@@ -75,7 +75,7 @@ BEGIN
     is_duplicate_accession BIT NOT NULL DEFAULT 0,
     first_seen_report_id INT NULL REFERENCES sdc.sdc_report(sdc_report_id),
     -- logical reference to intake.inbound_envelope.inbound_envelope_id; not an enforced FK (cross-schema/attached-DB)
-    inbound_envelope_id INT NULL,
+    inbound_envelope_id BIGINT NULL,
     created_datetime DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
     updated_datetime DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
   );
@@ -85,7 +85,7 @@ END
 GO
 
 IF COL_LENGTH('sdc.sdc_report', 'inbound_envelope_id') IS NULL
-    ALTER TABLE sdc.sdc_report ADD inbound_envelope_id INT NULL;
+    ALTER TABLE sdc.sdc_report ADD inbound_envelope_id BIGINT NULL;
 GO
 
 IF NOT EXISTS (
