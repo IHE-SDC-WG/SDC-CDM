@@ -11,10 +11,11 @@ from sdc_cdm.hl7v2.parser import decode_hl7, parse_date
 
 
 ROOT = Path(__file__).resolve().parents[3]
-SYNTHETIC = ROOT / "contracts/fixtures/two-obr-synthetic.hl7"
+SYNTHETIC = ROOT / "sample_data/naaccr_v2/two-obr-synthetic.hl7"
 ADRENAL = ROOT / "sample_data/naaccr_v2/obx-Adrenal.hl7"
 TWO_OBR = ROOT / "sample_data/naaccr_v2/24-11-000312-2.txt.hl7"
 SCHEMA = json.loads((ROOT / "contracts/envelope.schema.json").read_text())
+FIXTURES = sorted((ROOT / "sample_data/naaccr_v2").glob("*.hl7"))
 
 
 def test_synthetic_two_obr_envelopes_match_goldens_and_schema() -> None:
@@ -26,6 +27,16 @@ def test_synthetic_two_obr_envelopes_match_goldens_and_schema() -> None:
         assert serialized == (
             ROOT / f"contracts/golden/two-obr-synthetic.{index}.envelope.json"
         ).read_bytes()
+        assert serialize_envelope(parse_envelope(serialized)) == serialized
+
+
+@pytest.mark.parametrize("path", FIXTURES, ids=lambda path: path.name)
+def test_every_committed_fixture_parses_to_schema_valid_fixed_point(path: Path) -> None:
+    envelopes = parse_hl7(path.read_bytes())
+    assert envelopes
+    for envelope in envelopes:
+        Draft202012Validator(SCHEMA).validate(envelope)
+        serialized = serialize_envelope(envelope)
         assert serialize_envelope(parse_envelope(serialized)) == serialized
 
 

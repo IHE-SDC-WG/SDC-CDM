@@ -80,7 +80,7 @@ def _report_id(backend: DatabaseBackend, envelope: dict[str, Any], envelope_id: 
         "report_text", "report_template_source", "report_template_id",
         "report_template_version_id", "tumor_site", "procedure_type",
         "specimen_laterality", "report_accession", "report_loinc",
-        "is_duplicate_accession", "first_seen_report_id",
+        "is_duplicate_accession", "first_seen_report_id", "inbound_envelope_id",
     )
     values = (
         report.get("template_id") or report.get("report_loinc") or "unknown",
@@ -89,6 +89,7 @@ def _report_id(backend: DatabaseBackend, envelope: dict[str, Any], envelope_id: 
         report.get("template_id"), report.get("template_version"),
         report.get("tumor_site"), report.get("procedure"), report.get("laterality"),
         report.get("accession"), report.get("report_loinc"), duplicate, first_id,
+        envelope_id,
     )
     names = ", ".join(columns)
     markers = ", ".join("?" for _ in columns)
@@ -102,8 +103,8 @@ def _report_id(backend: DatabaseBackend, envelope: dict[str, Any], envelope_id: 
     return int(row[0])
 
 
-def _value_ids(backend: DatabaseBackend, envelope: dict[str, Any], person_id: int,
-               report_id: int, key: str, dd_version_id: int,
+def _value_ids(backend: DatabaseBackend, envelope: dict[str, Any], envelope_id: int,
+               person_id: int, report_id: int, key: str, dd_version_id: int,
                schema_id_number: str | None) -> list[int]:
     values = envelope.get("values", [])
     if not values:
@@ -119,7 +120,8 @@ def _value_ids(backend: DatabaseBackend, envelope: dict[str, Any], person_id: in
             INSERT INTO naaccr.naaccr_value
                 (person_id, episode_key, sdc_report_id, report_accession,
                  schema_id_number, item_num, ecp_code, obx_sub_id, value_code,
-                 value_num, value_text, value_unit_source, observation_date, dd_version_id)
+                 value_num, value_text, value_unit_source, observation_date, dd_version_id,
+                 inbound_envelope_id)
             SELECT ?, ?, ?, ?, ?,
                    json_extract(j.value, '$.item_num'),
                    json_extract(j.value, '$.ecp_code'),
@@ -128,7 +130,7 @@ def _value_ids(backend: DatabaseBackend, envelope: dict[str, Any], person_id: in
                    CAST(json_extract(j.value, '$.value_num') AS REAL),
                    json_extract(j.value, '$.value_text'),
                    json_extract(j.value, '$.unit_source'),
-                   json_extract(j.value, '$.observation_date_sql'), ?
+                   json_extract(j.value, '$.observation_date_sql'), ?, ?
             FROM json_each(?) AS j
             RETURNING naaccr_value_id
         """
@@ -137,12 +139,13 @@ def _value_ids(backend: DatabaseBackend, envelope: dict[str, Any], person_id: in
             INSERT INTO naaccr.naaccr_value
                 (person_id, episode_key, sdc_report_id, report_accession,
                  schema_id_number, item_num, ecp_code, obx_sub_id, value_code,
-                 value_num, value_text, value_unit_source, observation_date, dd_version_id)
+                 value_num, value_text, value_unit_source, observation_date, dd_version_id,
+                 inbound_envelope_id)
             OUTPUT INSERTED.naaccr_value_id
             SELECT ?, ?, ?, ?, ?,
                    j.item_num, j.ecp_code, j.obx_sub_id, j.value_code,
                    TRY_CONVERT(FLOAT, j.value_num), j.value_text, j.unit_source,
-                   TRY_CONVERT(DATE, j.observation_date_sql), ?
+                   TRY_CONVERT(DATE, j.observation_date_sql), ?, ?
             FROM OPENJSON(?) WITH (
                 item_num INT '$.item_num',
                 ecp_code NVARCHAR(50) '$.ecp_code',
@@ -155,7 +158,8 @@ def _value_ids(backend: DatabaseBackend, envelope: dict[str, Any], person_id: in
             ) AS j
         """
     rows = backend.fetch_all(
-        sql, (person_id, key, report_id, accession, schema_id_number, dd_version_id, payload)
+        sql, (person_id, key, report_id, accession, schema_id_number, dd_version_id,
+              envelope_id, payload)
     )
     return [int(row[0]) for row in rows]
 
@@ -217,7 +221,7 @@ def load_message(backend: DatabaseBackend, message_id: int, *, algorithm: str) -
             report_id = _report_id(backend, envelope, envelope_id, person_id,
                                    int(first_id is not None), first_id)
             schema_id_number = _staging_schema(backend, envelope, dd_version_id)
-            ids = _value_ids(backend, envelope, person_id, report_id, key,
+            ids = _value_ids(backend, envelope, envelope_id, person_id, report_id, key,
                              dd_version_id, schema_id_number)
             backend.execute_uncommitted(
                 "INSERT INTO intake.envelope_load "

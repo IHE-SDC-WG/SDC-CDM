@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import hashlib
-import json
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
 from sdc_cdm.db.backend import DatabaseBackend
+from sdc_cdm.hl7v2 import serialize_envelope
 
 
 @dataclass(frozen=True)
@@ -53,8 +53,8 @@ def ingest_message(
     """Record an intake event, then parse it; failures remain stored for review.
 
     The first transaction commits the byte stream before invoking the parser.
-    Parser `ValueError`s are recorded as failed parses. Other exceptions remain
-    visible to the caller without deleting the raw intake event.
+    Any parser exception is recorded as a failed parse. Exceptions other than
+    `ValueError` are then re-raised so the caller still sees them.
     """
 
     sha = hashlib.sha256(raw).hexdigest()
@@ -86,13 +86,15 @@ def ingest_message(
             info = envelope.get("raw", {})
             if source.get("obr_ordinal") != ordinal or info.get("sha256") != sha or info.get("byte_length") != len(raw):
                 raise ValueError(f"envelope {ordinal} does not match source bytes or OBR order")
-    except ValueError as exc:
+    except Exception as exc:
         with backend.transaction():
             backend.execute_uncommitted(
                 "UPDATE intake.inbound_message SET parse_status = 'failed', parse_error = ? "
                 "WHERE inbound_message_id = ?", (str(exc), message_id),
             )
             _diagnostic(backend, message_id, "error", "PARSE_FAILED", str(exc))
+        if not isinstance(exc, ValueError):
+            raise
         return IntakeResult(message_id, 0, "failed", first_id is not None)
 
     first = envelopes[0]
@@ -106,7 +108,7 @@ def ingest_message(
              source.get("message_profile"), message_id),
         )
         for ordinal, envelope in enumerate(envelopes, 1):
-            serialized = json.dumps(envelope, sort_keys=True, ensure_ascii=False, indent=2) + "\n"
+            serialized = serialize_envelope(envelope).decode("utf-8")
             backend.execute_uncommitted(
                 "INSERT INTO intake.inbound_envelope "
                 "(inbound_message_id, ordinal, envelope_json, envelope_version) "

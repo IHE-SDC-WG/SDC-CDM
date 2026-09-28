@@ -36,8 +36,8 @@ carry their own answer values; eCP answer values remain in `naaccr.naaccr_value`
 src/csharp/SdcCdm.Sdc.Tests/
   Import/
     SdcXml/          IMP-SDC-*
-src/python/tests/    MANIFEST-*, BUILD-*, schema and bridge tests
-tools/tests/         PY-* (Python ports + direct SQL tests, pytest)
+src/python/tests/    MANIFEST-*, BUILD-*, IMP-HL7-*, INT-*, schema and bridge tests
+tools/tests/         OMOP-01 three-schema smoke test (pytest)
 contracts/golden/    frozen importer outputs
 sample_data/         single source of truth for fixtures (see Cleanup)
 ```
@@ -60,7 +60,7 @@ sample_data/         single source of truth for fixtures (see Cleanup)
 
 ### 1.1 HL7v2 (NAACCR Vol V) (Python intake and loader)
 
-Fixtures: synthetic `contracts/fixtures/two-obr-synthetic.hl7` plus the committed
+Fixtures: synthetic `sample_data/naaccr_v2/two-obr-synthetic.hl7` plus the committed
 `sample_data/naaccr_v2/24-11-000312-2.txt.hl7` and `obx-Adrenal.hl7` profiles.
 
 - [x] **IMP-HL7-01** Intake and load complete on both committed Vol V profiles and the
@@ -86,6 +86,42 @@ Fixtures: synthetic `contracts/fixtures/two-obr-synthetic.hl7` plus the committe
 - [x] **IMP-HL7-08** Malformed message records a failed parse and diagnostic without
   a half-written report; exact raw bytes remain stored.
 - [x] **IMP-HL7-09** Units on numeric OBX values land in `value_unit_source`.
+
+### 1.1a Intake contract (Python `hl7v2` and `intake`)
+
+Fixtures: the same three `sample_data/naaccr_v2/` messages, plus stub parsers for inputs
+the HL7 parser cannot produce.
+
+- [x] **INT-01** Every committed `sample_data/naaccr_v2/*.hl7` message parses to
+  schema-valid envelopes that are a serialization fixed point, and the synthetic two-OBR
+  envelopes equal their goldens byte for byte. Stored `inbound_envelope.envelope_json` is the
+  canonical serialization.
+  `test_every_committed_fixture_parses_to_schema_valid_fixed_point`,
+  `test_synthetic_two_obr_envelopes_match_goldens_and_schema`,
+  `test_exact_bytes_envelopes_duplicate_flag_and_diagnostics`.
+- [x] **INT-02** Partial dates keep year, month, day, hour, minute, or second precision
+  and any source offset; an invalid date becomes NULL with an `INVALID_DATE` diagnostic.
+  `test_dates_preserve_precision_and_offset`, `test_invalid_date_is_null_and_diagnostic`.
+- [x] **INT-03** Provenance walk: a `naaccr_value` row and a narrative `sdc_report` row
+  join on `inbound_envelope_id` through `intake.inbound_envelope` to an
+  `inbound_message.raw_blob` that contains the originating OBX bytes. No loaded row has a NULL
+  `inbound_envelope_id`, and the `envelope_load` / `envelope_value` ledger agrees on both dialects.
+  `test_provenance_walks_from_rows_to_originating_raw_bytes`,
+  `test_sqlserver_two_obr_and_19_value_load`.
+- [x] **INT-04** Identical bytes are stored again with `first_seen_inbound_message_id` and a
+  `DUPLICATE_BYTES` diagnostic, and loading them writes no report or value.
+  `test_exact_bytes_envelopes_duplicate_flag_and_diagnostics`,
+  `test_two_reports_narrative_values_provenance_and_duplicate_bytes`.
+- [x] **INT-05** The same source patient ID under two assigning authorities yields two
+  `intake.patient` rows. `test_patient_key_is_authority_qualified`.
+- [x] **INT-06** Any parser exception lands the message as `failed` with a `PARSE_FAILED`
+  diagnostic and intact raw bytes; exceptions other than `ValueError` are then re-raised.
+  `test_failed_parse_keeps_raw_bytes`, `test_unexpected_parser_exception_is_recorded_then_raised`.
+- [x] **INT-07** `schema_id_number` resolves when complete NAACCR item inputs match one exact
+  selection rule. Otherwise it is NULL with one `STAGING_SCHEMA_UNRESOLVED` diagnostic per
+  envelope that has values; HL7 eCP input always takes this path.
+  `test_staging_schema_resolves_from_complete_item_inputs`,
+  `test_staging_schema_is_null_with_diagnostic_for_hl7_ecp_input`.
 
 ### 1.2 HL7 FHIR (CPDS bundles and mCODE) — `SdcCdm.FHIR.Importers.ImportFhir`
 
@@ -277,7 +313,7 @@ importer or direct inserts, run the bridge, assert on `omop.*`.
 
 ---
 
-## 5. Schema / DDL tests — `Schema/` and `tools/tests/`
+## 5. Schema / DDL tests — `src/python/tests/`
 
 - [x] **MANIFEST-01** `database/manifest.json` validates, names every executable DDL file
   exactly once, and applies files in `etl`, `intake`, `omop`, `naaccr`, `sdc` order.
@@ -372,15 +408,15 @@ count anchor: `expectations/naaccr-25.json`.
 
 ---
 
-## 6. Python port parity — `tools/tests/`
+## 6. Retired port-parity IDs
 
-The Python ports must not drift from the C# importers.
+The C# HL7 importer was deleted in Phase 0, so there is no second implementation to keep in
+parity. The assertions these IDs described now run against the Python parser.
 
-- [ ] **PY-01** Python HL7v2 importer retains the frozen `naaccr_value` count and
-  grouping behavior in `contracts/golden/`, but produces the corrected identifiers in
-  `contracts/expected/`. The golden files record the retired importer's prefix error.
-- [ ] **PY-02** *(regression, review finding #5)* Python port handles non-integer OBX-3
-  identifiers the same way the C# fix does.
+- (retired) **PY-01** The 19-value count, OBX-4 grouping, and corrected full CAP identifiers
+  are asserted by `test_retired_csharp_19_value_and_obx4_contract`.
+- (retired) **PY-02** Non-CAP OBX-3 identifiers are asserted by
+  `test_orc_episode_identifier_and_non_cap_warning` (see also IMP-HL7-07).
 - (retired) **PY-03** The former public CCR JSON importer and its eight-test module were removed;
   its private project now owns that coverage.
 - (retired) **PY-04** The one-time legacy map conversion produced the tracked seeds; its converter
@@ -462,11 +498,10 @@ time**, so no new golden files are needed for the core oracle tests (SDCOM-03/04
 
 ## Cleanup (from issue #82)
 
-- [ ] **CLEAN-01** Deduplicate fixtures: `src/csharp/SdcCdm.Sdc.Tests/TestData/` duplicates
-  `sample_data/` (`ADRENAL_GLAND.xml` exists in both). Keep `sample_data/` as the single
-  source of truth; the test csproj should link files from `../../../sample_data/` instead of
-  carrying copies. Move `SDC_Form.xml`,
-  `NAACCR_VolV.hl7`, and the IPS bundle into `sample_data/` first.
+- [ ] **CLEAN-01** Deduplicate fixtures. Python fixtures, including the synthetic two-OBR
+  message, all live under `sample_data/`. The only copy left is
+  `src/csharp/SdcCdm.Sdc.Tests/TestData/SDC_Form.xml`: move it into `sample_data/` and link it
+  from the test csproj the way `TemplateHistory-small.csv` already is.
 - [x] **CLEAN-02** Frozen importer outputs live under `contracts/golden/` for the Python
   conformance tests. The Phase 0 C# suite does not consume shared golden files.
 - [x] **CLEAN-03** CI has independent `python-sqlite`, `csharp-sdc`, and

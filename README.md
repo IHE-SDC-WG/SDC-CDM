@@ -78,12 +78,15 @@ The algorithm must match a current row in `naaccr.data_dictionary_version`; repl
 message ID `1` with the ID printed by intake. SQL Server accepts the same commands with
 `--dialect sqlserver` and the connection string described above. One inbound message stores its
 exact bytes and one ordered envelope per OBR. Loading produces one `sdc_report` per envelope;
-the narrative and synoptic reports remain separate. `intake.envelope_load` and
-`intake.envelope_value` give explicit source links. Identical-byte resends are recorded but do not
+the narrative and synoptic reports remain separate. Each `sdc_report` and `naaccr_value` row
+carries `inbound_envelope_id`, so a row joins through `intake.inbound_envelope` to the exact
+`inbound_message.raw_blob`; `intake.envelope_load` and `intake.envelope_value` are the load
+ledger. Identical-byte resends are recorded but do not
 produce another report or value. Source date precision and offsets remain in the envelope;
 `naaccr_value.observation_date` receives only the calendar day when one was supplied. Staging
 schema selection currently accepts complete NAACCR item inputs and one unambiguous exact rule;
-otherwise `schema_id_number` stays null with an intake diagnostic.
+otherwise `schema_id_number` stays null with an intake diagnostic. HL7 eCP input never resolves a
+staging schema today, because its answers carry CAP codes rather than NAACCR item numbers.
 
 ## Tool support
 

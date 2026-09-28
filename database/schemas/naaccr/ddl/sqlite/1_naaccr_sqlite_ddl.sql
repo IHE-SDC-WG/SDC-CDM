@@ -436,6 +436,8 @@ CREATE TABLE IF NOT EXISTS naaccr.naaccr_value (
     -- Gap #1: the dictionary version this answer was coded against. Nullable so existing
     -- import paths that do not yet supply it keep working; populate going forward.
     dd_version_id INTEGER NULL REFERENCES data_dictionary_version(dd_version_id),
+    -- logical reference to intake.inbound_envelope.inbound_envelope_id; not an enforced FK (cross-schema/attached-DB)
+    inbound_envelope_id INTEGER NULL,
     CONSTRAINT ck_naaccr_value_identifier CHECK (
         (item_num IS NOT NULL AND ecp_code IS NULL)
         OR (item_num IS NULL AND ecp_code IS NOT NULL AND length(ecp_code) BETWEEN 1 AND 50)
@@ -452,5 +454,7 @@ CREATE INDEX IF NOT EXISTS naaccr.idx_naaccr_value_report_ecp
     ON naaccr_value (report_accession, ecp_code);
 CREATE INDEX IF NOT EXISTS naaccr.idx_naaccr_value_sdc_report
     ON naaccr_value (sdc_report_id);
+CREATE INDEX IF NOT EXISTS naaccr.idx_naaccr_value_inbound_envelope
+    ON naaccr_value (inbound_envelope_id);
 
 COMMIT;

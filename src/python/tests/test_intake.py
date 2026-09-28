@@ -4,6 +4,8 @@ import hashlib
 import json
 from pathlib import Path
 
+import pytest
+
 from sdc_cdm.cli.build import BuildRunner
 from sdc_cdm.db.manifest import load_manifest
 from sdc_cdm.db.sqlite_backend import SQLiteBackend
@@ -11,11 +13,11 @@ from sdc_cdm.intake import ingest_message
 
 
 ROOT = Path(__file__).resolve().parents[3]
-RAW = (ROOT / "contracts/fixtures/two-obr-synthetic.hl7").read_bytes()
-GOLDENS = [
-    json.loads((ROOT / f"contracts/golden/two-obr-synthetic.{i}.envelope.json").read_text())
-    for i in (1, 2)
+RAW = (ROOT / "sample_data/naaccr_v2/two-obr-synthetic.hl7").read_bytes()
+GOLDEN_BYTES = [
+    (ROOT / f"contracts/golden/two-obr-synthetic.{i}.envelope.json").read_bytes() for i in (1, 2)
 ]
+GOLDENS = [json.loads(golden) for golden in GOLDEN_BYTES]
 
 
 def _backend(tmp_path: Path) -> SQLiteBackend:
@@ -26,7 +28,9 @@ def _backend(tmp_path: Path) -> SQLiteBackend:
 
 def test_exact_bytes_envelopes_duplicate_flag_and_diagnostics(tmp_path: Path) -> None:
     with _backend(tmp_path) as backend:
-        first = ingest_message(backend, RAW, lambda _: GOLDENS,
+        # An empty container the serializer prunes proves stored JSON is canonical.
+        noncanonical = [{**GOLDENS[0], "diagnostics": []}, GOLDENS[1]]
+        first = ingest_message(backend, RAW, lambda _: noncanonical,
                                parser_name="test", parser_version="1")
         again = ingest_message(backend, RAW, lambda _: GOLDENS,
                                parser_name="test", parser_version="1")
@@ -49,7 +53,7 @@ def test_exact_bytes_envelopes_duplicate_flag_and_diagnostics(tmp_path: Path) ->
             (first.inbound_message_id, 1), (first.inbound_message_id, 2),
             (again.inbound_message_id, 1), (again.inbound_message_id, 2),
         ]
-        assert json.loads(envelopes[0][2]) == GOLDENS[0]
+        assert [row[2].encode("utf-8") for row in envelopes[:2]] == GOLDEN_BYTES
         assert backend.fetch_one("SELECT COUNT(*) FROM intake.patient")[0] == 1
         assert backend.fetch_one(
             "SELECT code FROM intake.inbound_message_diagnostic "
@@ -71,6 +75,22 @@ def test_failed_parse_keeps_raw_bytes(tmp_path: Path) -> None:
         )
         assert bytes(row[0]) == b"invalid\x00"
         assert row[1] == "missing OBR"
+        assert backend.fetch_one("SELECT COUNT(*) FROM intake.inbound_envelope")[0] == 0
+        assert backend.fetch_one("SELECT code FROM intake.inbound_message_diagnostic")[0] == "PARSE_FAILED"
+
+
+def test_unexpected_parser_exception_is_recorded_then_raised(tmp_path: Path) -> None:
+    with _backend(tmp_path) as backend:
+        def crash(_: bytes) -> list[dict]:
+            raise RuntimeError("parser bug")
+
+        with pytest.raises(RuntimeError, match="parser bug"):
+            ingest_message(backend, b"MSH|crash\r", crash,
+                           parser_name="test", parser_version="1")
+        row = backend.fetch_one(
+            "SELECT raw_blob, parse_status, parse_error FROM intake.inbound_message"
+        )
+        assert (bytes(row[0]), row[1], row[2]) == (b"MSH|crash\r", "failed", "parser bug")
         assert backend.fetch_one("SELECT COUNT(*) FROM intake.inbound_envelope")[0] == 0
         assert backend.fetch_one("SELECT code FROM intake.inbound_message_diagnostic")[0] == "PARSE_FAILED"
 
