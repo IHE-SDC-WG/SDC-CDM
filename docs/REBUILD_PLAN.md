@@ -1,7 +1,7 @@
 # Rebuild SDC-CDM around a canonical intake envelope
 
-**Status:** proposed. **Scope:** seven phases (0–6), each landing on `main` by fast-forward from its
-own `phase-<N>-<topic>` branch — see "Starting point" for why this is not a stack of PRs.
+**Status:** proposed. **Scope:** seven phases (0–6), each landing on `main` as squash-merged pull
+requests, one per child issue — see "Starting point" for why this is not a stack of PRs.
 
 This is the controlling design document for the rebuild. Each phase's GitHub issue links to its
 section here, and the acceptance criteria in that section are the gate — not intent to be
@@ -71,7 +71,7 @@ with cross-language parity:
 
 ---
 
-## Starting point: `main` is trunk, phases land by fast-forward
+## Starting point: `main` is trunk, phases land by squash-merge
 
 `main` stays trunk and stays the default branch. It starts pointing at
 `three-schema-repo-reorg`, which holds all current work.
@@ -90,25 +90,25 @@ project after this rebuild.
 
 ### Per-phase branches
 
-Each phase runs on its own branch cut from `main`, and lands by fast-forward:
-
-`phase-0-skeleton`, `phase-1-vocab`, `phase-2-maps`, `phase-3-intake`, `phase-4-bridge`,
-`phase-5-export`, `phase-6-docs`.
+The original plan had each phase land by fast-forward from one `phase-<N>-<topic>` branch. In
+practice each phase is split into child issues, and each child issue lands as one pull request to
+`main` from its own `issue-<N>` branch, squash-merged once CI is green. (Phase 3's four PRs,
+#134–#137, used merge commits instead; squash-merge is the convention from here on.)
 
 ```bash
 git checkout main && git pull
-git checkout -b phase-1-vocab
-# …work…  then, with CI green and the phase's "Accept when" criteria met:
-git push origin phase-1-vocab:main
-git push origin --delete phase-1-vocab
+git checkout -b issue-130
+# …work…  then, with CI green and the child issue's "Accept when" criteria met:
+gh pr create --base main
+gh pr merge --squash --delete-branch
 ```
 
-Branches are **sequential, not stacked** — each is cut after the previous lands, so there is no stack
-to rebase. The one rule: **do not start phase N+1 until phase N is on `main`.** Phase 0 is the
-exception, running on the current branch because it is the phase that builds the CI.
+Child branches are **sequential, not stacked** where one depends on another — each is cut after its
+prerequisite lands, so there is no stack to rebase. The one rule: **do not start phase N+1 until
+phase N is on `main`.** Phase 0 was the exception, running on its own branch because it built the CI.
 
-A phase is done when its acceptance criteria pass, `main` is fast-forwarded to it, and its GitHub
-issue is closed. If `main` diverges, merge it back into the phase branch and push again.
+A phase is done when its acceptance criteria pass, every child PR is merged to `main`, and its
+GitHub issue is closed. If `main` moves, merge it back into the child branch and push again.
 
 ### Assets to preserve through the restructure
 
@@ -192,9 +192,10 @@ Three things fall out of this:
    emitting the same envelope*. `ccr_labreport_to_naaccr.py` and its tests are **deleted** from this
    tree — but the envelope is what makes that safe: whatever the private project becomes, it can emit
    the same contract and stay interoperable without sharing code with this repo.
-3. **Everything after the envelope is set-based.** `database/load/<dialect>/1_load_envelope.sql`
-   shreds the JSON with `json_each` (SQLite) / `OPENJSON` (SQL Server) into `naaccr.naaccr_value` +
-   `sdc.sdc_report`. Python drives it; the dialect difference is confined to that one file.
+3. **Answers are shredded in SQL.** `_value_ids` in `src/python/sdc_cdm/intake/load.py` shreds
+   the JSON with `json_each` (SQLite) / `OPENJSON` (SQL Server) into `naaccr.naaccr_value` in one
+   statement per envelope; `_report_id` writes the envelope's `sdc.sdc_report` row. Python drives
+   both, and the dialect difference is confined to those two functions.
 
 No patient *name* enters the envelope — PID-5 is read for nothing today and should stay out, since
 the envelope is stored in the database. The raw blob already carries it.
@@ -285,8 +286,12 @@ One raw byte stream is stored once per receipt even when it contains several
 OBRs. `contracts/SERIALIZATION.md` defines the episode-key precedence for the
 loader; source episode identity is optional in the envelope.
 
-`naaccr.naaccr_value` and `sdc.sdc_report` each gain `inbound_message_id`. The full provenance walk
-becomes: `omop.measurement` → `omop.note` → `sdc.sdc_report` → `intake.inbound_message.raw_blob`.
+`naaccr.naaccr_value` and `sdc.sdc_report` each carry `inbound_envelope_id`, a logical reference
+with no cross-schema FK (the same pattern as `naaccr_value.sdc_report_id`). The full provenance walk
+becomes: `omop.measurement` → `omop.note` → `sdc.sdc_report` → `intake.inbound_envelope` →
+`intake.inbound_message.raw_blob`. `intake.envelope_load` and `intake.envelope_value` are the load
+ledger: they record which envelope produced which report and values, with the `episode_key`,
+`dd_version_id`, and load time, and they make a repeated load a no-op.
 A failed parse still lands a row, so nothing is lost silently — quarantine is queryable.
 
 #### `intake.patient` — the local person registry
@@ -322,7 +327,7 @@ hardcoding `8507`/`8532` as it does at `ImportNaaccrVolV.cs:236-239`.
 
 **Duplicate-bytes policy.** On a `raw_sha256` collision the message is still stored (the audit trail
 must be complete), flagged `is_content_duplicate` with `first_seen_inbound_message_id` pointing at
-the original, and **`load_envelope` skips it** — no `naaccr_value` or `sdc_report` rows are written
+the original, and **`intake load` skips it** — no `naaccr_value` or `sdc_report` rows are written
 from it. This deliberately mirrors the existing accession behaviour
 (`sdc_report.is_duplicate_accession` / `first_seen_report_id`, set at
 `ImportNaaccrVolV.cs:391-402`), so the two duplicate concepts are structurally parallel and both
@@ -344,7 +349,7 @@ resource glob in `BuildSchema()` (`SdcCdmInSqlite.cs:127-135`).
 | `dict load` | Dictionary CSVs → `naaccr_item` and its two children; SEER staging CSVs → `staging_schema`, `schema_item`, codes, requirements, and lookup tables. Item definitions load first so every `schema_item` resolves. | Python batched inserts, one transaction |
 | `dict verify` | Counts-only checks for the declared dictionary version and section distribution. | Python, offline SQL counts |
 | `maps build` | layered concept-map build | set-based SQL, Python-driven |
-| `ingest` | HL7 → `intake` (blob + envelope) → `naaccr` + `sdc` | **Python parser** + `load_envelope.sql` |
+| `intake ingest`, `intake load` | HL7 → `intake` (blob + envelope), then `intake` → `naaccr` + `sdc` | **Python parser**, then Python-driven SQL inline in `intake/load.py` |
 | `bridge` | `naaccr` + `sdc` → `omop` | set-based SQL, Python-driven |
 | `validate` | DQ assertions | set-based SQL, Python-driven |
 | `export` | `omop` → CSV bundle + manifest | Python (CSV writing) |
@@ -422,8 +427,6 @@ database/
   schemas/omop/VENDORED.md                upstream OHDSI commit + re-vendor procedure;
                                           records that the vendored PostgreSQL CDM files
                                           are present but omitted from manifest.json
-  load/{sqlite,sqlserver}/1_load_envelope.sql
-  maps/{sqlite,sqlserver}/1_build_concept_maps.sql
   etl/{sqlite,sqlserver}/1_person_and_period.sql
                          2_note.sql
                          3_measurement_observation.sql
@@ -432,7 +435,7 @@ database/
   seed/concept_map_overrides.csv           curated layer-2 map
       cdm_source.csv
 src/csharp/{SdcCdm.Sdc,SdcCdm.Sdc.Tests}/  SDC XML import only — no CLI, no pipeline projects
-src/python/sdc_cdm/{envelope,hl7v2,cli,db,naaccr,vocab,export}/ + tests/
+src/python/sdc_cdm/{envelope,hl7v2,intake,maps,cli,db,naaccr,vocab,export}/ + tests/
 expectations/naaccr-25.json                counts and section-label acceptance anchor
 sample_data/test-fixtures/naaccr-dict/     raw API excerpt + derived CSV fixture
 sample_data/test-fixtures/ssdi/             synthetic staging API + 12 derived CSV fixtures
@@ -440,6 +443,11 @@ notebooks/                                 recreated from scratch (see below)
 sample_data/                               single source of fixtures
 docs/{REBUILD_PLAN,SCHEMA_ARCHITECTURE,ROADMAP,TEST_PLAN}.md
 ```
+
+`database/` holds DDL, seeds, and (from Phase 4) bridge scripts only. The per-dialect statements
+for `maps build` and `intake load` live inline in `src/python/sdc_cdm/maps/build.py` and
+`src/python/sdc_cdm/intake/load.py`, next to the Python that parameterizes them; there is no
+`database/maps/` or `database/load/` directory.
 
 The Python CLI exposes the full verb set above. The C# project is a library plus tests for SDC XML
 import; it has no CLI and no pipeline verbs.
@@ -539,8 +547,8 @@ Both `naaccr_value.dd_version_id` and `naaccr_value.schema_id_number` are hard-c
 tracked importer today (`ImportNaaccrVolV.cs:537-614` never passes either; `ISdcCdm.cs:215`
 defaults them). The retired private CCR path also wrote `None` literally when it was tracked here.
 
-- **`dd_version_id` becomes non-null in practice.** `load_envelope.sql` resolves it from the
-  message's NAACCR record version when present, else from the `is_current` row. This is a *load-time*
+- **`dd_version_id` becomes non-null in practice.** `intake load` resolves it from the
+  `is_current` row for the `--algorithm` it is given. This is a *load-time*
   decision, not a parse-time one — the envelope stays source-faithful and gains no `dd_version_id`
   field. It also gives the missing SQL Server FK (listed under Correctness fixes below) something
   real to enforce.
@@ -834,9 +842,9 @@ These are cheap now and expensive later:
 
 Order matters — vocabulary before mapping before ingest, so nothing needs re-ingesting.
 
-Each phase runs on its own `phase-<N>-<topic>` branch cut from `main`, ends by fast-forwarding `main`
-to it, and closes one GitHub issue. Acceptance criteria are what the phase must demonstrate before
-that fast-forward, not aspirations.
+Each phase lands as squash-merged pull requests to `main`, one per child issue, and closes one
+parent GitHub issue. Acceptance criteria are what the phase must demonstrate before its last child
+PR merges, not aspirations.
 
 **Phase 0 — skeleton and contracts.** Repo layout, `contracts/envelope.schema.json`, `intake` + `etl`
 DDL, `database/manifest.json`, migration ledger, CI. This plan is already committed as
@@ -873,7 +881,7 @@ makes layer 2 win over layer 1 for that item; no OMOP row carries a non-standard
 `*_concept_id` slot.
 
 **Phase 3 — intake.** Blob + envelope + `intake.patient` + the Python HL7 parser +
-`load_envelope.sql` + golden-envelope conformance. The CCR JSON importer and its public tests were
+`intake load` + golden-envelope conformance. The CCR JSON importer and its public tests were
 already removed after the private project took ownership; Phase 3 has no deferred CCR deletion.
 *Accept when:* the parser reproduces every `contracts/golden/*.envelope.json`
 byte-identically under the serialization profile, and `serialize(parse(serialize(x)))` is a fixed
@@ -884,7 +892,7 @@ diagnostic rather than today's date; the provenance walk from an `omop.measureme
 flagged, and loads no new `naaccr_value` rows; two messages with the same PID-3 under *different*
 assigning authorities produce two `intake.patient` rows; a deliberately malformed message lands a
 `parse_status = 'failed'` row rather than throwing; every `naaccr_value` row written by
-`load_envelope.sql` carries a non-null `dd_version_id`; a fixture carrying the staging-selection
+`intake load` carries a non-null `dd_version_id`; a fixture carrying the staging-selection
 inputs yields a non-null `schema_id_number` that resolves to a `staging_schema` row, and one lacking
 them yields NULL plus a diagnostic; **`SdcImporterTests.cs@c29d01dc6a042b13217bbb511864b98aa714aee5:41-154` is ported to pytest** and its
 count and grouping assertions (19 values → 19 measurements, both OBX-4 grouped shapes) pass using
@@ -919,7 +927,9 @@ rebuild stalls after them.
 
 ### Test artifacts per phase
 
-`TEST_PLAN.md` catalogues **75 test IDs across 12 prefixes**. It is updated in the same phase that
+`TEST_PLAN.md` catalogues **126 test IDs across 19 prefixes**. The count includes retired IDs and
+the lettered `OMOP-06a` / `OMOP-06b` (124 without them), and treats each `IMP-*` source as its own
+prefix. It is updated in the same phase that
 invalidates it — a phase whose test IDs are not retargeted is not done. "Retire" means delete the ID
 with a one-line note saying why.
 
@@ -933,9 +943,9 @@ with a one-line note saying why.
 | **5** export | — | **move `EXP-01`–`EXP-04` to roadmap, do not retarget them** — all four are FHIR round-trips against `ExportFhirCpds`, not CSV-bundle tests; see below | a fresh set of CSV-export IDs: export → fresh-schema round-trip equality; manifest row counts and sha256; PHI grep returns zero; header order matches the shared CDM 5.4 `TABLE_SPECS` |
 | **6** docs | — | the 12 `SDCOM` IDs at the C# SDC Object Model refactor; mark `IMP-FHIR` (12), `IMP-NXML` (2), `IMP-CCDA` (1) as roadmap-blocked rather than merely unchecked | notebooks execute top-to-bottom; no doc statement contradicts the code |
 
-Two structural changes to `TEST_PLAN.md` itself remain for Phase 3: the still-active `PY-01` and
-`PY-02` coverage moves to the intake section, and §1.1's heading stops naming a C# type. The
-`SdcImporterTests.cs` split and rename described under Correctness fixes lands in the same PR.
+Phase 3's structural changes to `TEST_PLAN.md` are done: §1.1's heading no longer names a C# type,
+`PY-01` and `PY-02` are retired to the Python tests that now carry their assertions, and the Phase 3
+additions above are checked as `INT-01..07` in §1.1a, each naming its test functions.
 
 #### FHIR code and `EXP-01`
 
@@ -961,10 +971,10 @@ at the new import-side assertion rather than deleting them.
 |---|---|---|
 | **Athena NAACCR coverage is worse than assumed.** Nobody has measured it. | Layer 3 dominates, most concepts are local, the export is far less interoperable than the design implies. | Measure in Phase 2 **before** the bridge is built on it; `concept_map_coverage` makes it a number. Thin layer 1 is a finding for the working group, not something to paper over with mints. |
 | **The envelope contract ossifies too early.** v1 is designed around HL7 v2 alone. | A breaking `envelope_version` bump with stored envelopes to migrate, or per-format hacks. | `envelope_version` is in the schema from day one and stored per row. Sketch the NAACCR XML mapping onto v1 during Phase 3 design as a cheap falsification test. |
-| **JSON shredding in SQL is the weakest link.** `json_each` / `OPENJSON` are where the two dialects genuinely diverge. | The two `load_envelope.sql` variants drift apart, invisible until a SQL Server run produces different rows. | Keep divergence to that one file per dialect; the path-filtered `python-sqlserver` job runs the same assertions so drift fails a test. Shredding in Python, or Jinja-templating one source into two, are the fallbacks. |
+| **JSON shredding in SQL is the weakest link.** `json_each` / `OPENJSON` are where the two dialects genuinely diverge. | The two dialect branches of the loader drift apart, invisible until a SQL Server run produces different rows. | Divergence is confined to `_report_id` and `_value_ids` in `intake/load.py`; the path-filtered `python-sqlserver` job runs the same load and provenance assertions, so drift fails a test. Shredding in Python, or Jinja-templating one source into two, are the fallbacks. |
 | **A single implementation is a single point of failure.** No C# pipeline, no hand-driven SQL path. | If a stage breaks there is no second way to run the pipeline. | Accepted cost of deleting the duplication. Every stage stays separately invocable and idempotent, so a failed stage can be re-run in isolation. |
 | **Concept identity differs by dialect** (accepted, not a defect). | A SQL Server export and a SQLite export of the same message are not concept-comparable. | Documented in `SCHEMA_ARCHITECTURE.md`, recorded per row in `mapping_layer`, carried in export `manifest.json`, excluded from test assertions. |
-| **Seven phases is a lot of runway.** Phases 3–5 depend on 0–2 landing. | Stalling mid-rebuild leaves two half-migrated layouts. | Each phase lands on `main` by fast-forward, so a stall leaves trunk holding every completed phase. Phases 1–2 alone fix the `concept_id = 0` problem. Do not start Phase 3 until 0–2 are on `main`. |
+| **Seven phases is a lot of runway.** Phases 3–5 depend on 0–2 landing. | Stalling mid-rebuild leaves two half-migrated layouts. | Each child issue lands on `main` as it completes, so a stall leaves trunk holding every completed phase. Phases 1–2 alone fix the `concept_id = 0` problem. Do not start Phase 3 until 0–2 are on `main`. |
 | **Dropping PostgreSQL strands a deployment.** Assumes the container was dev convenience, not a target. | Someone deploying on Postgres cannot follow the rebuild. | Confirmed with the working group before Phase 0. If it becomes a real target, fund it properly (manifest entry, CI job, `intake`/`etl` DDL). |
 | **SEER\*API dictionary refresh requires an authorized key and N+1 detail requests.** | A revoked key or API change can block a refresh. | Keep fetch separate from build/load, retain deterministic gitignored CSVs for local use, commit a raw 12-item fixture for offline CI, retry transient failures, and require an owned key-rotation policy before scheduling refreshes. |
 | **`4_condition_and_episode.sql` is thinly specified.** Thin condition + episode grouping is a deliberate scope cut. | The episode grain (one per accession) may not survive multi-tumor reports. | Keep it in its own script so it can be replaced without touching measurement routing. Revisit with the ICD-O-3 roadmap work. |
@@ -993,7 +1003,8 @@ python -m sdc_cdm constants resolve --dialect sqlite --db out/demo.db
 python -m sdc_cdm maps build --dialect sqlite --db out/demo.db
 python -m sdc_cdm maps coverage --dialect sqlite --db out/demo.db \
   --expect expectations/concept-maps-naaccr-25.json
-python -m sdc_cdm ingest sample_data/naaccr_v2/*.hl7
+python -m sdc_cdm intake ingest --dialect sqlite --db out/demo.db sample_data/naaccr_v2/*.hl7
+python -m sdc_cdm intake load --dialect sqlite --db out/demo.db --algorithm eod_public 1 2 3
 python -m sdc_cdm bridge
 python -m sdc_cdm validate
 python -m sdc_cdm export out/omop-csv/

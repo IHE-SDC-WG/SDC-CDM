@@ -38,11 +38,13 @@ A conforming parser emitting `"10"` and a loader storing `10.0` are both correct
 The last snapshot records a known loss in the retired importer: the message
 contains a narrative OBR, but that importer stored a null `report_text`.
 It is historical evidence, not the expected Phase 3 result. The synthetic
-`two-obr-synthetic.*.envelope.json` files are the current parser contract:
+`two-obr-synthetic.*.envelope.json` files, parsed from
+`sample_data/naaccr_v2/two-obr-synthetic.hl7`, are the current parser contract:
 one narrative envelope and one synoptic envelope under one raw-message hash.
 New load tests must expect both `sdc_report` rows and the narrative text.
 
 One deleted test has no golden because it asserted no values:
 `ImportAllHL7Files_ExecutesWithoutError` ran the importer over every fixture in
-`sample_data/naaccr_v2/` and only required that nothing threw. Phase 3 should reproduce it as a
-parametrized smoke test over the same glob rather than as a file here.
+`sample_data/naaccr_v2/` and only required that nothing threw. Its replacement is
+`test_every_committed_fixture_parses_to_schema_valid_fixed_point` in
+`src/python/tests/test_hl7v2.py`, which also schema-validates each envelope.

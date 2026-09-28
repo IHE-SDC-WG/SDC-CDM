@@ -61,6 +61,8 @@ CREATE TABLE IF NOT EXISTS sdc.sdc_report (
     report_loinc TEXT NULL,
     is_duplicate_accession INTEGER NOT NULL DEFAULT 0,
     first_seen_report_id INTEGER NULL REFERENCES sdc_report(sdc_report_id),
+    -- logical reference to intake.inbound_envelope.inbound_envelope_id; not an enforced FK (cross-schema/attached-DB)
+    inbound_envelope_id INTEGER NULL,
     created_datetime TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_datetime TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -124,6 +126,8 @@ CREATE TABLE IF NOT EXISTS sdc.observation_specimens (
 
 CREATE INDEX IF NOT EXISTS sdc.idx_sdc_report_accession
     ON sdc_report (report_accession);
+CREATE INDEX IF NOT EXISTS sdc.idx_sdc_report_inbound_envelope
+    ON sdc_report (inbound_envelope_id);
 CREATE INDEX IF NOT EXISTS sdc.idx_sdc_form_answer_instance_question
     ON sdc_form_answer (template_instance_id, question_sdcid);
 

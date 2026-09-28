@@ -74,12 +74,25 @@ BEGIN
     report_loinc NVARCHAR(50) NULL,
     is_duplicate_accession BIT NOT NULL DEFAULT 0,
     first_seen_report_id INT NULL REFERENCES sdc.sdc_report(sdc_report_id),
+    -- logical reference to intake.inbound_envelope.inbound_envelope_id; not an enforced FK (cross-schema/attached-DB)
+    inbound_envelope_id BIGINT NULL,
     created_datetime DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
     updated_datetime DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
   );
 
   CREATE INDEX IX_sdc_report_accession ON sdc.sdc_report(report_accession);
 END
+GO
+
+IF COL_LENGTH('sdc.sdc_report', 'inbound_envelope_id') IS NULL
+    ALTER TABLE sdc.sdc_report ADD inbound_envelope_id BIGINT NULL;
+GO
+
+IF NOT EXISTS (
+    SELECT 1 FROM sys.indexes
+    WHERE object_id = OBJECT_ID('sdc.sdc_report') AND name = 'IX_sdc_report_inbound_envelope'
+)
+    CREATE INDEX IX_sdc_report_inbound_envelope ON sdc.sdc_report(inbound_envelope_id);
 GO
 
 IF OBJECT_ID('sdc.sdc_form_answer', 'U') IS NULL

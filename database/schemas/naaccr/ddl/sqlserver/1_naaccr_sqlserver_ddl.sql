@@ -22,6 +22,8 @@ BEGIN
     -- Gap #1: the dictionary version this answer was coded against. Nullable so existing
     -- import paths that do not yet supply it keep working; populate going forward.
     dd_version_id INT NULL,
+    -- logical reference to intake.inbound_envelope.inbound_envelope_id; not an enforced FK (cross-schema/attached-DB)
+    inbound_envelope_id BIGINT NULL,
     CONSTRAINT CK_naaccr_value_identifier CHECK (
       (item_num IS NOT NULL AND ecp_code IS NULL)
       OR (item_num IS NULL AND ecp_code IS NOT NULL AND LEN(ecp_code) > 0)
@@ -39,4 +41,15 @@ BEGIN
   CREATE INDEX IX_naaccr_value_sdc_report
     ON naaccr.naaccr_value (sdc_report_id);
 END
+GO
+
+IF COL_LENGTH('naaccr.naaccr_value', 'inbound_envelope_id') IS NULL
+    ALTER TABLE naaccr.naaccr_value ADD inbound_envelope_id BIGINT NULL;
+GO
+
+IF NOT EXISTS (
+    SELECT 1 FROM sys.indexes
+    WHERE object_id = OBJECT_ID('naaccr.naaccr_value') AND name = 'IX_naaccr_value_inbound_envelope'
+)
+    CREATE INDEX IX_naaccr_value_inbound_envelope ON naaccr.naaccr_value (inbound_envelope_id);
 GO
