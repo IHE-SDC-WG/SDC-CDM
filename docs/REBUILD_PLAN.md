@@ -1,7 +1,8 @@
 # Rebuild SDC-CDM around a canonical intake envelope
 
-**Status:** proposed. **Scope:** seven phases (0–6), each landing on `main` as squash-merged pull
-requests, one per child issue — see "Starting point" for why this is not a stack of PRs.
+**Status:** Phases 0–3 are complete on `main` (#90–#93 closed). Phase 4 (#94) is next and is split
+into child issues 4.0–4.5 (#141–#146). **Scope:** seven phases (0–6), each landing on `main` as
+squash-merged pull requests, one per child issue — see "Starting point".
 
 This is the controlling design document for the rebuild. Each phase's GitHub issue links to its
 section here, and the acceptance criteria in that section are the gate — not intent to be
@@ -9,13 +10,20 @@ re-derived. Amend this file in the same commit whenever a decision in it changes
 already been bitten by docs that contradict the code, and that list is in the Doc drift section
 below.
 
-PR #81 (`three-schema-repo-reorg` → `omop`) is closed unmerged, but the **branch** is where all
-current work lives and becomes `main` — see **Starting point** below.
-
 ## Context
 
-The three-schema design (`naaccr` / `sdc` / `omop`) is sound and should survive. What doesn't work
-is everything around it:
+Sections that describe the repository before the rebuild are historical. They explain why a
+decision was made; they do not describe the current code. File and line references such as
+`ImportNaaccrVolV.cs:197` point at deleted code and are recoverable from git history.
+
+**Current state (after Phase 3).** Python owns build, vocabulary load, constant resolution,
+dictionary fetch/load/verify, SSDI fetch, map build/coverage, and HL7 intake/load on SQLite and
+SQL Server. The importer writes no OMOP rows. The only bridge is still the pre-rebuild
+`database/etl/<dialect>/1_naaccr_sdc_to_omop.sql`, applied directly by tests: it writes `note` and
+`measurement` only, embeds concept literals, and has no Python runner. Phase 4 replaces it.
+
+**Before the rebuild (historical).** The three-schema design (`naaccr` / `sdc` / `omop`) is sound
+and should survive. What didn't work was everything around it:
 
 - The raw HL7 v2 message is discarded at parse time — no provenance, no replay, warnings go to
   `Console.WriteLine` and vanish.
@@ -63,8 +71,10 @@ with cross-language parity:
 | Item→schema provenance | **Both axes, both in the dictionary layer.** Vol II *section* is a column on `naaccr_item`, populated from SEER\*API `/rest/naaccr/*`; the site-specific *staging schema* stays the `schema_item` → `staging_schema` many-to-many from SSDI. Captured values stamp `dd_version_id` always and `schema_id_number` only when derivable. |
 | Concept slots | **Two-slot contract**: `*_source_concept_id` = the NAACCR source concept, `*_concept_id` = the standard concept reached via `concept_relationship` `'Maps to'`. Never the same value in both. |
 | `NAACCR2026` minting script | **Kept, SQL-Server-only, as a supplement.** Concept identity legitimately differs by dialect; this is documented, not treated as drift. |
-| `condition_occurrence` | **Thin version**: one row per report from the primary-site item alone, `concept_id = 0` where unmapped. ICD-O-3 combination-concept derivation goes to the roadmap. |
+| `condition_occurrence` | **Thin version**: one row per selected report group from the primary-site item alone, `concept_id = 0` where unmapped. ICD-O-3 combination-concept derivation goes to the roadmap. |
 | Duplicate inbound bytes | **Store, flag, don't re-load.** Mirrors the existing insert-and-flag accession behaviour. |
+| CKey → NAACCR mapping | **Outside this project.** No crosswalk, mapping seeds, or mapping fixtures here. Verified `item_num` values arrive from external preprocessing; unmapped `ecp_code` values are retained and never interpreted by numeric prefix. |
+| Report versions | **Retain every version; select explicitly.** Group by patient, sending facility, and accession; distinguish versions by report type. The first version of each type is selected until an explicit supersession names a successor — newer receipt alone never replaces. |
 | Export format | **CSV per OMOP table**, canonical OHDSI layout, with `manifest.json` and a `CDM_SOURCE` row. |
 | Dialects | **SQLite + SQL Server only.** PostgreSQL is **removed from the tree**, not deferred in place — see below. The OHDSI PostgreSQL CDM files remain in the vendored upstream drop but are absent from `manifest.json`, so no driver applies them. Re-adding the dialect is roadmap. |
 | FHIR | Roadmap only. |
@@ -73,27 +83,19 @@ with cross-language parity:
 
 ## Starting point: `main` is trunk, phases land by squash-merge
 
-`main` stays trunk and stays the default branch. It starts pointing at
-`three-schema-repo-reorg`, which holds all current work.
-
-`main` was merged into the branch by PR #88, so `main` is now an ancestor and two steps remain:
-
-```bash
-git push origin three-schema-repo-reorg:main   # fast-forward, 86 commits
-git push origin --delete omop                  # ahead=0; a strict ancestor of main
-```
-
-`omop` is deleted only after the first push, so no commit is briefly unreferenced. The other stale
-branches (`sql-refactor`, `add-sdc-template-row-data`, `copilot/fix-*`, `update-readme`,
-`importFHIRIps`, `mvp`) hold unmerged commits and are out of scope here — they belong to a cleanup
-project after this rebuild.
+`main` is trunk and the default branch. The one-time transition from `three-schema-repo-reorg`
+(PR #81 closed unmerged; the branch was fast-forwarded onto `main` and `omop` deleted) is complete.
+The other stale branches (`sql-refactor`, `add-sdc-template-row-data`, `copilot/fix-*`,
+`update-readme`, `importFHIRIps`, `mvp`) hold unmerged commits and belong to a cleanup project
+after this rebuild.
 
 ### Per-phase branches
 
-The original plan had each phase land by fast-forward from one `phase-<N>-<topic>` branch. In
-practice each phase is split into child issues, and each child issue lands as one pull request to
-`main` from its own `issue-<N>` branch, squash-merged once CI is green. (Phase 3's four PRs,
-#134–#137, used merge commits instead; squash-merge is the convention from here on.)
+Each phase is split into child issues, and each child issue lands as one pull request to `main`,
+squash-merged once CI is green. There are no long-lived `phase-<N>-<topic>` branches; Phase 4 has
+no `phase-4-bridge` branch. A child's branch is normally `issue-<N>`; an existing checkout keeps
+its branch name. (Phase 3's four PRs, #134–#137, used merge commits; squash-merge is the
+convention from Phase 3.4 onward.)
 
 ```bash
 git checkout main && git pull
@@ -127,7 +129,7 @@ and `git blame` survive — the blame trail is how anyone will ever find out *wh
 | Occurrence-aware idempotency SQL | The one genuinely well-built part of the current bridge. |
 | `sample_data/` | Real HL7 messages, SDC templates, FHIR bundles. |
 | `SdcImporterTests.cs@c29d01dc6a042b13217bbb511864b98aa714aee5:41-154` | The historical behavioural contract: 19 values → 19 measurements, CAP codes `2129.1000043` and `820404.1000043`. Its numeric `item_num` assertions record the retired importer's identifier error. Phase 3 ports the grouping and count assertions to pytest using the corrected `ecp_code` shape. |
-| `TEST_PLAN.md` | ~85 catalogued test IDs. Retarget, don't discard. |
+| `TEST_PLAN.md` | The catalogue of test IDs and named acceptance checks. Retarget, don't discard. |
 | Git history | Why `sdc_report_id` and not accession; why SQLitePCLRaw is pinned; the 17 review findings. |
 
 Deliberately discarded: the C# HL7 importer's *structure* (not its constants),
@@ -422,18 +424,22 @@ contracts/
   envelope.schema.json                    the shared contract
   golden/                                 golden envelopes per fixture (parser regression oracle)
 database/
-  manifest.json                           canonical file order, read by the Python driver
+  manifest.json                           canonical file order, read by the Python driver;
+                                          Phase 4 adds ordered "bridge" and "validate" entries
   schemas/{intake,naaccr,sdc,omop,etl}/ddl/{sqlite,sqlserver}/
   schemas/omop/VENDORED.md                upstream OHDSI commit + re-vendor procedure;
                                           records that the vendored PostgreSQL CDM files
                                           are present but omitted from manifest.json
-  etl/{sqlite,sqlserver}/1_person_and_period.sql
-                         2_note.sql
-                         3_measurement_observation.sql
-                         4_condition_and_episode.sql
-                         9_validate.sql
-  seed/concept_map_overrides.csv           curated layer-2 map
-      cdm_source.csv
+  etl/{sqlite,sqlserver}/1_person_and_period.sql      (Phase 4.1)
+                         2_note.sql                   (Phase 4.2)
+                         3_measurement_observation.sql (Phase 4.3)
+                         4_condition_and_episode.sql  (Phase 4.4)
+                         9_validate.sql               (Phase 4.5)
+  seed/concept_constants.csv               tracked (vocabulary_id, concept_code) pairs
+      concept_map_overrides.csv            curated layer-2 map
+      naaccr_item_exclusions.csv           items excluded from mapping
+      cdm_source.csv                       (Phase 4.1)
+      validate_thresholds.csv              (Phase 4.5)
 src/csharp/{SdcCdm.Sdc,SdcCdm.Sdc.Tests}/  SDC XML import only — no CLI, no pipeline projects
 src/python/sdc_cdm/{envelope,hl7v2,intake,maps,cli,db,naaccr,vocab,export}/ + tests/
 expectations/naaccr-25.json                counts and section-label acceptance anchor
@@ -444,7 +450,7 @@ sample_data/                               single source of fixtures
 docs/{REBUILD_PLAN,SCHEMA_ARCHITECTURE,ROADMAP,TEST_PLAN}.md
 ```
 
-`database/` holds DDL, seeds, and (from Phase 4) bridge scripts only. The per-dialect statements
+`database/` holds DDL, seeds, and (from Phase 4) bridge and validation scripts only. The per-dialect statements
 for `maps build` and `intake load` live inline in `src/python/sdc_cdm/maps/build.py` and
 `src/python/sdc_cdm/intake/load.py`, next to the Python that parameterizes them; there is no
 `database/maps/` or `database/load/` directory.
@@ -452,8 +458,8 @@ for `maps build` and `intake load` live inline in `src/python/sdc_cdm/maps/build
 The Python CLI exposes the full verb set above. The C# project is a library plus tests for SDC XML
 import; it has no CLI and no pipeline verbs.
 
-**Deleted outright:** `phenoml-workflows/` (deleted in Phase 0; mapping absorbed into Phase 4 SQL,
-review role replaced by the tracked overrides CSV), the legacy NAACCR spreadsheet converter and
+**Deleted outright:** `phenoml-workflows/` (deleted in Phase 0; its mapper is historical reference
+at `cc6e446^`, its review role replaced by the tracked overrides CSV), the legacy NAACCR spreadsheet converter and
 its input workbooks (after the one-time seed conversion), the whole PostgreSQL dialect
 (`database/etl/postgresql/`,
 `database/schemas/{naaccr,sdc}/ddl/postgresql/`, `database/Dockerfile`,
@@ -592,13 +598,13 @@ measurable rather than rhetorical. `naaccr.value_code_collision` (#100) lists `(
 pairs whose meaning differs across staging schemas; the key stays `(item_num, code)` in Phase 2,
 and `maps coverage` (#119) reports these rows.
 
-#### The two-slot contract (fixes a live bug)
+#### The two-slot contract
 
-The current bridge writes **the same value** into both concept slots — `measurement_concept_id` gets
-`COALESCE(ncm.concept_id, 0)` (`1_naaccr_sdc_to_omop.sql:67`) and `measurement_source_concept_id`
-gets `ncm.concept_id` (`:81`), differing only by the `COALESCE`. That is only correct when the mapped
-concept happens to be standard, and it is invisible until a DQD run flags non-standard concepts in a
-standard slot.
+Before Phase 2.3 (#120), the bridge wrote **the same value** into both concept slots —
+`measurement_concept_id` got `COALESCE(ncm.concept_id, 0)` and `measurement_source_concept_id` got
+`ncm.concept_id`, differing only by the `COALESCE`. That was only correct when the mapped concept
+happened to be standard. #120 fixed the current bridge; Phase 4 carries the contract into every new
+script.
 
 The maps therefore carry both IDs explicitly, and the ETL uses them in the right slots:
 
@@ -610,6 +616,21 @@ The maps therefore carry both IDs explicitly, and the ETL uses them in the right
 
 The same contract applies to `value_as_concept_id` vs the value map's source concept, and to
 `condition_concept_id` / `condition_source_concept_id`.
+
+The two-slot contract covers **clinical target and source slots only**. It is not a rule that every
+`*_concept_id` column holds a standard concept. OMOP defines each slot separately — see the
+[CDM 5.4 field definitions](https://ohdsi.github.io/CommonDataModel/cdm54.html#episode) — and
+Phase 4 checks each column against its own contract:
+
+| Slot kind | Examples | Contract |
+|---|---|---|
+| Standard target | `measurement_concept_id`, `observation_concept_id`, `condition_concept_id`, `value_as_concept_id`, `episode_concept_id`, `episode_object_concept_id` | a standard concept in the domain OMOP specifies, or `0` / NULL where OMOP allows it |
+| Source concept | `*_source_concept_id`, `episode_source_concept_id` | the NAACCR source concept; may be non-standard, including `NAACCR_LOCAL` |
+| Type, field, and resolved constants | `*_type_concept_id`, `*_event_field_concept_id`, `episode_event_field_concept_id`, `gender_concept_id` | the vocabulary OMOP names for that field (Type Concept, CDM field, Gender), resolved through `etl.concept_constant` |
+
+Episode constants resolve from Athena vocabularies that both dialects load. They **must not**
+depend on the SQL-Server-only `NAACCR2026` supplement, which is optional and excluded from the
+manifest.
 
 **Unmapped policy and its DQD consequence.** Items that reach layer 3 get a real (local, non-standard)
 concept in `*_source_concept_id` and — having no standard target — `0` in `*_concept_id`. Items
@@ -667,57 +688,118 @@ The retired input left
 `is_mappable` null for 478 of 780 rows, so the active build must use the exclusions seed rather
 than that historical flag.
 
-### OMOP breadth, domain-routed
+### OMOP breadth, domain-routed (Phase 4)
 
-Split the monolithic bridge into ordered scripts. The `phenoml_workflows/mapper.py` logic
-(episode / episode_event / observation routing, JSON-only with no database) is **absorbed here** —
-its two roles (mapping, and review UI) are replaced by these SQL scripts and by the tracked
-overrides CSV respectively.
+Phase 4 replaces the monolithic `1_naaccr_sdc_to_omop.sql` with a Python-run sequence of ordered
+scripts. Phase 3 established intake identity (`intake.patient`) and source-row provenance
+(`inbound_envelope_id` on every report and value). Phase 4 owns everything downstream: report
+version selection, `omop.person`, and the provenance walk from an OMOP row back to raw bytes.
 
-**Phase 0 amendment (2026-08-06):** `phenoml-workflows/` was deleted in Phase 0 rather than here.
-Read the mapper for its episode-grain and domain-routing decisions from git history —
-`git show <phase-0-parent>:phenoml-workflows/phenoml_workflows/mapper.py` — before writing
-`4_condition_and_episode.sql`; those are the parts worth carrying over.
+**Historical reference, not a specification.** `phenoml-workflows/` was deleted in Phase 0. Its
+mapper made episode-grain and domain-routing choices that are worth reading once:
 
-1. `1_person_and_period.sql` — `omop.person` from `intake.patient` 1:1, with gender resolved through
-   `etl.concept_constant`; `observation_period`; `cdm_source` from seed. This is the honest fix for
-   the doc drift: after this, the importer really does write no OMOP.
-   **`observation_period` source order**: NAACCR date-of-diagnosis → date-of-last-contact when those
-   items are present, else the MIN/MAX span of the person's observation dates. A single synoptic
-   report yields a one-day period; that is legal OMOP but nearly useless for cohort logic, so record
-   the derivation source per row and surface the one-day count in `validate`. Do not silently pad.
-2. `2_note.sql` — one note per non-duplicate accessioned report, as today, with resolved concepts.
-3. `3_measurement_observation.sql` — **route on the mapped concept's `domain_id`**: `Measurement` →
-   `measurement`, `Observation` → `observation` with `value_as_string`.
-   **Units: `unit_source_value` only.** `unit_concept_id` is left `NULL` and no UCUM mapping table is
-   built. NAACCR sends `cm`, `mm`, `%` and similar; `unit_source_value` preserves them losslessly,
-   and a populated `unit_concept_id` is not worth a hand-curated mapping table at this stage. UCUM
-   resolution is on the roadmap and can be applied later as a pure update over existing rows,
-   because the source text is retained.
-4. `4_condition_and_episode.sql` —
-   - **`condition_occurrence`, thin version**: one row per report, derived from the **primary-site
-     item alone**, with `condition_concept_id = 0` where the map has no standard target and the
-     NAACCR source concept in `condition_source_concept_id`. `condition_start_date` = the report
-     observation date; `condition_type_concept_id` from `etl.concept_constant`. No histology
-     combination logic. Full ICD-O-3 primary-site + histology combination-concept derivation is
-     **roadmap** — it needs the ICDO3 vocabulary loaded and is a phase of its own.
-   - **`episode` / `episode_event`**: one `episode` per tumor/accession group, with `episode_event`
-     rows linking its measurements and the condition. The Episode Type and
-     `episode_event_field_concept_id` field concepts are already pre-seeded by the SQL Server vocab
-     script — reuse those definitions rather than re-inventing them, resolving the IDs through
-     `etl.concept_constant` so the SQLite path gets the same names from Athena.
-5. `9_validate.sql` — generalize `database/etl/sqlserver/validate_naaccr_sdc_to_omop.sql` and
-   extend: no orphan FKs, note/measurement counts reconcile against `naaccr_value`, every OMOP row
-   traceable to an `inbound_message`, count of one-day observation periods, and the unmapped-concept
-   count checked against a threshold declared in `database/seed/validate_thresholds.csv` — a tracked
-   file, so raising a threshold is a reviewed PR rather than an argument.
+```bash
+git show cc6e446^:phenoml-workflows/phenoml_workflows/mapper.py
+```
 
-Occurrence-aware idempotency (the `ROW_NUMBER()` + correlated `COUNT(*)` pattern at
-`1_naaccr_sdc_to_omop.sql:87-121`) is preserved in each script — it's the one piece of the current
-bridge that is genuinely well-built.
+Treat it as prior work. Where it disagrees with this section, this section wins.
 
-`omop` stays vanilla. No crosswalk table. Back-references remain `note_source_value` /
-`measurement_event_id` / `measurement_source_value`.
+#### Public mapping boundary
+
+CKey-to-NAACCR mapping (CAP eCC/eCP question codes to NAACCR items) belongs **outside this
+project**. This repository adds no proprietary crosswalk, mapping seeds, mapping fixtures, or future
+public mapping work for it. The bridge accepts verified NAACCR `item_num` values supplied by
+external preprocessing. It retains unmapped `ecp_code` values as source identifiers and never
+interprets their numeric prefixes. Unmapped CKey input is a supported case and is counted
+explicitly, not treated as an error.
+
+#### Report history and selection
+
+A **report group** is `(intake patient, sending facility, report accession)`. Within a group,
+`report_loinc` distinguishes **report types** (narrative versus synoptic, per the parser's LOINC
+sets). Complementary report types combine across messages: a narrative OBR sent in one message and
+a synoptic OBR sent in another belong to the same group.
+
+- **Versions are retained.** A changed report is a new version of its type. Its `sdc_report` and
+  `naaccr_value` rows stay loaded. Version relationships are recorded in `naaccr` and reference the
+  existing `sdc_report`, `inbound_envelope`, and raw-message rows. Source rows are never deleted.
+- **Initial selection is the first version of each type.** A newer receipt alone never authorizes
+  replacement.
+- **Explicit supersession.** One operation accepts a predecessor and successor `sdc_report_id`. It
+  rejects cross-group or cross-type pairs, cycles, and a second successor for the same predecessor.
+  In the same transaction, it refreshes the affected group's bridge-owned OMOP rows. Source history
+  and unrelated OMOP rows are preserved.
+- **Identical-byte resends** keep Phase 3 behavior: they are stored and flagged, but they are not
+  loaded and cannot create versions.
+- **Accession-less reports** stay excluded from the bridge, as they are today. `validate` reports
+  them explicitly rather than dropping them silently.
+- **Note provenance lives in `sdc`.** Each note has links to every contributing report. OMOP's
+  schema is unchanged. The existing `is_duplicate_accession` / `first_seen_report_id` columns remain
+  as intake provenance. Selection no longer depends on them. Phase 4.0 backfills version rows for
+  already-loaded reports.
+
+#### Mapping and data quality
+
+- **#100 stays open.** When a coded value appears in `naaccr.value_code_collision`, its meaning
+  differs across staging schemas. The bridge suppresses its coded target. The source value is kept
+  in `value_source_value` and the source-concept slot. `validate` reports the affected rows. The
+  absence of staging data does not prove that a mapping is unambiguous.
+- **Mapping correctness is proven with synthetic NAACCR input.** Coded, numeric, and text fixtures
+  carry verified `item_num` values. Real Athena NAACCR coverage remains unmeasured (#119) and is not
+  a Phase 4 gate.
+- **Required data fails loudly.** If a required birth year or clinical date cannot be derived, the
+  bridge fails and rolls back every derived change from that run. The failure names the offending
+  rows. Partial-date precision is preserved. The bridge never substitutes today's date, which is
+  what the current bridge's `DATE('now')` fallback does.
+- **Units: `unit_source_value` only.** `unit_concept_id` stays NULL, and no UCUM table is built.
+
+#### Scripts
+
+Occurrence-aware idempotency is preserved in every script. The current bridge's `ROW_NUMBER()`
+plus correlated `COUNT(*)` pattern is the model: an unchanged rerun adds no rows, and legitimate
+repeated identical answers survive.
+
+0. **Report versions** (4.0) — Add the `naaccr` version-relationship DDL, backfill it from loaded
+   reports, and add the supersession operation. No OMOP writes.
+1. **`1_person_and_period.sql`** (4.1) — Map `omop.person` 1:1 from `intake.patient`, with gender
+   resolved through `etl.concept_constant`. Write `observation_period` and `cdm_source` from
+   `database/seed/cdm_source.csv`. **`observation_period` source order:** NAACCR date of diagnosis
+   to date of last contact when present, otherwise the MIN/MAX span of the person's clinical dates.
+   Record the derivation per row and count one-day periods in `validate`. Do not pad periods.
+2. **`2_note.sql`** (4.2) — Write one note per report group from the selected reports. It is
+   anchored to the selected synoptic report and uses the selected narrative text when present. Every
+   contributing report has a link in `sdc`. A complementary report that arrives later refreshes the
+   group's note and links.
+3. **`3_measurement_observation.sql`** (4.3) — Route on the target concept's `domain_id`:
+   `Measurement` rows go to `measurement` and `Observation` rows go to `observation`. Unmapped rows
+   follow a documented default. Type values as follows: coded values use `value_as_concept_id`
+   (with #100 suppression), numeric values use `value_as_number` plus `unit_source_value`, and text
+   uses `observation.value_as_string`. Source and target slots follow the slot table above.
+   Supersession replaces the affected derived rows.
+4. **`4_condition_and_episode.sql`** (4.4) —
+   - **`condition_occurrence`, thin version:** one row per selected report group, from the
+     **primary-site item alone**. Use `condition_concept_id = 0` when there is no standard target,
+     and put the NAACCR source concept in `condition_source_concept_id`. There is no histology
+     combination logic. ICD-O-3 combination concepts are roadmap work.
+   - **`episode` / `episode_event`:** group episodes by tumor/accession within a patient, never by
+     accession alone. `episode_event` connects the selected measurements, observations, and
+     condition. Episode type and event-field concepts resolve through `etl.concept_constant` from
+     Athena. They do not come from the `NAACCR2026` supplement.
+5. **`9_validate.sql`** (4.5) — This generalizes
+   `database/etl/sqlserver/validate_naaccr_sdc_to_omop.sql` for both dialects. It checks for orphan
+   foreign keys and event links, checks each concept slot against its contract, and traces every
+   bridge-owned row to an `inbound_message`. It reconciles selected, historical, excluded, and
+   unmapped inputs; counts one-day periods and #100 suppressions; and checks unmapped counts against
+   `database/seed/validate_thresholds.csv`. Structural and provenance errors must be zero. Expected
+   unmapped coverage is tracked separately, so an accepted mapping limitation cannot hide a
+   structural failure.
+
+After 4.5 reaches equivalent regression coverage, the old `1_naaccr_sdc_to_omop.sql` and
+`validate_naaccr_sdc_to_omop.sql` are retired.
+
+`omop` stays vanilla. No crosswalk table exists. OMOP-side back-references remain
+`note_source_value`, `measurement_event_id`, and `*_source_value`; the rest of the provenance walk
+runs through `sdc` and `intake`.
 
 ### Export: CSV per OMOP table
 
@@ -755,10 +837,23 @@ prerequisite rather than something the SQLite path fakes.
 
 ### Python bridge runner
 
-`python -m sdc_cdm bridge` executes `database/etl/<dialect>/*.sql` in manifest order, owning the
-transaction, the `etl.run` log entry, and parameter binding. It is the only bridge runner — the
-former C# path and the hand-driven `sqlite3` path are both gone. The one-off
-`.context/verify_e2e_bridge.py` becomes a real test.
+`python -m sdc_cdm bridge --dialect <d> --db <target>` is the only bridge runner. The former C#
+path and the hand-driven `sqlite3` path are both gone. Phase 4.1 adds the runner; later children
+add their scripts to it.
+
+- **Ordering.** `database/manifest.json` gains ordered `bridge` and `validate` entries per dialect.
+  The runner executes those entries, never a directory glob. `test_manifest.py` asserts that every
+  `database/etl/<dialect>/*.sql` file is listed or explicitly excluded.
+- **Preconditions.** Before opening a write transaction, the runner verifies the required seeds
+  (`cdm_source.csv`, and from 4.5 `validate_thresholds.csv`), the resolved `etl.concept_constant`
+  rows, and a built concept map. A missing prerequisite exits non-zero and names the absent item.
+- **Transactions.** Python owns one transaction per run. Any script failure rolls back every derived
+  change from that run. The supersession operation runs its refresh in its own single transaction.
+- **Run log.** Each run writes an `etl.run` row (command, dialect, status, timestamps,
+  `error_message`) and prints per-script row counts. The run row is written outside the data
+  transaction, so a failed run keeps its `failed` status and error text after the rollback.
+- **Validation.** `python -m sdc_cdm validate` runs the validation entries, reports each check with
+  PASS/FAIL, and exits non-zero on any structural or provenance error or a threshold breach.
 
 ### Doc drift
 
@@ -788,7 +883,11 @@ former C# path and the hand-driven `sqlite3` path are both gone. The one-off
 
 ## Correctness fixes to fold in
 
-These are cheap now and expensive later:
+These are cheap now and expensive later. The descriptions record the pre-rebuild problem. Several
+have since landed: OBX classification by identifier, ledger-based build idempotency, the
+`response_string` rename, the `SdcImporterTests.cs` split, the `ImportCsv.cs` deletion,
+`FindTemplateItem`, and CI. MSH-21 is stored as `message_profile` but is not yet validated. The
+SQL Server `naaccr_value.dd_version_id` FK and OMOP re-vendoring remain open.
 
 - **OBX classification by identifier, not position.** `ImportNaaccrVolV.cs:440` starts the clinical
   loop at `i = 3`, hard-assuming the first three OBX segments are metadata. Classify each OBX by
@@ -846,67 +945,87 @@ Each phase lands as squash-merged pull requests to `main`, one per child issue, 
 parent GitHub issue. Acceptance criteria are what the phase must demonstrate before its last child
 PR merges, not aspirations.
 
-**Phase 0 — skeleton and contracts.** Repo layout, `contracts/envelope.schema.json`, `intake` + `etl`
-DDL, `database/manifest.json`, migration ledger, CI. This plan is already committed as
-`docs/REBUILD_PLAN.md` on `three-schema-repo-reorg`, so each phase issue can link to its section;
-the one-time transition in "Starting point" carries it to `main`. Open the seven phase issues here
-too. Phase 0 runs on the current branch rather than a `phase-0-skeleton` branch, since it is the
-phase that builds the CI there is nothing yet to gate against.
-*Accept when:* `build` runs twice against the same database with no error and no duplicate objects
-(the current `IF NOT EXISTS` regression); the Python driver builds a SQLite database from the
-manifest, and the SQL Server job does the same for matching changes; the three CI jobs are green on
-pull requests and pushes to `main`; **no pytest run requires .NET and no `dotnet test` requires Python** —
-the SDC XML suite must not reach into the pipeline; the
-promoted end-to-end no-double-count test (from the untracked `.context/verify_e2e_bridge.py`) passes
-as a tracked test; `test_no_postgres.py` verifies that removed-dialect text occurs only in the four
-vendored OHDSI files, `VENDORED.md`, this plan, and the manifest entries that declare those files
-excluded. Its path check filters its own descriptive filename and finds exactly the four vendored
-files. No executable DDL, container wiring, or support claim remains.
+**Phase 0 — skeleton and contracts. Complete (#90).** Repo layout, `contracts/envelope.schema.json`,
+`intake` + `etl` DDL, `database/manifest.json`, migration ledger, CI. Phase 0 ran on the
+pre-transition branch because it built the CI there was nothing yet to gate against.
+*Accepted:* `build` runs twice against the same database with no error and no duplicate objects;
+the Python driver builds SQLite from the manifest, and the SQL Server job does the same for
+matching changes; the three CI jobs are green on pull requests and pushes to `main`; **no pytest
+run requires .NET and no `dotnet test` requires Python**; the end-to-end no-double-count test is
+tracked; `test_no_postgres.py` verifies that removed-dialect text occurs only in the four vendored
+OHDSI files, `VENDORED.md`, this plan, and the manifest entries that declare those files excluded.
 
-**Phase 1 — vocabulary and constants.** Athena loader promoted out of `tools/`; `etl.concept_constant`
-resolver; SEER dictionary loader for **both** dialects.
-*Accept when:* every constant resolves from a loaded Athena bundle; deleting one required concept
+**Phase 1 — vocabulary and constants. Complete (#91).** Athena loader promoted out of `tools/`;
+`etl.concept_constant` resolver; SEER dictionary loader for **both** dialects.
+*Accepted:* every constant resolves from a loaded Athena bundle; deleting one required concept
 makes `constants resolve` exit non-zero with the missing `(vocabulary_id, concept_code)` named; the
 NAACCR dictionary loads into SQLite from the same 3NF CSVs SQL Server uses, with matching row counts;
 `naaccr.naaccr_item` seeds with non-null `xml_id` **and** non-null `section` for 100% of non-retired
-items at the declared version anchor, and `SELECT section, COUNT(*) … GROUP BY 1` returns the 17 expected
-sections; every `schema_item.item_num` resolves to a `naaccr_item` row with zero orphans.
+items at the declared version anchor, and `SELECT section, COUNT(*) … GROUP BY 1` returns the 17
+expected sections; every `schema_item.item_num` resolves to a `naaccr_item` row with zero orphans.
 
-**Phase 2 — concept maps.** Layered build, coverage view, one-time seed conversion from the mapping
-spec, then delete the spec/workbooks/converter.
-*Accept when:* `naaccr.concept_map_coverage` reports a nonzero layer-1 count on a real Athena bundle;
-every map row has a `mapping_layer` and a `source_concept_id`; layer-3 mints are stable across two
-consecutive rebuilds (same IDs); hand-editing one row of `concept_map_overrides.csv` and rebuilding
-makes layer 2 win over layer 1 for that item; no OMOP row carries a non-standard concept in a
-`*_concept_id` slot.
+**Phase 2 — concept maps. Complete (#92).** Layered build, coverage view, one-time seed conversion
+from the mapping spec, then delete the spec/workbooks/converter.
+*Accepted:* every map row has a `mapping_layer` and a `source_concept_id`; synthetic Athena
+fixtures prove layer-1 `Maps to` resolution, layer-2 override precedence (including an explicit
+zero target), exclusions, and stable layer-3 mints across rebuilds (`MAPS-01..10`); the current
+bridge puts source and standard concepts in separate slots (#120).
+*Deferred, unverified (#119):* real Athena NAACCR coverage. The available extract lacks `NAACCR`,
+so a nonzero layer-1 count on a real bundle has not been measured and is not a gate for any later
+phase. Standard-slot validation of OMOP rows moved to Phase 4, where the rows are written.
 
-**Phase 3 — intake.** Blob + envelope + `intake.patient` + the Python HL7 parser +
-`intake load` + golden-envelope conformance. The CCR JSON importer and its public tests were
-already removed after the private project took ownership; Phase 3 has no deferred CCR deletion.
-*Accept when:* the parser reproduces every `contracts/golden/*.envelope.json`
-byte-identically under the serialization profile, and `serialize(parse(serialize(x)))` is a fixed
-point; a message with a `1957`-only birth date yields `precision: "year"` with `m`/`d` null and an
-`omop.person` carrying `year_of_birth` and null month/day; an unparseable date yields `null` plus a
-diagnostic rather than today's date; the provenance walk from an `omop.measurement` reaches
-`raw_blob` and the originating OBX substring is found in it; a re-sent identical message is stored,
-flagged, and loads no new `naaccr_value` rows; two messages with the same PID-3 under *different*
-assigning authorities produce two `intake.patient` rows; a deliberately malformed message lands a
-`parse_status = 'failed'` row rather than throwing; every `naaccr_value` row written by
-`intake load` carries a non-null `dd_version_id`; a fixture carrying the staging-selection
-inputs yields a non-null `schema_id_number` that resolves to a `staging_schema` row, and one lacking
-them yields NULL plus a diagnostic; **`SdcImporterTests.cs@c29d01dc6a042b13217bbb511864b98aa714aee5:41-154` is ported to pytest** and its
-count and grouping assertions (19 values → 19 measurements, both OBX-4 grouped shapes) pass using
-the corrected CAP identifier expectations in `contracts/expected/` —
-this is the phase's proof that nothing was lost in retiring the C# HL7 path.
+**Phase 3 — intake. Complete (#93).** Blob + envelope + `intake.patient` + the Python HL7 parser +
+`intake load` + golden-envelope conformance.
+*Accepted:* the parser reproduces every `contracts/golden/*.envelope.json` byte-identically under
+the serialization profile, and `serialize(parse(serialize(x)))` is a fixed point; a `1957`-only
+birth date yields `precision: "year"` with `m`/`d` null in the envelope and `intake.patient`; an
+unparseable date yields `null` plus a diagnostic rather than today's date; every loaded
+`naaccr_value` and `sdc_report` row walks through `inbound_envelope_id` to a `raw_blob` containing
+its originating OBX bytes; a re-sent identical message is stored, flagged, and loads no new rows;
+the same PID-3 under two assigning authorities yields two `intake.patient` rows; a malformed
+message lands a `parse_status = 'failed'` row; every `naaccr_value` row carries a non-null
+`dd_version_id`; `schema_id_number` resolves when complete selection inputs are present and is
+NULL plus a diagnostic otherwise; the retired C# 19-value contract passes in pytest with the
+corrected CAP identifiers in `contracts/expected/`.
+*Moved to Phase 4:* `omop.person` creation (including `year_of_birth` from a partial birth date)
+and the provenance walk from an OMOP row to raw bytes. Phase 3 established intake identity and
+source-row provenance. Phase 4 owns both OMOP-side criteria.
 
-**Phase 4 — bridge broadening.** person/period/cdm_source, domain routing, thin condition + episode,
-validate. (`phenoml-workflows/` was already deleted in Phase 0; read `mapper.py` from git history.)
-*Accept when:* the importer writes zero `omop` rows; `omop.person` count equals `intake.patient`
-count; a fixture with coded, numeric, and text answers produces `value_as_concept_id`,
-`value_as_number` + `unit_source_value` (with `unit_concept_id` null), and an
-`observation.value_as_string` respectively; no OMOP row has a non-standard concept in a
-`*_concept_id` slot; `9_validate.sql` passes against
-`database/seed/validate_thresholds.csv`; every stage is idempotent on a second run.
+**Phase 4 — bridge broadening (#94).** Report versions and selection, the Python runner,
+person/period/`cdm_source`, combined notes with provenance, domain-routed measurements and
+observations, thin condition + episode, and validation — see "OMOP breadth, domain-routed" and
+"Python bridge runner". #94 is the parent tracker. Its children land sequentially, each as its own
+PR to `main` with its tests and documentation changes:
+
+| Child | Work and acceptance |
+|---|---|
+| **4.0** (#141) Report versions and selection | NAACCR version relationships and explicit supersession; backfill loaded reports without deleting source rows. Tests: first-version selection, cross-group/cross-type, cycle, and conflicting-successor rejections. |
+| **4.1** (#142) Runner, person, period, source | `bridge` orchestration and ordered manifest entries; `person`, `observation_period`, `cdm_source`; required constants and seeds resolved before writes. Tests: rollback on script failure; missing birth year or clinical date fails with no derived rows; partial birth dates keep precision. |
+| **4.2** (#143) Combined notes and provenance | Combine selected narrative/synoptic reports across messages, anchor notes to the synoptic report, link every contributing report in `sdc`, and handle late-arriving complementary reports. |
+| **4.3** (#144) Measurements and observations | Domain routing, value typing, source/target slots, #100 suppression, occurrence-preserving idempotency, and replacement of affected derived rows after supersession. |
+| **4.4** (#145) Conditions and episodes | Thin primary-site conditions; patient-qualified episode grouping; `episode_event` links to selected measurements, observations, and conditions. |
+| **4.5** (#146) Validation and final acceptance | `validate` verb, both dialects' validation SQL, `validate_thresholds.csv`; reconcile selected, historical, excluded, and unmapped inputs; retire the old bridge after equivalent regression coverage passes. |
+
+*Accept when* (#94 closes only after every child merges and these pass on SQLite and SQL Server):
+
+- **Boundary.** The importer writes zero `omop` rows; `omop.person` count equals `intake.patient`
+  count, and a year-only birth date yields `year_of_birth` with null month and day.
+- **Grouping and history.** Equivalent cases pass on both dialects for cross-message grouping, late
+  narrative arrival, retained versions, explicit replacement, and exact raw-byte provenance from
+  every bridge-owned OMOP row.
+- **Source edge cases.** Identical resends, repeated identical answers, accession reuse across
+  patients and facilities, and accession-less exclusions behave as specified and are reported.
+- **Failure.** Missing required birth years or clinical dates roll back every derived change, and
+  the failure names what was missing.
+- **Mapping.** Synthetic coded, numeric, and text inputs produce `value_as_concept_id`,
+  `value_as_number` + `unit_source_value` (with `unit_concept_id` NULL), and
+  `observation.value_as_string`; ambiguous (#100) coded targets are suppressed with source values
+  kept and rows reported; non-standard source concepts are preserved; standard-target slots pass
+  their contract; unmapped CKey input is retained and counted.
+- **Idempotency and replacement.** An unchanged rerun adds no rows; replacement leaves no obsolete
+  bridge-owned clinical rows or orphan event links.
+- **Validation.** `validate` reports zero structural and provenance errors, and unmapped coverage
+  is within `validate_thresholds.csv`, tracked separately from structural checks.
 
 **Phase 5 — export.** CSV bundle + manifest + round-trip test.
 *Accept when:* export → load into a fresh empty OMOP schema is row-for-row equal; `manifest.json`
@@ -927,19 +1046,17 @@ rebuild stalls after them.
 
 ### Test artifacts per phase
 
-`TEST_PLAN.md` catalogues **126 test IDs across 19 prefixes**. The count includes retired IDs and
-the lettered `OMOP-06a` / `OMOP-06b` (124 without them), and treats each `IMP-*` source as its own
-prefix. It is updated in the same phase that
-invalidates it — a phase whose test IDs are not retargeted is not done. "Retire" means delete the ID
-with a one-line note saying why.
+`TEST_PLAN.md` is updated in the same phase that invalidates it — a phase whose test IDs are not
+retargeted is not done. Rows below name the affected checks rather than counting IDs. "Retire" means
+delete the ID with a one-line note saying why.
 
 | Phase | Retire | Retarget | Add |
 |---|---|---|---|
 | **0** skeleton | `SCHEMA-05` (C# `BuildSchema()` ↔ raw-DDL drift check — there is no C# schema builder any more) | `TEST_PLAN.md:20` bridge glob → `{sqlite,sqlserver}`; `SCHEMA-02` DDL parity → two dialects; `SCHEMA-04` → whatever survives of `update-ddl-files.py`; `CLEAN-03` → the three-job topology; `CLEAN-02` shared golden files → `contracts/golden/`, Python-only | manifest ordering is the single apply order; `build` twice is a no-op (the `CREATE INDEX` regression); migration-ledger skip works |
 | **1** vocab + dict | `VocabImporterTests.cs` — deleted with `ImportCsv.cs`, not ported; the Python loader tests cover the active contract | `SCHEMA-03` (bridge concept literals exist) → `constants resolve` fails loudly on a missing `(vocabulary_id, concept_code)`; `SCHEMA-01` / `SCHEMA-02` cover both active dialects and documented storage normalization | `DICT-01..15`: `section` non-null for 100% of non-retired items at the anchor and the 17 expected values; zero orphan `schema_item.item_num`; API/CSV behavior; retry and auth; idempotent load and rollback; dictionary row counts match across dialects |
-| **2** concept maps | `PY-04` (the one-time converter test was retired after its conversion code was deleted) | the `NAACCR`/`OMOP` map IDs at the layered build | coverage by layer **and by section**; layer 2 beats layer 1 on an edited override row; layer-3 mints stable across two rebuilds; no non-standard concept in a `*_concept_id` slot |
-| **3** intake | `PY-01`/`PY-02` after their assertions move to the active parser; `PY-03` is already retired because the private project owns the former CCR path | the 9 `IMP-HL7` IDs in §1.1, from `SdcCdm.NAACCRVolVImporter.ImportNaaccrVolV` to the Python parser; `CLEAN-01` fixture dedup now that `sample_data/` is the single source | golden-envelope conformance + serialization fixed point; partial dates; provenance walk to `raw_blob`; duplicate bytes stored-flagged-not-loaded; two authorities → two patients; malformed message → `parse_status='failed'` |
-| **4** bridge | — | the 11 `OMOP` IDs in §3 at the split scripts; the 6 `NAACCR` IDs in §2 | domain routing (coded/numeric/text); the two-slot contract; person/period/`cdm_source`; `9_validate.sql` against `validate_thresholds.csv`; every stage idempotent twice |
+| **2** concept maps | `PY-04` (the one-time converter test was retired after its conversion code was deleted) | the concept-map checks at the layered build | `MAPS-01..10`: layered resolution, overrides, exclusions, stable mints, coverage by layer **and by section**. Real Athena coverage deferred (#119); standard-slot checks moved to Phase 4 |
+| **3** intake | `PY-01`/`PY-02` after their assertions move to the active parser; `PY-03` is already retired because the private project owns the former CCR path | `IMP-HL7-01..09` from the C# importer to the Python parser; `CLEAN-01` fixture dedup now that `sample_data/` is the single source | `INT-01..07`: golden conformance and fixed point; partial dates; source-row provenance to `raw_blob`; duplicate bytes; two authorities → two patients; failed parse; staging-schema resolution |
+| **4** bridge | `OMOP-01` and the old-bridge references in `OMOP-09`, once 4.5 retires `1_naaccr_sdc_to_omop.sql` | `OMOP-02..12` at the child that owns each; `NAACCR-05`/`NAACCR-06` at `validate`. FHIR and CCDA checks (`NAACCR-02`, `NAACCR-04`, the FHIR half of `OMOP-08`) stay outside Phase 4; `NAACCR-03` is out of scope under the public mapping boundary | `BRIDGE-01..12`: version selection and supersession; runner; person/period/`cdm_source`; required-data rollback; cross-message grouping and late arrival; domain routing; #100 suppression; unmapped CKey; replacement; condition and episode; validation reconciliation. All run on both dialects |
 | **5** export | — | **move `EXP-01`–`EXP-04` to roadmap, do not retarget them** — all four are FHIR round-trips against `ExportFhirCpds`, not CSV-bundle tests; see below | a fresh set of CSV-export IDs: export → fresh-schema round-trip equality; manifest row counts and sha256; PHI grep returns zero; header order matches the shared CDM 5.4 `TABLE_SPECS` |
 | **6** docs | — | the 12 `SDCOM` IDs at the C# SDC Object Model refactor; mark `IMP-FHIR` (12), `IMP-NXML` (2), `IMP-CCDA` (1) as roadmap-blocked rather than merely unchecked | notebooks execute top-to-bottom; no doc statement contradicts the code |
 
@@ -969,7 +1086,7 @@ at the new import-side assertion rather than deleting them.
 
 | Risk | Consequence | Mitigation |
 |---|---|---|
-| **Athena NAACCR coverage is worse than assumed.** Nobody has measured it. | Layer 3 dominates, most concepts are local, the export is far less interoperable than the design implies. | Measure in Phase 2 **before** the bridge is built on it; `concept_map_coverage` makes it a number. Thin layer 1 is a finding for the working group, not something to paper over with mints. |
+| **Athena NAACCR coverage is worse than assumed.** Nobody has measured it. | Layer 3 dominates, most concepts are local, the export is far less interoperable than the design implies. | Still unmeasured: the available extract lacks `NAACCR` (#119). Phase 4 proves mapping correctness with synthetic inputs and reports unmapped coverage separately from structural checks, so a thin layer 1 is visible as a number. A bundle-holder measures real coverage later; thin layer 1 is a finding for the working group, not something to paper over with mints. |
 | **The envelope contract ossifies too early.** v1 is designed around HL7 v2 alone. | A breaking `envelope_version` bump with stored envelopes to migrate, or per-format hacks. | `envelope_version` is in the schema from day one and stored per row. Sketch the NAACCR XML mapping onto v1 during Phase 3 design as a cheap falsification test. |
 | **JSON shredding in SQL is the weakest link.** `json_each` / `OPENJSON` are where the two dialects genuinely diverge. | The two dialect branches of the loader drift apart, invisible until a SQL Server run produces different rows. | Divergence is confined to `_report_id` and `_value_ids` in `intake/load.py`; the path-filtered `python-sqlserver` job runs the same load and provenance assertions, so drift fails a test. Shredding in Python, or Jinja-templating one source into two, are the fallbacks. |
 | **A single implementation is a single point of failure.** No C# pipeline, no hand-driven SQL path. | If a stage breaks there is no second way to run the pipeline. | Accepted cost of deleting the duplication. Every stage stays separately invocable and idempotent, so a failed stage can be re-run in isolation. |
@@ -977,7 +1094,7 @@ at the new import-side assertion rather than deleting them.
 | **Seven phases is a lot of runway.** Phases 3–5 depend on 0–2 landing. | Stalling mid-rebuild leaves two half-migrated layouts. | Each child issue lands on `main` as it completes, so a stall leaves trunk holding every completed phase. Phases 1–2 alone fix the `concept_id = 0` problem. Do not start Phase 3 until 0–2 are on `main`. |
 | **Dropping PostgreSQL strands a deployment.** Assumes the container was dev convenience, not a target. | Someone deploying on Postgres cannot follow the rebuild. | Confirmed with the working group before Phase 0. If it becomes a real target, fund it properly (manifest entry, CI job, `intake`/`etl` DDL). |
 | **SEER\*API dictionary refresh requires an authorized key and N+1 detail requests.** | A revoked key or API change can block a refresh. | Keep fetch separate from build/load, retain deterministic gitignored CSVs for local use, commit a raw 12-item fixture for offline CI, retry transient failures, and require an owned key-rotation policy before scheduling refreshes. |
-| **`4_condition_and_episode.sql` is thinly specified.** Thin condition + episode grouping is a deliberate scope cut. | The episode grain (one per accession) may not survive multi-tumor reports. | Keep it in its own script so it can be replaced without touching measurement routing. Revisit with the ICD-O-3 roadmap work. |
+| **`4_condition_and_episode.sql` is thinly specified.** Thin condition + episode grouping is a deliberate scope cut. | The episode grain (one per patient-qualified tumor/accession group) may not survive multi-tumor reports. | Keep it in its own script so it can be replaced without touching measurement routing. Revisit with the ICD-O-3 roadmap work. |
 
 ---
 
@@ -1005,8 +1122,8 @@ python -m sdc_cdm maps coverage --dialect sqlite --db out/demo.db \
   --expect expectations/concept-maps-naaccr-25.json
 python -m sdc_cdm intake ingest --dialect sqlite --db out/demo.db sample_data/naaccr_v2/*.hl7
 python -m sdc_cdm intake load --dialect sqlite --db out/demo.db --algorithm eod_public 1 2 3
-python -m sdc_cdm bridge
-python -m sdc_cdm validate
+python -m sdc_cdm bridge --dialect sqlite --db out/demo.db
+python -m sdc_cdm validate --dialect sqlite --db out/demo.db
 python -m sdc_cdm export out/omop-csv/
 
 # SDC XML import is the one C# surface, and it is a library + tests, not a CLI
@@ -1022,16 +1139,17 @@ dotnet test src/csharp/SdcCdm.Sdc.Tests
 - **Partial dates.** A `1957`-only birth date survives as `year` precision into
   `omop.person.year_of_birth` with null month/day; an unparseable date becomes `null` plus a
   diagnostic, never today's date.
-- **Provenance round-trip.** Pick any `omop.measurement`, walk
-  `→ note → sdc_report → intake.inbound_message`, and assert the originating OBX substring is
-  present in `raw_blob`. This is the test that proves the blob requirement is really met.
+- **Provenance round-trip.** Pick any bridge-owned OMOP row, walk
+  `→ note → sdc note-report links → sdc_report → intake.inbound_envelope → inbound_message`, and
+  assert the originating OBX substring is present in `raw_blob`. Phase 3 proves the
+  `sdc_report`/`naaccr_value` → `raw_blob` half; Phase 4 proves the OMOP half.
 - **Concept coverage.** `SELECT * FROM naaccr.concept_map_coverage` — record a baseline per layer;
-  CI fails on regression. `COUNT(*) FROM omop.measurement WHERE measurement_concept_id = 0` must
-  drop from 100% to a documented residue.
+  CI fails on regression. Unmapped OMOP rows are counted against `validate_thresholds.csv`,
+  separately from structural checks. The real-bundle Athena baseline is deferred (#119).
 - **Constants.** Deliberately drop a required concept from the vocabulary and confirm
   `constants resolve` fails loudly rather than the bridge writing a wrong ID.
-- **Idempotency.** Every stage run twice leaves row counts unchanged (including `build`, which is
-  the regression that the missing `IF NOT EXISTS` currently causes).
+- **Idempotency.** Every stage run twice leaves row counts unchanged (including `build`, whose
+  second run is a ledger no-op). Repeated identical answers survive as distinct occurrences.
 - **Export round-trip.** Export → load into a fresh empty OMOP schema → row-for-row equal. Plus:
   grep the entire export bundle for a known PHI string from the raw message and assert zero hits.
 - **Domain routing.** A fixture with one coded, one numeric, and one text answer produces a
@@ -1040,9 +1158,17 @@ dotnet test src/csharp/SdcCdm.Sdc.Tests
   `value_as_string` respectively.
 - **Person identity.** `omop.person` count equals `intake.patient` count; the same PID-3 under two
   different assigning authorities yields two patients, not one.
+- **Report history.** Narrative and synoptic reports sent in separate messages combine into one
+  note, including when the narrative arrives after the first bridge run. A changed report is
+  retained, but the first version stays selected until an explicit supersession. That
+  supersession replaces the group's bridge-owned rows and leaves no obsolete rows or orphan event
+  links. The same accession under another patient or facility is a separate group.
+- **Required data.** A missing birth year or clinical date fails the bridge and rolls back every
+  derived change from the run.
 - **Existing coverage retained, in the new language.** `SdcImporterTests.cs@c29d01dc6a042b13217bbb511864b98aa714aee5:41-154` asserts 19
   `naaccr_value` rows → 19 `omop.measurement` rows with both OBX-4 grouped shapes (CAP code
-  `2129.1000043` code+number, CAP code `820404.1000043` code+text). Because it exercises the HL7 path, it cannot stay in C#: port
-  its count and grouping assertions to pytest, correcting the identifier shape to full CAP codes
+  `2129.1000043` code+number, CAP code `820404.1000043` code+text). Phase 3 ported
+  its count and grouping assertions to pytest at the `naaccr_value` level; Phase 4 extends them to
+  OMOP rows, with the corrected identifier shape: full CAP codes
   in `ecp_code` and NULL `item_num`. The retired C# snapshots remain historical evidence; the
   corrected expected identifiers are in `contracts/expected/obx-Adrenal.identifiers.json`.
