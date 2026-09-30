@@ -20,8 +20,9 @@ HL7v2 / FHIR / SDC XML / CCDA / NAACCR XML          (Import layer)
         ├─► sdc.sdc_report                          (eCP report metadata)
         └─► sdc.sdc_form_answer, sdc.template_*     (SDC XML forms and answers)
         │
-        ▼  database/etl/{sqlite,sqlserver}/1_naaccr_sdc_to_omop.sql
-   omop.note + omop.measurement / omop.observation  ("To OMOP": vanilla CDM 5.4)
+        ▼  sdc-cdm bridge: database/etl/{sqlite,sqlserver}/ in manifest order (Phase 4)
+   omop.person, observation_period, cdm_source, note, measurement, observation,
+   condition_occurrence, episode, episode_event     ("To OMOP": vanilla CDM 5.4)
 
 etl.schema_migration + etl.run                      (build and run provenance)
 ```
@@ -30,13 +31,17 @@ etl.schema_migration + etl.run                      (build and run provenance)
 "To OMOP" tests assert on `omop.*` after running the bridge ETL. The SDC XML form tables
 carry their own answer values; eCP answer values remain in `naaccr.naaccr_value`.
 
+Until Phase 4.5 retires it, the current bridge is the single pre-rebuild script
+`database/etl/<dialect>/1_naaccr_sdc_to_omop.sql`, which writes `note` and `measurement` only
+and is applied directly by tests.
+
 ## Proposed folder layout
 
 ```
 src/csharp/SdcCdm.Sdc.Tests/
   Import/
     SdcXml/          IMP-SDC-*
-src/python/tests/    MANIFEST-*, BUILD-*, IMP-HL7-*, INT-*, schema and bridge tests
+src/python/tests/    MANIFEST-*, BUILD-*, IMP-HL7-*, INT-*, MAPS-*, OMOP-*, BRIDGE-*, schema tests
 tools/tests/         OMOP-01 three-schema smoke test (pytest)
 contracts/golden/    frozen importer outputs
 sample_data/         single source of truth for fixtures (see Cleanup)
@@ -66,7 +71,8 @@ Fixtures: synthetic `sample_data/naaccr_v2/two-obr-synthetic.hl7` plus the commi
 - [x] **IMP-HL7-01** Intake and load complete on both committed Vol V profiles and the
   synthetic two-OBR message. Raw bytes remain available after a failed parse.
 - [x] **IMP-HL7-02** PID creates one authority-qualified `intake.patient` identity with
-  source identifier, birth date components, and source gender. OMOP `person` mapping is later work.
+  source identifier, birth date components, and source gender. OMOP `person` mapping is Phase 4.1
+  (OMOP-11, BRIDGE-04).
 - [x] **IMP-HL7-03** Each OBR creates its own `sdc.sdc_report` with accession and LOINC;
   the narrative OBR and synoptic OBR remain distinct and have ordered envelope provenance.
 - [x] **IMP-HL7-04** Each logical answer yields one `naaccr.naaccr_value` row with the right
@@ -199,84 +205,139 @@ Fixtures: `sample_data/sdc_xml/ADRENAL_GLAND.xml`, templates in `sample_data/sdc
 ## 2. ETL "To NAACCR" tests — `EtlToNaaccr/`
 
 These verify that **every import source converges to the same canonical NAACCR + SDC
-shape**, so the OMOP bridge only has to be tested once.
+shape**, so the OMOP bridge only has to be tested once. FHIR and CCDA checks are outside
+Phase 4.
 
 - [x] **NAACCR-01** *(from HL7v2)* Importing `obx-Adrenal.hl7` yields the expected
   `naaccr_value` rows, including grouped code/number and code/text answers, source units,
   OBX-14 dates, and OBX-4 sub-IDs.
   *(coverage regression: Phase 0 deleted `SdcImporterTests.cs` and the C# HL7 importer;
   the expected rows remain frozen under `contracts/golden/`.)*
-- [ ] **NAACCR-02** *(from FHIR)* Importing the CPDS bundle for the same case yields
+- [ ] **NAACCR-02** *(from FHIR; outside Phase 4)* Importing the CPDS bundle for the same case yields
   equivalent `naaccr_value` rows to NAACCR-01 where items overlap.
-- [ ] **NAACCR-03** *(from SDC XML)* Importing `ADRENAL_GLAND.xml` yields answers joinable
-  to the NAACCR dictionary only through a verified crosswalk. CAP question identifiers
-  such as `2129.1000043` remain in `ecp_code` until then.
-- [ ] **NAACCR-04** *(from CCDA — blocked)* Same golden comparison once the importer exists.
-- [ ] **NAACCR-05** Dictionary integrity: every non-NULL `naaccr_value.item_num` written by any
+- [ ] **NAACCR-03** *(from SDC XML; out of scope)* Importing `ADRENAL_GLAND.xml` retains CAP
+  question identifiers such as `2129.1000043` in `ecp_code`. CKey-to-NAACCR mapping belongs
+  outside this project, so no crosswalk, mapping seed, or mapping fixture is added here;
+  verified `item_num` values arrive only from external preprocessing.
+- [ ] **NAACCR-04** *(from CCDA — blocked; outside Phase 4)* Same golden comparison once the importer exists.
+- [ ] **NAACCR-05** *(Phase 4.5, `validate`)* Dictionary integrity: every non-NULL `naaccr_value.item_num` written by any
   importer exists in `naaccr.naaccr_item` (or is explicitly reported as unmapped);
   `ecp_code` rows cannot join by their numeric prefix.
-- [ ] **NAACCR-06** Concept-map coverage: every item/value pair used by the fixtures has a
-  row in `naaccr_concept_map` / `naaccr_value_concept_map`, or appears in an "unmapped"
-  report — so bridge output never silently maps to concept 0 for known items.
+- [ ] **NAACCR-06** *(Phase 4.5, `validate`)* Concept-map coverage: every item/value pair used
+  by the fixtures has a row in `naaccr_concept_map` / `naaccr_value_concept_map`, or appears in
+  the unmapped report — so bridge output never silently maps to concept 0 for known items.
+  Unmapped `ecp_code` input is a supported case and is counted, not failed.
 
 ---
 
 ## 3. ETL "To OMOP" tests — `EtlToOmop/`
 
-Target: `database/etl/sqlite/1_naaccr_sdc_to_omop.sql` and its SQL Server counterpart. Seed via an
-importer or direct inserts, run the bridge, assert on `omop.*`.
+Target: the Phase 4 bridge scripts run by `sdc-cdm bridge` (see `docs/REBUILD_PLAN.md`,
+"OMOP breadth, domain-routed"). Until Phase 4.5, the implemented IDs below run against the
+pre-rebuild `1_naaccr_sdc_to_omop.sql`. Each ID names the Phase 4 child that owns it. Every
+Phase 4 check runs on SQLite and SQL Server and asserts equal behavior, not equal concept IDs.
 
 - [x] **OMOP-01** Three-schema layout + minimal bridge smoke test
   (`tools/tests/test_three_schema_sqlite.py`): OMOP tables carry **no** `sdc_*` columns;
-  a seeded report/raw value produces a note + measurement.
-- [ ] **OMOP-02** Phase 4 combines related OBR reports into one `omop.note`, anchored
-  to the synoptic report and retaining explicit provenance to each contributing report.
-- [ ] **OMOP-03** One `omop.measurement`/`observation` per answered item, with
-  `*_source_value` = the full CAP code or verified NAACCR item number, and NAACCR
-  source IDs in `*_source_concept_id` and standard targets in `*_concept_id`
-  only for rows with `item_num`; unmapped items use zero in both concept slots.
-  `*_event_id` points at the note (event field concept `1147289` for
-  measurement→note anchoring).
-- [ ] **OMOP-04** Value typing: coded answers use the standard target from
-  `naaccr_value_concept_map` in `value_as_concept_id`, or NULL when its target is
-  zero or absent; numeric → `value_as_number` + `unit_source_value`, text →
-  `value_as_string` (observation) — one test per shape.
-- [x] **OMOP-05** *(regression, review finding #2a)* Duplicate-accession reports
-  (`is_duplicate_accession = 1`) do **not** fan out: measurement count equals distinct
-  answer count, not N×M across re-imported reports sharing an accession.
-- [x] **OMOP-06** *(regression, review finding #2b)* Idempotency: running the bridge ETL
-  repeatedly leaves row counts unchanged in `note` and `measurement`.
-- [x] **OMOP-06a** *(regression, pre-bridge duplicate double-counting)* When the same message is
-  imported twice **before** the bridge runs, the re-import's `naaccr_value` rows carry the
-  duplicate-flagged report's `sdc_report_id` and do **not** bridge: measurement count equals the
-  single-import count, not 2×. Values bridge only via `naaccr_value.sdc_report_id` →
-  non-duplicate `sdc_report`.
-- [x] **OMOP-06b** *(regression, empty-accession collisions)* Accession-less reports (OBR-3
-  stored as NULL, and legacy `''` covered by the ETL's `NULLIF` guard) never bridge: no `''`
-  note is created and their values do not fan out across reports.
-- [ ] **OMOP-07** Back-reference join from `SCHEMA_ARCHITECTURE.md` works: from an OMOP
-  measurement you can recover the report and source identifier via
-  note → sdc_report → naaccr_value; recover a NAACCR item name only for rows with
-  `item_num`, with no stored cross-schema FK.
-- [ ] **OMOP-08** End-to-end: HL7v2 fixture → import → bridge → expected OMOP rows
-  (golden-file comparison). Repeat from the FHIR fixture and assert equivalence.
-- [x] **OMOP-09** *(regression, review finding #3)* The SQL Server bridge ETL only
+  a seeded report/raw value produces a note + measurement. *(4.5: retarget to the runner, or
+  retire with the old bridge.)*
+- [ ] **OMOP-02** *(4.2)* Selected narrative and synoptic reports in one report group combine
+  into one `omop.note`, anchored to the synoptic report, with an `sdc` link to each
+  contributing report.
+- [ ] **OMOP-03** *(4.3)* One `omop.measurement`/`observation` per answered item, with
+  `*_source_value` = the full CAP code or verified NAACCR item number. For rows with
+  `item_num`, the NAACCR source concept goes in `*_source_concept_id` and the standard target,
+  or `0`, goes in `*_concept_id`. Rows with only `ecp_code` use zero in both slots. `*_event_id`
+  points at the note, with the event field concept resolved from `field_note_note_id`.
+- [ ] **OMOP-04** *(4.3)* Value typing: coded answers use the standard target from
+  `naaccr_value_concept_map` in `value_as_concept_id`, or NULL when its target is zero, absent,
+  or suppressed under #100; numeric → `value_as_number` + `unit_source_value` with
+  `unit_concept_id` NULL; text → `observation.value_as_string`. One test per shape, using
+  synthetic NAACCR input.
+- [x] **OMOP-05** *(regression, review finding #2a; 4.0/4.3 retarget)* Repeated reports do
+  **not** fan out: measurement count equals the selected version's answer count, not N×M
+  across retained versions sharing a group. Currently asserted through
+  `is_duplicate_accession`; Phase 4 asserts it through version selection.
+- [x] **OMOP-06** *(regression, review finding #2b; 4.1–4.4 extend)* Idempotency: running the
+  bridge repeatedly leaves row counts unchanged in every OMOP table it writes.
+- [x] **OMOP-06a** *(regression, pre-bridge duplicate double-counting; 4.3 keep)* When the same
+  message is imported twice **before** the bridge runs, the re-import's rows do **not** bridge:
+  measurement count equals the single-import count, not 2×.
+- [x] **OMOP-06b** *(regression, empty-accession collisions; 4.5 extend)* Accession-less reports
+  (OBR-3 stored as NULL, and legacy `''` covered by the ETL's `NULLIF` guard) never bridge: no
+  `''` note is created and their values do not fan out across reports. Phase 4 adds an
+  explicit exclusion count in `validate`.
+- [ ] **OMOP-07** *(4.2; 4.3/4.4 extend)* Provenance walk: from any bridge-owned OMOP row,
+  recover the note, its contributing `sdc_report` rows, their `inbound_envelope` rows, and the
+  exact `raw_blob` bytes containing the originating OBX. Recover a NAACCR item name only for
+  rows with `item_num`, with no stored cross-schema FK.
+- [ ] **OMOP-08** *(4.5)* End-to-end: HL7v2 fixture → intake → bridge → expected OMOP rows
+  (golden-file comparison). The FHIR repeat is outside Phase 4.
+- [x] **OMOP-09** *(regression, review finding #3; 4.5 retarget)* The SQL Server bridge ETL only
   references objects the manifest-built SQL Server DDL creates: `naaccr_concept_map`,
   `naaccr_value_concept_map`, and `local_concept_allocation` come from
   `2_naaccr_concept_maps_sqlserver.sql`, not from the excluded NAACCR2026 supplement, so
   `test_bridge_no_double_count` runs the bridge on both dialects with no test-side table
   stubs. `test_concept_map_ddl` pins the two-slot column contract and the
-  `concept_map_coverage` and `value_code_collision` views in both dialects.
-- [ ] **OMOP-10** *(regression, review finding #4)* The validation script
-  (`validate_naaccr_sdc_to_omop.sql`) passes against a database produced by the shipped
-  ETL — its type-concept filters and expected tables (`episode`/`episode_event`) must
-  match what the ETL actually writes.
-- [ ] **OMOP-11** Person linkage: measurements/notes carry the `person_id` created at
-  import; no orphan rows referencing missing persons (FK check with constraints applied).
-- [ ] **OMOP-12** Bridge standard target slots (`measurement_concept_id` and
-  `value_as_concept_id`) contain only standard concepts when nonzero/non-NULL.
-  `measurement_source_concept_id` is a separate source slot and may contain a
-  nonstandard NAACCR concept.
+  `concept_map_coverage` and `value_code_collision` views in both dialects. Phase 4 extends this
+  to every bridge script, including episode constants.
+- [ ] **OMOP-10** *(regression, review finding #4; 4.5)* The validation SQL passes against a
+  database produced by the shipped bridge on both dialects; its type-concept filters and
+  expected tables (`episode`/`episode_event`) match what the bridge actually writes.
+- [ ] **OMOP-11** *(4.1)* Person linkage: `omop.person` maps 1:1 from `intake.patient`;
+  notes, measurements, observations, conditions, and episodes carry that `person_id`; there are
+  no orphan rows with constraints applied.
+- [ ] **OMOP-12** *(4.3–4.5)* Concept slots follow their OMOP contracts. Standard-target slots
+  (`measurement_concept_id`, `observation_concept_id`, `condition_concept_id`,
+  `value_as_concept_id`, `episode_concept_id`, `episode_object_concept_id`) contain only
+  standard concepts when nonzero or non-NULL. Source slots may contain non-standard NAACCR
+  concepts. Type and event-field slots hold their resolved constants.
+
+### 3.1 Phase 4 bridge checks
+
+Each check names its owning child issue under #94: 4.0 #141, 4.1 #142, 4.2 #143, 4.3 #144,
+4.4 #145, 4.5 #146. #94 closes when every check passes on both
+dialects.
+
+- [ ] **BRIDGE-01** *(4.0)* Backfill records version relationships for every loaded report
+  without deleting source rows; the first version of each report type in a group is selected;
+  a newer receipt alone does not change selection.
+- [ ] **BRIDGE-02** *(4.0)* Supersession rejects cross-group and cross-type pairs, cycles, and a
+  second successor for the same predecessor, and writes nothing on rejection.
+- [ ] **BRIDGE-03** *(4.1)* `sdc-cdm bridge` executes the manifest's ordered bridge entries in
+  one transaction; every `database/etl/<dialect>/*.sql` file is listed or excluded; a missing
+  seed, constant, or built map exits non-zero before any write and names it; `etl.run` records
+  both success and failure.
+- [ ] **BRIDGE-04** *(4.1)* `observation_period` follows the documented derivation order,
+  records its derivation per row, and never pads; `cdm_source` comes from
+  `database/seed/cdm_source.csv`; a year-only birth date yields `year_of_birth` with NULL month
+  and day.
+- [ ] **BRIDGE-05** *(4.1)* A missing required birth year or clinical date fails the run, rolls
+  back every derived change, and names the offending rows; no date is replaced with today's
+  date.
+- [ ] **BRIDGE-06** *(4.2)* Narrative and synoptic reports sent in separate messages form one
+  group and one note; a narrative arriving after the first bridge run refreshes that note and
+  its links; the same accession under another patient or sending facility forms a separate
+  group.
+- [ ] **BRIDGE-07** *(4.3)* Domain routing: a `Measurement`-domain target writes
+  `measurement`, an `Observation`-domain target writes `observation`, and unmapped rows follow
+  the documented default.
+- [ ] **BRIDGE-08** *(4.3)* A coded value listed in `naaccr.value_code_collision` (#100) gets no
+  coded target; its source value and source concept are kept, and the row is reported.
+- [ ] **BRIDGE-09** *(4.3)* Unmapped CKey input (`ecp_code` with NULL `item_num`) is retained in
+  `*_source_value`, is never joined by numeric prefix, and is counted as unmapped.
+- [ ] **BRIDGE-10** *(4.3, 4.4)* After explicit supersession, the group's bridge-owned rows are
+  replaced atomically. No obsolete clinical rows or orphan event links remain, unrelated OMOP rows
+  are unchanged, and source history is preserved. Repeated identical answers survive as
+  distinct occurrences, and an unchanged rerun adds no rows.
+- [ ] **BRIDGE-11** *(4.4)* One thin primary-site `condition_occurrence` per selected group;
+  episodes are grouped per patient, not by accession alone; `episode_event` links the group's
+  selected measurements, observations, and condition. Episode constants resolve without the
+  `NAACCR2026` supplement.
+- [ ] **BRIDGE-12** *(4.5)* `sdc-cdm validate` reports zero structural and provenance errors;
+  reconciles selected, historical, excluded, and unmapped inputs; counts one-day periods and
+  #100 suppressions; and checks unmapped coverage against `validate_thresholds.csv` separately
+  from structural checks. Any failure exits non-zero.
 
 ### Phase 2.2 concept map checks
 
@@ -297,8 +358,8 @@ importer or direct inserts, run the bridge, assert on `omop.*`.
 
 ## 4. Export / round-trip tests (roadmap-blocked)
 
-> The FHIR importer and exporter were removed in Phase 0. These tests stay assigned to
-> Phase 5 and cannot run until those paths are rebuilt. EXP-01 previously blamed a
+> The FHIR importer and exporter were removed in Phase 0. These tests are roadmap-blocked with
+> the FHIR work; they are not Phase 5 CSV-export tests and cannot run until those paths are rebuilt. EXP-01 previously blamed a
 > `GetSdcObsClasses` projection that had already been corrected; the active defect was on
 > the response write path, now covered by IMP-SDC-03.
 
@@ -510,13 +571,13 @@ time**, so no new golden files are needed for the core oracle tests (SDCOM-03/04
 
 ## Suggested implementation order
 
-1. **IMP-SDC-03, OMOP-05, OMOP-06** cover the import-side answer persistence and the
-   bridge fan-out/idempotency regressions. `EXP-01` remains blocked on the Phase 5 FHIR work.
-2. **IMP-HL7-02..07** — content-level assertions for the most mature importer.
-3. **OMOP-02..04, OMOP-08** — the bridge contract.
-4. **CLEAN-01** alongside, so new tests are written against `sample_data/` from day one.
-5. FHIR and SDC XML content tests, then schema-parity tests, then blocked items
-   (NAACCR XML, CCDA) as those importers land.
-6. **SDCOM-01/02** to stand up the optional SDC.Schema oracle, then **SDCOM-03/04**. Once
+1. **Phase 4 in child order** (#94): 4.0 `BRIDGE-01/02`; 4.1 `BRIDGE-03..05`, `OMOP-11`;
+   4.2 `OMOP-02`, `OMOP-07`, `BRIDGE-06`; 4.3 `OMOP-03/04`, `BRIDGE-07..10`; 4.4 `BRIDGE-11`;
+   4.5 `OMOP-08`, `OMOP-10`, `OMOP-12`, `NAACCR-05/06`, `BRIDGE-12`, then retire the old bridge.
+2. **CLEAN-01** alongside, so new tests are written against `sample_data/` from day one.
+3. Phase 5 CSV-export checks.
+4. FHIR and SDC XML content tests, then blocked items (NAACCR XML, CCDA) as those importers
+   land. `EXP-01` remains roadmap-blocked with the FHIR work.
+5. **SDCOM-01/02** to stand up the optional SDC.Schema oracle, then **SDCOM-03/04**. Once
    wired in, these replace hand-maintained SDC-XML expected sets and provide a
    fixture-agnostic check for IMP-SDC-03.
