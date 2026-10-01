@@ -41,11 +41,23 @@ def is_accessioned(accession: str | None) -> bool:
     return bool(accession)
 
 
+def _lock(backend: DatabaseBackend) -> str:
+    """Table hint that holds a check-then-write read until commit.
+
+    On SQL Server, UPDLOCK plus HOLDLOCK locks the key range a lookup found
+    empty, so a concurrent transaction waits and then sees the committed row
+    instead of inserting a duplicate. SQLite's BEGIN IMMEDIATE already
+    serializes writers.
+    """
+
+    return " WITH (UPDLOCK, HOLDLOCK)" if backend.dialect == "sqlserver" else ""
+
+
 def _group_id(backend: DatabaseBackend, person_id: int, sending_facility: str,
               accession: str) -> int:
     key = (person_id, sending_facility, accession)
     row = backend.fetch_one(
-        "SELECT report_group_id FROM naaccr.report_group WHERE person_id = ? "
+        f"SELECT report_group_id FROM naaccr.report_group{_lock(backend)} WHERE person_id = ? "
         "AND sending_facility = ? AND report_accession = ?", key,
     )
     if row is not None:
@@ -83,7 +95,8 @@ def record_report_version(
     group_id = _group_id(backend, person_id, sending_facility or "", accession)
     report_type = report_loinc or ""
     has_type = backend.fetch_one(
-        "SELECT 1 FROM naaccr.report_version WHERE report_group_id = ? AND report_loinc = ?",
+        f"SELECT 1 FROM naaccr.report_version{_lock(backend)} "
+        "WHERE report_group_id = ? AND report_loinc = ?",
         (group_id, report_type),
     )
     backend.execute_uncommitted(
@@ -140,14 +153,15 @@ def backfill_report_versions(backend: DatabaseBackend) -> int:
 
 _VERSION = (
     "SELECT report_group_id, report_loinc, is_selected, predecessor_sdc_report_id "
-    "FROM naaccr.report_version WHERE sdc_report_id = ?"
+    "FROM naaccr.report_version{lock} WHERE sdc_report_id = ?"
 )
 
 
 def _check_supersession(backend: DatabaseBackend, predecessor_id: int,
                         successor_id: int) -> tuple[int, str]:
-    predecessor = backend.fetch_one(_VERSION, (predecessor_id,))
-    successor = backend.fetch_one(_VERSION, (successor_id,))
+    version = _VERSION.format(lock=_lock(backend))
+    predecessor = backend.fetch_one(version, (predecessor_id,))
+    successor = backend.fetch_one(version, (successor_id,))
     for report_id, row in ((predecessor_id, predecessor), (successor_id, successor)):
         if row is None:
             raise SupersessionError("unversioned_report", f"sdc_report {report_id} has no report version")
@@ -172,10 +186,11 @@ def _check_supersession(backend: DatabaseBackend, predecessor_id: int,
                 f"sdc_report {successor_id} is sdc_report {predecessor_id} or precedes it",
             )
         seen.add(ancestor)
-        row = backend.fetch_one(_VERSION, (ancestor,))
+        row = backend.fetch_one(version, (ancestor,))
         ancestor = None if row is None or row[3] is None else int(row[3])
     existing = backend.fetch_one(
-        "SELECT sdc_report_id FROM naaccr.report_version WHERE predecessor_sdc_report_id = ?",
+        f"SELECT sdc_report_id FROM naaccr.report_version{_lock(backend)} "
+        "WHERE predecessor_sdc_report_id = ?",
         (predecessor_id,),
     )
     if existing is not None:
