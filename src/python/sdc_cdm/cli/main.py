@@ -24,6 +24,7 @@ from sdc_cdm.cli.intake import configure_ingest, configure_load, run_ingest, run
 from sdc_cdm.cli.maps import (
     configure_maps_build, configure_maps_coverage, run_maps_build, run_maps_coverage,
 )
+from sdc_cdm.cli.reports import configure_supersede, run_supersede
 from sdc_cdm.db.errors import MigrationHashMismatch, SdcCdmError, UsageError
 from sdc_cdm.db.manifest import load_manifest
 from sdc_cdm.vocab.constants import resolve_constants
@@ -56,13 +57,16 @@ def _run_build(args: argparse.Namespace) -> int:
         return 0
 
     with open_backend(args, read_only=args.dry_run) as backend:
-        actions = BuildRunner(
+        runner = BuildRunner(
             manifest,
             backend,
             accept_changed_hashes=args.accept_changed_hashes,
-        ).run(dry_run=args.dry_run)
+        )
+        actions = runner.run(dry_run=args.dry_run)
     for action in actions:
         print(f"{action.status.value:<17} {action.path}")
+    if runner.backfilled_report_versions:
+        print(f"{'BACKFILL':<17} {runner.backfilled_report_versions} report version(s)")
     return 0
 
 
@@ -188,6 +192,12 @@ _VERBS: tuple[tuple[tuple[str, ...], str, _Configure, _Handler], ...] = (
     (("maps", "coverage"), "report concept map coverage", configure_maps_coverage, run_maps_coverage),
     (("intake", "ingest"), "retain and parse HL7 byte streams", configure_ingest, run_ingest),
     (("intake", "load"), "load OBR envelopes into SDC and NAACCR", configure_load, run_load),
+    (
+        ("reports", "supersede"),
+        "select a successor report version in place of its predecessor",
+        configure_supersede,
+        run_supersede,
+    ),
 )
 
 _TARGET = argparse.ArgumentParser(add_help=False)

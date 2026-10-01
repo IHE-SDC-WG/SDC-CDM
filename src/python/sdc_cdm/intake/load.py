@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from sdc_cdm.db.backend import DatabaseBackend
+from sdc_cdm.reports import is_accessioned, record_report_version
 
 
 @dataclass(frozen=True)
@@ -165,7 +166,10 @@ def _value_ids(backend: DatabaseBackend, envelope: dict[str, Any], envelope_id: 
 
 
 def load_message(backend: DatabaseBackend, message_id: int, *, algorithm: str) -> LoadResult:
-    """Load all envelopes of a parsed message atomically, skipping exact-byte resends."""
+    """Load all envelopes of a parsed message atomically, skipping exact-byte resends.
+
+    Each accessioned report gets its report version in the same transaction.
+    """
 
     version = backend.fetch_one(
         "SELECT dd_version_id FROM naaccr.data_dictionary_version "
@@ -175,8 +179,8 @@ def load_message(backend: DatabaseBackend, message_id: int, *, algorithm: str) -
         raise ValueError(f"no current data dictionary version for {algorithm}")
     dd_version_id = int(version[0])
     message = backend.fetch_one(
-        "SELECT is_content_duplicate, parse_status FROM intake.inbound_message "
-        "WHERE inbound_message_id = ?", (message_id,),
+        "SELECT is_content_duplicate, parse_status, sending_facility "
+        "FROM intake.inbound_message WHERE inbound_message_id = ?", (message_id,),
     )
     if message is None:
         raise ValueError(f"unknown inbound message {message_id}")
@@ -242,6 +246,13 @@ def load_message(backend: DatabaseBackend, message_id: int, *, algorithm: str) -
                         (message_id, f"OBR {envelope['source']['obr_ordinal']}: "
                          "complete inputs or a unique exact staging rule unavailable"),
                     )
+            if is_accessioned(accession):
+                record_report_version(
+                    backend, sdc_report_id=report_id, person_id=person_id,
+                    sending_facility=message[2], accession=accession,
+                    report_loinc=report.get("report_loinc"),
+                    inbound_envelope_id=envelope_id, inbound_message_id=message_id,
+                )
             report_count += 1
             value_count += len(ids)
     return LoadResult(report_count, value_count, 0)

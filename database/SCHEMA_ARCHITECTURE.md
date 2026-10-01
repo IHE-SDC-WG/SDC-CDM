@@ -48,6 +48,13 @@ regression fixtures seed the matching OMOP person explicitly.
   schema-scoped, so `naaccr.value_code_collision` lists current-generation pairs
   whose descriptions differ across schemas (#100); `concept_map_coverage` reports
   coverage by layer for the generation that built the map rows.
+- `report_group` is one accession for one intake patient at one sending facility, and
+  `report_version` holds one row per loaded, accessioned `sdc_report`, with its envelope, raw
+  message, report LOINC (the report type), selection flag, and predecessor. The first version of
+  each type is selected; `reports supersede` is the only thing that moves selection. Unique
+  indexes allow one selected version per group and type and one successor per predecessor, and a
+  composite foreign key keeps each predecessor in its successor's group and type. Missing
+  facility or LOINC is stored as `''`. Accession-less reports get no group.
 
 `dict fetch` stamps its CSVs with `data_dictionary_version.csv` and `ssdi fetch` stamps its CSVs with
 `ssdi_version.csv`; `dict load` requires the two stamps to agree and injects one `dd_version_id` into

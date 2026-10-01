@@ -48,6 +48,7 @@ def test_real_manifest_script_counts_are_pinned() -> None:
             "database/schemas/omop/ddl/sqlite/3_OMOPCDM_sqlite_5.4_constraints.sql": (0, 0),
             "database/schemas/omop/ddl/sqlite/4_OMOPCDM_sqlite_5.4_indices.sql": (70, 0),
             "database/schemas/naaccr/ddl/sqlite/1_naaccr_sqlite_ddl.sql": (37, 2),
+            "database/schemas/naaccr/ddl/sqlite/3_naaccr_report_version_sqlite.sql": (5, 2),
             "database/schemas/sdc/ddl/sqlite/1_sdc_sqlite_ddl.sql": (13, 2),
         },
         "sqlserver": {
@@ -60,6 +61,7 @@ def test_real_manifest_script_counts_are_pinned() -> None:
             "database/schemas/naaccr/ddl/sqlserver/0_naaccr_dictionary_sqlserver.sql": (23, 23),
             "database/schemas/naaccr/ddl/sqlserver/1_naaccr_sqlserver_ddl.sql": (4, 4),
             "database/schemas/naaccr/ddl/sqlserver/2_naaccr_concept_maps_sqlserver.sql": (8, 8),
+            "database/schemas/naaccr/ddl/sqlserver/3_naaccr_report_version_sqlserver.sql": (3, 3),
             "database/schemas/sdc/ddl/sqlserver/1_sdc_sqlserver_ddl.sql": (12, 12),
         },
     }

@@ -88,6 +88,20 @@ schema selection currently accepts complete NAACCR item inputs and one unambiguo
 otherwise `schema_id_number` stays null with an intake diagnostic. HL7 eCP input never resolves a
 staging schema today, because its answers carry CAP codes rather than NAACCR item numbers.
 
+Loading also records a report version in `naaccr.report_version` for each accessioned report. A
+report group is one accession for one patient at one sending facility, and its report LOINC is the
+report type. The first version of each type stays selected until you name a successor, so a
+corrected report that arrives later never takes over by itself:
+
+```bash
+python -m sdc_cdm reports supersede --dialect sqlite --db out/demo.db 12 15
+```
+
+Both arguments are `sdc_report_id` values: the selected predecessor, then an unselected version
+of the same group and type. The command rejects cross-group and cross-type pairs, cycles, and
+links that already exist. It names the broken rule and changes nothing. `build` backfills versions
+for reports loaded before this table existed.
+
 ## Tool support
 
 | Tool | SQLite | SQL Server |
@@ -97,6 +111,7 @@ staging schema today, because its answers carry CAP codes rather than NAACCR ite
 | Python `sdc_cdm dict fetch` | Network-only; target ignored | Network-only; target ignored |
 | Python `sdc_cdm ssdi fetch` | Network-only; target ignored | Network-only; target ignored |
 | Python `sdc_cdm intake ingest` / `intake load` | Supported | Supported |
+| Python `sdc_cdm reports supersede` | Supported | Supported |
 | C# SDC XML importer | Supported | Not supported |
 
 The C# project is deliberately limited to SDC XML template and response persistence. It uses

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import os
 import uuid
 from pathlib import Path
@@ -129,12 +130,36 @@ def _seed_source_rows(backend: DatabaseBackend) -> tuple[int, str]:
         (patient_id, f"patient-{token}"),
     )
 
+    # Accessioned reports carry envelope provenance, as loaded reports do, so a
+    # later build on a shared database can backfill their report versions.
+    raw = f"raw-{token}".encode()
+    message_id = _insert_id(
+        backend,
+        "INSERT INTO intake.inbound_message "
+        "(source_format, media_type, raw_blob, raw_sha256, byte_length) VALUES (?, ?, ?, ?, ?)",
+        "INSERT INTO intake.inbound_message "
+        "(source_format, media_type, raw_blob, raw_sha256, byte_length) "
+        "OUTPUT INSERTED.inbound_message_id VALUES (?, ?, ?, ?, ?)",
+        ("hl7v2", "application/hl7-v2+er7", raw, hashlib.sha256(raw).hexdigest(), len(raw)),
+    )
+
+    def insert_envelope(ordinal: int) -> int:
+        columns = "inbound_message_id, ordinal, envelope_json, envelope_version"
+        return _insert_id(
+            backend,
+            f"INSERT INTO intake.inbound_envelope ({columns}) VALUES (?, ?, '{{}}', '1')",
+            f"INSERT INTO intake.inbound_envelope ({columns}) "
+            "OUTPUT INSERTED.inbound_envelope_id VALUES (?, ?, '{}', '1')",
+            (message_id, ordinal),
+        )
+
     def insert_report(
         guid_suffix: str,
         report_accession: str | None,
         report_text: str,
         duplicate: int,
         first_seen: int | None,
+        envelope_id: int | None = None,
     ) -> int:
         parameters = (
             "Adrenal",
@@ -145,22 +170,26 @@ def _seed_source_rows(backend: DatabaseBackend) -> tuple[int, str]:
             report_text,
             duplicate,
             first_seen,
+            envelope_id,
         )
         columns = (
             "template_name, template_version, template_instance_guid, person_id, "
-            "report_accession, report_text, is_duplicate_accession, first_seen_report_id"
+            "report_accession, report_text, is_duplicate_accession, first_seen_report_id, "
+            "inbound_envelope_id"
         )
         return _insert_id(
             backend,
-            f"INSERT INTO sdc.sdc_report ({columns}) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            f"INSERT INTO sdc.sdc_report ({columns}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
             f"INSERT INTO sdc.sdc_report ({columns}) OUTPUT INSERTED.sdc_report_id "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
             parameters,
         )
 
-    primary_report = insert_report("1", accession, "Report text", 0, None)
+    primary_report = insert_report(
+        "1", accession, "Report text", 0, None, insert_envelope(1)
+    )
     duplicate_report = insert_report(
-        "2", accession, "Duplicate report text", 1, primary_report
+        "2", accession, "Duplicate report text", 1, primary_report, insert_envelope(2)
     )
     null_accession_report = insert_report(
         "3", None, "No-accession report (NULL)", 0, None

@@ -17,6 +17,7 @@ from sdc_cdm.db.manifest import DatabaseManifest, ManifestEntry
 from sdc_cdm.db.paths import repository_path
 from sdc_cdm.db.run_log import RunLog
 from sdc_cdm.db.sqlscript import split_script
+from sdc_cdm.reports import backfill_report_versions
 
 
 class BuildStatus(str, Enum):
@@ -57,6 +58,7 @@ class BuildRunner:
         self.accept_changed_hashes = accept_changed_hashes
         self.ledger = MigrationLedger(backend)
         self.run_log = RunLog(backend)
+        self.backfilled_report_versions = 0
 
     def _naaccr_value_shape(self) -> tuple[bool, bool]:
         """Return whether the table has the new column and nullable item number."""
@@ -247,6 +249,8 @@ class BuildRunner:
                 )
                 actions.append(BuildAction(entry.path, status))
             self._verify_naaccr_value_shape()
+            # Reports loaded before report versions existed get theirs now.
+            self.backfilled_report_versions = backfill_report_versions(self.backend)
             self.run_log.finish(run_id)
             return actions
         except Exception as exc:

@@ -21,6 +21,9 @@ dictionary fetch/load/verify, SSDI fetch, map build/coverage, and HL7 intake/loa
 SQL Server. The importer writes no OMOP rows. The only bridge is still the pre-rebuild
 `database/etl/<dialect>/1_naaccr_sdc_to_omop.sql`, applied directly by tests: it writes `note` and
 `measurement` only, embeds concept literals, and has no Python runner. Phase 4 replaces it.
+Phase 4.0 adds `naaccr.report_group` and `naaccr.report_version`: `intake load` records each
+accessioned report's version, `build` backfills earlier loads, and `reports supersede` moves
+selection. The existing bridge does not read selection yet.
 
 **Before the rebuild (historical).** The three-schema design (`naaccr` / `sdc` / `omop`) is sound
 and should survive. What didn't work was everything around it:
@@ -352,6 +355,7 @@ resource glob in `BuildSchema()` (`SdcCdmInSqlite.cs:127-135`).
 | `dict verify` | Counts-only checks for the declared dictionary version and section distribution. | Python, offline SQL counts |
 | `maps build` | layered concept-map build | set-based SQL, Python-driven |
 | `intake ingest`, `intake load` | HL7 → `intake` (blob + envelope), then `intake` → `naaccr` + `sdc` | **Python parser**, then Python-driven SQL inline in `intake/load.py` |
+| `reports supersede` | move report-version selection to a named successor (4.0) | Python, `reports/versions.py` |
 | `bridge` | `naaccr` + `sdc` → `omop` | set-based SQL, Python-driven |
 | `validate` | DQ assertions | set-based SQL, Python-driven |
 | `export` | `omop` → CSV bundle + manifest | Python (CSV writing) |
