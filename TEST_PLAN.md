@@ -299,11 +299,16 @@ Each check names its owning child issue under #94: 4.0 #141, 4.1 #142, 4.2 #143,
 4.4 #145, 4.5 #146. #94 closes when every check passes on both
 dialects.
 
-- [ ] **BRIDGE-01** *(4.0)* Backfill records version relationships for every loaded report
+- [x] **BRIDGE-01** *(4.0)* Backfill records version relationships for every loaded report
   without deleting source rows; the first version of each report type in a group is selected;
   a newer receipt alone does not change selection.
-- [ ] **BRIDGE-02** *(4.0)* Supersession rejects cross-group and cross-type pairs, cycles, and a
+  `test_report_versions.py`: `test_loads_version_reports_and_keep_the_first_of_each_type_selected`,
+  `test_backfill_replays_load_selection_without_rewriting_sources`,
+  `test_backfill_names_reports_missing_source_links_and_writes_nothing`.
+- [x] **BRIDGE-02** *(4.0)* Supersession rejects cross-group and cross-type pairs, cycles, and a
   second successor for the same predecessor, and writes nothing on rejection.
+  `test_report_versions.py`: `test_invalid_supersessions_name_their_rule_and_change_nothing`,
+  `test_supersession_chain_advances_selection_one_version_at_a_time`.
 - [ ] **BRIDGE-03** *(4.1)* `sdc-cdm bridge` executes the manifest's ordered bridge entries in
   one transaction; every `database/etl/<dialect>/*.sql` file is listed or excluded; a missing
   seed, constant, or built map exits non-zero before any write and names it; `etl.run` records

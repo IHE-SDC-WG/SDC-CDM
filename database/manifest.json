@@ -37,6 +37,11 @@
         "schema": "naaccr"
       },
       {
+        "path": "database/schemas/naaccr/ddl/sqlite/3_naaccr_report_version_sqlite.sql",
+        "reapply_on_change": true,
+        "schema": "naaccr"
+      },
+      {
         "path": "database/schemas/sdc/ddl/sqlite/1_sdc_sqlite_ddl.sql",
         "reapply_on_change": true,
         "schema": "sdc"
@@ -85,6 +90,11 @@
       },
       {
         "path": "database/schemas/naaccr/ddl/sqlserver/2_naaccr_concept_maps_sqlserver.sql",
+        "reapply_on_change": true,
+        "schema": "naaccr"
+      },
+      {
+        "path": "database/schemas/naaccr/ddl/sqlserver/3_naaccr_report_version_sqlserver.sql",
         "reapply_on_change": true,
         "schema": "naaccr"
       },

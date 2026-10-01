@@ -38,6 +38,7 @@ def test_expected_commands_are_registered() -> None:
         "maps coverage",
         "intake ingest",
         "intake load",
+        "reports supersede",
     )
     with pytest.raises(SystemExit) as exc_info:
         main(["ingest"])

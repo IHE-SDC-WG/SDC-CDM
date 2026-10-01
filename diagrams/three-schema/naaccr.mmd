@@ -167,6 +167,26 @@ erDiagram
     INTEGER dd_version_id FK
   }
 
+  %% Report history (database/schemas/naaccr/ddl/sqlite/3_naaccr_report_version_sqlite.sql):
+  %% one group per (patient, sending facility, accession); one version per accessioned report.
+  REPORT_GROUP {
+    INTEGER report_group_id PK
+    INTEGER person_id
+    TEXT sending_facility
+    TEXT report_accession
+  }
+
+  REPORT_VERSION {
+    INTEGER report_version_id PK
+    INTEGER report_group_id FK
+    TEXT report_loinc
+    INTEGER sdc_report_id UK
+    INTEGER inbound_envelope_id
+    INTEGER inbound_message_id
+    INTEGER is_selected
+    INTEGER predecessor_sdc_report_id FK
+  }
+
   %% Relationships
   DATA_DICTIONARY_VERSION ||--o{ NAACCR_ITEM : "dd_version_id"
   DATA_DICTIONARY_VERSION ||--o{ STAGING_SCHEMA : "dd_version_id"
@@ -191,3 +211,6 @@ erDiagram
   NAACCR_ITEM ||..o{ NAACCR_VALUE : "verified item_num only"
   STAGING_SCHEMA ||..o{ NAACCR_VALUE : "schema_id_number (no FK)"
   SDC_REPORT ||..o{ NAACCR_VALUE : "sdc_report_id (cross-schema, no FK)"
+  REPORT_GROUP ||--o{ REPORT_VERSION : "report_group_id"
+  REPORT_VERSION |o--o| REPORT_VERSION : "predecessor (same group and type)"
+  SDC_REPORT ||..o| REPORT_VERSION : "sdc_report_id (cross-schema, no FK)"
