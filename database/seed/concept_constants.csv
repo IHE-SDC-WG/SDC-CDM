@@ -1,7 +1,9 @@
 constant_name,vocabulary_id,concept_code
-note_type_ehr,Type Concept,EHR
-measurement_type_registry,Type Concept,Registry
+note_type_ehr,Type Concept,OMOP4976890
+measurement_type_registry,Type Concept,OMOP4976952
 field_note_note_id,CDM,note.note_id
 unmapped,None,No matching concept
 gender_male,Gender,M
 gender_female,Gender,F
+period_type_registry,Type Concept,OMOP4976952
+cdm_version,CDM,CDM v5.4.0

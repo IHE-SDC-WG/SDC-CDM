@@ -828,11 +828,13 @@ vocabulary and **fails loudly if absent** rather than letting the ETL write a wr
 
 | Constant | Resolved from |
 |---|---|
-| `note_type_ehr` | `Type Concept` / `EHR` (today's literal `32817`) |
-| `measurement_type_registry` | `Type Concept` / `Registry` (`32879`) |
-| `field_note_note_id` | `CDM` / `note.note_id` (`1147289`) |
-| `unmapped` | `None` / `0` |
+| `note_type_ehr` | `Type Concept` / `OMOP4976890` (today's literal `32817`) |
+| `measurement_type_registry` | `Type Concept` / `OMOP4976952` (`32879`) |
+| `field_note_note_id` | `CDM` / `note.note_id`, which Athena does not contain; correct it in 4.3 (`1147289` is `dose_era.person_id`) |
+| `unmapped` | `None` / `No matching concept` (`0`) |
 | `gender_male`, `gender_female` | `Gender` / `M`, `F` (`8507`, `8532`) |
+| `period_type_registry` | `Type Concept` / `OMOP4976952` (`32879`), from 4.1 |
+| `cdm_version` | `CDM` / `CDM v5.4.0` (`756265`), from 4.1 |
 
 The ETL scripts join `etl.concept_constant` instead of embedding literals. This also removes the
 `// TODO: confirm the exact field concept_id` at `SdcCdmInSqlite.cs:1228` and makes

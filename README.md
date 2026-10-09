@@ -102,6 +102,35 @@ of the same group and type. The command rejects cross-group and cross-type pairs
 links that already exist. It names the broken rule and changes nothing. `build` backfills versions
 for reports loaded before this table existed.
 
+## OMOP bridge
+
+The bridge derives stock OMOP rows from the loaded `naaccr` and `sdc` data. It runs the ordered
+`bridge` entries in [`database/manifest.json`](database/manifest.json) inside one transaction:
+
+```bash
+python -m sdc_cdm vocab load --dialect sqlite --db out/demo.db
+python -m sdc_cdm constants resolve --dialect sqlite --db out/demo.db
+python -m sdc_cdm maps build --dialect sqlite --db out/demo.db
+python -m sdc_cdm bridge --dialect sqlite --db out/demo.db
+```
+
+Before it writes anything, `bridge` checks the seed files, the concept constants its scripts need,
+the loaded vocabulary version, and a concept map built for the current dictionary. It names every
+missing prerequisite and exits non-zero. A script that finds unusable source rows, such as a
+patient with no birth year, names them and rolls back the whole run. Either way, `etl.run` keeps
+the failed run and its error. A successful run prints each script's row counts, and an unchanged
+rerun changes nothing.
+
+Phase 4.1 adds one script. It writes `omop.person` from `intake.patient` with
+`person_id = patient_id`, and it keeps a year-only birth date as `year_of_birth` alone. It writes
+one unpadded `observation_period` per person from the selected report versions: it uses NAACCR
+date of diagnosis (item 390) to date of last contact (item 1750) when both are full dates, and
+otherwise the earliest and latest day-precision observation dates. The method and source
+`naaccr_value` IDs for each period are recorded in `etl.observation_period_derivation`.
+`omop.cdm_source` comes from [`database/seed/cdm_source.csv`](database/seed/cdm_source.csv), a
+synthetic test source. A real deployment replaces that file, or passes `--seed-dir`, with its own
+source metadata.
+
 ## Tool support
 
 | Tool | SQLite | SQL Server |
@@ -112,6 +141,7 @@ for reports loaded before this table existed.
 | Python `sdc_cdm ssdi fetch` | Network-only; target ignored | Network-only; target ignored |
 | Python `sdc_cdm intake ingest` / `intake load` | Supported | Supported |
 | Python `sdc_cdm reports supersede` | Supported | Supported |
+| Python `sdc_cdm bridge` | Supported | Supported |
 | C# SDC XML importer | Supported | Not supported |
 
 The C# project is deliberately limited to SDC XML template and response persistence. It uses
@@ -132,7 +162,8 @@ dotnet test src/csharp/SdcCdm.Sdc.Tests
 ```
 
 The Python suite covers the manifest, migration ledger, schema contracts, NAACCR dictionary client
-and transaction behavior, parser utilities, and the SQLite bridge rerun regression. SQL Server runs
+and transaction behavior, parser utilities, the bridge runner, and the pre-rebuild bridge rerun
+regression. SQL Server runs
 the same suite for pull requests and pushes to `main` when database, Python, or tool paths change.
 The C# suite covers only the SDC XML library.
 

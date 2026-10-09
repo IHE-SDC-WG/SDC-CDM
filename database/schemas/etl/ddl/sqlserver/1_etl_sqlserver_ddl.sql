@@ -41,3 +41,38 @@ BEGIN
     );
 END
 GO
+
+-- How the bridge derived each omop.observation_period row, keyed by its
+-- observation_period_id, and the naaccr.naaccr_value rows that set its start
+-- and end dates. Logical references to omop and naaccr; not enforced FKs.
+IF OBJECT_ID('etl.observation_period_derivation', 'U') IS NULL
+BEGIN
+    CREATE TABLE etl.observation_period_derivation (
+        observation_period_id INT NOT NULL PRIMARY KEY,
+        person_id INT NOT NULL UNIQUE,
+        derivation NVARCHAR(40) NOT NULL
+            CHECK (derivation IN ('naaccr_diagnosis_to_last_contact', 'clinical_date_span')),
+        start_naaccr_value_id INT NOT NULL,
+        end_naaccr_value_id INT NOT NULL
+    );
+END
+GO
+
+-- The cdm_source seed row of the current bridge run. Python replaces it inside
+-- the run's data transaction; the bridge adds the vocabulary version and the
+-- CDM version concept when it writes omop.cdm_source.
+IF OBJECT_ID('etl.cdm_source_seed', 'U') IS NULL
+BEGIN
+    CREATE TABLE etl.cdm_source_seed (
+        cdm_source_name NVARCHAR(255) NOT NULL,
+        cdm_source_abbreviation NVARCHAR(25) NOT NULL,
+        cdm_holder NVARCHAR(255) NOT NULL,
+        source_description NVARCHAR(MAX) NULL,
+        source_documentation_reference NVARCHAR(255) NULL,
+        cdm_etl_reference NVARCHAR(255) NULL,
+        source_release_date DATE NOT NULL,
+        cdm_release_date DATE NOT NULL,
+        cdm_version NVARCHAR(10) NOT NULL
+    );
+END
+GO

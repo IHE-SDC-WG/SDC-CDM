@@ -98,6 +98,19 @@ class DatabaseBackend(ABC):
 
         self.connection.cursor().execute(sql, tuple(parameters))
 
+    def execute_uncommitted_returning(self, sql: str) -> list[Any] | None:
+        """Execute one script unit without committing.
+
+        Returns the unit's rows, or None when it produces no result set, so a
+        caller can run DML and row-returning checks from one script in order.
+        """
+
+        cursor = self.connection.cursor()
+        cursor.execute(sql)
+        if cursor.description is None:
+            return None
+        return list(cursor.fetchall())
+
     def _bulk_cursor(self) -> Any:
         """Return the one cursor bulk_insert reuses for every batch."""
 
