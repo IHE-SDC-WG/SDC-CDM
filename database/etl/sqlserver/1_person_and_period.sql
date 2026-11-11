@@ -15,10 +15,12 @@
   selected report versions only. When those reports carry a day-precision
   NAACCR item 390 (date of diagnosis) and item 1750 (date of last contact), the
   period runs from the earliest 390 to the latest 1750. Otherwise it spans the
-  earliest and latest naaccr_value.observation_date. Partial dates never set a
-  boundary, and no date is ever inferred or taken from today.
-  etl.observation_period_derivation records the rule and the naaccr_value rows
-  that set each boundary.
+  earliest and latest day-precision clinical date: each
+  naaccr_value.observation_date, plus the envelope report.observation_date of
+  each selected report that has no naaccr_value rows (narrative reports keep
+  their date only there). Partial dates never set a boundary, and no date is
+  ever inferred or taken from today. etl.observation_period_derivation records
+  the rule and the naaccr_value row or inbound envelope that set each boundary.
 
   Every write updates changed rows or inserts missing ones, so an unchanged
   rerun writes nothing. EXISTS (... EXCEPT ...) is the NULL-safe "differs" test.
@@ -86,21 +88,52 @@ last_contact AS (
     FROM naaccr_day
     WHERE item_num = 1750 AND day IS NOT NULL
 ),
-first_clinical AS (
+report_day AS (
+    SELECT
+        el.person_id,
+        e.inbound_envelope_id,
+        TRY_CONVERT(date, CONCAT(
+            RIGHT(CONCAT('000', JSON_VALUE(e.envelope_json, '$.report.observation_date.y')), 4),
+            '-',
+            RIGHT(CONCAT('0', JSON_VALUE(e.envelope_json, '$.report.observation_date.m')), 2),
+            '-',
+            RIGHT(CONCAT('0', JSON_VALUE(e.envelope_json, '$.report.observation_date.d')), 2)
+        ), 23) AS day
+    FROM naaccr.report_version rv
+    JOIN intake.envelope_load el ON el.inbound_envelope_id = rv.inbound_envelope_id
+    JOIN intake.inbound_envelope e ON e.inbound_envelope_id = rv.inbound_envelope_id
+    WHERE rv.is_selected = 1
+      AND JSON_VALUE(e.envelope_json, '$.report.observation_date.d') IS NOT NULL
+      AND NOT EXISTS (
+          SELECT 1 FROM naaccr.naaccr_value v WHERE v.sdc_report_id = rv.sdc_report_id
+      )
+),
+-- A value date sorts before a report date on the same day, so provenance
+-- prefers the more specific source.
+clinical_day AS (
     SELECT person_id, observation_date AS day, naaccr_value_id,
-           ROW_NUMBER() OVER (
-               PARTITION BY person_id ORDER BY observation_date, naaccr_value_id
-           ) AS n
+           CAST(NULL AS BIGINT) AS inbound_envelope_id, 0 AS source_order,
+           CAST(naaccr_value_id AS BIGINT) AS source_id
     FROM selected_value
     WHERE observation_date IS NOT NULL
+    UNION ALL
+    SELECT person_id, day, NULL, inbound_envelope_id, 1, inbound_envelope_id
+    FROM report_day
+    WHERE day IS NOT NULL
+),
+first_clinical AS (
+    SELECT person_id, day, naaccr_value_id, inbound_envelope_id,
+           ROW_NUMBER() OVER (
+               PARTITION BY person_id ORDER BY day, source_order, source_id
+           ) AS n
+    FROM clinical_day
 ),
 last_clinical AS (
-    SELECT person_id, observation_date AS day, naaccr_value_id,
+    SELECT person_id, day, naaccr_value_id, inbound_envelope_id,
            ROW_NUMBER() OVER (
-               PARTITION BY person_id ORDER BY observation_date DESC, naaccr_value_id
+               PARTITION BY person_id ORDER BY day DESC, source_order, source_id
            ) AS n
-    FROM selected_value
-    WHERE observation_date IS NOT NULL
+    FROM clinical_day
 )
 SELECT
     p.patient_id AS person_id,
@@ -114,9 +147,13 @@ SELECT
     CASE WHEN dx.person_id IS NOT NULL AND lc.person_id IS NOT NULL
         THEN dx.naaccr_value_id ELSE fc.naaccr_value_id END AS start_naaccr_value_id,
     CASE WHEN dx.person_id IS NOT NULL AND lc.person_id IS NOT NULL
+        THEN NULL ELSE fc.inbound_envelope_id END AS start_inbound_envelope_id,
+    CASE WHEN dx.person_id IS NOT NULL AND lc.person_id IS NOT NULL
         THEN lc.day ELSE lcl.day END AS end_date,
     CASE WHEN dx.person_id IS NOT NULL AND lc.person_id IS NOT NULL
-        THEN lc.naaccr_value_id ELSE lcl.naaccr_value_id END AS end_naaccr_value_id
+        THEN lc.naaccr_value_id ELSE lcl.naaccr_value_id END AS end_naaccr_value_id,
+    CASE WHEN dx.person_id IS NOT NULL AND lc.person_id IS NOT NULL
+        THEN NULL ELSE lcl.inbound_envelope_id END AS end_inbound_envelope_id
 INTO #bridge_period
 FROM intake.patient p
 LEFT JOIN diagnosis dx ON dx.person_id = p.patient_id AND dx.n = 1
@@ -225,22 +262,27 @@ UPDATE d
 SET person_id = b.person_id,
     derivation = b.derivation,
     start_naaccr_value_id = b.start_naaccr_value_id,
-    end_naaccr_value_id = b.end_naaccr_value_id
+    start_inbound_envelope_id = b.start_inbound_envelope_id,
+    end_naaccr_value_id = b.end_naaccr_value_id,
+    end_inbound_envelope_id = b.end_inbound_envelope_id
 FROM etl.observation_period_derivation d
 JOIN omop.observation_period o ON o.observation_period_id = d.observation_period_id
 JOIN #bridge_period b ON b.person_id = o.person_id
 WHERE EXISTS (
-    SELECT d.person_id, d.derivation, d.start_naaccr_value_id, d.end_naaccr_value_id
+    SELECT d.person_id, d.derivation, d.start_naaccr_value_id, d.start_inbound_envelope_id,
+           d.end_naaccr_value_id, d.end_inbound_envelope_id
     EXCEPT
-    SELECT b.person_id, b.derivation, b.start_naaccr_value_id, b.end_naaccr_value_id
+    SELECT b.person_id, b.derivation, b.start_naaccr_value_id, b.start_inbound_envelope_id,
+           b.end_naaccr_value_id, b.end_inbound_envelope_id
 );
 GO
 
 INSERT INTO etl.observation_period_derivation (
-    observation_period_id, person_id, derivation, start_naaccr_value_id, end_naaccr_value_id
+    observation_period_id, person_id, derivation, start_naaccr_value_id,
+    start_inbound_envelope_id, end_naaccr_value_id, end_inbound_envelope_id
 )
 SELECT o.observation_period_id, b.person_id, b.derivation, b.start_naaccr_value_id,
-       b.end_naaccr_value_id
+       b.start_inbound_envelope_id, b.end_naaccr_value_id, b.end_inbound_envelope_id
 FROM omop.observation_period o
 JOIN #bridge_period b ON b.person_id = o.person_id
 WHERE NOT EXISTS (

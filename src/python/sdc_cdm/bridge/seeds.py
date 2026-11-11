@@ -26,6 +26,9 @@ CDM_SOURCE_COLUMNS = (
     ("cdm_version", 10, True),
 )
 _DATE_COLUMNS = {"source_release_date", "cdm_release_date"}
+# The shipped OMOP DDL is CDM 5.4, and the bridge pairs cdm_version with the
+# cdm_version constant (CDM v5.4.0); any other value would contradict it.
+CDM_VERSION = "5.4"
 
 
 def read_cdm_source(path: Path) -> tuple[str | None, ...]:
@@ -56,6 +59,10 @@ def read_cdm_source(path: Path) -> tuple[str | None, ...]:
                 valid = False
             if not valid:
                 raise ValueError(f"{name} must be a YYYY-MM-DD date, got {value!r}")
+        elif name == "cdm_version" and value != CDM_VERSION:
+            raise ValueError(
+                f"cdm_version must be {CDM_VERSION!r}, the shipped OMOP schema, got {value!r}"
+            )
         values.append(value)
     return tuple(values)
 

@@ -102,7 +102,8 @@ standard OMOP event and source-value columns.
 - `concept_constant` holds the vocabulary constants that `constants resolve` found for
   `database/seed/concept_constants.csv`.
 - `observation_period_derivation` records, for each bridge-written `omop.observation_period`, its
-  derivation rule and the `naaccr.naaccr_value` rows that set its start and end dates. It keeps
+  derivation rule and the `naaccr.naaccr_value` row or `intake.inbound_envelope` (for a report
+  date from a report with no values) that set each of its start and end dates. It keeps
   that provenance out of the stock OMOP table.
 - `cdm_source_seed` holds the current bridge run's `cdm_source.csv` row; Python replaces it inside
   the run's transaction.

@@ -39,8 +39,9 @@ constant. The tracked row describes a **synthetic test source** with fixed
 release dates. A real deployment replaces it with its own source name, holder,
 documentation, and release dates, or passes `--seed-dir` to `bridge`. The bridge
 rejects a missing file, a changed header, any number of data rows other than
-one, a blank required field, a value longer than its SQL Server CDM column, and
-a date that is not `YYYY-MM-DD`.
+one, a blank required field, a value longer than its SQL Server CDM column, a
+date that is not `YYYY-MM-DD`, and a `cdm_version` other than `5.4` (the shipped
+OMOP schema, which the bridge pairs with the `CDM v5.4.0` concept).
 
 ## NAACCR concept maps
 

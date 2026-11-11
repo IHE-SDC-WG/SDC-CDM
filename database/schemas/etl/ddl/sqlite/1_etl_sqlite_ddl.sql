@@ -30,15 +30,25 @@ CREATE TABLE IF NOT EXISTS etl.schema_migration (
 );
 
 -- How the bridge derived each omop.observation_period row, keyed by its
--- observation_period_id, and the naaccr.naaccr_value rows that set its start
--- and end dates. Logical references; not enforced FKs (cross-schema/attached-DB).
+-- observation_period_id, and the naaccr.naaccr_value row or intake.inbound_envelope
+-- that set its start and end dates. Logical references; not enforced FKs
+-- (cross-schema/attached-DB).
 CREATE TABLE IF NOT EXISTS etl.observation_period_derivation (
     observation_period_id INTEGER NOT NULL PRIMARY KEY,
     person_id INTEGER NOT NULL UNIQUE,
     derivation TEXT NOT NULL
         CHECK (derivation IN ('naaccr_diagnosis_to_last_contact', 'clinical_date_span')),
-    start_naaccr_value_id INTEGER NOT NULL,
-    end_naaccr_value_id INTEGER NOT NULL
+    start_naaccr_value_id INTEGER NULL,
+    start_inbound_envelope_id INTEGER NULL,
+    end_naaccr_value_id INTEGER NULL,
+    end_inbound_envelope_id INTEGER NULL,
+    -- Each boundary comes from exactly one source; the NAACCR rule only from values.
+    CHECK ((start_naaccr_value_id IS NULL AND start_inbound_envelope_id IS NOT NULL)
+        OR (start_naaccr_value_id IS NOT NULL AND start_inbound_envelope_id IS NULL)),
+    CHECK ((end_naaccr_value_id IS NULL AND end_inbound_envelope_id IS NOT NULL)
+        OR (end_naaccr_value_id IS NOT NULL AND end_inbound_envelope_id IS NULL)),
+    CHECK (derivation = 'clinical_date_span'
+        OR (start_naaccr_value_id IS NOT NULL AND end_naaccr_value_id IS NOT NULL))
 );
 
 -- The cdm_source seed row of the current bridge run. Python replaces it inside

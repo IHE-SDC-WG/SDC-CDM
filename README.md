@@ -125,8 +125,10 @@ Phase 4.1 adds one script. It writes `omop.person` from `intake.patient` with
 `person_id = patient_id`, and it keeps a year-only birth date as `year_of_birth` alone. It writes
 one unpadded `observation_period` per person from the selected report versions: it uses NAACCR
 date of diagnosis (item 390) to date of last contact (item 1750) when both are full dates, and
-otherwise the earliest and latest day-precision observation dates. The method and source
-`naaccr_value` IDs for each period are recorded in `etl.observation_period_derivation`.
+otherwise the earliest and latest day-precision clinical dates. Clinical dates are the value
+observation dates plus the report date of any selected report with no NAACCR values, such as a
+narrative report. The method and the source `naaccr_value` or `inbound_envelope` ID for each
+boundary are recorded in `etl.observation_period_derivation`.
 `omop.cdm_source` comes from [`database/seed/cdm_source.csv`](database/seed/cdm_source.csv), a
 synthetic test source. A real deployment replaces that file, or passes `--seed-dir`, with its own
 source metadata.

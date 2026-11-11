@@ -15,10 +15,12 @@
   selected report versions only. When those reports carry a day-precision
   NAACCR item 390 (date of diagnosis) and item 1750 (date of last contact), the
   period runs from the earliest 390 to the latest 1750. Otherwise it spans the
-  earliest and latest day-precision naaccr_value.observation_date. Partial
-  dates never set a boundary, and no date is ever inferred or taken from
-  today. etl.observation_period_derivation records the rule and the
-  naaccr_value rows that set each boundary.
+  earliest and latest day-precision clinical date: each
+  naaccr_value.observation_date, plus the envelope report.observation_date of
+  each selected report that has no naaccr_value rows (narrative reports keep
+  their date only there). Partial dates never set a boundary, and no date is
+  ever inferred or taken from today. etl.observation_period_derivation records
+  the rule and the naaccr_value row or inbound envelope that set each boundary.
 
   Every write updates changed rows or inserts missing ones, so an unchanged
   rerun writes nothing.
@@ -71,6 +73,8 @@ naaccr_day AS (
     WHERE item_num IN (390, 1750)
       AND length(item_value) = 8
       AND item_value NOT GLOB '*[^0-9]*'
+      -- SQLite's date() accepts year 0000; SQL Server's date type starts at 0001.
+      AND substr(item_value, 1, 4) <> '0000'
 ),
 diagnosis AS (
     SELECT person_id, day, naaccr_value_id,
@@ -84,21 +88,48 @@ last_contact AS (
     FROM naaccr_day
     WHERE item_num = 1750 AND date(day) = day
 ),
-first_clinical AS (
+report_day AS (
+    SELECT
+        el.person_id,
+        e.inbound_envelope_id,
+        printf('%04d-%02d-%02d',
+               json_extract(e.envelope_json, '$.report.observation_date.y'),
+               json_extract(e.envelope_json, '$.report.observation_date.m'),
+               json_extract(e.envelope_json, '$.report.observation_date.d')) AS day
+    FROM naaccr.report_version rv
+    JOIN intake.envelope_load el ON el.inbound_envelope_id = rv.inbound_envelope_id
+    JOIN intake.inbound_envelope e ON e.inbound_envelope_id = rv.inbound_envelope_id
+    WHERE rv.is_selected = 1
+      AND json_extract(e.envelope_json, '$.report.observation_date.d') IS NOT NULL
+      AND NOT EXISTS (
+          SELECT 1 FROM naaccr.naaccr_value v WHERE v.sdc_report_id = rv.sdc_report_id
+      )
+),
+-- A value date sorts before a report date on the same day, so provenance
+-- prefers the more specific source.
+clinical_day AS (
     SELECT person_id, observation_date AS day, naaccr_value_id,
-           ROW_NUMBER() OVER (
-               PARTITION BY person_id ORDER BY observation_date, naaccr_value_id
-           ) AS n
+           NULL AS inbound_envelope_id, 0 AS source_order, naaccr_value_id AS source_id
     FROM selected_value
     WHERE date(observation_date) = observation_date
+    UNION ALL
+    SELECT person_id, day, NULL, inbound_envelope_id, 1, inbound_envelope_id
+    FROM report_day
+    WHERE date(day) = day
+),
+first_clinical AS (
+    SELECT person_id, day, naaccr_value_id, inbound_envelope_id,
+           ROW_NUMBER() OVER (
+               PARTITION BY person_id ORDER BY day, source_order, source_id
+           ) AS n
+    FROM clinical_day
 ),
 last_clinical AS (
-    SELECT person_id, observation_date AS day, naaccr_value_id,
+    SELECT person_id, day, naaccr_value_id, inbound_envelope_id,
            ROW_NUMBER() OVER (
-               PARTITION BY person_id ORDER BY observation_date DESC, naaccr_value_id
+               PARTITION BY person_id ORDER BY day DESC, source_order, source_id
            ) AS n
-    FROM selected_value
-    WHERE date(observation_date) = observation_date
+    FROM clinical_day
 )
 SELECT
     p.patient_id AS person_id,
@@ -112,9 +143,13 @@ SELECT
     CASE WHEN dx.person_id IS NOT NULL AND lc.person_id IS NOT NULL
         THEN dx.naaccr_value_id ELSE fc.naaccr_value_id END AS start_naaccr_value_id,
     CASE WHEN dx.person_id IS NOT NULL AND lc.person_id IS NOT NULL
+        THEN NULL ELSE fc.inbound_envelope_id END AS start_inbound_envelope_id,
+    CASE WHEN dx.person_id IS NOT NULL AND lc.person_id IS NOT NULL
         THEN lc.day ELSE lcl.day END AS end_date,
     CASE WHEN dx.person_id IS NOT NULL AND lc.person_id IS NOT NULL
-        THEN lc.naaccr_value_id ELSE lcl.naaccr_value_id END AS end_naaccr_value_id
+        THEN lc.naaccr_value_id ELSE lcl.naaccr_value_id END AS end_naaccr_value_id,
+    CASE WHEN dx.person_id IS NOT NULL AND lc.person_id IS NOT NULL
+        THEN NULL ELSE lcl.inbound_envelope_id END AS end_inbound_envelope_id
 FROM intake.patient p
 LEFT JOIN diagnosis dx ON dx.person_id = p.patient_id AND dx.n = 1
 LEFT JOIN last_contact lc ON lc.person_id = p.patient_id AND lc.n = 1
@@ -217,7 +252,9 @@ UPDATE etl.observation_period_derivation AS d
 SET person_id = b.person_id,
     derivation = b.derivation,
     start_naaccr_value_id = b.start_naaccr_value_id,
-    end_naaccr_value_id = b.end_naaccr_value_id
+    start_inbound_envelope_id = b.start_inbound_envelope_id,
+    end_naaccr_value_id = b.end_naaccr_value_id,
+    end_inbound_envelope_id = b.end_inbound_envelope_id
 FROM omop.observation_period o
 JOIN temp.bridge_period b ON b.person_id = o.person_id
 WHERE d.observation_period_id = o.observation_period_id
@@ -225,14 +262,17 @@ WHERE d.observation_period_id = o.observation_period_id
       d.person_id IS NOT b.person_id
       OR d.derivation IS NOT b.derivation
       OR d.start_naaccr_value_id IS NOT b.start_naaccr_value_id
+      OR d.start_inbound_envelope_id IS NOT b.start_inbound_envelope_id
       OR d.end_naaccr_value_id IS NOT b.end_naaccr_value_id
+      OR d.end_inbound_envelope_id IS NOT b.end_inbound_envelope_id
   );
 
 INSERT INTO etl.observation_period_derivation (
-    observation_period_id, person_id, derivation, start_naaccr_value_id, end_naaccr_value_id
+    observation_period_id, person_id, derivation, start_naaccr_value_id,
+    start_inbound_envelope_id, end_naaccr_value_id, end_inbound_envelope_id
 )
 SELECT o.observation_period_id, b.person_id, b.derivation, b.start_naaccr_value_id,
-       b.end_naaccr_value_id
+       b.start_inbound_envelope_id, b.end_naaccr_value_id, b.end_inbound_envelope_id
 FROM omop.observation_period o
 JOIN temp.bridge_period b ON b.person_id = o.person_id
 WHERE NOT EXISTS (

@@ -138,8 +138,10 @@ class _Source:
         )[0]
 
     def patient(self, name: str, values: list[dict], *, birth: dict | None = YEAR_1957,
-                gender: str | None = "F") -> int:
-        raw = f"bridge-{self.token}-{name}".encode()
+                gender: str | None = "F", narrative_date: dict | None = None,
+                message: str = "") -> int:
+        """Load one report; with narrative_date, a value-less narrative report on that date."""
+        raw = f"bridge-{self.token}-{name}-{message}".encode()
         envelope = copy.deepcopy(BASE_ENVELOPE)
         envelope["source"]["obr_ordinal"] = 1
         envelope["raw"].update(sha256=hashlib.sha256(raw).hexdigest(), byte_length=len(raw))
@@ -149,6 +151,10 @@ class _Source:
         }
         envelope["report"]["accession"] = f"ACC-{name}-{self.token}"
         envelope["values"] = values
+        if narrative_date is not None:
+            envelope["report"].update(report_loinc="35265-8", narrative="Synthetic narrative.",
+                                      observation_date=narrative_date)
+            envelope.pop("values")
         envelope.pop("diagnostics", None)
         message_id = ingest_message(self.backend, raw, lambda _: [envelope],
                                     parser_name="test", parser_version="1").inbound_message_id
@@ -156,6 +162,12 @@ class _Source:
         return int(self.backend.fetch_one(
             "SELECT patient_id FROM intake.patient WHERE person_source_value = ?",
             (f"{name}-{self.token}",),
+        )[0])
+
+    def envelope_id(self, person_id: int, report_loinc: str) -> int:
+        return int(self.backend.fetch_one(
+            "SELECT r.inbound_envelope_id FROM sdc.sdc_report r "
+            "WHERE r.person_id = ? AND r.report_loinc = ?", (person_id, report_loinc),
         )[0])
 
     def value_id(self, person_id: int, *, item_num: int | None = None,
@@ -270,6 +282,66 @@ def test_bridge_derives_person_period_and_source_and_reruns_unchanged(
 
 
 @DIALECTS
+def test_report_date_of_a_value_less_report_sets_clinical_boundaries(
+    dialect: str, tmp_path: Path,
+) -> None:
+    with _database(dialect, tmp_path) as (backend, target):
+        source = _Source(backend)
+        narrative = source.patient("narrative", [], narrative_date={
+            "y": 2024, "m": 7, "d": 4, "hh": 9, "mi": 30, "ss": None, "precision": "minute",
+        })
+        mixed = source.patient("mixed", [_clinical(_day(2024, 3, 1))])
+        source.patient("mixed", [], narrative_date=_day(2024, 8, 1), message="narrative")
+        # A month-precision report date never sets a boundary.
+        partial = source.patient("partial", [_clinical(_day(2024, 2, 2))])
+        source.patient("partial", [], message="narrative",
+                       narrative_date={"y": 2024, "m": 9, "d": None, "precision": "month"})
+
+        assert main(["bridge", *target]) == 0
+        rows = backend.fetch_all(
+            "SELECT o.person_id, o.observation_period_start_date, "
+            "o.observation_period_end_date, d.derivation, d.start_naaccr_value_id, "
+            "d.start_inbound_envelope_id, d.end_naaccr_value_id, d.end_inbound_envelope_id "
+            "FROM omop.observation_period o JOIN etl.observation_period_derivation d "
+            "ON d.observation_period_id = o.observation_period_id ORDER BY o.person_id"
+        )
+        narrative_envelope = source.envelope_id(narrative, "35265-8")
+        assert [tuple(_normalize(value) for value in row) for row in rows] == [
+            (narrative, "2024-07-04", "2024-07-04", "clinical_date_span",
+             None, narrative_envelope, None, narrative_envelope),
+            (mixed, "2024-03-01", "2024-08-01", "clinical_date_span",
+             source.value_id(mixed, observation_date="2024-03-01"), None,
+             None, source.envelope_id(mixed, "35265-8")),
+            (partial, "2024-02-02", "2024-02-02", "clinical_date_span",
+             source.value_id(partial, observation_date="2024-02-02"), None,
+             source.value_id(partial, observation_date="2024-02-02"), None),
+        ]
+
+        first = _snapshot(backend)
+        assert main(["bridge", *target]) == 0
+        assert _snapshot(backend) == first
+
+
+@DIALECTS
+def test_year_zero_naaccr_dates_fall_back_to_clinical_dates(
+    dialect: str, tmp_path: Path,
+) -> None:
+    with _database(dialect, tmp_path) as (backend, target):
+        source = _Source(backend)
+        person = source.patient("year-zero", [
+            _naaccr_date(390, "00000101"), _naaccr_date(1750, "00000102"),
+            _clinical(_day(2024, 4, 5)),
+        ])
+        assert main(["bridge", *target]) == 0
+        clinical = source.value_id(person, observation_date="2024-04-05")
+        assert [tuple(_normalize(value) for value in row)
+                for row in backend.fetch_all(PERIODS)] == [
+            (person, "2024-04-05", "2024-04-05", 32879, "clinical_date_span",
+             clinical, clinical),
+        ]
+
+
+@DIALECTS
 def test_missing_prerequisites_fail_before_any_write_and_are_named(
     dialect: str, tmp_path: Path, capsys: pytest.CaptureFixture[str],
 ) -> None:
@@ -319,6 +391,8 @@ def test_missing_prerequisites_fail_before_any_write_and_are_named(
      + "\nn,a,h,,,,2026-02-30,2026-01-01,5.4\n", "source_release_date must be a YYYY-MM-DD"),
     (",".join(name for name, _l, _r in CDM_SOURCE_COLUMNS)
      + "\nn,,h,,,,2026-01-01,2026-01-01,5.4\n", "cdm_source_abbreviation is required"),
+    (",".join(name for name, _l, _r in CDM_SOURCE_COLUMNS)
+     + "\nn,a,h,,,,2026-01-01,2026-01-01,5.3\n", "cdm_version must be '5.4'"),
 ))
 def test_cdm_source_seed_defects_are_named(tmp_path: Path, content: str, defect: str) -> None:
     path = tmp_path / "cdm_source.csv"

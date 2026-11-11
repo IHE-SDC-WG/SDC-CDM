@@ -43,8 +43,9 @@ END
 GO
 
 -- How the bridge derived each omop.observation_period row, keyed by its
--- observation_period_id, and the naaccr.naaccr_value rows that set its start
--- and end dates. Logical references to omop and naaccr; not enforced FKs.
+-- observation_period_id, and the naaccr.naaccr_value row or intake.inbound_envelope
+-- that set its start and end dates. Logical references to omop, naaccr, and
+-- intake; not enforced FKs.
 IF OBJECT_ID('etl.observation_period_derivation', 'U') IS NULL
 BEGIN
     CREATE TABLE etl.observation_period_derivation (
@@ -52,8 +53,17 @@ BEGIN
         person_id INT NOT NULL UNIQUE,
         derivation NVARCHAR(40) NOT NULL
             CHECK (derivation IN ('naaccr_diagnosis_to_last_contact', 'clinical_date_span')),
-        start_naaccr_value_id INT NOT NULL,
-        end_naaccr_value_id INT NOT NULL
+        start_naaccr_value_id INT NULL,
+        start_inbound_envelope_id BIGINT NULL,
+        end_naaccr_value_id INT NULL,
+        end_inbound_envelope_id BIGINT NULL,
+        -- Each boundary comes from exactly one source; the NAACCR rule only from values.
+        CHECK ((start_naaccr_value_id IS NULL AND start_inbound_envelope_id IS NOT NULL)
+            OR (start_naaccr_value_id IS NOT NULL AND start_inbound_envelope_id IS NULL)),
+        CHECK ((end_naaccr_value_id IS NULL AND end_inbound_envelope_id IS NOT NULL)
+            OR (end_naaccr_value_id IS NOT NULL AND end_inbound_envelope_id IS NULL)),
+        CHECK (derivation = 'clinical_date_span'
+            OR (start_naaccr_value_id IS NOT NULL AND end_naaccr_value_id IS NOT NULL))
     );
 END
 GO
