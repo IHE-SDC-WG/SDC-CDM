@@ -99,7 +99,14 @@ standard OMOP event and source-value columns.
 
 - `schema_migration` stores each applied manifest path and SHA-256 hash.
 - `run` records command, dialect, status, timing, and errors.
-- `concept_constant` is reserved for resolved vocabulary constants in the later mapping phase.
+- `concept_constant` holds the vocabulary constants that `constants resolve` found for
+  `database/seed/concept_constants.csv`.
+- `observation_period_derivation` records, for each bridge-written `omop.observation_period`, its
+  derivation rule and the `naaccr.naaccr_value` row or `intake.inbound_envelope` (for a report
+  date from a report with no values) that set each of its start and end dates. It keeps
+  that provenance out of the stock OMOP table.
+- `cdm_source_seed` holds the current bridge run's `cdm_source.csv` row; Python replaces it inside
+  the run's transaction.
 
 The first entry in `database/manifest.json` creates this schema and its ledger. Every later build
 decision is recorded against that ledger.
@@ -115,15 +122,17 @@ Inbound bytes
    |
    +--> naaccr.naaccr_value + sdc.sdc_report
    |          |
-   |          +--> bridge --> omop.note + omop.measurement
+   |          +--> bridge --> omop.person + omop.observation_period + omop.cdm_source
+   |                      (pre-rebuild script: omop.note + omop.measurement)
    |
    +--> sdc.template_* + sdc.sdc_form_answer    (SDC XML path)
 
 database/manifest.json --> etl.schema_migration + etl.run
 ```
 
-The bridge is a separate transform. It reads `naaccr` and `sdc`, writes only standard OMOP
-columns, and does not run as part of `build`.
+The bridge is a separate transform, `sdc-cdm bridge`, that runs the manifest's ordered `bridge`
+entries in one transaction. It reads `intake`, `naaccr`, and `sdc`, writes only standard OMOP
+columns plus its own `etl` provenance, and does not run as part of `build`.
 
 ## Back-reference without a crosswalk
 

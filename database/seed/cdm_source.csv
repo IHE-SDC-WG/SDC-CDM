@@ -1,0 +1,2 @@
+cdm_source_name,cdm_source_abbreviation,cdm_holder,source_description,source_documentation_reference,cdm_etl_reference,source_release_date,cdm_release_date,cdm_version
+SDC-CDM synthetic test source,SDC-CDM TEST,IHE SDC Work Group,Synthetic test-source metadata tracked in the SDC-CDM repository. A real deployment replaces this row with its own source metadata.,https://github.com/IHE-SDC-WG/SDC-CDM,https://github.com/IHE-SDC-WG/SDC-CDM/tree/main/database/etl,2026-01-01,2026-01-01,5.4

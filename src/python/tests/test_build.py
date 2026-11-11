@@ -39,6 +39,7 @@ def test_expected_commands_are_registered() -> None:
         "intake ingest",
         "intake load",
         "reports supersede",
+        "bridge",
     )
     with pytest.raises(SystemExit) as exc_info:
         main(["ingest"])

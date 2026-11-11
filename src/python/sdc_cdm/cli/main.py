@@ -8,6 +8,7 @@ from collections.abc import Callable, Sequence
 from pathlib import Path
 
 from sdc_cdm.cdm.tables import TABLE_SPECS
+from sdc_cdm.cli.bridge import configure_bridge, run_bridge_command
 from sdc_cdm.cli.build import BuildRunner
 from sdc_cdm.cli.dictionary import (
     configure_dict_fetch,
@@ -197,6 +198,12 @@ _VERBS: tuple[tuple[tuple[str, ...], str, _Configure, _Handler], ...] = (
         "select a successor report version in place of its predecessor",
         configure_supersede,
         run_supersede,
+    ),
+    (
+        ("bridge",),
+        "derive OMOP rows from naaccr and sdc in manifest order",
+        configure_bridge,
+        run_bridge_command,
     ),
 )
 

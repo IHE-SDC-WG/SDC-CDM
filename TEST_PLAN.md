@@ -31,9 +31,10 @@ etl.schema_migration + etl.run                      (build and run provenance)
 "To OMOP" tests assert on `omop.*` after running the bridge ETL. The SDC XML form tables
 carry their own answer values; eCP answer values remain in `naaccr.naaccr_value`.
 
-Until Phase 4.5 retires it, the current bridge is the single pre-rebuild script
-`database/etl/<dialect>/1_naaccr_sdc_to_omop.sql`, which writes `note` and `measurement` only
-and is applied directly by tests.
+`sdc-cdm bridge` runs the manifest's ordered `bridge` entries; Phase 4.1 adds
+`1_person_and_period.sql`. Until Phase 4.5 retires it, the pre-rebuild
+`database/etl/<dialect>/1_naaccr_sdc_to_omop.sql` still writes `note` and `measurement`. The
+manifest excludes it from the runner, and its regression tests apply it directly.
 
 ## Proposed folder layout
 
@@ -284,9 +285,11 @@ Phase 4 check runs on SQLite and SQL Server and asserts equal behavior, not equa
 - [ ] **OMOP-10** *(regression, review finding #4; 4.5)* The validation SQL passes against a
   database produced by the shipped bridge on both dialects; its type-concept filters and
   expected tables (`episode`/`episode_event`) match what the bridge actually writes.
-- [ ] **OMOP-11** *(4.1)* Person linkage: `omop.person` maps 1:1 from `intake.patient`;
-  notes, measurements, observations, conditions, and episodes carry that `person_id`; there are
-  no orphan rows with constraints applied.
+- [x] **OMOP-11** *(4.1)* Person boundary: `omop.person` count equals `intake.patient` count,
+  with `person_id = patient_id`; intake and load write zero `omop` rows; a second bridge run adds
+  no rows. Linkage of notes, measurements, observations, conditions, and episodes to that
+  `person_id` is checked by the phase that writes each table (OMOP-07, BRIDGE-11).
+  `test_bridge.py`: `test_bridge_derives_person_period_and_source_and_reruns_unchanged`.
 - [ ] **OMOP-12** *(4.3–4.5)* Concept slots follow their OMOP contracts. Standard-target slots
   (`measurement_concept_id`, `observation_concept_id`, `condition_concept_id`,
   `value_as_concept_id`, `episode_concept_id`, `episode_object_concept_id`) contain only
@@ -309,17 +312,25 @@ dialects.
   second successor for the same predecessor, and writes nothing on rejection.
   `test_report_versions.py`: `test_invalid_supersessions_name_their_rule_and_change_nothing`,
   `test_supersession_chain_advances_selection_one_version_at_a_time`.
-- [ ] **BRIDGE-03** *(4.1)* `sdc-cdm bridge` executes the manifest's ordered bridge entries in
+- [x] **BRIDGE-03** *(4.1)* `sdc-cdm bridge` executes the manifest's ordered bridge entries in
   one transaction; every `database/etl/<dialect>/*.sql` file is listed or excluded; a missing
   seed, constant, or built map exits non-zero before any write and names it; `etl.run` records
   both success and failure.
-- [ ] **BRIDGE-04** *(4.1)* `observation_period` follows the documented derivation order,
+  `test_manifest.py`: `test_bridge_entries_are_ordered_and_every_etl_script_is_declared`,
+  `test_an_undeclared_etl_script_is_rejected`; `test_bridge.py`:
+  `test_missing_prerequisites_fail_before_any_write_and_are_named`,
+  `test_a_later_script_failure_rolls_back_every_earlier_script`,
+  `test_cdm_source_seed_defects_are_named`.
+- [x] **BRIDGE-04** *(4.1)* `observation_period` follows the documented derivation order,
   records its derivation per row, and never pads; `cdm_source` comes from
   `database/seed/cdm_source.csv`; a year-only birth date yields `year_of_birth` with NULL month
   and day.
-- [ ] **BRIDGE-05** *(4.1)* A missing required birth year or clinical date fails the run, rolls
+  `test_bridge.py`: `test_bridge_derives_person_period_and_source_and_reruns_unchanged`,
+  `test_tracked_cdm_source_seed_is_the_synthetic_test_source`.
+- [x] **BRIDGE-05** *(4.1)* A missing required birth year or clinical date fails the run, rolls
   back every derived change, and names the offending rows; no date is replaced with today's
   date.
+  `test_bridge.py`: `test_missing_birth_year_or_clinical_date_rolls_back_and_names_rows`.
 - [ ] **BRIDGE-06** *(4.2)* Narrative and synoptic reports sent in separate messages form one
   group and one note; a narrative arriving after the first bridge run refreshes that note and
   its links; the same accession under another patient or sending facility forms a separate
@@ -413,12 +424,12 @@ edit; Athena import and concept resolution are covered by `src/python/tests/test
   contains rows.
 - [x] **VOCAB-05** The shared batch path handles date/decimal conversion and a
   `drug_strength` row whose first numeric field is NULL on both dialects.
-- [x] **CONST-01** All six tracked vocabulary/code pairs resolve into
+- [x] **CONST-01** All eight tracked vocabulary/code pairs resolve into
   `etl.concept_constant`.
 - [x] **CONST-02** A missing pair exits 1, names the pair and remedy command, and does not
   modify `etl.concept_constant`.
 - [x] **CONST-03** Ambiguous valid candidates fail and name every candidate concept ID.
-- [x] **CONST-04** Re-running constant resolution produces the same six mappings.
+- [x] **CONST-04** Re-running constant resolution produces the same eight mappings.
 - [x] **CONST-05** Every 4-or-more-digit integer literal in both bridge ETLs is pinned to the
   expected set and appears in `etl.concept_constant` after resolution.
 

@@ -119,7 +119,7 @@ def test_load_populates_a_fresh_schema_and_validates_counts(
         )[0] is not None
         if dialect == "sqlite":
             assert backend.fetch_all('PRAGMA "omop".foreign_key_check') == []
-        assert len(resolve_constants(backend)) == 6
+        assert len(resolve_constants(backend)) == 8
 
 
 def test_sqlite_load_rolls_back_on_orphaned_relationship(
@@ -155,7 +155,7 @@ def test_sqlite_loader_refuses_an_existing_vocabulary(
             load_vocab(backend, vocab_dir, "\t")
 
 
-def test_all_six_constants_resolve_from_the_loaded_fixture(
+def test_all_tracked_constants_resolve_from_the_loaded_fixture(
     tmp_path: Path,
 ) -> None:
     control_path = _load_sqlite_fixture(tmp_path)
@@ -171,8 +171,10 @@ def test_all_six_constants_resolve_from_the_loaded_fixture(
             "unmapped": 0,
             "gender_male": 8507,
             "gender_female": 8532,
+            "period_type_registry": 32879,
+            "cdm_version": 756265,
         }
-        assert backend.fetch_one("SELECT COUNT(*) FROM etl.concept_constant")[0] == 6
+        assert backend.fetch_one("SELECT COUNT(*) FROM etl.concept_constant")[0] == 8
 
 
 def test_missing_constant_exits_one_and_does_not_modify_the_table(
@@ -214,7 +216,7 @@ def test_ambiguous_pair_names_every_candidate_id(tmp_path: Path) -> None:
                 "Type Concept",
                 "Type Concept",
                 "S",
-                "EHR",
+                "OMOP4976890",
                 "1970-01-01",
                 "2099-12-31",
             ),
@@ -222,7 +224,7 @@ def test_ambiguous_pair_names_every_candidate_id(tmp_path: Path) -> None:
         with pytest.raises(VocabularyError) as exc_info:
             resolve_constants(backend)
         message = str(exc_info.value)
-        assert "('Type Concept', 'EHR')" in message
+        assert "('Type Concept', 'OMOP4976890')" in message
         assert "32817" in message
         assert "999999" in message
         assert backend.fetch_one("SELECT COUNT(*) FROM etl.concept_constant")[0] == 0
@@ -238,8 +240,8 @@ def test_constants_resolve_is_idempotent(tmp_path: Path) -> None:
             "SELECT constant_name, concept_id, vocabulary_id, concept_code "
             "FROM etl.concept_constant ORDER BY constant_name"
         )
-        assert len(rows) == 6
-        assert len({row[0] for row in rows}) == 6
+        assert len(rows) == 8
+        assert len({row[0] for row in rows}) == 8
 
 
 def test_every_bridge_concept_literal_resolves_to_a_constant(

@@ -19,6 +19,30 @@ These values are data rather than Python constants. A load and resolution run
 against an authorized Athena extract is the acceptance gate. If a pair changes,
 correct its CSV row and rerun both commands.
 
+Several pairs have been checked against an Athena extract (vocabulary
+`v5.0 27-FEB-26`). In the `Type Concept` vocabulary, concept codes are
+`OMOP…` identifiers, not concept names: EHR (32817) is `OMOP4976890` and
+Registry (32879) is `OMOP4976952`. `period_type_registry` therefore shares
+`measurement_type_registry`'s pair. `cdm_version` is `CDM` / `CDM v5.4.0`
+(756265). The `Gender` pairs and `unmapped` match the extract as well.
+`field_note_note_id` does not: that extract has no `CDM` concept with code
+`note.note_id`, and the historical literal 1147289 is `dose_era.person_id`.
+Correct that pair before loading a real extract: `vocab load` and
+`constants resolve` both fail until every tracked pair is present.
+
+## OMOP CDM source
+
+`cdm_source.csv` holds the one `omop.cdm_source` row that `sdc-cdm bridge`
+writes, except for `vocabulary_version` and `cdm_version_concept_id`. The bridge
+takes those from the loaded vocabulary's `None` row and the `cdm_version`
+constant. The tracked row describes a **synthetic test source** with fixed
+release dates. A real deployment replaces it with its own source name, holder,
+documentation, and release dates, or passes `--seed-dir` to `bridge`. The bridge
+rejects a missing file, a changed header, any number of data rows other than
+one, a blank required field, a value longer than its SQL Server CDM column, a
+date that is not `YYYY-MM-DD`, and a `cdm_version` other than `5.4` (the shipped
+OMOP schema, which the bridge pairs with the `CDM v5.4.0` concept).
+
 ## NAACCR concept maps
 
 `concept_map_overrides.csv` is the reviewed layer-2 input. A row is active only

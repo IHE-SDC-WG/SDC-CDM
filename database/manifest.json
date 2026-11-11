@@ -105,6 +105,54 @@
       }
     ]
   },
+  "bridge": {
+    "sqlite": [
+      {
+        "path": "database/etl/sqlite/1_person_and_period.sql",
+        "constants": [
+          "gender_male",
+          "gender_female",
+          "unmapped",
+          "period_type_registry",
+          "cdm_version"
+        ],
+        "seeds": [
+          "cdm_source.csv"
+        ],
+        "tables": [
+          "omop.person",
+          "omop.observation_period",
+          "etl.observation_period_derivation",
+          "omop.cdm_source"
+        ]
+      }
+    ],
+    "sqlserver": [
+      {
+        "path": "database/etl/sqlserver/1_person_and_period.sql",
+        "constants": [
+          "gender_male",
+          "gender_female",
+          "unmapped",
+          "period_type_registry",
+          "cdm_version"
+        ],
+        "seeds": [
+          "cdm_source.csv"
+        ],
+        "tables": [
+          "omop.person",
+          "omop.observation_period",
+          "etl.observation_period_derivation",
+          "omop.cdm_source"
+        ]
+      }
+    ]
+  },
+  "validate": {
+    "sqlite": [],
+    "sqlserver": []
+  },
   "excluded": [
     {
       "path": "database/schemas/omop/ddl/postgresql/1_OMOPCDM_postgresql_5.4_ddl.sql",
@@ -133,6 +181,18 @@
     {
       "path": "database/schemas/naaccr/ddl/sqlserver/validate_naaccr_omop_vocab.sql",
       "reason": "Validation belongs to Phase 4, not schema DDL."
+    },
+    {
+      "path": "database/etl/sqlite/1_naaccr_sdc_to_omop.sql",
+      "reason": "Pre-rebuild note and measurement bridge, applied directly by its regression tests until Phase 4.2 and 4.3 replace it and Phase 4.5 retires it."
+    },
+    {
+      "path": "database/etl/sqlserver/1_naaccr_sdc_to_omop.sql",
+      "reason": "Pre-rebuild note and measurement bridge, applied directly by its regression tests until Phase 4.2 and 4.3 replace it and Phase 4.5 retires it."
+    },
+    {
+      "path": "database/etl/sqlserver/validate_naaccr_sdc_to_omop.sql",
+      "reason": "Pre-rebuild validation for the old bridge; Phase 4.5 replaces it with 9_validate.sql for both dialects."
     }
   ],
   "manifest_version": 1

@@ -48,6 +48,7 @@ def _synthetic_rows() -> dict[str, list[list[str]]]:
         _concept(14, "Measurement Value domain"),
         _concept(15, "Vocabulary class"),
         _concept(16, "Concept Class class"),
+        _concept(22, "CDM concept class"),
         _concept(17, "NAACCR item class"),
         _concept(18, "NAACCR value class"),
         _concept(19, "NAACCR vocabulary"),
@@ -64,7 +65,7 @@ def _synthetic_rows() -> dict[str, list[list[str]]]:
             "Type Concept",
             "Type Concept",
             "Type Concept",
-            "EHR",
+            "OMOP4976890",
         ),
         _concept(
             32879,
@@ -72,7 +73,7 @@ def _synthetic_rows() -> dict[str, list[list[str]]]:
             "Type Concept",
             "Type Concept",
             "Type Concept",
-            "Registry",
+            "OMOP4976952",
         ),
         _concept(
             1147289,
@@ -82,6 +83,7 @@ def _synthetic_rows() -> dict[str, list[list[str]]]:
             "Field",
             "note.note_id",
         ),
+        _concept(756265, "OMOP CDM Version 5.4.0", "Metadata", "CDM", "CDM", "CDM v5.4.0"),
         _concept(8507, "Male", "Gender", "Gender", "Gender", "M"),
         _concept(8532, "Female", "Gender", "Gender", "Gender", "F"),
     ]
@@ -104,6 +106,7 @@ def _synthetic_rows() -> dict[str, list[list[str]]]:
             ["Undefined", "Undefined", "6"],
             ["Type Concept", "Type Concept", "7"],
             ["Field", "Field", "8"],
+            ["CDM", "CDM", "22"],
             ["Gender", "Gender", "12"],
             ["Vocabulary", "Vocabulary", "15"],
             ["Concept Class", "Concept Class", "16"],

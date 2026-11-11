@@ -41,7 +41,7 @@ def test_sqlserver_splitter_removes_go_and_preserves_batches() -> None:
 def test_real_manifest_script_counts_are_pinned() -> None:
     expected = {
         "sqlite": {
-            "database/schemas/etl/ddl/sqlite/1_etl_sqlite_ddl.sql": (5, 2),
+            "database/schemas/etl/ddl/sqlite/1_etl_sqlite_ddl.sql": (7, 2),
             "database/schemas/intake/ddl/sqlite/1_intake_sqlite_ddl.sql": (11, 2),
             "database/schemas/omop/ddl/sqlite/1_OMOPCDM_sqlite_5.4_ddl.sql": (40, 2),
             "database/schemas/omop/ddl/sqlite/2_OMOPCDM_sqlite_5.4_primary_keys.sql": (0, 0),
@@ -50,9 +50,11 @@ def test_real_manifest_script_counts_are_pinned() -> None:
             "database/schemas/naaccr/ddl/sqlite/1_naaccr_sqlite_ddl.sql": (37, 2),
             "database/schemas/naaccr/ddl/sqlite/3_naaccr_report_version_sqlite.sql": (5, 2),
             "database/schemas/sdc/ddl/sqlite/1_sdc_sqlite_ddl.sql": (13, 2),
+            # Bridge scripts hold one statement per unit in both dialects.
+            "database/etl/sqlite/1_person_and_period.sql": (18, 0),
         },
         "sqlserver": {
-            "database/schemas/etl/ddl/sqlserver/1_etl_sqlserver_ddl.sql": (4, 4),
+            "database/schemas/etl/ddl/sqlserver/1_etl_sqlserver_ddl.sql": (6, 6),
             "database/schemas/intake/ddl/sqlserver/1_intake_sqlserver_ddl.sql": (7, 7),
             "database/schemas/omop/ddl/sqlserver/1_OMOPCDM_sqlserver_5.4_ddl.sql": (2, 1),
             "database/schemas/omop/ddl/sqlserver/2_OMOPCDM_sqlserver_5.4_primary_keys.sql": (1, 0),
@@ -63,13 +65,14 @@ def test_real_manifest_script_counts_are_pinned() -> None:
             "database/schemas/naaccr/ddl/sqlserver/2_naaccr_concept_maps_sqlserver.sql": (8, 8),
             "database/schemas/naaccr/ddl/sqlserver/3_naaccr_report_version_sqlserver.sql": (3, 3),
             "database/schemas/sdc/ddl/sqlserver/1_sdc_sqlserver_ddl.sql": (12, 12),
+            "database/etl/sqlserver/1_person_and_period.sql": (18, 18),
         },
     }
 
     manifest = load_manifest()
     actual: dict[str, dict[str, tuple[int, int]]] = {"sqlite": {}, "sqlserver": {}}
     for dialect in actual:
-        for entry in manifest.entries_for(dialect):
+        for entry in (*manifest.entries_for(dialect), *manifest.bridge_entries_for(dialect)):
             sql = repository_path(entry.path).read_text(encoding="utf-8")
             result = (
                 split_sqlite_script(sql)

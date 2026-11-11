@@ -33,6 +33,10 @@ database/
 SQLite uses attached databases named `etl`, `intake`, `omop`, `naaccr`, and `sdc`. SQL Server uses
 real schemas. The repository provides schema builds and bridge ETL for SQLite and SQL Server.
 
+`etl/<dialect>/` holds the bridge scripts. `sdc-cdm bridge` runs the manifest's ordered `bridge`
+entries and nothing else. Each entry names the constants, seed files, and tables it uses. The
+manifest test fails if a SQL file in that directory is neither listed nor excluded.
+
 ## Build
 
 The manifest is the only complete schema apply order. The first entry creates the `etl` ledger;
