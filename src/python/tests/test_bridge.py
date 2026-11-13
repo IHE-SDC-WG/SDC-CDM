@@ -821,10 +821,10 @@ def test_unchanged_non_ascii_note_rerun_does_not_issue_an_update(
         assert _notes(backend)[0][3] == expected
         backend.execute("CREATE TABLE omop.bridge_note_update_test (note_id INT NOT NULL)")
         trigger = (
-            "CREATE TRIGGER omop.bridge_note_update_test AFTER UPDATE ON note "
+            "CREATE TRIGGER omop.bridge_note_update_audit AFTER UPDATE ON note "
             "BEGIN INSERT INTO bridge_note_update_test VALUES (NEW.note_id); END"
             if dialect == "sqlite" else
-            "CREATE TRIGGER omop.bridge_note_update_test ON omop.note AFTER UPDATE AS "
+            "CREATE TRIGGER omop.bridge_note_update_audit ON omop.note AFTER UPDATE AS "
             "INSERT INTO omop.bridge_note_update_test SELECT note_id FROM inserted"
         )
         try:
@@ -834,5 +834,5 @@ def test_unchanged_non_ascii_note_rerun_does_not_issue_an_update(
             assert _snapshot(backend) == before
             assert _count(backend, "omop.bridge_note_update_test") == 0
         finally:
-            backend.execute("DROP TRIGGER IF EXISTS omop.bridge_note_update_test")
+            backend.execute("DROP TRIGGER IF EXISTS omop.bridge_note_update_audit")
             backend.execute("DROP TABLE omop.bridge_note_update_test")
