@@ -223,14 +223,20 @@ def supersede_report(backend: DatabaseBackend, predecessor_id: int,
     """
 
     with backend.transaction():
-        group_id, report_type = _check_supersession(backend, predecessor_id, successor_id)
-        backend.execute_uncommitted(
-            "UPDATE naaccr.report_version SET is_selected = 0 WHERE sdc_report_id = ?",
-            (predecessor_id,),
-        )
-        backend.execute_uncommitted(
-            "UPDATE naaccr.report_version SET is_selected = 1, predecessor_sdc_report_id = ? "
-            "WHERE sdc_report_id = ?",
-            (predecessor_id, successor_id),
-        )
+        return supersede_in_transaction(backend, predecessor_id, successor_id)
+
+
+def supersede_in_transaction(backend: DatabaseBackend, predecessor_id: int,
+                             successor_id: int) -> Supersession:
+    """Check and move selection inside the caller's data transaction."""
+    group_id, report_type = _check_supersession(backend, predecessor_id, successor_id)
+    backend.execute_uncommitted(
+        "UPDATE naaccr.report_version SET is_selected = 0 WHERE sdc_report_id = ?",
+        (predecessor_id,),
+    )
+    backend.execute_uncommitted(
+        "UPDATE naaccr.report_version SET is_selected = 1, predecessor_sdc_report_id = ? "
+        "WHERE sdc_report_id = ?",
+        (predecessor_id, successor_id),
+    )
     return Supersession(predecessor_id, successor_id, group_id, report_type)

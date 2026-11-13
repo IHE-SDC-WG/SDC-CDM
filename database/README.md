@@ -10,7 +10,10 @@ This repo now uses one physical database with five logical schemas:
 - `omop`: stock OMOP CDM 5.4 tables, kept unmodified.
 - `etl`: run history, applied migrations, and resolved concept constants.
 
-The bridge step reads `naaccr` and `sdc`, then writes standard OMOP rows only. OMOP rows point back to the source through standard fields such as `note_source_value`, `measurement_event_id`, `observation_event_id`, and source value columns.
+The bridge reads `intake`, `naaccr`, and `sdc`, and writes stock OMOP columns plus provenance
+in `etl` and `sdc.note_report`. This link table connects each `omop.note` to its selected reports
+and marks its anchor. `note_source_value` stores the accession for display; it is not a group key.
+Following a link through `sdc_report.inbound_envelope_id` reaches the exact raw message bytes.
 
 ## Files
 
@@ -36,6 +39,19 @@ real schemas. The repository provides schema builds and bridge ETL for SQLite an
 `etl/<dialect>/` holds the bridge scripts. `sdc-cdm bridge` runs the manifest's ordered `bridge`
 entries and nothing else. Each entry names the constants, seed files, and tables it uses. The
 manifest test fails if a SQL file in that directory is neither listed nor excluded.
+
+`1_person_and_period.sql` writes people, periods, and source metadata. `2_note.sql` writes one
+note per selected report group, anchored in synoptic / other non-narrative / narrative order,
+with the lowest report ID breaking ties. It prefers the first non-empty selected narrative,
+then the anchor comment, then a report-kind placeholder. Its date is the anchor's earliest
+value observation day, then its envelope report day. Missing dates and accessions over 50
+characters fail the run. Each selected report gets an `sdc.note_report` link; superseded and
+accession-less reports do not. Both scripts reconcile changed state and keep existing note IDs.
+
+`reports supersede` refreshes the full bridge when the group already has a note, in the same
+transaction as selection. Pending loads are also bridged and periods recalculated. A failure
+rolls back selection and all derived changes. Unbridged groups require no bridge prerequisites.
+The command accepts `--seed-dir` and logs its outcome outside the data transaction.
 
 ## Build
 

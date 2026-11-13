@@ -18,8 +18,7 @@ records stay outside OMOP core.
 
 `naaccr.naaccr_value.person_id` and `sdc.sdc_report.person_id` refer logically to
 `intake.patient.patient_id`, not directly to `omop.person.person_id`. Neither column has a
-cross-schema foreign key. The later person transform owns the 1:1 mapping into OMOP; current bridge
-regression fixtures seed the matching OMOP person explicitly.
+cross-schema foreign key. `1_person_and_period.sql` owns the 1:1 mapping into OMOP.
 
 ### 2. `naaccr`: dictionary and captured values
 
@@ -89,11 +88,17 @@ The eCP path uses `sdc_report` for report headers and keeps its answer values in
 `naaccr.naaccr_value`. `sdc_report` carries accession, report LOINC, template identity, narrative,
 and duplicate-report provenance.
 
+`note_report` links each bridge-owned `omop.note` to every selected contributing `sdc_report`.
+It records the report group and one `is_anchor = 1` row per group. Its composite primary key
+is `(note_id, sdc_report_id)` and each report ID is unique. Note and group IDs are logical
+cross-schema references; the report ID has an enforced FK within `sdc`. Supersession replaces
+contributors atomically while retaining the note ID. Notes with no link belong to other writers.
+
 ### 4. `omop`: stock OMOP CDM 5.4
 
 The executable OMOP DDL is the upstream SQLite or SQL Server CDM 5.4 drop. It has no SDC tables,
 no `sdc_*` columns, and no `sdc_form_answer_id` foreign key. Repository-specific provenance uses
-standard OMOP event and source-value columns.
+standard OMOP event and source-value columns plus links outside OMOP in `sdc` and `etl`.
 
 ### 5. `etl`: build and run records
 
@@ -122,8 +127,12 @@ Inbound bytes
    |
    +--> naaccr.naaccr_value + sdc.sdc_report
    |          |
-   |          +--> bridge --> omop.person + omop.observation_period + omop.cdm_source
-   |                      (pre-rebuild script: omop.note + omop.measurement)
+   |          +--> naaccr.report_group + naaccr.report_version (selection)
+   |                      |
+   |                      +--> bridge --> omop.person + omop.observation_period
+   |                                   + omop.cdm_source + omop.note
+   |                                   + sdc.note_report (selected contributors + anchor)
+   |                                   + etl.observation_period_derivation
    |
    +--> sdc.template_* + sdc.sdc_form_answer    (SDC XML path)
 
@@ -132,53 +141,43 @@ database/manifest.json --> etl.schema_migration + etl.run
 
 The bridge is a separate transform, `sdc-cdm bridge`, that runs the manifest's ordered `bridge`
 entries in one transaction. It reads `intake`, `naaccr`, and `sdc`, writes only standard OMOP
-columns plus its own `etl` provenance, and does not run as part of `build`.
+columns plus its own `etl` and `sdc.note_report` provenance, and does not run as part of `build`.
 
 ## Back-reference without a crosswalk
 
-OMOP rows point back to source records using standard columns:
+`omop.note.note_source_value` stores the accession, but is not a unique group identity.
+`sdc.note_report` is the authoritative note-to-report link. It identifies every selected
+contributor, including reports loaded in different messages, and marks the anchor. Group
+identity includes patient and sending facility, so matching an accession alone is insufficient.
 
-- `omop.note.note_source_value` stores the report accession.
-- `omop.measurement.measurement_source_value` stores the full CAP `ecp_code` for eCP
-  answers or the NAACCR `item_num` for verified NAACCR answers.
-- `omop.measurement.measurement_event_id` points to `omop.note.note_id` when
-  `meas_event_field_concept_id = 1147289` (`note.note_id`).
-- Numeric answers use `value_as_number`; coded answers use `value_as_concept_id`; companion text
-  or an unmapped raw code uses `value_source_value`.
+The bridge chooses an anchor in synoptic / other non-narrative / narrative order, breaking ties
+by report ID. Text prefers the first non-empty selected narrative, then anchor text, then a
+report-kind placeholder. The date is the anchor's earliest value observation day, then its
+envelope report day. Missing dates and accessions longer than 50 characters fail the run.
+An unchanged rerun performs no note or link writes.
 
-The following SQLite query walks from a measurement back to report and dictionary metadata by
-key joins rather than a stored crosswalk:
+This query recovers each note's contributing reports and exact source bytes without adding
+columns to OMOP:
 
 ```sql
-SELECT m.measurement_id,
-       m.value_as_number,
-       m.value_source_value,
-       sr.report_accession,
-       nv.ecp_code,
-       ni.name AS naaccr_item_name
-FROM omop.measurement m
-JOIN omop.note n
-  ON n.note_id = m.measurement_event_id
-JOIN sdc.sdc_report sr
-  ON sr.report_accession = n.note_source_value
- AND sr.person_id = n.person_id
- AND sr.is_duplicate_accession = 0
-JOIN naaccr.naaccr_value nv
-  ON nv.sdc_report_id = sr.sdc_report_id
- AND COALESCE(nv.ecp_code, CAST(nv.item_num AS TEXT)) = m.measurement_source_value
-LEFT JOIN naaccr.naaccr_item ni
-  ON nv.item_num IS NOT NULL
- AND ni.item_num = nv.item_num
- AND ni.dd_version_id = (
-       SELECT dd_version_id
-       FROM naaccr.data_dictionary_version
-       WHERE algorithm = 'eod_public' AND is_current = 1
-     )
-WHERE m.meas_event_field_concept_id = 1147289;
+SELECT n.note_id, nr.report_group_id, nr.is_anchor,
+       sr.sdc_report_id, sr.report_accession,
+       e.inbound_envelope_id, m.inbound_message_id, m.raw_blob
+FROM omop.note n
+JOIN sdc.note_report nr ON nr.note_id = n.note_id
+JOIN sdc.sdc_report sr ON sr.sdc_report_id = nr.sdc_report_id
+JOIN intake.inbound_envelope e ON e.inbound_envelope_id = sr.inbound_envelope_id
+JOIN intake.inbound_message m ON m.inbound_message_id = e.inbound_message_id;
 ```
 
-For repeated answers sharing an identifier, this returns candidate source rows;
-there is no row-level answer pointer in OMOP yet.
+A supersession for an already bridged group runs selection and the full bridge in one
+transaction, including pending loads and period recalculation. Any failure rolls back both.
+An unbridged group only moves selection, with no bridge prerequisites. Its `etl.run` record
+is written outside the data transaction so failed outcomes survive rollback.
+
+Measurement and observation event pointers and source-value columns are extended in Phase 4.3.
+The excluded pre-rebuild bridge remains under separate regression tests until Phase 4.5;
+it must not run alongside the manifest bridge on one database.
 
 ## Physical model and build order
 
