@@ -31,10 +31,12 @@ etl.schema_migration + etl.run                      (build and run provenance)
 "To OMOP" tests assert on `omop.*` after running the bridge ETL. The SDC XML form tables
 carry their own answer values; eCP answer values remain in `naaccr.naaccr_value`.
 
-`sdc-cdm bridge` runs the manifest's ordered `bridge` entries; Phase 4.1 adds
-`1_person_and_period.sql`. Until Phase 4.5 retires it, the pre-rebuild
-`database/etl/<dialect>/1_naaccr_sdc_to_omop.sql` still writes `note` and `measurement`. The
-manifest excludes it from the runner, and its regression tests apply it directly.
+`sdc-cdm bridge` runs the manifest's ordered `1_person_and_period.sql` and `2_note.sql`
+entries. Script 2 combines selected reports into one note per group and records contributors
+in `sdc.note_report`. Supersession of a bridged group runs the full bridge atomically with
+selection. Until Phase 4.5 retires it, the excluded pre-rebuild
+`database/etl/<dialect>/1_naaccr_sdc_to_omop.sql` is still applied directly by its own regression
+tests on separate databases.
 
 ## Proposed folder layout
 
@@ -235,16 +237,21 @@ Phase 4.
 
 Target: the Phase 4 bridge scripts run by `sdc-cdm bridge` (see `docs/REBUILD_PLAN.md`,
 "OMOP breadth, domain-routed"). Until Phase 4.5, the implemented IDs below run against the
-pre-rebuild `1_naaccr_sdc_to_omop.sql`. Each ID names the Phase 4 child that owns it. Every
-Phase 4 check runs on SQLite and SQL Server and asserts equal behavior, not equal concept IDs.
+pre-rebuild `1_naaccr_sdc_to_omop.sql` unless an ID names its new runner test. Each ID names the
+Phase 4 child that owns it. Every Phase 4 check runs on SQLite and SQL Server and asserts equal behavior, not equal concept IDs.
 
 - [x] **OMOP-01** Three-schema layout + minimal bridge smoke test
   (`tools/tests/test_three_schema_sqlite.py`): OMOP tables carry **no** `sdc_*` columns;
   a seeded report/raw value produces a note + measurement. *(4.5: retarget to the runner, or
   retire with the old bridge.)*
-- [ ] **OMOP-02** *(4.2)* Selected narrative and synoptic reports in one report group combine
-  into one `omop.note`, anchored to the synoptic report, with an `sdc` link to each
-  contributing report.
+- [x] **OMOP-02** *(4.2)* Selected narrative and synoptic reports in one report group combine
+  into one `omop.note`, anchored to the synoptic report, with an `sdc.note_report` link to each
+  contributing report. Constants are resolved and optional note fields stay NULL.
+  `test_bridge.py`: `test_combined_note_and_every_contributor_recover_exact_message_bytes`,
+  `test_note_anchor_text_and_date_precedence_and_unowned_notes`,
+  `test_unusable_note_data_names_group_and_anchor_and_rolls_back`,
+  `test_unchanged_non_ascii_note_rerun_does_not_issue_an_update`,
+  `test_accession_less_reports_have_no_note_or_provenance_link`, `test_note_sql_loinc_sets_match_parser`.
 - [ ] **OMOP-03** *(4.3)* One `omop.measurement`/`observation` per answered item, with
   `*_source_value` = the full CAP code or verified NAACCR item number. For rows with
   `item_num`, the NAACCR source concept goes in `*_source_concept_id` and the standard target,
@@ -268,10 +275,13 @@ Phase 4 check runs on SQLite and SQL Server and asserts equal behavior, not equa
   (OBR-3 stored as NULL, and legacy `''` covered by the ETL's `NULLIF` guard) never bridge: no
   `''` note is created and their values do not fan out across reports. Phase 4 adds an
   explicit exclusion count in `validate`.
-- [ ] **OMOP-07** *(4.2; 4.3/4.4 extend)* Provenance walk: from any bridge-owned OMOP row,
+- [x] **OMOP-07** *(4.2; 4.3/4.4 extend)* Provenance walk: from any bridge-owned OMOP row,
   recover the note, its contributing `sdc_report` rows, their `inbound_envelope` rows, and the
   exact `raw_blob` bytes containing the originating OBX. Recover a NAACCR item name only for
-  rows with `item_num`, with no stored cross-schema FK.
+  rows with `item_num`, with no stored cross-schema FK. Note-to-message walk implemented;
+  later phases extend this to clinical rows and dictionary names.
+  `test_bridge.py`: `test_combined_note_and_every_contributor_recover_exact_message_bytes`,
+  `test_late_complementary_report_keeps_note_id_and_reconciles_anchor_and_provenance`.
 - [ ] **OMOP-08** *(4.5)* End-to-end: HL7v2 fixture → intake → bridge → expected OMOP rows
   (golden-file comparison). The FHIR repeat is outside Phase 4.
 - [x] **OMOP-09** *(regression, review finding #3; 4.5 retarget)* The SQL Server bridge ETL only
@@ -331,10 +341,15 @@ dialects.
   back every derived change, and names the offending rows; no date is replaced with today's
   date.
   `test_bridge.py`: `test_missing_birth_year_or_clinical_date_rolls_back_and_names_rows`.
-- [ ] **BRIDGE-06** *(4.2)* Narrative and synoptic reports sent in separate messages form one
-  group and one note; a narrative arriving after the first bridge run refreshes that note and
-  its links; the same accession under another patient or sending facility forms a separate
-  group.
+- [x] **BRIDGE-06** *(4.2)* Narrative and synoptic reports sent in separate messages form one
+  group and one note; a late narrative refreshes text and links without changing `note_id`.
+  A narrative-only group also gets a note; a late synoptic moves its anchor and retains its ID.
+  The same accession under another patient or sending facility forms a separate group.
+  Supersession refreshes notes, links, and periods atomically; a failed refresh rolls back selection.
+  `test_bridge.py`: `test_late_complementary_report_keeps_note_id_and_reconciles_anchor_and_provenance`,
+  `test_same_accession_for_other_patients_or_facilities_gets_separate_notes`,
+  `test_supersession_refreshes_notes_links_periods_and_pending_loads_atomically`,
+  `test_failed_supersession_refresh_rolls_back_selection_note_and_links`.
 - [ ] **BRIDGE-07** *(4.3)* Domain routing: a `Measurement`-domain target writes
   `measurement`, an `Observation`-domain target writes `observation`, and unmapped rows follow
   the documented default.

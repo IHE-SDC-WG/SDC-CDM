@@ -121,7 +121,7 @@ patient with no birth year, names them and rolls back the whole run. Either way,
 the failed run and its error. A successful run prints each script's row counts, and an unchanged
 rerun changes nothing.
 
-Phase 4.1 adds one script. It writes `omop.person` from `intake.patient` with
+The first script writes `omop.person` from `intake.patient` with
 `person_id = patient_id`, and it keeps a year-only birth date as `year_of_birth` alone. It writes
 one unpadded `observation_period` per person from the selected report versions: it uses NAACCR
 date of diagnosis (item 390) to date of last contact (item 1750) when both are full dates, and
@@ -132,6 +132,23 @@ boundary are recorded in `etl.observation_period_derivation`.
 `omop.cdm_source` comes from [`database/seed/cdm_source.csv`](database/seed/cdm_source.csv), a
 synthetic test source. A real deployment replaces that file, or passes `--seed-dir`, with its own
 source metadata.
+
+The second script writes one `omop.note` for every group with selected reports, including
+narrative-only groups. Its anchor is the selected synoptic report, then another non-narrative
+report, then a narrative report; the lowest `sdc_report_id` breaks ties. Text comes from the first
+non-empty selected narrative, then the anchor comment, then `Synoptic report` or `Narrative report`.
+The note date is the anchor's earliest day-precision value observation date, falling back to its
+envelope report date. A missing date or accession longer than 50 characters fails the whole run
+and names the group and anchor. `sdc.note_report` links each note to every selected contributor
+and marks one anchor. Late complementary reports update that note and its links while keeping
+`note_id`. Accession-less reports get no note.
+
+For a group already linked to a note, `reports supersede` moves selection and runs the **full
+bridge** in one transaction. This also bridges pending loads and recalculates observation periods.
+A prerequisite or source-data failure rolls back selection and every derived change. For an
+unbridged group it only moves selection and needs no bridge prerequisites. The command accepts
+`--seed-dir` with the same default as `bridge`, and records an `etl.run` row with command
+`supersede` whether it succeeds or fails.
 
 ## Tool support
 

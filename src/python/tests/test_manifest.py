@@ -48,6 +48,7 @@ def test_bridge_entries_are_ordered_and_every_etl_script_is_declared() -> None:
         entries = manifest.bridge_entries_for(dialect)
         assert [entry.path for entry in entries] == [
             f"database/etl/{dialect}/1_person_and_period.sql",
+            f"database/etl/{dialect}/2_note.sql",
         ]
         assert manifest.validate[dialect] == ()
         listed = {entry.path for entry in entries}

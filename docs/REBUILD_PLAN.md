@@ -731,14 +731,20 @@ a synoptic OBR sent in another belong to the same group.
   replacement.
 - **Explicit supersession.** One operation accepts a predecessor and successor `sdc_report_id`. It
   rejects cross-group or cross-type pairs, cycles, and a second successor for the same predecessor.
-  In the same transaction, it refreshes the affected group's bridge-owned OMOP rows. Source history
-  and unrelated OMOP rows are preserved.
+  For a group with an `sdc.note_report` link, the same transaction runs the full bridge after
+  moving selection. It also bridges pending loads and recalculates observation periods; unchanged
+  unrelated notes retain identical rows. A failure rolls back selection and all derived changes.
+  An unbridged group only moves selection and needs no bridge prerequisites.
 - **Identical-byte resends** keep Phase 3 behavior: they are stored and flagged, but they are not
   loaded and cannot create versions.
 - **Accession-less reports** stay excluded from the bridge, as they are today. `validate` reports
   them explicitly rather than dropping them silently.
-- **Note provenance lives in `sdc`.** Each note has links to every contributing report. OMOP's
-  schema is unchanged. The existing `is_duplicate_accession` / `first_seen_report_id` columns remain
+- **Note provenance lives in `sdc.note_report`.** Each note has links to every selected
+  contributing report and exactly one anchor. The link has a `(note_id, sdc_report_id)` primary
+  key, a unique report ID, and a filtered unique group index for the anchor. Note and group IDs
+  are logical cross-schema references; the report reference is enforced inside `sdc`. The bridge
+  owns only notes named by these links and never matches on `note_source_value`. OMOP's schema
+  is unchanged. The existing `is_duplicate_accession` / `first_seen_report_id` columns remain
   as intake provenance. Selection no longer depends on them. Phase 4.0 backfills version rows for
   already-loaded reports.
 
@@ -770,10 +776,16 @@ repeated identical answers survive.
    `database/seed/cdm_source.csv`. **`observation_period` source order:** NAACCR date of diagnosis
    to date of last contact when present, otherwise the MIN/MAX span of the person's clinical dates.
    Record the derivation per row and count one-day periods in `validate`. Do not pad periods.
-2. **`2_note.sql`** (4.2) — Write one note per report group from the selected reports. It is
-   anchored to the selected synoptic report and uses the selected narrative text when present. Every
-   contributing report has a link in `sdc`. A complementary report that arrives later refreshes the
-   group's note and links.
+2. **`2_note.sql`** (4.2) — Write one note per group with selected reports, including narrative-only
+   groups. Anchor order is synoptic, other non-narrative, narrative, with the lowest report ID
+   breaking ties. Text is the first non-empty selected narrative (lowest report ID), then the
+   anchor's non-empty text, then `Synoptic report` (`Narrative report` for a narrative anchor).
+   Date is the anchor's earliest day-precision `naaccr_value.observation_date`, then its envelope
+   report day. No day or an accession over 50 characters fails the run, naming group and anchor.
+   `note_type_ehr` and `unmapped` come from constants; title, datetime, provider, visit, and event
+   fields are NULL. Every selected contributor has an `sdc.note_report` link. A late complementary
+   report refreshes text and links, moving the anchor if needed while preserving `note_id`.
+   SQL Server stages text and accession in OMOP's stored `varchar` types before comparing.
 3. **`3_measurement_observation.sql`** (4.3) — Route on the target concept's `domain_id`:
    `Measurement` rows go to `measurement` and `Observation` rows go to `observation`. Unmapped rows
    follow a documented default. Type values as follows: coded values use `value_as_concept_id`
@@ -854,7 +866,10 @@ add their scripts to it.
   (`cdm_source.csv`, and from 4.5 `validate_thresholds.csv`), the resolved `etl.concept_constant`
   rows, and a built concept map. A missing prerequisite exits non-zero and names the absent item.
 - **Transactions.** Python owns one transaction per run. Any script failure rolls back every derived
-  change from that run. The supersession operation runs its refresh in its own single transaction.
+  change from that run. Supersession runs selection and the full bridge in its own single
+  transaction only when the group already has a note. It uses the same prerequisite checks and
+  reports the same named source failures as a normal bridge run. `reports supersede --seed-dir`
+  uses the bridge default. Its `etl.run` command is `supersede`, logged outside that transaction.
 - **Run log.** Each run writes an `etl.run` row (command, dialect, status, timestamps,
   `error_message`) and prints per-script row counts. The run row is written outside the data
   transaction, so a failed run keeps its `failed` status and error text after the rollback.
