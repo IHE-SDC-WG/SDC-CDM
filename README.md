@@ -139,8 +139,9 @@ report, then a narrative report; the lowest `sdc_report_id` breaks ties. Text co
 non-empty selected narrative, then the anchor comment, then `Synoptic report` or `Narrative report`.
 The note date is the anchor's earliest day-precision value observation date, falling back to its
 envelope report date. A missing date or accession longer than 50 characters fails the whole run
-and names the group and anchor. `sdc.note_report` links each note to every selected contributor
-and marks one anchor. Late complementary reports update that note and its links while keeping
+and names the group and anchor. SQL Server also rejects accessions whose encoded value exceeds
+`varchar(50)`'s 50-byte limit, before any narrowing conversion. `sdc.note_report` links each note
+to every selected contributor and marks one anchor. Late complementary reports update that note and its links while keeping
 `note_id`. Accession-less reports get no note.
 
 For a group already linked to a note, `reports supersede` moves selection and runs the **full

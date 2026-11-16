@@ -65,8 +65,10 @@ SELECT g.report_group_id, g.person_id, a.sdc_report_id AS anchor_id,
            CASE WHEN NULLIF(TRIM(a.report_text), '') IS NOT NULL THEN a.report_text END,
            CASE WHEN a.report_loinc IN ('33716-2', '33717-0', '35265-8')
                 THEN 'Narrative report' ELSE 'Synoptic report' END) AS varchar(MAX)) AS note_text,
-       CAST(g.report_accession AS varchar(50)) AS note_source_value,
+       -- Keep the conversion untruncated until the required-data check below.
+       CAST(g.report_accession AS varchar(MAX)) AS note_source_value,
        LEN(g.report_accession + N'#') - 1 AS accession_length,
+       DATALENGTH(CAST(g.report_accession AS varchar(MAX))) AS accession_bytes,
        ehr.concept_id AS note_type_concept_id, unmapped.concept_id AS unmapped_concept_id
 INTO #bridge_note
 FROM #bridge_contributor a
@@ -90,6 +92,10 @@ FROM (
     SELECT report_group_id, anchor_id, 1,
            'accession is longer than 50 characters'
     FROM #bridge_note WHERE accession_length > 50
+    UNION ALL
+    SELECT report_group_id, anchor_id, 2,
+           'accession exceeds the 50-byte note_source_value limit'
+    FROM #bridge_note WHERE accession_length <= 50 AND accession_bytes > 50
 ) failures
 ORDER BY report_group_id, anchor_id, rule_order;
 GO
@@ -113,14 +119,15 @@ SET person_id = b.person_id,
 FROM omop.note o
 JOIN #bridge_note b ON b.note_id = o.note_id
 WHERE EXISTS (
+    -- Text collation ignores some case/spacing changes; compare the stored bytes.
     SELECT o.person_id, o.note_date, o.note_datetime, o.note_type_concept_id,
-        o.note_class_concept_id, o.note_title, o.note_text, o.encoding_concept_id,
+        o.note_class_concept_id, o.note_title, CAST(o.note_text AS varbinary(MAX)), o.encoding_concept_id,
         o.language_concept_id, o.provider_id, o.visit_occurrence_id, o.visit_detail_id,
-        o.note_source_value, o.note_event_id, o.note_event_field_concept_id
+        CAST(o.note_source_value AS varbinary(MAX)), o.note_event_id, o.note_event_field_concept_id
     EXCEPT
     SELECT b.person_id, b.note_date, NULL, b.note_type_concept_id, b.unmapped_concept_id, NULL,
-        b.note_text, b.unmapped_concept_id, b.unmapped_concept_id, NULL, NULL, NULL,
-        b.note_source_value, NULL, NULL
+        CAST(b.note_text AS varbinary(MAX)), b.unmapped_concept_id, b.unmapped_concept_id, NULL, NULL, NULL,
+        CAST(b.note_source_value AS varbinary(MAX)), NULL, NULL
 );
 GO
 

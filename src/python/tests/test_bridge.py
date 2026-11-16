@@ -101,16 +101,19 @@ def _empty_map_seeds(tmp_path: Path) -> Path:
 
 
 @contextmanager
-def _database(dialect: str, tmp_path: Path) -> Iterator[tuple[DatabaseBackend, list[str]]]:
+def _database(
+    dialect: str, tmp_path: Path, *,
+    sqlserver_env: str = "SDC_CDM_BRIDGE_SQLSERVER_CONNECTION_STRING",
+) -> Iterator[tuple[DatabaseBackend, list[str]]]:
     """A built target with vocabulary, dictionary, concept map, and constants."""
     if dialect == "sqlite":
         control = tmp_path / "bridge.db"
         backend: DatabaseBackend = SQLiteBackend(control)
         target = ["--dialect", "sqlite", "--db", str(control)]
     else:
-        connection_string = os.environ.get("SDC_CDM_BRIDGE_SQLSERVER_CONNECTION_STRING")
+        connection_string = os.environ.get(sqlserver_env)
         if not connection_string:
-            pytest.skip("SDC_CDM_BRIDGE_SQLSERVER_CONNECTION_STRING is not set")
+            pytest.skip(f"{sqlserver_env} is not set")
         backend = SqlServerBackend(connection_string)
         target = ["--dialect", "sqlserver", "--connection-string", connection_string]
     try:
@@ -836,3 +839,80 @@ def test_unchanged_non_ascii_note_rerun_does_not_issue_an_update(
         finally:
             backend.execute("DROP TRIGGER IF EXISTS omop.bridge_note_update_audit")
             backend.execute("DROP TABLE omop.bridge_note_update_test")
+
+
+@DIALECTS
+@pytest.mark.parametrize("corrected_text", ("Stage II", "Stage ii "))
+def test_supersession_and_reconciliation_preserve_case_and_trailing_spaces(
+    dialect: str, tmp_path: Path, corrected_text: str,
+) -> None:
+    with _database(dialect, tmp_path) as (backend, _target):
+        source = _Source(backend)
+        source.patient("P", [], loinc="35265-8", narrative="Stage ii",
+                       report_date=_day(2024, 1, 2))
+        predecessor = source.last_report_id
+        run_bridge(backend, load_manifest())
+        (before,) = _notes(backend)
+        source.patient("P", [], loinc="35265-8", narrative=corrected_text,
+                       report_date=_day(2024, 1, 2))
+        successor = source.last_report_id
+        supersede_and_refresh(backend, load_manifest(), predecessor, successor)
+        (after,) = _notes(backend)
+        assert after[:3] == before[:3]
+        assert after[3] == corrected_text
+        assert _links(backend) == [(before[0], successor, 1)]
+
+        # The accession comparison also needs exact stored-byte semantics.
+        stale_source = before[4].lower() if corrected_text == "Stage II" else before[4] + " "
+        assert stale_source != before[4]
+        backend.execute("UPDATE omop.note SET note_source_value = ? WHERE note_id = ?",
+                        (stale_source, before[0]))
+        run_bridge(backend, load_manifest())
+        assert _notes(backend)[0] == after
+        before_rerun = _snapshot(backend)
+        run_bridge(backend, load_manifest())
+        assert _snapshot(backend) == before_rerun
+
+
+@pytest.mark.parametrize("accession", ("é" * 19 + "A", "é" * 20))
+def test_utf8_accession_byte_limit_is_checked_before_narrowing(
+    tmp_path: Path, accession: str,
+) -> None:
+    with _database("sqlserver", tmp_path,
+                   sqlserver_env="SDC_CDM_BRIDGE_UTF8_SQLSERVER_CONNECTION_STRING") as (backend, _target):
+        collation = backend.fetch_one(
+            "SELECT CONVERT(varchar(128), DATABASEPROPERTYEX(DB_NAME(), 'Collation'))"
+        )[0]
+        assert collation.endswith("_UTF8"), "this regression requires a UTF-8 database"
+        source = _Source(backend)
+        source.patient("kept", [_clinical(_day(2024, 1, 2))])
+        run_bridge(backend, load_manifest())
+        before = _snapshot(backend)
+        full_accession = f"{accession}-{source.token}"
+        assert len(full_accession) < 50
+        byte_length = len(full_accession.encode("utf-8"))
+        assert byte_length in (50, 51)
+        source.patient("P", [_clinical(_day(2024, 1, 2))], accession=accession)
+        anchor = source.last_report_id
+        if byte_length == 51:
+            group = backend.fetch_one(
+                "SELECT report_group_id FROM naaccr.report_version WHERE sdc_report_id = ?",
+                (anchor,),
+            )[0]
+            with pytest.raises(BridgeError) as error:
+                run_bridge(backend, load_manifest())
+            assert (f"naaccr.report_group {group} (anchor sdc_report {anchor}): "
+                    "accession exceeds the 50-byte note_source_value limit") in str(error.value)
+            assert _snapshot(backend) == before
+            assert _last_run(backend)[:2] == ("bridge", "failed")
+        else:
+            run_bridge(backend, load_manifest())
+            assert _notes(backend)[1][4] == full_accession
+            stored_length = backend.fetch_one(
+                "SELECT DATALENGTH(note_source_value) FROM omop.note WHERE note_id = ?",
+                (_notes(backend)[1][0],),
+            )[0]
+            assert stored_length == 50
+            before_rerun = _snapshot(backend)
+            run_bridge(backend, load_manifest())
+            assert _snapshot(backend) == before_rerun

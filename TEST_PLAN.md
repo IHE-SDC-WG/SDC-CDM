@@ -251,6 +251,8 @@ Phase 4 child that owns it. Every Phase 4 check runs on SQLite and SQL Server an
   `test_note_anchor_text_and_date_precedence_and_unowned_notes`,
   `test_unusable_note_data_names_group_and_anchor_and_rolls_back`,
   `test_unchanged_non_ascii_note_rerun_does_not_issue_an_update`,
+  `test_supersession_and_reconciliation_preserve_case_and_trailing_spaces`,
+  `test_utf8_accession_byte_limit_is_checked_before_narrowing` (SQL Server UTF-8 database),
   `test_accession_less_reports_have_no_note_or_provenance_link`, `test_note_sql_loinc_sets_match_parser`.
 - [ ] **OMOP-03** *(4.3)* One `omop.measurement`/`observation` per answered item, with
   `*_source_value` = the full CAP code or verified NAACCR item number. For rows with

@@ -45,7 +45,9 @@ note per selected report group, anchored in synoptic / other non-narrative / nar
 with the lowest report ID breaking ties. It prefers the first non-empty selected narrative,
 then the anchor comment, then a report-kind placeholder. Its date is the anchor's earliest
 value observation day, then its envelope report day. Missing dates and accessions over 50
-characters fail the run. Each selected report gets an `sdc.note_report` link; superseded and
+characters fail the run. SQL Server also checks the untruncated encoded accession against the
+50-byte `varchar(50)` limit. Text comparisons use stored bytes so case and trailing spaces
+are preserved. Each selected report gets an `sdc.note_report` link; superseded and
 accession-less reports do not. Both scripts reconcile changed state and keep existing note IDs.
 
 `reports supersede` refreshes the full bridge when the group already has a note, in the same

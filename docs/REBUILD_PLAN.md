@@ -785,7 +785,9 @@ repeated identical answers survive.
    `note_type_ehr` and `unmapped` come from constants; title, datetime, provider, visit, and event
    fields are NULL. Every selected contributor has an `sdc.note_report` link. A late complementary
    report refreshes text and links, moving the anchor if needed while preserving `note_id`.
-   SQL Server stages text and accession in OMOP's stored `varchar` types before comparing.
+   SQL Server converts text and accession to the stored `varchar` encoding before comparing
+   their bytes, preserving case and trailing spaces. Accession conversion stays untruncated
+   until its encoded byte length is checked against the 50-byte `note_source_value` limit.
 3. **`3_measurement_observation.sql`** (4.3) — Route on the target concept's `domain_id`:
    `Measurement` rows go to `measurement` and `Observation` rows go to `observation`. Unmapped rows
    follow a documented default. Type values as follows: coded values use `value_as_concept_id`

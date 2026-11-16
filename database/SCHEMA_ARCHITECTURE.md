@@ -154,6 +154,8 @@ The bridge chooses an anchor in synoptic / other non-narrative / narrative order
 by report ID. Text prefers the first non-empty selected narrative, then anchor text, then a
 report-kind placeholder. The date is the anchor's earliest value observation day, then its
 envelope report day. Missing dates and accessions longer than 50 characters fail the run.
+SQL Server also rejects encoded accessions over 50 bytes before narrowing to `varchar(50)`.
+Its reconciliation compares stored text bytes to preserve case and trailing spaces.
 An unchanged rerun performs no note or link writes.
 
 This query recovers each note's contributing reports and exact source bytes without adding
