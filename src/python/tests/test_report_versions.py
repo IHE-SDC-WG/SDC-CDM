@@ -337,8 +337,15 @@ def test_supersession_chain_advances_selection_one_version_at_a_time(
         assert links() == {n1: None, s1: None, s2: s1, s3: None}
 
         assert main(["reports", "supersede", str(s2), str(s3),
-                     *_target(backend, tmp_path)]) == 0
-        assert f"sdc_report {s3} supersedes {s2}" in capsys.readouterr().out
+                     *_target(backend, tmp_path),
+                     "--seed-dir", str(tmp_path / "unavailable-seeds")]) == 0
+        output = capsys.readouterr().out
+        assert f"sdc_report {s3} supersedes {s2}" in output
+        assert "bridge not yet run for this group" in output
+        assert tuple(backend.fetch_one(
+            "SELECT command, status, error_message FROM etl.run "
+            "WHERE run_id = (SELECT MAX(run_id) FROM etl.run)"
+        )) == ("supersede", "succeeded", None)
         assert lab.selected() == {n1, s3}
         assert links() == {n1: None, s1: None, s2: s1, s3: s2}
         # Supersession moves selection only: no source or OMOP row changes.

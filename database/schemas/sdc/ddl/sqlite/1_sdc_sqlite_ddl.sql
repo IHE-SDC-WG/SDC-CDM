@@ -131,4 +131,17 @@ CREATE INDEX IF NOT EXISTS sdc.idx_sdc_report_inbound_envelope
 CREATE INDEX IF NOT EXISTS sdc.idx_sdc_form_answer_instance_question
     ON sdc_form_answer (template_instance_id, question_sdcid);
 
+-- Logical references to omop.note and naaccr.report_group are not enforced
+-- across schemas/attached databases. The report FK stays inside sdc.
+CREATE TABLE IF NOT EXISTS sdc.note_report (
+    note_id INTEGER NOT NULL,
+    report_group_id INTEGER NOT NULL,
+    sdc_report_id INTEGER NOT NULL REFERENCES sdc_report(sdc_report_id),
+    is_anchor INTEGER NOT NULL CHECK (is_anchor IN (0, 1)),
+    PRIMARY KEY (note_id, sdc_report_id),
+    UNIQUE (sdc_report_id)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS sdc.idx_note_report_anchor
+    ON note_report (report_group_id) WHERE is_anchor = 1;
+
 COMMIT;

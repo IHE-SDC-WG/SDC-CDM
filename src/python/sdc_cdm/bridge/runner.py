@@ -146,6 +146,31 @@ def _run_script(backend: DatabaseBackend, entry: EtlEntry) -> ScriptResult:
     return ScriptResult(entry.path, counts)
 
 
+def check_prerequisites(
+    backend: DatabaseBackend, entries: tuple[EtlEntry, ...], seed_dir: Path,
+) -> None:
+    """Name every missing prerequisite without writing data or committing."""
+    missing = [
+        *_missing_seeds(entries, seed_dir),
+        *_missing_constants(backend, entries),
+        *_missing_database_state(backend),
+    ]
+    if missing:
+        raise BridgeError(
+            "bridge prerequisites are missing; nothing was written:\n- "
+            + "\n- ".join(missing)
+        )
+
+
+def apply_entries(
+    backend: DatabaseBackend, entries: tuple[EtlEntry, ...], seed_dir: Path,
+) -> tuple[ScriptResult, ...]:
+    """Stage seeds and apply all entries inside the caller's transaction."""
+    for name in sorted({seed for entry in entries for seed in entry.seeds}):
+        SEEDS[name][1](backend, seed_dir / name)
+    return tuple(_run_script(backend, entry) for entry in entries)
+
+
 def run_bridge(
     backend: DatabaseBackend,
     manifest: DatabaseManifest,
@@ -158,20 +183,9 @@ def run_bridge(
     run_log = RunLog(backend)
     run_id = run_log.start("bridge")
     try:
-        missing = [
-            *_missing_seeds(entries, seed_dir),
-            *_missing_constants(backend, entries),
-            *_missing_database_state(backend),
-        ]
-        if missing:
-            raise BridgeError(
-                "bridge prerequisites are missing; nothing was written:\n- "
-                + "\n- ".join(missing)
-            )
+        check_prerequisites(backend, entries, seed_dir)
         with backend.transaction():
-            for name in sorted({seed for entry in entries for seed in entry.seeds}):
-                SEEDS[name][1](backend, seed_dir / name)
-            scripts = tuple(_run_script(backend, entry) for entry in entries)
+            scripts = apply_entries(backend, entries, seed_dir)
         run_log.finish(run_id)
         return BridgeResult(run_id, scripts)
     except Exception as exc:

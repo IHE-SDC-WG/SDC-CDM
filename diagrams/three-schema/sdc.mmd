@@ -10,6 +10,8 @@ erDiagram
   %%   eCP / HL7 V2 path -- sdc_report holds the synoptic report header only; its
   %%     answers live in naaccr.naaccr_value, not in sdc_form_answer.
   OMOP_PERSON { INTEGER person_id PK }
+  OMOP_NOTE { INTEGER note_id PK }
+  NAACCR_REPORT_GROUP { INTEGER report_group_id PK }
   OMOP_VISIT_OCCURRENCE { INTEGER visit_occurrence_id PK }
   OMOP_PROVIDER { INTEGER provider_id PK }
   NAACCR_VALUE { INTEGER naaccr_value_id PK }
@@ -54,10 +56,8 @@ erDiagram
     TEXT report_text
   }
 
-  %% Synoptic-report header for the eCP / HL7 path (renamed from
-  %% sdc_template_instance_ecp). report_loinc is 60568-3. Re-imports of the same
-  %% accession are flagged is_duplicate_accession=1 and chained to the original via
-  %% first_seen_report_id; the ETL bridge skips those rows.
+  %% Report header for the eCP / HL7 path, including narrative reports.
+  %% Duplicate metadata is retained; the bridge uses naaccr.report_version selection.
   SDC_REPORT {
     INTEGER sdc_report_id PK
     INTEGER template_instance_id FK
@@ -78,8 +78,18 @@ erDiagram
     TEXT report_loinc
     INTEGER is_duplicate_accession
     INTEGER first_seen_report_id FK
+    INTEGER inbound_envelope_id
     TEXT created_datetime
     TEXT updated_datetime
+  }
+
+  %% One selected contributor per row; one anchor per group (filtered unique index).
+  %% note_id and report_group_id are logical cross-schema references.
+  NOTE_REPORT {
+    INTEGER note_id PK
+    INTEGER sdc_report_id PK,FK,UK
+    INTEGER report_group_id
+    INTEGER is_anchor
   }
 
   %% Answer store for the SDC XML path only. `response` holds the raw source
@@ -144,6 +154,9 @@ erDiagram
   }
 
   %% Relationships
+  OMOP_NOTE ||..|{ NOTE_REPORT : "note_id (logical)"
+  NAACCR_REPORT_GROUP ||..|{ NOTE_REPORT : "report_group_id (one anchor)"
+  SDC_REPORT ||--o| NOTE_REPORT : "sdc_report_id (selected contributors only)"
   TEMPLATE_SDC ||--o{ TEMPLATE_ITEM : "template_sdc_id"
   TEMPLATE_ITEM ||--o{ TEMPLATE_ITEM : "parent_template_item_id (item tree)"
   TEMPLATE_SDC ||--o{ TEMPLATE_INSTANCE : "template_sdc_id"

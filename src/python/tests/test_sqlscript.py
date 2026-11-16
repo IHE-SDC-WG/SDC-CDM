@@ -49,9 +49,10 @@ def test_real_manifest_script_counts_are_pinned() -> None:
             "database/schemas/omop/ddl/sqlite/4_OMOPCDM_sqlite_5.4_indices.sql": (70, 0),
             "database/schemas/naaccr/ddl/sqlite/1_naaccr_sqlite_ddl.sql": (37, 2),
             "database/schemas/naaccr/ddl/sqlite/3_naaccr_report_version_sqlite.sql": (5, 2),
-            "database/schemas/sdc/ddl/sqlite/1_sdc_sqlite_ddl.sql": (13, 2),
+            "database/schemas/sdc/ddl/sqlite/1_sdc_sqlite_ddl.sql": (15, 2),
             # Bridge scripts hold one statement per unit in both dialects.
             "database/etl/sqlite/1_person_and_period.sql": (18, 0),
+            "database/etl/sqlite/2_note.sql": (14, 0),
         },
         "sqlserver": {
             "database/schemas/etl/ddl/sqlserver/1_etl_sqlserver_ddl.sql": (6, 6),
@@ -64,8 +65,9 @@ def test_real_manifest_script_counts_are_pinned() -> None:
             "database/schemas/naaccr/ddl/sqlserver/1_naaccr_sqlserver_ddl.sql": (4, 4),
             "database/schemas/naaccr/ddl/sqlserver/2_naaccr_concept_maps_sqlserver.sql": (8, 8),
             "database/schemas/naaccr/ddl/sqlserver/3_naaccr_report_version_sqlserver.sql": (3, 3),
-            "database/schemas/sdc/ddl/sqlserver/1_sdc_sqlserver_ddl.sql": (12, 12),
+            "database/schemas/sdc/ddl/sqlserver/1_sdc_sqlserver_ddl.sql": (13, 13),
             "database/etl/sqlserver/1_person_and_period.sql": (18, 18),
+            "database/etl/sqlserver/2_note.sql": (14, 14),
         },
     }
 

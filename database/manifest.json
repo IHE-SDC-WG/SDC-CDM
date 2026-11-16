@@ -125,6 +125,18 @@
           "etl.observation_period_derivation",
           "omop.cdm_source"
         ]
+      },
+      {
+        "path": "database/etl/sqlite/2_note.sql",
+        "constants": [
+          "note_type_ehr",
+          "unmapped"
+        ],
+        "seeds": [],
+        "tables": [
+          "omop.note",
+          "sdc.note_report"
+        ]
       }
     ],
     "sqlserver": [
@@ -145,6 +157,18 @@
           "omop.observation_period",
           "etl.observation_period_derivation",
           "omop.cdm_source"
+        ]
+      },
+      {
+        "path": "database/etl/sqlserver/2_note.sql",
+        "constants": [
+          "note_type_ehr",
+          "unmapped"
+        ],
+        "seeds": [],
+        "tables": [
+          "omop.note",
+          "sdc.note_report"
         ]
       }
     ]

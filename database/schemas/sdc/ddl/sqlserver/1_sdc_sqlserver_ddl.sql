@@ -174,3 +174,20 @@ BEGIN
   );
 END
 GO
+
+-- Logical references to omop.note and naaccr.report_group are not enforced
+-- across schemas/attached databases. The report FK stays inside sdc.
+IF OBJECT_ID('sdc.note_report', 'U') IS NULL
+BEGIN
+    CREATE TABLE sdc.note_report (
+        note_id INT NOT NULL,
+        report_group_id INT NOT NULL,
+        sdc_report_id INT NOT NULL REFERENCES sdc.sdc_report(sdc_report_id),
+        is_anchor BIT NOT NULL,
+        PRIMARY KEY (note_id, sdc_report_id),
+        UNIQUE (sdc_report_id)
+    );
+    CREATE UNIQUE INDEX IX_note_report_anchor
+        ON sdc.note_report (report_group_id) WHERE is_anchor = 1;
+END
+GO
