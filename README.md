@@ -144,6 +144,18 @@ and names the group and anchor. SQL Server also rejects accessions whose encoded
 to every selected contributor and marks one anchor. Late complementary reports update that note and its links while keeping
 `note_id`. Accession-less reports get no note.
 
+The third script writes one `omop.measurement` or `omop.observation` for every NAACCR value of a
+selected report, including repeated identical answers. Maps join on `item_num` only; an
+`ecp_code` is kept in `*_source_value` and never parsed. A standard target in the
+`Measurement` or `Observation` domain routes the value to that table. Any other value keeps
+`0` in `*_concept_id` and goes to `observation` when it carries text, otherwise to
+`measurement`. Coded values use the value map's standard target in `value_as_concept_id`,
+except for #100 collision codes; numbers use `value_as_number` and `unit_source_value`; text
+uses `observation.value_as_string`. Text longer than the OMOP column is cut and flagged. The
+date is the value's own day, then its report's day; a value with neither fails the run.
+`naaccr.value_event` links every value to its row and records how it was routed and typed, so
+unmapped and suppressed values can be counted. `*_event_id` points at the group's note.
+
 For a group already linked to a note, `reports supersede` moves selection and runs the **full
 bridge** in one transaction. This also bridges pending loads and recalculates observation periods.
 A prerequisite or source-data failure rolls back selection and every derived change. For an

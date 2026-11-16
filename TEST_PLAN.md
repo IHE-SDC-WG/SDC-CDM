@@ -254,25 +254,35 @@ Phase 4 child that owns it. Every Phase 4 check runs on SQLite and SQL Server an
   `test_supersession_and_reconciliation_preserve_case_and_trailing_spaces`,
   `test_utf8_accession_byte_limit_is_checked_before_narrowing` (SQL Server UTF-8 database),
   `test_accession_less_reports_have_no_note_or_provenance_link`, `test_note_sql_loinc_sets_match_parser`.
-- [ ] **OMOP-03** *(4.3)* One `omop.measurement`/`observation` per answered item, with
+- [x] **OMOP-03** *(4.3)* One `omop.measurement`/`observation` per answered item, with
   `*_source_value` = the full CAP code or verified NAACCR item number. For rows with
   `item_num`, the NAACCR source concept goes in `*_source_concept_id` and the standard target,
   or `0`, goes in `*_concept_id`. Rows with only `ecp_code` use zero in both slots. `*_event_id`
   points at the note, with the event field concept resolved from `field_note_note_id`.
-- [ ] **OMOP-04** *(4.3)* Value typing: coded answers use the standard target from
+  `test_bridge.py`: `test_values_route_to_their_domain_tables_with_both_concept_slots`,
+  `test_ckey_values_are_kept_never_joined_by_prefix_and_counted`.
+- [x] **OMOP-04** *(4.3)* Value typing: coded answers use the standard target from
   `naaccr_value_concept_map` in `value_as_concept_id`, or NULL when its target is zero, absent,
   or suppressed under #100; numeric → `value_as_number` + `unit_source_value` with
   `unit_concept_id` NULL; text → `observation.value_as_string`. One test per shape, using
-  synthetic NAACCR input.
+  synthetic NAACCR input. Text over the OMOP column limit is cut and flagged.
+  `test_bridge.py`: `test_coded_numeric_and_text_values_take_their_omop_shapes`,
+  `test_over_length_text_is_cut_to_omop_limits_and_flagged`,
+  `test_utf8_text_is_cut_on_character_boundaries_and_long_ckeys_fail` (SQL Server UTF-8 database).
 - [x] **OMOP-05** *(regression, review finding #2a; 4.0/4.3 retarget)* Repeated reports do
   **not** fan out: measurement count equals the selected version's answer count, not N×M
-  across retained versions sharing a group. Currently asserted through
-  `is_duplicate_accession`; Phase 4 asserts it through version selection.
+  across retained versions sharing a group. The old bridge asserts it through
+  `is_duplicate_accession`; the runner asserts it through version selection.
+  `test_bridge.py`: `test_supersession_replaces_clinical_rows_and_an_unchanged_rerun_updates_nothing`.
 - [x] **OMOP-06** *(regression, review finding #2b; 4.1–4.4 extend)* Idempotency: running the
   bridge repeatedly leaves row counts unchanged in every OMOP table it writes.
+  `test_bridge.py`: `test_bridge_derives_person_period_and_source_and_reruns_unchanged`,
+  `test_supersession_replaces_clinical_rows_and_an_unchanged_rerun_updates_nothing`,
+  `test_unchanged_non_ascii_and_truncated_values_rerun_without_updates`.
 - [x] **OMOP-06a** *(regression, pre-bridge duplicate double-counting; 4.3 keep)* When the same
   message is imported twice **before** the bridge runs, the re-import's rows do **not** bridge:
   measurement count equals the single-import count, not 2×.
+  `test_bridge.py`: `test_exact_byte_resend_before_the_first_bridge_does_not_double_rows`.
 - [x] **OMOP-06b** *(regression, empty-accession collisions; 4.5 extend)* Accession-less reports
   (OBR-3 stored as NULL, and legacy `''` covered by the ETL's `NULLIF` guard) never bridge: no
   `''` note is created and their values do not fan out across reports. Phase 4 adds an
@@ -280,10 +290,12 @@ Phase 4 child that owns it. Every Phase 4 check runs on SQLite and SQL Server an
 - [x] **OMOP-07** *(4.2; 4.3/4.4 extend)* Provenance walk: from any bridge-owned OMOP row,
   recover the note, its contributing `sdc_report` rows, their `inbound_envelope` rows, and the
   exact `raw_blob` bytes containing the originating OBX. Recover a NAACCR item name only for
-  rows with `item_num`, with no stored cross-schema FK. Note-to-message walk implemented;
-  later phases extend this to clinical rows and dictionary names.
+  rows with `item_num`, with no stored cross-schema FK. Note-to-message and (4.3)
+  measurement/observation-to-message walks are implemented, the latter through
+  `naaccr.value_event`; 4.4 extends this to conditions and episodes, and dictionary names follow.
   `test_bridge.py`: `test_combined_note_and_every_contributor_recover_exact_message_bytes`,
-  `test_late_complementary_report_keeps_note_id_and_reconciles_anchor_and_provenance`.
+  `test_late_complementary_report_keeps_note_id_and_reconciles_anchor_and_provenance`,
+  `test_every_clinical_row_walks_to_its_exact_message_bytes`.
 - [ ] **OMOP-08** *(4.5)* End-to-end: HL7v2 fixture → intake → bridge → expected OMOP rows
   (golden-file comparison). The FHIR repeat is outside Phase 4.
 - [x] **OMOP-09** *(regression, review finding #3; 4.5 retarget)* The SQL Server bridge ETL only
@@ -306,7 +318,9 @@ Phase 4 child that owns it. Every Phase 4 check runs on SQLite and SQL Server an
   (`measurement_concept_id`, `observation_concept_id`, `condition_concept_id`,
   `value_as_concept_id`, `episode_concept_id`, `episode_object_concept_id`) contain only
   standard concepts when nonzero or non-NULL. Source slots may contain non-standard NAACCR
-  concepts. Type and event-field slots hold their resolved constants.
+  concepts. Type and event-field slots hold their resolved constants. 4.3 checks measurement
+  and observation slots in `test_bridge.py`:
+  `test_values_route_to_their_domain_tables_with_both_concept_slots`.
 
 ### 3.1 Phase 4 bridge checks
 
@@ -342,7 +356,8 @@ dialects.
 - [x] **BRIDGE-05** *(4.1)* A missing required birth year or clinical date fails the run, rolls
   back every derived change, and names the offending rows; no date is replaced with today's
   date.
-  `test_bridge.py`: `test_missing_birth_year_or_clinical_date_rolls_back_and_names_rows`.
+  `test_bridge.py`: `test_missing_birth_year_or_clinical_date_rolls_back_and_names_rows`,
+  `test_undated_values_use_their_report_day_or_fail_and_roll_back` (4.3).
 - [x] **BRIDGE-06** *(4.2)* Narrative and synoptic reports sent in separate messages form one
   group and one note; a late narrative refreshes text and links without changing `note_id`.
   A narrative-only group also gets a note; a late synoptic moves its anchor and retains its ID.
@@ -352,17 +367,23 @@ dialects.
   `test_same_accession_for_other_patients_or_facilities_gets_separate_notes`,
   `test_supersession_refreshes_notes_links_periods_and_pending_loads_atomically`,
   `test_failed_supersession_refresh_rolls_back_selection_note_and_links`.
-- [ ] **BRIDGE-07** *(4.3)* Domain routing: a `Measurement`-domain target writes
+- [x] **BRIDGE-07** *(4.3)* Domain routing: a `Measurement`-domain target writes
   `measurement`, an `Observation`-domain target writes `observation`, and unmapped rows follow
-  the documented default.
-- [ ] **BRIDGE-08** *(4.3)* A coded value listed in `naaccr.value_code_collision` (#100) gets no
+  the documented default (`observation` with non-blank text, otherwise `measurement`).
+  `test_bridge.py`: `test_values_route_to_their_domain_tables_with_both_concept_slots`.
+- [x] **BRIDGE-08** *(4.3)* A coded value listed in `naaccr.value_code_collision` (#100) gets no
   coded target; its source value and source concept are kept, and the row is reported.
-- [ ] **BRIDGE-09** *(4.3)* Unmapped CKey input (`ecp_code` with NULL `item_num`) is retained in
+  `test_bridge.py`: `test_collision_codes_are_suppressed_kept_and_reported`.
+- [x] **BRIDGE-09** *(4.3)* Unmapped CKey input (`ecp_code` with NULL `item_num`) is retained in
   `*_source_value`, is never joined by numeric prefix, and is counted as unmapped.
-- [ ] **BRIDGE-10** *(4.3, 4.4)* After explicit supersession, the group's bridge-owned rows are
+  `test_bridge.py`: `test_ckey_values_are_kept_never_joined_by_prefix_and_counted`.
+- [x] **BRIDGE-10** *(4.3, 4.4)* After explicit supersession, the group's bridge-owned rows are
   replaced atomically. No obsolete clinical rows or orphan event links remain, unrelated OMOP rows
   are unchanged, and source history is preserved. Repeated identical answers survive as
-  distinct occurrences, and an unchanged rerun adds no rows.
+  distinct occurrences, and an unchanged rerun adds no rows. 4.4 extends this to conditions and
+  episodes.
+  `test_bridge.py`: `test_supersession_replaces_clinical_rows_and_an_unchanged_rerun_updates_nothing`,
+  `test_a_clinical_row_without_a_link_is_never_adopted_or_changed`.
 - [ ] **BRIDGE-11** *(4.4)* One thin primary-site `condition_occurrence` per selected group;
   episodes are grouped per patient, not by accession alone; `episode_event` links the group's
   selected measurements, observations, and condition. Episode constants resolve without the

@@ -137,6 +137,21 @@
           "omop.note",
           "sdc.note_report"
         ]
+      },
+      {
+        "path": "database/etl/sqlite/3_measurement_observation.sql",
+        "constants": [
+          "measurement_type_registry",
+          "observation_type_registry",
+          "field_note_note_id",
+          "unmapped"
+        ],
+        "seeds": [],
+        "tables": [
+          "omop.measurement",
+          "omop.observation",
+          "naaccr.value_event"
+        ]
       }
     ],
     "sqlserver": [
@@ -169,6 +184,21 @@
         "tables": [
           "omop.note",
           "sdc.note_report"
+        ]
+      },
+      {
+        "path": "database/etl/sqlserver/3_measurement_observation.sql",
+        "constants": [
+          "measurement_type_registry",
+          "observation_type_registry",
+          "field_note_note_id",
+          "unmapped"
+        ],
+        "seeds": [],
+        "tables": [
+          "omop.measurement",
+          "omop.observation",
+          "naaccr.value_event"
         ]
       }
     ]

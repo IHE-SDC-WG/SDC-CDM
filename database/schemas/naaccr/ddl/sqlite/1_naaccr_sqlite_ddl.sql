@@ -457,4 +457,25 @@ CREATE INDEX IF NOT EXISTS naaccr.idx_naaccr_value_sdc_report
 CREATE INDEX IF NOT EXISTS naaccr.idx_naaccr_value_inbound_envelope
     ON naaccr_value (inbound_envelope_id);
 
+-- Bridge script 3 provenance: one link per naaccr_value bridged into omop.measurement or
+-- omop.observation. event_id is a logical reference into the table named by event_table
+-- (OMOP holds no crosswalk). The bridge owns only clinical rows named here. route,
+-- value_target, and is_truncated record how the row was routed and typed, so unmapped,
+-- collision-suppressed, and truncated values stay reportable.
+CREATE TABLE IF NOT EXISTS naaccr.value_event (
+    naaccr_value_id INTEGER NOT NULL PRIMARY KEY
+        REFERENCES naaccr_value(naaccr_value_id),
+    event_table TEXT NOT NULL CHECK (event_table IN ('measurement', 'observation')),
+    event_id INTEGER NOT NULL,
+    route TEXT NOT NULL CHECK (route IN (
+        'target_domain', 'default_ecp_code', 'default_no_map',
+        'default_no_target', 'default_other_domain'
+    )),
+    value_target TEXT NOT NULL CHECK (value_target IN (
+        'none', 'mapped', 'unmapped', 'collision_suppressed'
+    )),
+    is_truncated INTEGER NOT NULL CHECK (is_truncated IN (0, 1)),
+    UNIQUE (event_table, event_id)
+);
+
 COMMIT;

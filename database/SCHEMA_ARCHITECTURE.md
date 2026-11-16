@@ -74,6 +74,13 @@ Fetch, CSV, load, and verification details are in
 `report_accession` remains as a denormalized business key, but the bridge joins by report ID so
 duplicate-accession and accession-less reports cannot fan out.
 
+`value_event` links each bridged `naaccr_value` (its primary key, an enforced FK) to the one
+`omop.measurement` or `omop.observation` row it produced: `event_table` names the table and
+`event_id` is a logical reference to its ID, unique per table. It also records how the row was
+routed (`route`), how its coded value was typed (`value_target`), and whether any text was cut
+(`is_truncated`), so unmapped, #100-suppressed, and truncated values are countable without
+reading OMOP. Clinical rows with no link belong to other writers.
+
 ### 3. `sdc`: form structure and report metadata
 
 The SDC XML path stores templates, instances, and submitted answers:
@@ -132,6 +139,8 @@ Inbound bytes
    |                      +--> bridge --> omop.person + omop.observation_period
    |                                   + omop.cdm_source + omop.note
    |                                   + sdc.note_report (selected contributors + anchor)
+   |                                   + omop.measurement + omop.observation
+   |                                   + naaccr.value_event (one link per value)
    |                                   + etl.observation_period_derivation
    |
    +--> sdc.template_* + sdc.sdc_form_answer    (SDC XML path)
@@ -141,7 +150,8 @@ database/manifest.json --> etl.schema_migration + etl.run
 
 The bridge is a separate transform, `sdc-cdm bridge`, that runs the manifest's ordered `bridge`
 entries in one transaction. It reads `intake`, `naaccr`, and `sdc`, writes only standard OMOP
-columns plus its own `etl` and `sdc.note_report` provenance, and does not run as part of `build`.
+columns plus its own `etl`, `sdc.note_report`, and `naaccr.value_event` provenance, and does not
+run as part of `build`.
 
 ## Back-reference without a crosswalk
 
@@ -177,7 +187,66 @@ transaction, including pending loads and period recalculation. Any failure rolls
 An unbridged group only moves selection, with no bridge prerequisites. Its `etl.run` record
 is written outside the data transaction so failed outcomes survive rollback.
 
-Measurement and observation event pointers and source-value columns are extended in Phase 4.3.
+### Measurements and observations
+
+Each `naaccr_value` of a selected report (one with a `note_report` link) becomes exactly one
+clinical row, including a value with no answer. Maps join on `item_num` only; an `ecp_code` is
+never parsed for an item number. The row's table and concept slots follow its route:
+
+| Route (`value_event.route`) | Case | Table | `*_concept_id` | `*_source_concept_id` |
+|---|---|---|---|---|
+| `target_domain` | map target in the `Measurement` or `Observation` domain | that domain's table | map `concept_id` | map `source_concept_id` |
+| `default_other_domain` | map target in any other domain | by value shape | `0` | map `source_concept_id` |
+| `default_no_target` | map row with `concept_id = 0` (local mint) | by value shape | `0` | map `source_concept_id` |
+| `default_no_map` | `item_num` with no map row | by value shape | `0` | `0` |
+| `default_ecp_code` | `ecp_code` only | by value shape | `0` | `0` |
+
+"By value shape" means `observation` when the value carries non-blank `value_text`, otherwise
+`measurement`. Every `0` comes from the `unmapped` constant. `*_source_value` is the `ecp_code`
+or the item number. `*_event_id` is the group's `note_id`, with the event field concept from
+`field_note_note_id`. Type concepts come from `measurement_type_registry` and
+`observation_type_registry`.
+
+| `naaccr_value` column | OMOP column | Rule |
+|---|---|---|
+| `value_code` | `value_as_concept_id` | the nonzero `naaccr_value_concept_map` target for `(item_num, value_code)`; NULL when the target is `0` or absent, or when `naaccr.value_code_collision` lists the pair (#100) |
+| `value_code`, else `value_text` | `value_source_value` | cut to 50 |
+| `value_num` | `value_as_number` | — |
+| `value_unit_source` | `unit_source_value` | cut to 50; `unit_concept_id` stays NULL |
+| `value_text` | `observation.value_as_string` | cut to 60; `measurement` has no string column |
+| `observation_date` | `*_date` | else the report's day-precision envelope date; neither fails the run |
+
+`value_event.value_target` is `none` (no code), `mapped`, `unmapped`, or `collision_suppressed`
+(which takes precedence over `unmapped`). OMOP has no value-source-concept column, so a coded
+value keeps its code in `value_source_value` and the item's source concept in
+`*_source_concept_id`. Limits are characters on SQLite and bytes of the stored `varchar`
+encoding on SQL Server; a cut never splits a character and sets `is_truncated`. An `ecp_code`
+longer than 50 bytes fails the run instead of being cut. Datetime, time, operator, range,
+provider, visit, and qualifier columns are NULL.
+
+A rerun deletes owned rows whose value is no longer selected, whose table changed, or whose row
+is gone; updates only columns that differ; and inserts the rest. IDs stay stable, repeated
+identical answers stay separate rows, and an unchanged rerun writes nothing. This query walks
+each clinical row back to its exact source bytes:
+
+```sql
+SELECT ev.event_table, ev.event_id, ev.note_id, v.naaccr_value_id, v.item_num, v.ecp_code,
+       l.route, l.value_target, l.is_truncated, nr.report_group_id,
+       v.sdc_report_id, e.inbound_envelope_id, m.inbound_message_id, m.raw_blob
+FROM (
+    SELECT 'measurement' AS event_table, measurement_id AS event_id,
+           measurement_event_id AS note_id
+    FROM omop.measurement
+    UNION ALL
+    SELECT 'observation', observation_id, observation_event_id FROM omop.observation
+) ev
+JOIN naaccr.value_event l ON l.event_table = ev.event_table AND l.event_id = ev.event_id
+JOIN naaccr.naaccr_value v ON v.naaccr_value_id = l.naaccr_value_id
+JOIN sdc.note_report nr ON nr.sdc_report_id = v.sdc_report_id
+JOIN intake.inbound_envelope e ON e.inbound_envelope_id = v.inbound_envelope_id
+JOIN intake.inbound_message m ON m.inbound_message_id = e.inbound_message_id;
+```
+
 The excluded pre-rebuild bridge remains under separate regression tests until Phase 4.5;
 it must not run alongside the manifest bridge on one database.
 

@@ -1,4 +1,4 @@
-"""BRIDGE-03..06 and OMOP-02/07/11: runner, person/period/source, notes and provenance."""
+"""BRIDGE-03..10, OMOP-02..07/11/12: runner, person/period/source, notes, clinical rows."""
 
 from __future__ import annotations
 
@@ -51,7 +51,7 @@ OMOP_TABLES = (
 # SQL Server bridge database is dedicated to this module, so each test starts
 # from empty source and derived tables.
 RESET = (
-    "sdc.note_report", "omop.note", "omop.cdm_source", "omop.observation_period", "omop.person",
+    "naaccr.value_event", "omop.measurement", "omop.observation", "sdc.note_report", "omop.note", "omop.cdm_source", "omop.observation_period", "omop.person",
     "etl.observation_period_derivation", "etl.cdm_source_seed",
     "naaccr.report_version", "naaccr.report_group", "naaccr.naaccr_value",
     "intake.envelope_value", "intake.envelope_load", "intake.inbound_message_diagnostic",
@@ -64,6 +64,9 @@ DERIVED = (
     ("omop.cdm_source", "cdm_source_name"),
     ("omop.note", "note_id"),
     ("sdc.note_report", "note_id, sdc_report_id"),
+    ("omop.measurement", "measurement_id"),
+    ("omop.observation", "observation_id"),
+    ("naaccr.value_event", "naaccr_value_id"),
 )
 PERIODS = (
     "SELECT o.person_id, o.observation_period_start_date, o.observation_period_end_date, "
@@ -188,10 +191,19 @@ class _Source:
             "WHERE e.inbound_message_id = ?", (message_id,),
         )[0])
         self.raw[self.last_report_id] = raw
+        self.last_envelope = envelope
         return int(self.backend.fetch_one(
             "SELECT patient_id FROM intake.patient WHERE person_source_value = ?",
             (f"{name}-{self.token}",),
         )[0])
+
+    def resend_last(self) -> int:
+        """Ingest and load the last report's exact bytes again; return the new message ID."""
+        raw = self.raw[self.last_report_id]
+        message_id = ingest_message(self.backend, raw, lambda _: [self.last_envelope],
+                                    parser_name="test", parser_version="1").inbound_message_id
+        load_message(self.backend, message_id, algorithm=self.algorithm)
+        return message_id
 
     def envelope_id(self, person_id: int, report_loinc: str) -> int:
         return int(self.backend.fetch_one(
@@ -916,3 +928,602 @@ def test_utf8_accession_byte_limit_is_checked_before_narrowing(
             before_rerun = _snapshot(backend)
             run_bridge(backend, load_manifest())
             assert _snapshot(backend) == before_rerun
+
+
+# Phase 4.3: domain-routed measurements and observations.
+
+# Reviewed-map rows for this module only: 3827 keeps its Athena Observation target
+# (9001), 3605 gets a Measurement target, 3803 a target in another domain, and both
+# codes of 3827 get value targets, including the #100 collision (3827, '1').
+ROUTING_OVERRIDES = (
+    (3605, "", 9004, "Measurement", "synthetic routing fixture", "tester", "2026-11-16"),
+    (3803, "", 9003, "Meas Value", "synthetic routing fixture", "tester", "2026-11-16"),
+    (3827, "0", 9003, "Meas Value", "synthetic routing fixture", "tester", "2026-11-16"),
+    (3827, "1", 9002, "Meas Value", "synthetic routing fixture", "tester", "2026-11-16"),
+)
+ABSENT_ITEM = 99999
+REPORT_DAY = "2026-09-24"  # the day-precision report date of the base envelope
+EVENTS = (
+    "SELECT v.obx_sub_id, l.event_table, l.route, l.value_target, l.is_truncated, "
+    "e.concept_id, e.source_concept_id, e.source_value, e.value_as_number, "
+    "e.value_as_concept_id, e.value_as_string, e.value_source_value, e.unit_source_value, "
+    "e.event_date, e.type_concept_id, e.note_id, e.field_concept_id, e.person_id, "
+    "l.naaccr_value_id, l.event_id, v.sdc_report_id "
+    "FROM naaccr.value_event l "
+    "JOIN naaccr.naaccr_value v ON v.naaccr_value_id = l.naaccr_value_id "
+    "JOIN (SELECT 'measurement' AS event_table, measurement_id AS id, "
+    "measurement_concept_id AS concept_id, measurement_source_concept_id AS source_concept_id, "
+    "measurement_source_value AS source_value, value_as_number, value_as_concept_id, "
+    "NULL AS value_as_string, value_source_value, unit_source_value, "
+    "measurement_date AS event_date, measurement_type_concept_id AS type_concept_id, "
+    "measurement_event_id AS note_id, meas_event_field_concept_id AS field_concept_id, "
+    "person_id FROM omop.measurement "
+    "UNION ALL SELECT 'observation', observation_id, observation_concept_id, "
+    "observation_source_concept_id, observation_source_value, value_as_number, "
+    "value_as_concept_id, value_as_string, value_source_value, unit_source_value, "
+    "observation_date, observation_type_concept_id, observation_event_id, "
+    "obs_event_field_concept_id, person_id FROM omop.observation) e "
+    "ON e.event_table = l.event_table AND e.id = l.event_id "
+    "ORDER BY l.naaccr_value_id"
+)
+EVENT_COLUMNS = (
+    "label", "event_table", "route", "value_target", "is_truncated", "concept_id",
+    "source_concept_id", "source_value", "value_as_number", "value_as_concept_id",
+    "value_as_string", "value_source_value", "unit_source_value", "event_date",
+    "type_concept_id", "note_id", "field_concept_id", "person_id", "naaccr_value_id",
+    "event_id", "sdc_report_id",
+)
+# Columns the bridge always leaves NULL.
+UNSET = {
+    "omop.measurement": (
+        "measurement_datetime", "measurement_time", "operator_concept_id", "unit_concept_id",
+        "range_low", "range_high", "provider_id", "visit_occurrence_id", "visit_detail_id",
+        "unit_source_concept_id",
+    ),
+    "omop.observation": (
+        "observation_datetime", "qualifier_concept_id", "unit_concept_id", "provider_id",
+        "visit_occurrence_id", "visit_detail_id", "qualifier_source_value",
+    ),
+}
+
+
+@contextmanager
+def _mapped_database(
+    dialect: str, tmp_path: Path, **kwargs: str,
+) -> Iterator[tuple[DatabaseBackend, list[str]]]:
+    with _database(dialect, tmp_path, **kwargs) as (backend, target):
+        seeds = _empty_map_seeds(tmp_path)
+        write_csv(seeds / "concept_map_overrides.csv", OVERRIDE_COLUMNS, ROUTING_OVERRIDES)
+        build_concept_maps(backend, csv_dir=seeds)
+        yield backend, target
+
+
+def _events(backend: DatabaseBackend) -> list[dict[str, object]]:
+    return [
+        dict(zip(EVENT_COLUMNS, (_normalize(value) for value in row), strict=True))
+        for row in backend.fetch_all(EVENTS)
+    ]
+
+
+def _by_label(backend: DatabaseBackend) -> dict[str, dict[str, object]]:
+    events = _events(backend)
+    labelled = {str(event["label"]): event for event in events}
+    assert len(labelled) == len(events)
+    return labelled
+
+
+def _source_concepts(backend: DatabaseBackend) -> dict[int, int]:
+    return {int(row[0]): int(row[1]) for row in backend.fetch_all(
+        "SELECT item_num, source_concept_id FROM naaccr.naaccr_concept_map"
+    )}
+
+
+def _constants(backend: DatabaseBackend) -> dict[str, int]:
+    return {str(row[0]): int(row[1]) for row in backend.fetch_all(
+        "SELECT constant_name, concept_id FROM etl.concept_constant"
+    )}
+
+
+def _routing_values() -> list[dict]:
+    """Every routing case once; obx_sub_id labels each source occurrence."""
+    return [
+        {"obx_sub_id": "er-negative", "item_num": 3827, "value_code": "0",
+         "observation_date": _day(2024, 5, 6)},
+        {"obx_sub_id": "er-positive", "item_num": 3827, "value_code": "1"},
+        {"obx_sub_id": "stage", "item_num": 3605, "value_code": "1"},
+        {"obx_sub_id": "stage-zero-target", "item_num": 3605, "value_code": "0A"},
+        {"obx_sub_id": "stage-size", "item_num": 3605, "value_num": "2.5", "unit_source": "cm"},
+        {"obx_sub_id": "stage-text", "item_num": 3605, "value_text": "Stage text"},
+        {"obx_sub_id": "stage-empty", "item_num": 3605},
+        {"obx_sub_id": "basaloid-text", "item_num": 3803, "value_text": "Basaloid present"},
+        {"obx_sub_id": "basaloid-number", "item_num": 3803, "value_num": "40", "unit_source": "%"},
+        {"obx_sub_id": "pediatric", "item_num": 1144, "value_code": "M1"},
+        {"obx_sub_id": "absent-text", "item_num": ABSENT_ITEM, "value_text": "Free text"},
+        {"obx_sub_id": "absent-code", "item_num": ABSENT_ITEM, "value_code": "7"},
+        {"obx_sub_id": "ckey-code", "ecp_code": "3827.100004300", "value_code": "1"},
+        {"obx_sub_id": "ckey-number", "ecp_code": "20791.100004300", "value_num": "1.20",
+         "unit_source": "cm"},
+        {"obx_sub_id": "ckey-both", "ecp_code": "22637.100004300", "value_code": "Y",
+         "value_text": "Coded with text"},
+        {"obx_sub_id": "ckey-blank", "ecp_code": "22638.100004300", "value_text": "   "},
+    ]
+
+
+@contextmanager
+def _routed(
+    dialect: str, tmp_path: Path,
+) -> Iterator[tuple[DatabaseBackend, int, dict[str, dict[str, object]]]]:
+    with _mapped_database(dialect, tmp_path) as (backend, _target):
+        source = _Source(backend)
+        person = source.patient("routed", _routing_values())
+        run_bridge(backend, load_manifest())
+        yield backend, person, _by_label(backend)
+
+
+@DIALECTS
+def test_values_route_to_their_domain_tables_with_both_concept_slots(
+    dialect: str, tmp_path: Path,
+) -> None:
+    """BRIDGE-07, OMOP-03, OMOP-12 (4.3 part): table, route, slots, and constants."""
+    with _routed(dialect, tmp_path) as (backend, person, events):
+        maps = {int(row[0]): (int(row[1]), row[2], row[3]) for row in backend.fetch_all(
+            "SELECT item_num, concept_id, target_domain_id, mapping_layer "
+            "FROM naaccr.naaccr_concept_map WHERE item_num IN (1144, 3605, 3803, 3827)"
+        )}
+        assert maps == {
+            1144: (0, None, "local_mint"), 3605: (9004, "Measurement", "curated_override"),
+            3803: (9003, "Meas Value", "curated_override"),
+            3827: (9001, "Observation", "athena_standard"),
+        }
+        assert backend.fetch_one(
+            "SELECT 1 FROM naaccr.naaccr_concept_map WHERE item_num = ?", (ABSENT_ITEM,),
+        ) is None
+        source = _source_concepts(backend)
+        expected = {
+            "er-negative": ("observation", "target_domain", 9001, source[3827], "3827"),
+            "er-positive": ("observation", "target_domain", 9001, source[3827], "3827"),
+            "stage": ("measurement", "target_domain", 9004, source[3605], "3605"),
+            "stage-zero-target": ("measurement", "target_domain", 9004, source[3605], "3605"),
+            "stage-size": ("measurement", "target_domain", 9004, source[3605], "3605"),
+            # A Measurement-domain target keeps text in measurement, not observation.
+            "stage-text": ("measurement", "target_domain", 9004, source[3605], "3605"),
+            "stage-empty": ("measurement", "target_domain", 9004, source[3605], "3605"),
+            # Every default keeps 0 in *_concept_id and routes by value shape.
+            "basaloid-text": ("observation", "default_other_domain", 0, source[3803], "3803"),
+            "basaloid-number": ("measurement", "default_other_domain", 0, source[3803], "3803"),
+            "pediatric": ("measurement", "default_no_target", 0, source[1144], "1144"),
+            "absent-text": ("observation", "default_no_map", 0, 0, str(ABSENT_ITEM)),
+            "absent-code": ("measurement", "default_no_map", 0, 0, str(ABSENT_ITEM)),
+            "ckey-code": ("measurement", "default_ecp_code", 0, 0, "3827.100004300"),
+            "ckey-number": ("measurement", "default_ecp_code", 0, 0, "20791.100004300"),
+            "ckey-both": ("observation", "default_ecp_code", 0, 0, "22637.100004300"),
+            "ckey-blank": ("measurement", "default_ecp_code", 0, 0, "22638.100004300"),
+        }
+        assert {label: (event["event_table"], event["route"], event["concept_id"],
+                        event["source_concept_id"], event["source_value"])
+                for label, event in events.items()} == expected
+
+        constants = _constants(backend)
+        (note_id,) = {row[0] for row in _notes(backend)}
+        for event in events.values():
+            assert event["type_concept_id"] == constants[f"{event['event_table']}_type_registry"]
+            assert event["field_concept_id"] == constants["field_note_note_id"] == 1147156
+            assert (event["note_id"], event["person_id"]) == (note_id, person)
+            assert event["event_date"] == ("2024-05-06" if event["label"] == "er-negative"
+                                           else REPORT_DAY)
+        for table, columns in UNSET.items():
+            assert backend.fetch_one(
+                f"SELECT COUNT(*) FROM {table} WHERE "
+                + " OR ".join(f"{column} IS NOT NULL" for column in columns)
+            )[0] == 0
+        # OMOP-12: nonzero standard slots hold standard concepts.
+        assert backend.fetch_one(
+            "SELECT COUNT(*) FROM omop.measurement m JOIN omop.concept c "
+            "ON c.concept_id IN (m.measurement_concept_id, m.value_as_concept_id) "
+            "WHERE c.concept_id <> 0 AND (c.standard_concept IS NULL OR c.standard_concept <> 'S')"
+        )[0] == 0
+        assert backend.fetch_one(
+            "SELECT COUNT(*) FROM omop.observation o JOIN omop.concept c "
+            "ON c.concept_id IN (o.observation_concept_id, o.value_as_concept_id) "
+            "WHERE c.concept_id <> 0 AND (c.standard_concept IS NULL OR c.standard_concept <> 'S')"
+        )[0] == 0
+        assert _count(backend, "omop.measurement") + _count(backend, "omop.observation") \
+            == _count(backend, "naaccr.value_event") == _count(backend, "naaccr.naaccr_value")
+
+
+@DIALECTS
+def test_coded_numeric_and_text_values_take_their_omop_shapes(
+    dialect: str, tmp_path: Path,
+) -> None:
+    """OMOP-04: one synthetic NAACCR input per value shape."""
+    with _routed(dialect, tmp_path) as (_backend, _person, events):
+        shape = {label: (event["value_target"], event["value_as_concept_id"],
+                         event["value_as_number"], event["unit_source_value"],
+                         event["value_as_string"], event["value_source_value"])
+                 for label, event in events.items()}
+        # Coded: the nonzero value target; zero, absent, or suppressed targets give NULL.
+        assert shape["stage"] == ("mapped", 9002, None, None, None, "1")
+        assert shape["er-negative"] == ("mapped", 9003, None, None, None, "0")
+        assert shape["stage-zero-target"] == ("unmapped", None, None, None, None, "0A")
+        assert shape["pediatric"] == ("unmapped", None, None, None, None, "M1")
+        assert shape["absent-code"] == ("unmapped", None, None, None, None, "7")
+        assert shape["er-positive"] == ("collision_suppressed", None, None, None, None, "1")
+        # Numeric: value_as_number and the unit source text; unit_concept_id stays NULL.
+        assert shape["stage-size"] == ("none", None, 2.5, "cm", None, None)
+        assert shape["basaloid-number"] == ("none", None, 40.0, "%", None, None)
+        assert shape["ckey-number"] == ("none", None, 1.2, "cm", None, None)
+        # Text: observation.value_as_string; a code still wins value_source_value.
+        assert shape["basaloid-text"] == ("none", None, None, None, "Basaloid present",
+                                          "Basaloid present")
+        assert shape["absent-text"] == ("none", None, None, None, "Free text", "Free text")
+        assert shape["ckey-both"] == ("unmapped", None, None, None, "Coded with text", "Y")
+        assert shape["stage-text"] == ("none", None, None, None, None, "Stage text")
+        # No value at all still yields one row; blank text routes to measurement.
+        assert shape["stage-empty"] == ("none", None, None, None, None, None)
+        assert shape["ckey-blank"] == ("none", None, None, None, None, "   ")
+        assert not any(event["is_truncated"] for event in events.values())
+
+
+@DIALECTS
+def test_collision_codes_are_suppressed_kept_and_reported(
+    dialect: str, tmp_path: Path,
+) -> None:
+    """BRIDGE-08: a reviewed target never reaches a #100 collision code."""
+    with _routed(dialect, tmp_path) as (backend, _person, events):
+        collisions = {(int(row[0]), str(row[1]), int(row[2])) for row in backend.fetch_all(
+            "SELECT item_num, code, concept_id FROM naaccr.value_code_collision"
+        )}
+        assert collisions == {(3827, "1", 9002)}
+        positive, negative = events["er-positive"], events["er-negative"]
+        assert positive["value_as_concept_id"] is None
+        assert positive["value_source_value"] == "1"
+        assert positive["source_concept_id"] == _source_concepts(backend)[3827]
+        assert positive["value_target"] == "collision_suppressed"
+        assert negative["value_as_concept_id"] == 9003
+        assert negative["value_target"] == "mapped"
+        # The suppressed rows are reportable from the link table alone.
+        assert [tuple(row) for row in backend.fetch_all(
+            "SELECT v.item_num, v.value_code FROM naaccr.value_event l "
+            "JOIN naaccr.naaccr_value v ON v.naaccr_value_id = l.naaccr_value_id "
+            "WHERE l.value_target = 'collision_suppressed'"
+        )] == [(3827, "1")]
+
+
+@DIALECTS
+def test_ckey_values_are_kept_never_joined_by_prefix_and_counted(
+    dialect: str, tmp_path: Path,
+) -> None:
+    """BRIDGE-09: 3827.100004300 is not item 3827."""
+    with _routed(dialect, tmp_path) as (backend, _person, events):
+        ckey = events["ckey-code"]
+        assert (ckey["source_value"], ckey["concept_id"], ckey["source_concept_id"],
+                ckey["value_as_concept_id"], ckey["value_target"]) == (
+            "3827.100004300", 0, 0, None, "unmapped")
+        counts = {str(row[0]): int(row[1]) for row in backend.fetch_all(
+            "SELECT route, COUNT(*) FROM naaccr.value_event GROUP BY route"
+        )}
+        assert counts == {"target_domain": 7, "default_other_domain": 2,
+                          "default_no_target": 1, "default_no_map": 2, "default_ecp_code": 4}
+
+
+def _owned(backend: DatabaseBackend, report_id: int) -> list[tuple]:
+    rows: list[tuple] = []
+    for table, key in (("measurement", "measurement_id"), ("observation", "observation_id")):
+        rows += [("measurement" if table == "measurement" else "observation",
+                  *(_normalize(value) for value in row)) for row in backend.fetch_all(
+            f"SELECT o.* FROM omop.{table} o JOIN naaccr.value_event l "
+            f"ON l.event_table = '{table}' AND l.event_id = o.{key} "
+            "JOIN naaccr.naaccr_value v ON v.naaccr_value_id = l.naaccr_value_id "
+            f"WHERE v.sdc_report_id = ? ORDER BY o.{key}", (report_id,),
+        )]
+    return rows
+
+
+def _assert_no_orphans(backend: DatabaseBackend) -> None:
+    for table, key, event in (("measurement", "measurement_id", "measurement_event_id"),
+                              ("observation", "observation_id", "observation_event_id")):
+        assert backend.fetch_one(
+            f"SELECT COUNT(*) FROM omop.{table} o "
+            f"WHERE NOT EXISTS (SELECT 1 FROM omop.note n WHERE n.note_id = o.{event})"
+        )[0] == 0
+        assert backend.fetch_one(
+            f"SELECT COUNT(*) FROM naaccr.value_event l WHERE l.event_table = '{table}' "
+            f"AND NOT EXISTS (SELECT 1 FROM omop.{table} o WHERE o.{key} = l.event_id)"
+        )[0] == 0
+    # Every linked value belongs to a selected report.
+    assert backend.fetch_one(
+        "SELECT COUNT(*) FROM naaccr.value_event l "
+        "JOIN naaccr.naaccr_value v ON v.naaccr_value_id = l.naaccr_value_id "
+        "WHERE NOT EXISTS (SELECT 1 FROM naaccr.report_version rv "
+        "WHERE rv.sdc_report_id = v.sdc_report_id AND rv.is_selected = 1)"
+    )[0] == 0
+
+
+@contextmanager
+def _update_audit(backend: DatabaseBackend, dialect: str) -> Iterator[None]:
+    """Record any UPDATE of a bridge-owned clinical row or link."""
+    audits = (("omop", "measurement", "measurement_id"),
+              ("omop", "observation", "observation_id"),
+              ("naaccr", "value_event", "naaccr_value_id"))
+    created: list[tuple[str, str]] = []
+    try:
+        for schema, table, key in audits:
+            backend.execute(f"CREATE TABLE {schema}.bridge_{table}_update_test (id INT NOT NULL)")
+            created.append((schema, table))
+            backend.execute(
+                f"CREATE TRIGGER {schema}.bridge_{table}_update_audit AFTER UPDATE ON {table} "
+                f"BEGIN INSERT INTO bridge_{table}_update_test VALUES (NEW.{key}); END"
+                if dialect == "sqlite" else
+                f"CREATE TRIGGER {schema}.bridge_{table}_update_audit ON {schema}.{table} "
+                f"AFTER UPDATE AS INSERT INTO {schema}.bridge_{table}_update_test "
+                f"SELECT {key} FROM inserted"
+            )
+        yield
+        for schema, table in created:
+            assert _count(backend, f"{schema}.bridge_{table}_update_test") == 0, table
+    finally:
+        for schema, table in created:
+            backend.execute(f"DROP TRIGGER IF EXISTS {schema}.bridge_{table}_update_audit")
+            backend.execute(f"DROP TABLE {schema}.bridge_{table}_update_test")
+
+
+@DIALECTS
+def test_supersession_replaces_clinical_rows_and_an_unchanged_rerun_updates_nothing(
+    dialect: str, tmp_path: Path,
+) -> None:
+    """BRIDGE-10, OMOP-05, OMOP-06: atomic replacement of one group's rows."""
+    with _mapped_database(dialect, tmp_path) as (backend, _target):
+        source = _Source(backend)
+        size = {"item_num": 3605, "value_num": "2.5", "unit_source": "cm",
+                "observation_date": _day(2024, 1, 2)}
+        unicode_text = {"ecp_code": "22637.100004300", "value_text": "Clinical café, 漢字."}
+        source.patient("P", [size, dict(size), {"item_num": 3827, "value_code": "1"},
+                             unicode_text], narrative="First.")
+        predecessor = source.last_report_id
+        source.patient("Q", [dict(size), {"item_num": 3803, "value_text": "Other group"}])
+        other_report = source.last_report_id
+        run_bridge(backend, load_manifest())
+        before = _owned(backend, predecessor)
+        # Two identical answers stay two rows that differ only in their ID.
+        assert [row[2:] for row in before if row[0] == "measurement"] == [before[0][2:]] * 2
+        assert len(before) == 4
+        other = _owned(backend, other_report)
+        assert len(other) == 2
+
+        source.patient("P", [size, dict(size), {"item_num": 3827, "value_code": "0"}],
+                       narrative="Corrected.")
+        successor = source.last_report_id
+        supersede_and_refresh(backend, load_manifest(), predecessor, successor)
+
+        assert _owned(backend, predecessor) == []
+        after = _owned(backend, successor)
+        assert len(after) == 3
+        assert [row[2:] for row in after if row[0] == "measurement"] == [after[0][2:]] * 2
+        assert {event["sdc_report_id"] for event in _events(backend)} == {successor, other_report}
+        # Unrelated rows keep their IDs and every byte; source history is retained.
+        assert _owned(backend, other_report) == other
+        assert _count(backend, "naaccr.naaccr_value") == 4 + 2 + 3
+        _assert_no_orphans(backend)
+        # OMOP-05: the group's rows equal the selected version's answers, not N x M.
+        assert _count(backend, "omop.measurement") + _count(backend, "omop.observation") \
+            == _count(backend, "naaccr.value_event") == 3 + 2
+
+        before_rerun = _snapshot(backend)
+        with _update_audit(backend, dialect):
+            run_bridge(backend, load_manifest())
+            assert _snapshot(backend) == before_rerun
+
+
+@DIALECTS
+def test_unchanged_non_ascii_and_truncated_values_rerun_without_updates(
+    dialect: str, tmp_path: Path,
+) -> None:
+    """OMOP-06: stored-type comparisons, including lossy and cut text."""
+    with _mapped_database(dialect, tmp_path) as (backend, _target):
+        source = _Source(backend)
+        source.patient("P", [
+            {"ecp_code": "22637.100004300", "value_text": "Clinical café, 漢字. " * 4},
+            {"ecp_code": "22638.100004300", "value_code": "Stage ii ", "value_num": "3",
+             "unit_source": "mm"},
+            {"item_num": 3827, "value_code": "0", "observation_date": _day(2024, 1, 2)},
+        ])
+        run_bridge(backend, load_manifest())
+        before = _snapshot(backend)
+        with _update_audit(backend, dialect):
+            run_bridge(backend, load_manifest())
+            assert _snapshot(backend) == before
+
+
+@DIALECTS
+def test_every_clinical_row_walks_to_its_exact_message_bytes(
+    dialect: str, tmp_path: Path,
+) -> None:
+    """OMOP-07: clinical row -> value_event -> naaccr_value -> envelope -> raw bytes."""
+    with _mapped_database(dialect, tmp_path) as (backend, _target):
+        source = _Source(backend)
+        source.patient("P", [{"item_num": 3827, "value_code": "0"}, _clinical(_day(2024, 1, 2))])
+        source.patient("P", [{"item_num": 3803, "value_text": "Late"}], loinc="11529-5")
+        source.patient("Q", _routing_values())
+        run_bridge(backend, load_manifest())
+        walk = backend.fetch_all(
+            "SELECT e.event_table, e.note_id, v.sdc_report_id, link.note_id, m.raw_blob, "
+            "r.inbound_envelope_id, v.inbound_envelope_id "
+            "FROM (SELECT 'measurement' AS event_table, measurement_id AS id, "
+            "measurement_event_id AS note_id FROM omop.measurement UNION ALL "
+            "SELECT 'observation', observation_id, observation_event_id FROM omop.observation) e "
+            "JOIN naaccr.value_event l ON l.event_table = e.event_table AND l.event_id = e.id "
+            "JOIN naaccr.naaccr_value v ON v.naaccr_value_id = l.naaccr_value_id "
+            "JOIN sdc.note_report link ON link.sdc_report_id = v.sdc_report_id "
+            "JOIN sdc.sdc_report r ON r.sdc_report_id = v.sdc_report_id "
+            "JOIN intake.inbound_envelope env ON env.inbound_envelope_id = v.inbound_envelope_id "
+            "JOIN intake.inbound_message m ON m.inbound_message_id = env.inbound_message_id"
+        )
+        assert len(walk) == _count(backend, "omop.measurement") + _count(
+            backend, "omop.observation") == 3 + len(_routing_values())
+        for _table, event_note, report, link_note, raw, report_envelope, value_envelope in walk:
+            assert bytes(raw) == source.raw[int(report)]
+            assert event_note == link_note
+            assert report_envelope == value_envelope
+        assert {int(row[2]) for row in walk} == set(source.raw)
+
+
+@DIALECTS
+def test_exact_byte_resend_before_the_first_bridge_does_not_double_rows(
+    dialect: str, tmp_path: Path,
+) -> None:
+    """OMOP-06a on the runner."""
+    with _mapped_database(dialect, tmp_path) as (backend, _target):
+        source = _Source(backend)
+        source.patient("P", [{"item_num": 3827, "value_code": "0"}, _clinical(_day(2024, 1, 2))])
+        source.resend_last()
+        assert _count(backend, "intake.inbound_message") == 2
+        run_bridge(backend, load_manifest())
+        assert _count(backend, "omop.measurement") + _count(backend, "omop.observation") == 2
+        assert _count(backend, "naaccr.value_event") == 2
+
+
+@DIALECTS
+def test_undated_values_use_their_report_day_or_fail_and_roll_back(
+    dialect: str, tmp_path: Path,
+) -> None:
+    with _mapped_database(dialect, tmp_path) as (backend, _target):
+        source = _Source(backend)
+        source.patient("dated", [_clinical(_day(2024, 8, 1)), {"item_num": 3605, "value_num": "1"}],
+                       report_date=_day(2024, 8, 9))
+        run_bridge(backend, load_manifest())
+        assert [event["event_date"] for event in _events(backend)] == ["2024-08-01", "2024-08-09"]
+        before = _snapshot(backend)
+
+        # The dated value dates the note and the period; its undated sibling has no day.
+        source.patient("undated", [_clinical(_day(2024, 1, 2)), {"item_num": 3605, "value_num": "2"}],
+                       report_date={"y": 2024, "m": 1, "d": None, "precision": "month"})
+        report = source.last_report_id
+        undated = backend.fetch_one(
+            "SELECT naaccr_value_id FROM naaccr.naaccr_value WHERE sdc_report_id = ? "
+            "AND item_num = 3605", (report,),
+        )[0]
+        with pytest.raises(BridgeError) as error:
+            run_bridge(backend, load_manifest())
+        text = str(error.value)
+        assert "3_measurement_observation.sql: 1 source row(s) cannot be bridged" in text
+        assert (f"naaccr.naaccr_value {undated} (sdc_report {report}): "
+                "no day-precision clinical date") in text
+        assert _snapshot(backend) == before
+        assert _last_run(backend)[:2] == ("bridge", "failed")
+
+
+@DIALECTS
+def test_over_length_text_is_cut_to_omop_limits_and_flagged(
+    dialect: str, tmp_path: Path,
+) -> None:
+    with _mapped_database(dialect, tmp_path) as (backend, _target):
+        source = _Source(backend)
+        text = "".join(chr(ord("a") + index % 26) for index in range(70))
+        source.patient("P", [
+            {"obx_sub_id": "text", "ecp_code": "22637.100004300", "value_text": text},
+            {"obx_sub_id": "text-60", "ecp_code": "22637.100004300", "value_text": text[:60]},
+            {"obx_sub_id": "code", "item_num": 3605, "value_code": "C" * 51},
+            {"obx_sub_id": "unit", "item_num": 3605, "value_num": "1", "unit_source": "u" * 50},
+            {"obx_sub_id": "measured-text", "item_num": 3605, "value_text": text[:55]},
+            {"obx_sub_id": "dated", **_clinical(_day(2024, 1, 2))},
+        ])
+        run_bridge(backend, load_manifest())
+        events = _by_label(backend)
+        cut = {label: (event["value_as_string"], event["value_source_value"],
+                       event["unit_source_value"], event["is_truncated"])
+               for label, event in events.items() if label != "dated"}
+        assert cut == {
+            "text": (text[:60], text[:50], None, 1),
+            # 60 characters fit value_as_string; value_source_value is still cut.
+            "text-60": (text[:60], text[:50], None, 1),
+            "code": (None, "C" * 50, None, 1),
+            "unit": (None, None, "u" * 50, 0),
+            # Measurement has no value_as_string, so only the 50-character limit applies.
+            "measured-text": (None, text[:50], None, 1),
+        }
+        before = _snapshot(backend)
+        run_bridge(backend, load_manifest())
+        assert _snapshot(backend) == before
+
+
+def test_utf8_text_is_cut_on_character_boundaries_and_long_ckeys_fail(tmp_path: Path) -> None:
+    with _mapped_database(
+        "sqlserver", tmp_path, sqlserver_env="SDC_CDM_BRIDGE_UTF8_SQLSERVER_CONNECTION_STRING",
+    ) as (backend, _target):
+        collation = backend.fetch_one(
+            "SELECT CONVERT(varchar(128), DATABASEPROPERTYEX(DB_NAME(), 'Collation'))"
+        )[0]
+        assert collation.endswith("_UTF8"), "this regression requires a UTF-8 database"
+        source = _Source(backend)
+        # Three bytes per character: 21 characters are 63 bytes.
+        text = "漢" * 21
+        source.patient("P", [
+            {"obx_sub_id": "wide", "ecp_code": "22637.100004300", "value_text": text},
+            {"obx_sub_id": "unit", "item_num": 3605, "value_num": "1", "unit_source": "é" * 26,
+             "observation_date": _day(2024, 1, 2)},
+        ])
+        run_bridge(backend, load_manifest())
+        events = _by_label(backend)
+        assert (events["wide"]["value_as_string"], events["wide"]["value_source_value"],
+                events["wide"]["is_truncated"]) == ("漢" * 20, "漢" * 16, 1)
+        assert (events["unit"]["unit_source_value"], events["unit"]["is_truncated"]) == (
+            "é" * 25, 1)
+        assert tuple(backend.fetch_one(
+            "SELECT DATALENGTH(value_as_string), DATALENGTH(value_source_value) "
+            "FROM omop.observation"
+        )) == (60, 48)
+        before = _snapshot(backend)
+        with _update_audit(backend, "sqlserver"):
+            run_bridge(backend, load_manifest())
+            assert _snapshot(backend) == before
+
+        # An identifier is never cut: 26 two-byte characters fit 50 characters, not 50 bytes.
+        source.patient("P", [{"ecp_code": "é" * 26, "value_num": "1",
+                              "observation_date": _day(2024, 1, 3)}], accession="WIDE")
+        report = source.last_report_id
+        value = backend.fetch_one(
+            "SELECT naaccr_value_id FROM naaccr.naaccr_value WHERE sdc_report_id = ?", (report,),
+        )[0]
+        with pytest.raises(BridgeError) as error:
+            run_bridge(backend, load_manifest())
+        assert (f"naaccr.naaccr_value {value} (sdc_report {report}): "
+                "ecp_code exceeds the 50-byte source value limit") in str(error.value)
+        assert _snapshot(backend) == before
+
+
+@DIALECTS
+def test_a_clinical_row_without_a_link_is_never_adopted_or_changed(
+    dialect: str, tmp_path: Path,
+) -> None:
+    with _mapped_database(dialect, tmp_path) as (backend, _target):
+        source = _Source(backend)
+        person = source.patient("P", [{"item_num": 3605, "value_num": "2.5", "unit_source": "cm",
+                                       "observation_date": _day(2024, 1, 2)}])
+        predecessor = source.last_report_id
+        run_bridge(backend, load_manifest())
+        (event,) = _events(backend)
+        constants = _constants(backend)
+        # Same person, note, content, and event field as the bridge row, but no link.
+        backend.execute(
+            "INSERT INTO omop.measurement (person_id, measurement_concept_id, measurement_date, "
+            "measurement_type_concept_id, value_as_number, measurement_source_value, "
+            "measurement_source_concept_id, unit_source_value, measurement_event_id, "
+            "meas_event_field_concept_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (person, 9004, event["event_date"], constants["measurement_type_registry"], 2.5,
+             "3605", event["source_concept_id"], "cm", event["note_id"],
+             constants["field_note_note_id"]),
+        )
+        foreign = backend.fetch_all("SELECT * FROM omop.measurement WHERE measurement_id NOT IN "
+                                    "(SELECT event_id FROM naaccr.value_event)")
+        assert len(foreign) == 1
+        before = _snapshot(backend)
+        run_bridge(backend, load_manifest())
+        assert _snapshot(backend) == before
+        source.patient("P", [{"item_num": 3605, "value_num": "3",
+                              "observation_date": _day(2024, 1, 3)}])
+        supersede_and_refresh(backend, load_manifest(), predecessor, source.last_report_id)
+        assert [tuple(row) for row in backend.fetch_all(
+            "SELECT * FROM omop.measurement WHERE measurement_id NOT IN "
+            "(SELECT event_id FROM naaccr.value_event)"
+        )] == [tuple(row) for row in foreign]
+        assert _count(backend, "omop.measurement") == 2

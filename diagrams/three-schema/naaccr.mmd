@@ -167,6 +167,17 @@ erDiagram
     INTEGER dd_version_id FK
   }
 
+  %% Bridge script 3 provenance: one link per bridged value. event_id is a logical
+  %% reference into omop.measurement or omop.observation, named by event_table.
+  VALUE_EVENT {
+    INTEGER naaccr_value_id PK,FK
+    TEXT event_table UK
+    INTEGER event_id UK
+    TEXT route
+    TEXT value_target
+    INTEGER is_truncated
+  }
+
   %% Report history (database/schemas/naaccr/ddl/sqlite/3_naaccr_report_version_sqlite.sql):
   %% one group per (patient, sending facility, accession); one version per accessioned report.
   REPORT_GROUP {
@@ -211,6 +222,7 @@ erDiagram
   NAACCR_ITEM ||..o{ NAACCR_VALUE : "verified item_num only"
   STAGING_SCHEMA ||..o{ NAACCR_VALUE : "schema_id_number (no FK)"
   SDC_REPORT ||..o{ NAACCR_VALUE : "sdc_report_id (cross-schema, no FK)"
+  NAACCR_VALUE ||--o| VALUE_EVENT : "naaccr_value_id (bridged values only)"
   REPORT_GROUP ||--o{ REPORT_VERSION : "report_group_id"
   REPORT_VERSION |o--o| REPORT_VERSION : "predecessor (same group and type)"
   SDC_REPORT ||..o| REPORT_VERSION : "sdc_report_id (cross-schema, no FK)"
