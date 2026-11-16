@@ -125,6 +125,11 @@ _INSERT_LEGACY_ROW = (
 )
 
 
+def _drop_value_event(backend: DatabaseBackend) -> None:
+    if backend.table_exists("naaccr", "value_event"):
+        backend.execute("DROP TABLE naaccr.value_event")
+
+
 @contextmanager
 def _legacy_value_table(backend: DatabaseBackend) -> Iterator[str]:
     """Build, swap in the pre-ecp_code table, and restore it afterwards.
@@ -135,11 +140,15 @@ def _legacy_value_table(backend: DatabaseBackend) -> Iterator[str]:
 
     BuildRunner(load_manifest(), backend).run()
     ddl_path = BuildRunner._NAACCR_VALUE_DDL[backend.dialect]
+    # A legacy database predates naaccr.value_event, whose FK would block the drop;
+    # the same DDL file recreates it.
+    _drop_value_event(backend)
     backend.execute("DROP TABLE naaccr.naaccr_value")
     backend.execute(_LEGACY_VALUE_DDL[backend.dialect])
     try:
         yield ddl_path
     finally:
+        _drop_value_event(backend)
         if backend.table_exists("naaccr", "naaccr_value"):
             backend.execute("DROP TABLE naaccr.naaccr_value")
         sql = repository_path(ddl_path).read_text(encoding="utf-8")
