@@ -257,11 +257,17 @@ WHERE b.naaccr_value_id = l.naaccr_value_id AND (
 DROP TABLE IF EXISTS temp.bridge_new_event;
 
 -- Stage explicit IDs: RETURNING would be treated as a required-data failure.
+-- Start above the AUTOINCREMENT high-water mark as well as the current maximum,
+-- so a deleted event ID is never reused (as with SQL Server identity).
 CREATE TEMP TABLE bridge_new_event AS
 SELECT naaccr_value_id,
        CASE WHEN event_table = 'measurement'
-            THEN (SELECT COALESCE(MAX(measurement_id), 0) FROM omop.measurement)
-            ELSE (SELECT COALESCE(MAX(observation_id), 0) FROM omop.observation) END
+            THEN MAX((SELECT COALESCE(MAX(measurement_id), 0) FROM omop.measurement),
+                     COALESCE((SELECT seq FROM omop.sqlite_sequence
+                               WHERE name = 'measurement'), 0))
+            ELSE MAX((SELECT COALESCE(MAX(observation_id), 0) FROM omop.observation),
+                     COALESCE((SELECT seq FROM omop.sqlite_sequence
+                               WHERE name = 'observation'), 0)) END
            + ROW_NUMBER() OVER (PARTITION BY event_table ORDER BY naaccr_value_id) AS event_id
 FROM temp.bridge_event WHERE event_id IS NULL;
 

@@ -352,7 +352,8 @@ dialects.
   `database/seed/cdm_source.csv`; a year-only birth date yields `year_of_birth` with NULL month
   and day.
   `test_bridge.py`: `test_bridge_derives_person_period_and_source_and_reruns_unchanged`,
-  `test_tracked_cdm_source_seed_is_the_synthetic_test_source`.
+  `test_tracked_cdm_source_seed_is_the_synthetic_test_source`,
+  `test_report_day_of_an_undated_value_bounds_the_period_and_dates_the_event` (4.3).
 - [x] **BRIDGE-05** *(4.1)* A missing required birth year or clinical date fails the run, rolls
   back every derived change, and names the offending rows; no date is replaced with today's
   date.
@@ -383,7 +384,8 @@ dialects.
   distinct occurrences, and an unchanged rerun adds no rows. 4.4 extends this to conditions and
   episodes.
   `test_bridge.py`: `test_supersession_replaces_clinical_rows_and_an_unchanged_rerun_updates_nothing`,
-  `test_a_clinical_row_without_a_link_is_never_adopted_or_changed`.
+  `test_a_clinical_row_without_a_link_is_never_adopted_or_changed`,
+  `test_superseded_clinical_ids_are_never_reused`.
 - [ ] **BRIDGE-11** *(4.4)* One thin primary-site `condition_occurrence` per selected group;
   episodes are grouped per patient, not by accession alone; `episode_event` links the group's
   selected measurements, observations, and condition. Episode constants resolve without the

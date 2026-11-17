@@ -127,7 +127,8 @@ one unpadded `observation_period` per person from the selected report versions: 
 date of diagnosis (item 390) to date of last contact (item 1750) when both are full dates, and
 otherwise the earliest and latest day-precision clinical dates. Clinical dates are the value
 observation dates plus the report date of any selected report with no NAACCR values, such as a
-narrative report. The method and the source `naaccr_value` or `inbound_envelope` ID for each
+narrative report, or with a value that has no day-precision date of its own (the third script dates
+that value by its report). The method and the source `naaccr_value` or `inbound_envelope` ID for each
 boundary are recorded in `etl.observation_period_derivation`.
 `omop.cdm_source` comes from [`database/seed/cdm_source.csv`](database/seed/cdm_source.csv), a
 synthetic test source. A real deployment replaces that file, or passes `--seed-dir`, with its own

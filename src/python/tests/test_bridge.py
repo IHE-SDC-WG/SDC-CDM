@@ -264,7 +264,7 @@ def test_bridge_derives_person_period_and_source_and_reruns_unchanged(
         clinical = source.patient("clinical", [
             _clinical(_day(2024, 5, 1)), _clinical(_day(2024, 3, 10)),
             _naaccr_date(390, "2024"), _naaccr_date(1750, "20250101"),
-        ], birth=_day(1960, 3, 12), gender="M")
+        ], birth=_day(1960, 3, 12), gender="M", report_date=_day(2024, 4, 1))
         one_day = source.patient("one-day", [_clinical(_day(2024, 6, 1))], gender="U")
 
         # OMOP-11 importer boundary: intake and load write no OMOP rows.
@@ -372,7 +372,7 @@ def test_year_zero_naaccr_dates_fall_back_to_clinical_dates(
         person = source.patient("year-zero", [
             _naaccr_date(390, "00000101"), _naaccr_date(1750, "00000102"),
             _clinical(_day(2024, 4, 5)),
-        ])
+        ], report_date=_day(2024, 4, 5))
         assert main(["bridge", *target]) == 0
         clinical = source.value_id(person, observation_date="2024-04-05")
         assert [tuple(_normalize(value) for value in row)
@@ -465,7 +465,7 @@ def test_missing_birth_year_or_clinical_date_rolls_back_and_names_rows(
         partial_only = source.patient("partial-only", [
             _clinical({"y": 2024, "m": 4, "d": None, "precision": "month"}),
             _naaccr_date(390, "202404"), _naaccr_date(1750, "20240901"),
-        ])
+        ], report_date={"y": 2024, "m": 4, "d": None, "precision": "month"})
         reversed_span = source.patient("reversed", [
             _naaccr_date(390, "20250101"), _naaccr_date(1750, "20240101"),
             _clinical(_day(2024, 6, 1)),
@@ -1527,3 +1527,63 @@ def test_a_clinical_row_without_a_link_is_never_adopted_or_changed(
             "(SELECT event_id FROM naaccr.value_event)"
         )] == [tuple(row) for row in foreign]
         assert _count(backend, "omop.measurement") == 2
+
+
+@DIALECTS
+def test_superseded_clinical_ids_are_never_reused(dialect: str, tmp_path: Path) -> None:
+    """A deleted event ID never identifies a different source occurrence."""
+    with _mapped_database(dialect, tmp_path) as (backend, _target):
+        source = _Source(backend)
+        source.patient("P", [{"item_num": 3605, "value_num": "1", "observation_date": _day(2024, 1, 2)},
+                             {"ecp_code": "22637.100004300", "value_text": "Old text",
+                              "observation_date": _day(2024, 1, 2)}])
+        predecessor = source.last_report_id
+        run_bridge(backend, load_manifest())
+        before = {(event["event_table"], event["event_id"]) for event in _events(backend)}
+        source.patient("P", [{"item_num": 3605, "value_num": "2", "observation_date": _day(2024, 1, 3)},
+                             {"ecp_code": "22637.100004300", "value_text": "New text",
+                              "observation_date": _day(2024, 1, 3)}])
+        supersede_and_refresh(backend, load_manifest(), predecessor, source.last_report_id)
+        after = {(event["event_table"], event["event_id"]) for event in _events(backend)}
+        assert len(after) == 2 and not before & after
+
+
+@DIALECTS
+def test_report_day_of_an_undated_value_bounds_the_period_and_dates_the_event(
+    dialect: str, tmp_path: Path,
+) -> None:
+    """Script 1 and script 3 share the date rule, so every event is inside its period."""
+    with _mapped_database(dialect, tmp_path) as (backend, _target):
+        source = _Source(backend)
+        undated = source.patient("undated", [{"item_num": 3605, "value_num": "1"}],
+                                 report_date=_day(2024, 8, 9))
+        undated_envelope = source.envelope_id(undated, "60569-1")
+        mixed = source.patient("mixed", [_clinical(_day(2024, 1, 2)),
+                                         {"item_num": 3605, "value_num": "2"}],
+                               report_date=_day(2024, 8, 9))
+        mixed_envelope = source.envelope_id(mixed, "60569-1")
+        run_bridge(backend, load_manifest())
+        rows = backend.fetch_all(
+            "SELECT o.person_id, o.observation_period_start_date, "
+            "o.observation_period_end_date, d.derivation, d.start_naaccr_value_id, "
+            "d.start_inbound_envelope_id, d.end_naaccr_value_id, d.end_inbound_envelope_id "
+            "FROM omop.observation_period o JOIN etl.observation_period_derivation d "
+            "ON d.observation_period_id = o.observation_period_id ORDER BY o.person_id"
+        )
+        assert [tuple(_normalize(value) for value in row) for row in rows] == [
+            (undated, "2024-08-09", "2024-08-09", "clinical_date_span",
+             None, undated_envelope, None, undated_envelope),
+            (mixed, "2024-01-02", "2024-08-09", "clinical_date_span",
+             source.value_id(mixed, observation_date="2024-01-02"), None,
+             None, mixed_envelope),
+        ]
+        outside = backend.fetch_one(
+            "SELECT COUNT(*) FROM (SELECT person_id, measurement_date AS day "
+            "FROM omop.measurement UNION ALL SELECT person_id, observation_date "
+            "FROM omop.observation) e JOIN omop.observation_period p "
+            "ON p.person_id = e.person_id WHERE e.day < p.observation_period_start_date "
+            "OR e.day > p.observation_period_end_date"
+        )[0]
+        assert outside == 0
+        assert sorted(event["event_date"] for event in _events(backend)) == [
+            "2024-01-02", "2024-08-09", "2024-08-09"]

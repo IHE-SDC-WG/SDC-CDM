@@ -18,7 +18,8 @@
   earliest and latest day-precision clinical date: each
   naaccr_value.observation_date, plus the envelope report.observation_date of
   each selected report that has no naaccr_value rows (narrative reports keep
-  their date only there). Partial dates never set a boundary, and no date is
+  their date only there) or has a value without a day-precision date (script 3
+  dates that value by its report). Partial dates never set a boundary, and no date is
   ever inferred or taken from today. etl.observation_period_derivation records
   the rule and the naaccr_value row or inbound envelope that set each boundary.
 
@@ -101,8 +102,17 @@ report_day AS (
     JOIN intake.inbound_envelope e ON e.inbound_envelope_id = rv.inbound_envelope_id
     WHERE rv.is_selected = 1
       AND json_extract(e.envelope_json, '$.report.observation_date.d') IS NOT NULL
-      AND NOT EXISTS (
-          SELECT 1 FROM naaccr.naaccr_value v WHERE v.sdc_report_id = rv.sdc_report_id
+      -- Script 3 dates an undated value by its report, so the report day bounds
+      -- the period when the report has no values or any value lacks its own day.
+      AND (
+          NOT EXISTS (
+              SELECT 1 FROM naaccr.naaccr_value v WHERE v.sdc_report_id = rv.sdc_report_id
+          )
+          OR EXISTS (
+              SELECT 1 FROM naaccr.naaccr_value v
+              WHERE v.sdc_report_id = rv.sdc_report_id
+                AND COALESCE(date(v.observation_date) = v.observation_date, 0) = 0
+          )
       )
 ),
 -- A value date sorts before a report date on the same day, so provenance

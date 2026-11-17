@@ -115,7 +115,8 @@ standard OMOP event and source-value columns plus links outside OMOP in `sdc` an
   `database/seed/concept_constants.csv`.
 - `observation_period_derivation` records, for each bridge-written `omop.observation_period`, its
   derivation rule and the `naaccr.naaccr_value` row or `intake.inbound_envelope` (for a report
-  date from a report with no values) that set each of its start and end dates. It keeps
+  date from a report with no values or with an undated value) that set each of its start and
+  end dates. It keeps
   that provenance out of the stock OMOP table.
 - `cdm_source_seed` holds the current bridge run's `cdm_source.csv` row; Python replaces it inside
   the run's transaction.
@@ -225,8 +226,9 @@ longer than 50 bytes fails the run instead of being cut. Datetime, time, operato
 provider, visit, and qualifier columns are NULL.
 
 A rerun deletes owned rows whose value is no longer selected, whose table changed, or whose row
-is gone; updates only columns that differ; and inserts the rest. IDs stay stable, repeated
-identical answers stay separate rows, and an unchanged rerun writes nothing. This query walks
+is gone; updates only columns that differ; and inserts the rest. IDs stay stable, a deleted ID
+is never reused (SQLite allocates above the table's `sqlite_sequence` value, like SQL Server
+identity), repeated identical answers stay separate rows, and an unchanged rerun writes nothing. This query walks
 each clinical row back to its exact source bytes:
 
 ```sql

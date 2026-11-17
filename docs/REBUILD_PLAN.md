@@ -775,7 +775,9 @@ OMOP row it owns (`sdc.note_report`, `naaccr.value_event`).
 1. **`1_person_and_period.sql`** (4.1) — Map `omop.person` 1:1 from `intake.patient`, with gender
    resolved through `etl.concept_constant`. Write `observation_period` and `cdm_source` from
    `database/seed/cdm_source.csv`. **`observation_period` source order:** NAACCR date of diagnosis
-   to date of last contact when present, otherwise the MIN/MAX span of the person's clinical dates.
+   to date of last contact when present, otherwise the MIN/MAX span of the person's clinical dates
+   (value days, plus the report day of each report with no values or an undated value, matching
+   the date script 3 gives that value).
    Record the derivation per row and count one-day periods in `validate`. Do not pad periods.
 2. **`2_note.sql`** (4.2) — Write one note per group with selected reports, including narrative-only
    groups. Anchor order is synoptic, other non-narrative, narrative, with the lowest report ID
@@ -810,7 +812,8 @@ OMOP row it owns (`sdc.note_report`, `naaccr.value_event`).
    `route`, `value_target` (`none`, `mapped`, `unmapped`, `collision_suppressed`), and
    `is_truncated`. The bridge owns only linked rows. A rerun deletes rows whose value is no
    longer selected, re-routed, or gone, updates only changed columns, and inserts the rest, so
-   IDs stay stable and repeated identical answers stay separate rows. `*_event_id` is the
+   IDs stay stable, a deleted ID is never reused (SQLite allocates above the `sqlite_sequence`
+   high-water mark), and repeated identical answers stay separate rows. `*_event_id` is the
    group's `note_id`, with the event field from `field_note_note_id`; type concepts come from
    `measurement_type_registry` and `observation_type_registry`.
 4. **`4_condition_and_episode.sql`** (4.4) —
