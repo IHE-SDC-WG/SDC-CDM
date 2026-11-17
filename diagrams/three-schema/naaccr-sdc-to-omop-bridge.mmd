@@ -1,6 +1,6 @@
 erDiagram
-  %% Manifest bridge through Phase 4.2, both SQLite and SQL Server.
-  %% Source: database/etl/{sqlite,sqlserver}/{1_person_and_period,2_note}.sql
+  %% Manifest bridge through Phase 4.3, both SQLite and SQL Server.
+  %% Source: database/etl/{sqlite,sqlserver}/{1_person_and_period,2_note,3_measurement_observation}.sql
   %% Solid (--) = enforced FK; dotted (..) = logical cross-schema reference.
   %% No repository-specific columns are added to stock OMOP.
   %% Every selected group has one note; accession alone is never an identity key.
@@ -10,8 +10,13 @@ erDiagram
   %% Required dates and accession length are checked before note writes.
   %% Late complementary reports retain note_id and reconcile contributors + anchor.
   %% Supersession of a bridged group refreshes the full bridge atomically with selection.
-  %% Measurements and observations are added in Phase 4.3. The excluded pre-rebuild
-  %% bridge is tested separately and must not run on this bridge's database.
+  %% Every value of a selected report is one measurement or observation, linked by
+  %% naaccr.value_event. Measurement/Observation-domain targets pick their table; any
+  %% other value has concept 0 and goes to observation when it has text, else measurement.
+  %% Maps join on item_num only; ecp_code is never parsed. #100 collision codes get no
+  %% value_as_concept_id. Date: value day, then its report's day; neither fails the run.
+  %% The excluded pre-rebuild bridge is tested separately and must not run on this
+  %% bridge's database.
 
   INTAKE_PATIENT {
     INTEGER patient_id PK
@@ -49,7 +54,36 @@ erDiagram
   NAACCR_VALUE {
     INTEGER naaccr_value_id PK
     INTEGER sdc_report_id
+    INTEGER inbound_envelope_id
+    INTEGER item_num
+    TEXT ecp_code
+    TEXT value_code
+    REAL value_num
+    TEXT value_text
     TEXT observation_date
+  }
+  NAACCR_VALUE_EVENT {
+    INTEGER naaccr_value_id PK,FK
+    TEXT event_table UK
+    INTEGER event_id UK
+    TEXT route
+    TEXT value_target
+    INTEGER is_truncated
+  }
+  NAACCR_CONCEPT_MAP {
+    INTEGER item_num PK
+    INTEGER source_concept_id
+    INTEGER concept_id
+    TEXT target_domain_id
+  }
+  NAACCR_VALUE_CONCEPT_MAP {
+    INTEGER item_num PK
+    TEXT code PK
+    INTEGER concept_id
+  }
+  NAACCR_VALUE_CODE_COLLISION {
+    INTEGER item_num
+    TEXT code
   }
   SDC_NOTE_REPORT {
     INTEGER note_id PK
@@ -68,6 +102,33 @@ erDiagram
     TEXT note_source_value
     INTEGER note_type_concept_id
   }
+  OMOP_MEASUREMENT {
+    INTEGER measurement_id PK
+    INTEGER person_id FK
+    INTEGER measurement_concept_id
+    INTEGER measurement_source_concept_id
+    TEXT measurement_source_value
+    REAL value_as_number
+    INTEGER value_as_concept_id
+    TEXT value_source_value
+    TEXT unit_source_value
+    INTEGER measurement_event_id
+    INTEGER meas_event_field_concept_id
+  }
+  OMOP_OBSERVATION {
+    INTEGER observation_id PK
+    INTEGER person_id FK
+    INTEGER observation_concept_id
+    INTEGER observation_source_concept_id
+    TEXT observation_source_value
+    REAL value_as_number
+    TEXT value_as_string
+    INTEGER value_as_concept_id
+    TEXT value_source_value
+    TEXT unit_source_value
+    INTEGER observation_event_id
+    INTEGER obs_event_field_concept_id
+  }
   ETL_CONCEPT_CONSTANT {
     TEXT constant_name PK
     INTEGER concept_id
@@ -85,3 +146,15 @@ erDiagram
   SDC_REPORT ||--o| SDC_NOTE_REPORT : "selected contributors only"
   NAACCR_REPORT_GROUP ||..|{ SDC_NOTE_REPORT : "report_group_id (one anchor)"
   ETL_CONCEPT_CONSTANT ||..o{ OMOP_NOTE : "note_type_ehr and unmapped"
+  NAACCR_VALUE ||--o| NAACCR_VALUE_EVENT : "selected values only"
+  NAACCR_VALUE_EVENT |o..|| OMOP_MEASUREMENT : "event_table = measurement"
+  NAACCR_VALUE_EVENT |o..|| OMOP_OBSERVATION : "event_table = observation"
+  NAACCR_CONCEPT_MAP ||..o{ NAACCR_VALUE : "item_num (route, both slots)"
+  NAACCR_VALUE_CONCEPT_MAP ||..o{ NAACCR_VALUE : "(item_num, value_code)"
+  NAACCR_VALUE_CODE_COLLISION ||..o{ NAACCR_VALUE : "suppresses value_as_concept_id"
+  OMOP_PERSON ||--o{ OMOP_MEASUREMENT : "person_id"
+  OMOP_PERSON ||--o{ OMOP_OBSERVATION : "person_id"
+  OMOP_NOTE ||..o{ OMOP_MEASUREMENT : "measurement_event_id"
+  OMOP_NOTE ||..o{ OMOP_OBSERVATION : "observation_event_id"
+  ETL_CONCEPT_CONSTANT ||..o{ OMOP_MEASUREMENT : "type, field_note_note_id, unmapped"
+  ETL_CONCEPT_CONSTANT ||..o{ OMOP_OBSERVATION : "type, field_note_note_id, unmapped"

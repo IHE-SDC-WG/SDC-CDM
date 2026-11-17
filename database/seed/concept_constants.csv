@@ -1,7 +1,8 @@
 constant_name,vocabulary_id,concept_code
 note_type_ehr,Type Concept,OMOP4976890
 measurement_type_registry,Type Concept,OMOP4976952
-field_note_note_id,CDM,note.note_id
+observation_type_registry,Type Concept,OMOP4976952
+field_note_note_id,CDM,CDM212
 unmapped,None,No matching concept
 gender_male,Gender,M
 gender_female,Gender,F

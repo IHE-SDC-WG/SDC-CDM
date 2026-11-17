@@ -53,3 +53,33 @@ IF NOT EXISTS (
 )
     CREATE INDEX IX_naaccr_value_inbound_envelope ON naaccr.naaccr_value (inbound_envelope_id);
 GO
+
+-- Bridge script 3 provenance: one link per naaccr_value bridged into omop.measurement or
+-- omop.observation. event_id is a logical reference into the table named by event_table
+-- (OMOP holds no crosswalk). The bridge owns only clinical rows named here. route,
+-- value_target, and is_truncated record how the row was routed and typed, so unmapped,
+-- collision-suppressed, and truncated values stay reportable.
+IF OBJECT_ID('naaccr.value_event', 'U') IS NULL
+BEGIN
+  CREATE TABLE naaccr.value_event (
+    naaccr_value_id INT NOT NULL,
+    event_table VARCHAR(20) NOT NULL,
+    event_id INT NOT NULL,
+    route VARCHAR(30) NOT NULL,
+    value_target VARCHAR(30) NOT NULL,
+    is_truncated BIT NOT NULL,
+    CONSTRAINT PK_value_event PRIMARY KEY (naaccr_value_id),
+    CONSTRAINT FK_value_event_naaccr_value FOREIGN KEY (naaccr_value_id)
+      REFERENCES naaccr.naaccr_value (naaccr_value_id),
+    CONSTRAINT UQ_value_event_event UNIQUE (event_table, event_id),
+    CONSTRAINT CK_value_event_table CHECK (event_table IN ('measurement', 'observation')),
+    CONSTRAINT CK_value_event_route CHECK (route IN (
+      'target_domain', 'default_ecp_code', 'default_no_map',
+      'default_no_target', 'default_other_domain'
+    )),
+    CONSTRAINT CK_value_event_value_target CHECK (value_target IN (
+      'none', 'mapped', 'unmapped', 'collision_suppressed'
+    ))
+  );
+END
+GO

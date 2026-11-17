@@ -765,16 +765,19 @@ a synoptic OBR sent in another belong to the same group.
 
 #### Scripts
 
-Occurrence-aware idempotency is preserved in every script. The current bridge's `ROW_NUMBER()`
-plus correlated `COUNT(*)` pattern is the model: an unchanged rerun adds no rows, and legitimate
-repeated identical answers survive.
+Occurrence-aware idempotency is preserved in every script: an unchanged rerun adds no rows, and
+legitimate repeated identical answers survive. The old bridge counted occurrences with
+`ROW_NUMBER()` plus a correlated `COUNT(*)`; scripts 2 and 3 instead link each source row to the
+OMOP row it owns (`sdc.note_report`, `naaccr.value_event`).
 
 0. **Report versions** (4.0) — Add the `naaccr` version-relationship DDL, backfill it from loaded
    reports, and add the supersession operation. No OMOP writes.
 1. **`1_person_and_period.sql`** (4.1) — Map `omop.person` 1:1 from `intake.patient`, with gender
    resolved through `etl.concept_constant`. Write `observation_period` and `cdm_source` from
    `database/seed/cdm_source.csv`. **`observation_period` source order:** NAACCR date of diagnosis
-   to date of last contact when present, otherwise the MIN/MAX span of the person's clinical dates.
+   to date of last contact when present, otherwise the MIN/MAX span of the person's clinical dates
+   (value days, plus the report day of each report with no values or an undated value, matching
+   the date script 3 gives that value).
    Record the derivation per row and count one-day periods in `validate`. Do not pad periods.
 2. **`2_note.sql`** (4.2) — Write one note per group with selected reports, including narrative-only
    groups. Anchor order is synoptic, other non-narrative, narrative, with the lowest report ID
@@ -788,12 +791,31 @@ repeated identical answers survive.
    SQL Server converts text and accession to the stored `varchar` encoding before comparing
    their bytes, preserving case and trailing spaces. Accession conversion stays untruncated
    until its encoded byte length is checked against the 50-byte `note_source_value` limit.
-3. **`3_measurement_observation.sql`** (4.3) — Route on the target concept's `domain_id`:
-   `Measurement` rows go to `measurement` and `Observation` rows go to `observation`. Unmapped rows
-   follow a documented default. Type values as follows: coded values use `value_as_concept_id`
-   (with #100 suppression), numeric values use `value_as_number` plus `unit_source_value`, and text
-   uses `observation.value_as_string`. Source and target slots follow the slot table above.
-   Supersession replaces the affected derived rows.
+3. **`3_measurement_observation.sql`** (4.3) — Every `naaccr_value` of a selected report (one with
+   an `sdc.note_report` link) becomes exactly one clinical row, including a row with no value.
+   Maps join on `item_num` only; `ecp_code` is never parsed. A map target in the `Measurement` or
+   `Observation` domain routes the row to that table (`target_domain`). **Default:** every other
+   row puts `0` in `*_concept_id` and goes to `observation` when it carries non-blank
+   `value_text`, otherwise to `measurement`. The defaults are `default_ecp_code` (no `item_num`),
+   `default_no_map` (no map row), `default_no_target` (map target `0`), and
+   `default_other_domain`. `*_source_concept_id` is the map's source concept, or `0` without a
+   map row. `*_source_value` is the `ecp_code` or the item number. Type values as follows: coded
+   values use the nonzero `(item_num, value_code)` target in `value_as_concept_id` unless
+   `naaccr.value_code_collision` lists the pair (#100), numeric values use `value_as_number` plus
+   `unit_source_value` with `unit_concept_id` NULL, and text uses `observation.value_as_string`.
+   `value_source_value` is the code, else the text. **Date:** the value's day, else its own
+   report's day-precision envelope date; neither fails the run and names the value and report.
+   **Truncation:** `value_as_string` is cut to 60 and `value_source_value` / `unit_source_value`
+   to 50 (characters on SQLite, bytes of the stored `varchar` encoding on SQL Server, never
+   splitting a character). Every cut is flagged. An `ecp_code` too long in bytes fails the run
+   instead. **Provenance:** `naaccr.value_event` links each value to its row and records
+   `route`, `value_target` (`none`, `mapped`, `unmapped`, `collision_suppressed`), and
+   `is_truncated`. The bridge owns only linked rows. A rerun deletes rows whose value is no
+   longer selected, re-routed, or gone, updates only changed columns, and inserts the rest, so
+   IDs stay stable, a deleted ID is never reused (SQLite allocates above the `sqlite_sequence`
+   high-water mark), and repeated identical answers stay separate rows. `*_event_id` is the
+   group's `note_id`, with the event field from `field_note_note_id`; type concepts come from
+   `measurement_type_registry` and `observation_type_registry`.
 4. **`4_condition_and_episode.sql`** (4.4) —
    - **`condition_occurrence`, thin version:** one row per selected report group, from the
      **primary-site item alone**. Use `condition_concept_id = 0` when there is no standard target,
@@ -815,7 +837,8 @@ repeated identical answers survive.
 After 4.5 reaches equivalent regression coverage, the old `1_naaccr_sdc_to_omop.sql` and
 `validate_naaccr_sdc_to_omop.sql` are retired.
 
-`omop` stays vanilla. No crosswalk table exists. OMOP-side back-references remain
+`omop` stays vanilla. OMOP holds no crosswalk; `naaccr.value_event` links rows outside it.
+OMOP-side back-references remain
 `note_source_value`, `measurement_event_id`, and `*_source_value`; the rest of the provenance walk
 runs through `sdc` and `intake`.
 
@@ -844,7 +867,8 @@ vocabulary and **fails loudly if absent** rather than letting the ETL write a wr
 |---|---|
 | `note_type_ehr` | `Type Concept` / `OMOP4976890` (today's literal `32817`) |
 | `measurement_type_registry` | `Type Concept` / `OMOP4976952` (`32879`) |
-| `field_note_note_id` | `CDM` / `note.note_id`, which Athena does not contain; correct it in 4.3 (`1147289` is `dose_era.person_id`) |
+| `observation_type_registry` | `Type Concept` / `OMOP4976952` (`32879`), from 4.3 |
+| `field_note_note_id` | `CDM` / `CDM212` (`1147156`, `note.note_id`), corrected in 4.3; the old bridge's literal `1147289` is `dose_era.person_id` |
 | `unmapped` | `None` / `No matching concept` (`0`) |
 | `gender_male`, `gender_female` | `Gender` / `M`, `F` (`8507`, `8532`) |
 | `period_type_registry` | `Type Concept` / `OMOP4976952` (`32879`), from 4.1 |

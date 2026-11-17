@@ -22,13 +22,14 @@ correct its CSV row and rerun both commands.
 Several pairs have been checked against an Athena extract (vocabulary
 `v5.0 27-FEB-26`). In the `Type Concept` vocabulary, concept codes are
 `OMOP…` identifiers, not concept names: EHR (32817) is `OMOP4976890` and
-Registry (32879) is `OMOP4976952`. `period_type_registry` therefore shares
-`measurement_type_registry`'s pair. `cdm_version` is `CDM` / `CDM v5.4.0`
-(756265). The `Gender` pairs and `unmapped` match the extract as well.
-`field_note_note_id` does not: that extract has no `CDM` concept with code
-`note.note_id`, and the historical literal 1147289 is `dose_era.person_id`.
-Correct that pair before loading a real extract: `vocab load` and
-`constants resolve` both fail until every tracked pair is present.
+Registry (32879) is `OMOP4976952`. `period_type_registry` and
+`observation_type_registry` therefore share `measurement_type_registry`'s pair.
+`cdm_version` is `CDM` / `CDM v5.4.0` (756265). The `Gender` pairs and
+`unmapped` match the extract as well. `field_note_note_id` is `CDM` / `CDM212`
+(1147156, the v5 `note.note_id` field concept). The extract has no `CDM`
+concept with code `note.note_id`, and the historical literal 1147289 is
+`dose_era.person_id`; the pre-rebuild bridge keeps that literal until Phase 4.5
+retires it.
 
 ## OMOP CDM source
 

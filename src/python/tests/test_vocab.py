@@ -119,7 +119,7 @@ def test_load_populates_a_fresh_schema_and_validates_counts(
         )[0] is not None
         if dialect == "sqlite":
             assert backend.fetch_all('PRAGMA "omop".foreign_key_check') == []
-        assert len(resolve_constants(backend)) == 8
+        assert len(resolve_constants(backend)) == 9
 
 
 def test_sqlite_load_rolls_back_on_orphaned_relationship(
@@ -167,14 +167,15 @@ def test_all_tracked_constants_resolve_from_the_loaded_fixture(
         assert mappings == {
             "note_type_ehr": 32817,
             "measurement_type_registry": 32879,
-            "field_note_note_id": 1147289,
+            "observation_type_registry": 32879,
+            "field_note_note_id": 1147156,
             "unmapped": 0,
             "gender_male": 8507,
             "gender_female": 8532,
             "period_type_registry": 32879,
             "cdm_version": 756265,
         }
-        assert backend.fetch_one("SELECT COUNT(*) FROM etl.concept_constant")[0] == 8
+        assert backend.fetch_one("SELECT COUNT(*) FROM etl.concept_constant")[0] == 9
 
 
 def test_missing_constant_exits_one_and_does_not_modify_the_table(
@@ -240,8 +241,8 @@ def test_constants_resolve_is_idempotent(tmp_path: Path) -> None:
             "SELECT constant_name, concept_id, vocabulary_id, concept_code "
             "FROM etl.concept_constant ORDER BY constant_name"
         )
-        assert len(rows) == 8
-        assert len({row[0] for row in rows}) == 8
+        assert len(rows) == 9
+        assert len({row[0] for row in rows}) == 9
 
 
 def test_every_bridge_concept_literal_resolves_to_a_constant(
@@ -276,4 +277,7 @@ def test_every_bridge_concept_literal_resolves_to_a_constant(
                 "SELECT concept_id FROM etl.concept_constant"
             )
         }
-    assert literal_sets[0].issubset(resolved_ids)
+    # The pre-rebuild bridge keeps its 1147289 literal (dose_era.person_id, not
+    # note.note_id) until Phase 4.5 retires it; only the type concepts resolve.
+    assert {32817, 32879}.issubset(resolved_ids)
+    assert 1147289 not in resolved_ids

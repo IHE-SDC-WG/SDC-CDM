@@ -11,9 +11,11 @@ This repo now uses one physical database with five logical schemas:
 - `etl`: run history, applied migrations, and resolved concept constants.
 
 The bridge reads `intake`, `naaccr`, and `sdc`, and writes stock OMOP columns plus provenance
-in `etl` and `sdc.note_report`. This link table connects each `omop.note` to its selected reports
-and marks its anchor. `note_source_value` stores the accession for display; it is not a group key.
-Following a link through `sdc_report.inbound_envelope_id` reaches the exact raw message bytes.
+in `etl`, `sdc.note_report`, and `naaccr.value_event`. `sdc.note_report` connects each `omop.note`
+to its selected reports and marks its anchor. `note_source_value` stores the accession for
+display; it is not a group key. `naaccr.value_event` connects each bridged `naaccr_value` to its
+`omop.measurement` or `omop.observation` row. Following either link to `inbound_envelope_id`
+reaches the exact raw message bytes.
 
 ## Files
 
@@ -48,7 +50,16 @@ value observation day, then its envelope report day. Missing dates and accession
 characters fail the run. SQL Server also checks the untruncated encoded accession against the
 50-byte `varchar(50)` limit. Text comparisons use stored bytes so case and trailing spaces
 are preserved. Each selected report gets an `sdc.note_report` link; superseded and
-accession-less reports do not. Both scripts reconcile changed state and keep existing note IDs.
+accession-less reports do not.
+
+`3_measurement_observation.sql` writes one `measurement` or `observation` per value of a
+selected report. A map target in the `Measurement` or `Observation` domain picks that table;
+every other value keeps concept `0` and goes to `observation` when it has non-blank text,
+otherwise to `measurement`. Coded values get the value map's nonzero target unless
+`naaccr.value_code_collision` lists the pair (#100). Over-length text is cut to the OMOP
+column limit and flagged. A value with no day-precision date of its own or on its report
+fails the run. `naaccr.value_event` records each row's route, value typing, and truncation.
+All three scripts reconcile changed state and keep existing IDs.
 
 `reports supersede` refreshes the full bridge when the group already has a note, in the same
 transaction as selection. Pending loads are also bridged and periods recalculated. A failure
