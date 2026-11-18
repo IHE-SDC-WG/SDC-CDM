@@ -1,4 +1,5 @@
-"""BRIDGE-03..10, OMOP-02..07/11/12: runner, person/period/source, notes, clinical rows."""
+"""BRIDGE-03..11, OMOP-02..07/11/12: runner, person/period/source, notes, clinical rows,
+conditions, and episodes."""
 
 from __future__ import annotations
 
@@ -51,6 +52,8 @@ OMOP_TABLES = (
 # SQL Server bridge database is dedicated to this module, so each test starts
 # from empty source and derived tables.
 RESET = (
+    "omop.episode_event", "omop.episode", "naaccr.person_episode", "naaccr.group_condition",
+    "omop.condition_occurrence",
     "naaccr.value_event", "omop.measurement", "omop.observation", "sdc.note_report", "omop.note", "omop.cdm_source", "omop.observation_period", "omop.person",
     "etl.observation_period_derivation", "etl.cdm_source_seed",
     "naaccr.report_version", "naaccr.report_group", "naaccr.naaccr_value",
@@ -67,6 +70,11 @@ DERIVED = (
     ("omop.measurement", "measurement_id"),
     ("omop.observation", "observation_id"),
     ("naaccr.value_event", "naaccr_value_id"),
+    ("omop.condition_occurrence", "condition_occurrence_id"),
+    ("naaccr.group_condition", "report_group_id"),
+    ("omop.episode", "episode_id"),
+    ("naaccr.person_episode", "episode_id"),
+    ("omop.episode_event", "episode_id, episode_event_field_concept_id, event_id"),
 )
 PERIODS = (
     "SELECT o.person_id, o.observation_period_start_date, o.observation_period_end_date, "
@@ -93,6 +101,50 @@ def _clinical(observation_date: dict | None) -> dict:
 
 def _naaccr_date(item_num: int, value: str) -> dict:
     return {"item_num": item_num, "value_code": value}
+
+
+# Item 400 (Primary Site) is not in the dictionary excerpt, whose CSVs recompute
+# byte-for-byte from verbatim SEER*API JSON, so this module adds it to the loaded
+# generation: four synthetic allowed codes, and two schemas that disagree on C509
+# so (400, 'C509') is a #100 collision.
+PRIMARY_SITE = 400
+SITE_CODES = (
+    ("C500", "Nipple"), ("C504", "Upper-outer quadrant of breast"),
+    ("C509", "Breast, NOS"), ("C619", "Prostate gland"),
+)
+
+
+def _add_primary_site(backend: DatabaseBackend) -> None:
+    generation = backend.fetch_one(
+        "SELECT dd_version_id FROM naaccr.data_dictionary_version WHERE is_current = 1"
+    )[0]
+    if backend.fetch_one(
+        "SELECT 1 FROM naaccr.naaccr_item WHERE dd_version_id = ? AND item_num = ?",
+        (generation, PRIMARY_SITE),
+    ) is not None:
+        return
+    backend.execute(
+        "INSERT INTO naaccr.naaccr_item (dd_version_id, item_num, name, section, "
+        "parent_xml_element) VALUES (?, ?, 'Primary Site', 'Cancer Identification', 'Tumor')",
+        (generation, PRIMARY_SITE),
+    )
+    for sequence, (code, description) in enumerate(SITE_CODES):
+        backend.execute(
+            "INSERT INTO naaccr.naaccr_item_allowed_code (dd_version_id, item_num, code_seq, "
+            "code, description) VALUES (?, ?, ?, ?, ?)",
+            (generation, PRIMARY_SITE, sequence, code, description),
+        )
+    for schema, meaning in (("00460", "Breast, NOS"), ("00580", "Fixture-B site")):
+        backend.execute(
+            "INSERT INTO naaccr.schema_item (dd_version_id, schema_id_number, item_num, "
+            "item_role, used_for_staging) VALUES (?, ?, ?, 'input', 1)",
+            (generation, schema, PRIMARY_SITE),
+        )
+        backend.execute(
+            "INSERT INTO naaccr.schema_item_code (dd_version_id, schema_id_number, item_num, "
+            "code, description) VALUES (?, ?, ?, 'C509', ?)",
+            (generation, schema, PRIMARY_SITE, meaning),
+        )
 
 
 def _empty_map_seeds(tmp_path: Path) -> Path:
@@ -130,6 +182,7 @@ def _database(
             "SELECT 1 FROM naaccr.data_dictionary_version WHERE is_current = 1"
         ) is None:
             load_dictionary(backend, csv_dir=DICTIONARY)
+        _add_primary_site(backend)
         build_concept_maps(backend, csv_dir=_empty_map_seeds(tmp_path))
         resolve_constants(backend)
         yield backend, target
@@ -154,7 +207,7 @@ class _Source:
                 gender: str | None = "F", narrative_date: dict | None = None,
                 message: str = "", accession: str | None = "ACC", loinc: str = "60569-1",
                 facility: str = "SYNTHLAB", narrative: str | None = None,
-                report_date: dict | None = None) -> int:
+                report_date: dict | None = None, episode: dict | None = None) -> int:
         """Load one report; narrative_date also selects the narrative report type."""
         self.sent += 1
         raw = f"bridge-{self.token}-{name}-{message}-{self.sent}".encode()
@@ -172,6 +225,8 @@ class _Source:
         )
         if report_date is not None:
             envelope["report"]["observation_date"] = report_date
+        if episode is not None:
+            envelope["episode"] = episode
         envelope["values"] = values
         if narrative_date is not None:
             envelope["report"].update(report_loinc="35265-8", narrative="Synthetic narrative.",
@@ -934,8 +989,13 @@ def test_utf8_accession_byte_limit_is_checked_before_narrowing(
 
 # Reviewed-map rows for this module only: 3827 keeps its Athena Observation target
 # (9001), 3605 gets a Measurement target, 3803 a target in another domain, and both
-# codes of 3827 get value targets, including the #100 collision (3827, '1').
+# codes of 3827 get value targets, including the #100 collision (3827, '1'). Primary
+# site C504 and the C509 collision get a Condition target and C619 one in another
+# domain; C500 keeps no target.
 ROUTING_OVERRIDES = (
+    (400, "C504", 9005, "Condition", "synthetic routing fixture", "tester", "2026-11-18"),
+    (400, "C509", 9005, "Condition", "synthetic routing fixture", "tester", "2026-11-18"),
+    (400, "C619", 9003, "Meas Value", "synthetic routing fixture", "tester", "2026-11-18"),
     (3605, "", 9004, "Measurement", "synthetic routing fixture", "tester", "2026-11-16"),
     (3803, "", 9003, "Meas Value", "synthetic routing fixture", "tester", "2026-11-16"),
     (3827, "0", 9003, "Meas Value", "synthetic routing fixture", "tester", "2026-11-16"),
@@ -1173,7 +1233,7 @@ def test_collision_codes_are_suppressed_kept_and_reported(
         collisions = {(int(row[0]), str(row[1]), int(row[2])) for row in backend.fetch_all(
             "SELECT item_num, code, concept_id FROM naaccr.value_code_collision"
         )}
-        assert collisions == {(3827, "1", 9002)}
+        assert collisions == {(3827, "1", 9002), (400, "C509", 9005)}
         positive, negative = events["er-positive"], events["er-negative"]
         assert positive["value_as_concept_id"] is None
         assert positive["value_source_value"] == "1"
@@ -1219,6 +1279,27 @@ def _owned(backend: DatabaseBackend, report_id: int) -> list[tuple]:
     return rows
 
 
+def _orphan_episode_events(backend: DatabaseBackend) -> int:
+    """Owned episode events whose episode or referenced row is missing."""
+    constants = _constants(backend)
+    return int(backend.fetch_one(
+        "SELECT COUNT(*) FROM omop.episode_event x "
+        "JOIN naaccr.person_episode l ON l.episode_id = x.episode_id "
+        "WHERE NOT EXISTS (SELECT 1 FROM omop.episode e WHERE e.episode_id = x.episode_id) "
+        "OR NOT ("
+        "(x.episode_event_field_concept_id = ? AND EXISTS (SELECT 1 FROM omop.measurement o "
+        "WHERE o.measurement_id = x.event_id)) "
+        "OR (x.episode_event_field_concept_id = ? AND EXISTS (SELECT 1 FROM omop.observation o "
+        "WHERE o.observation_id = x.event_id)) "
+        "OR (x.episode_event_field_concept_id = ? AND EXISTS ("
+        "SELECT 1 FROM omop.condition_occurrence o "
+        "WHERE o.condition_occurrence_id = x.event_id)))",
+        (constants["field_measurement_measurement_id"],
+         constants["field_observation_observation_id"],
+         constants["field_condition_occurrence_id"]),
+    )[0])
+
+
 def _assert_no_orphans(backend: DatabaseBackend) -> None:
     for table, key, event in (("measurement", "measurement_id", "measurement_event_id"),
                               ("observation", "observation_id", "observation_event_id")):
@@ -1237,6 +1318,20 @@ def _assert_no_orphans(backend: DatabaseBackend) -> None:
         "WHERE NOT EXISTS (SELECT 1 FROM naaccr.report_version rv "
         "WHERE rv.sdc_report_id = v.sdc_report_id AND rv.is_selected = 1)"
     )[0] == 0
+    # Every condition link names a live condition and a selected site value.
+    assert backend.fetch_one(
+        "SELECT COUNT(*) FROM naaccr.group_condition l "
+        "JOIN naaccr.naaccr_value v ON v.naaccr_value_id = l.naaccr_value_id "
+        "WHERE v.item_num <> 400 OR NOT EXISTS (SELECT 1 FROM omop.condition_occurrence o "
+        "WHERE o.condition_occurrence_id = l.condition_occurrence_id) "
+        "OR NOT EXISTS (SELECT 1 FROM naaccr.report_version rv "
+        "WHERE rv.sdc_report_id = v.sdc_report_id AND rv.is_selected = 1)"
+    )[0] == 0
+    assert backend.fetch_one(
+        "SELECT COUNT(*) FROM naaccr.person_episode l WHERE NOT EXISTS "
+        "(SELECT 1 FROM omop.episode e WHERE e.episode_id = l.episode_id)"
+    )[0] == 0
+    assert _orphan_episode_events(backend) == 0
 
 
 @contextmanager
@@ -1244,7 +1339,12 @@ def _update_audit(backend: DatabaseBackend, dialect: str) -> Iterator[None]:
     """Record any UPDATE of a bridge-owned clinical row or link."""
     audits = (("omop", "measurement", "measurement_id"),
               ("omop", "observation", "observation_id"),
-              ("naaccr", "value_event", "naaccr_value_id"))
+              ("naaccr", "value_event", "naaccr_value_id"),
+              ("omop", "condition_occurrence", "condition_occurrence_id"),
+              ("naaccr", "group_condition", "report_group_id"),
+              ("omop", "episode", "episode_id"),
+              ("naaccr", "person_episode", "episode_id"),
+              ("omop", "episode_event", "episode_id"))
     created: list[tuple[str, str]] = []
     try:
         for schema, table, key in audits:
@@ -1587,3 +1687,450 @@ def test_report_day_of_an_undated_value_bounds_the_period_and_dates_the_event(
         assert outside == 0
         assert sorted(event["event_date"] for event in _events(backend)) == [
             "2024-01-02", "2024-08-09", "2024-08-09"]
+
+
+# Phase 4.4: thin conditions and episodes.
+
+CONDITIONS = (
+    "SELECT l.report_group_id, l.naaccr_value_id, l.condition_target, "
+    "o.condition_occurrence_id, o.person_id, o.condition_concept_id, o.condition_start_date, "
+    "o.condition_type_concept_id, o.condition_source_value, o.condition_source_concept_id "
+    "FROM naaccr.group_condition l JOIN omop.condition_occurrence o "
+    "ON o.condition_occurrence_id = l.condition_occurrence_id ORDER BY l.report_group_id"
+)
+CONDITION_COLUMNS = (
+    "report_group_id", "naaccr_value_id", "condition_target", "condition_occurrence_id",
+    "person_id", "concept_id", "start_date", "type_concept_id", "source_value",
+    "source_concept_id",
+)
+EPISODES = (
+    "SELECT e.episode_id, e.person_id, l.episode_key, e.episode_concept_id, "
+    "e.episode_start_date, e.episode_object_concept_id, e.episode_type_concept_id, "
+    "e.episode_source_concept_id FROM omop.episode e "
+    "JOIN naaccr.person_episode l ON l.episode_id = e.episode_id ORDER BY e.episode_id"
+)
+EPISODE_COLUMNS = (
+    "episode_id", "person_id", "episode_key", "concept_id", "start_date", "object_concept_id",
+    "type_concept_id", "source_concept_id",
+)
+UNSET_4 = {
+    "omop.condition_occurrence": (
+        "condition_start_datetime", "condition_end_date", "condition_end_datetime",
+        "condition_status_concept_id", "stop_reason", "provider_id", "visit_occurrence_id",
+        "visit_detail_id", "condition_status_source_value",
+    ),
+    "omop.episode": (
+        "episode_start_datetime", "episode_end_date", "episode_end_datetime",
+        "episode_parent_id", "episode_number", "episode_source_value",
+    ),
+}
+
+
+def _site(code: str | None = None, *, text: str | None = None, label: str | None = None,
+          observation_date: dict | None = None) -> dict:
+    value: dict = {"item_num": PRIMARY_SITE}
+    if code is not None:
+        value["value_code"] = code
+    if text is not None:
+        value["value_text"] = text
+    if label is not None:
+        value["obx_sub_id"] = label
+    if observation_date is not None:
+        value["observation_date"] = observation_date
+    return value
+
+
+def _conditions(backend: DatabaseBackend) -> list[dict[str, object]]:
+    return [dict(zip(CONDITION_COLUMNS, (_normalize(value) for value in row), strict=True))
+            for row in backend.fetch_all(CONDITIONS)]
+
+
+def _episodes(backend: DatabaseBackend) -> list[dict[str, object]]:
+    return [dict(zip(EPISODE_COLUMNS, (_normalize(value) for value in row), strict=True))
+            for row in backend.fetch_all(EPISODES)]
+
+
+def _group(backend: DatabaseBackend, report_id: int) -> int:
+    return int(backend.fetch_one(
+        "SELECT report_group_id FROM naaccr.report_version WHERE sdc_report_id = ?",
+        (report_id,),
+    )[0])
+
+
+def _site_source_concepts(backend: DatabaseBackend) -> dict[str, int]:
+    return {str(row[0]): int(row[1]) for row in backend.fetch_all(
+        "SELECT code, source_concept_id FROM naaccr.naaccr_value_concept_map WHERE item_num = ?",
+        (PRIMARY_SITE,),
+    )}
+
+
+def _episode_events(backend: DatabaseBackend) -> list[tuple[int, int, int]]:
+    return sorted((int(row[0]), int(row[1]), int(row[2])) for row in backend.fetch_all(
+        "SELECT episode_id, episode_event_field_concept_id, event_id FROM omop.episode_event"
+    ))
+
+
+def _owned_4(backend: DatabaseBackend, report_group_id: int, person_id: int) -> dict:
+    """One group's condition, its person's episodes, and their events, in full."""
+    return {
+        "condition": [tuple(_normalize(value) for value in row) for row in backend.fetch_all(
+            "SELECT o.* FROM omop.condition_occurrence o JOIN naaccr.group_condition l "
+            "ON l.condition_occurrence_id = o.condition_occurrence_id "
+            "WHERE l.report_group_id = ?", (report_group_id,),
+        )],
+        "episode": [tuple(_normalize(value) for value in row) for row in backend.fetch_all(
+            "SELECT * FROM omop.episode WHERE person_id = ? ORDER BY episode_id", (person_id,),
+        )],
+        "events": sorted(tuple(row) for row in backend.fetch_all(
+            "SELECT x.episode_id, x.event_id, x.episode_event_field_concept_id "
+            "FROM omop.episode_event x JOIN omop.episode e ON e.episode_id = x.episode_id "
+            "WHERE e.person_id = ?", (person_id,),
+        )),
+    }
+
+
+@DIALECTS
+def test_one_thin_condition_per_selected_group_with_a_primary_site(
+    dialect: str, tmp_path: Path,
+) -> None:
+    """BRIDGE-11, OMOP-12 (4.4 part): condition slots, targets, and constants."""
+    with _mapped_database(dialect, tmp_path) as (backend, _target):
+        source = _Source(backend)
+        reports: dict[str, int] = {}
+        persons: dict[str, int] = {}
+
+        def send(label: str, values: list[dict], **kwargs: object) -> None:
+            persons[label] = source.patient(label, values, **kwargs)
+            reports[label] = source.last_report_id
+
+        # The lowest site value wins; a later repeat in the same group is ignored.
+        send("mapped", [_site("C504", observation_date=_day(2024, 3, 4)), _site("C500"),
+                        _clinical(_day(2024, 1, 2))])
+        send("no-target", [_site("C500")])
+        send("no-map", [_site("C999")])
+        send("text", [_site(text="Left breast, upper outer")])
+        send("other-domain", [_site("C619")])
+        send("collision", [_site("C509")])
+        # A blank site value is skipped in favor of the next non-blank one.
+        send("blank-first", [_site("  "), _site(text=""), _site("C504")])
+        send("blank", [_site("  "), {"item_num": 3605, "value_num": "1"}])
+        send("site-less", [_clinical(_day(2024, 1, 2))])
+        send("narrative", [], narrative_date=_day(2024, 7, 4))
+        run_bridge(backend, load_manifest())
+
+        constants = _constants(backend)
+        sources = _site_source_concepts(backend)
+        conditions = {
+            next(label for label, report in reports.items()
+                 if _group(backend, report) == row["report_group_id"]): row
+            for row in _conditions(backend)
+        }
+        expected = {
+            "mapped": ("mapped", 9005, sources["C504"], "C504", "2024-03-04"),
+            "no-target": ("no_target", 0, sources["C500"], "C500", REPORT_DAY),
+            "no-map": ("no_map", 0, 0, "C999", REPORT_DAY),
+            "text": ("no_map", 0, 0, "Left breast, upper outer", REPORT_DAY),
+            "other-domain": ("other_domain", 0, sources["C619"], "C619", REPORT_DAY),
+            "collision": ("collision_suppressed", 0, sources["C509"], "C509", REPORT_DAY),
+            "blank-first": ("mapped", 9005, sources["C504"], "C504", REPORT_DAY),
+        }
+        assert {label: (row["condition_target"], row["concept_id"], row["source_concept_id"],
+                        row["source_value"], row["start_date"])
+                for label, row in conditions.items()} == expected
+        for label, row in conditions.items():
+            assert row["person_id"] == persons[label]
+            assert row["type_concept_id"] == constants["condition_type_registry"] == 32879
+            # The chosen value is the group's lowest non-blank site value.
+            chosen = backend.fetch_one(
+                "SELECT MIN(naaccr_value_id) FROM naaccr.naaccr_value WHERE sdc_report_id = ? "
+                "AND item_num = 400 AND (TRIM(value_code) <> '' OR TRIM(value_text) <> '')",
+                (reports[label],),
+            )[0]
+            assert row["naaccr_value_id"] == chosen
+        for table, columns in UNSET_4.items():
+            assert backend.fetch_one(
+                f"SELECT COUNT(*) FROM {table} WHERE "
+                + " OR ".join(f"{column} IS NOT NULL" for column in columns)
+            )[0] == 0
+        # OMOP-12: a nonzero condition target is a standard Condition-domain concept.
+        assert backend.fetch_one(
+            "SELECT COUNT(*) FROM omop.condition_occurrence o JOIN omop.concept c "
+            "ON c.concept_id = o.condition_concept_id WHERE c.concept_id <> 0 "
+            "AND (c.standard_concept IS NULL OR c.standard_concept <> 'S' "
+            "OR c.domain_id <> 'Condition')"
+        )[0] == 0
+        assert _count(backend, "omop.condition_occurrence") == len(expected)
+
+        before = _snapshot(backend)
+        with _update_audit(backend, dialect):
+            run_bridge(backend, load_manifest())
+            assert _snapshot(backend) == before
+
+
+@DIALECTS
+def test_episodes_group_by_tumor_within_a_person_and_link_every_event(
+    dialect: str, tmp_path: Path,
+) -> None:
+    """BRIDGE-11, OMOP-11/12 (4.4 part): episode grain, slots, and event links."""
+    with _mapped_database(dialect, tmp_path) as (backend, _target):
+        source = _Source(backend)
+        tumor = {"assigning_authority": "SYNTHLAB", "episode_source_value": "TUMOR-1",
+                 "sequence_number": 1}
+        # The same accession under two patients is two tumors.
+        shared_p = source.patient("P", [_site("C504"), _clinical(_day(2024, 1, 2))],
+                                  accession="SHARED")
+        shared_q = source.patient("Q", [_site("C504"), _clinical(_day(2024, 1, 3))],
+                                  accession="SHARED")
+        # Two accessions with one source tumor identity are one episode; the object
+        # concept skips the lower group's unmapped site for the next nonzero one.
+        same = source.patient("R", [_site("C500"), _clinical(_day(2024, 2, 1))],
+                              accession="R1", episode=tumor)
+        same_first = source.last_report_id
+        source.patient("R", [_site("C504"), {"ecp_code": "22637.100004300",
+                                             "value_text": "Text", "observation_date":
+                                             _day(2024, 1, 15)}],
+                       accession="R2", episode=tumor)
+        # Without that identity, two accessions are two episodes.
+        split = source.patient("S", [_clinical(_day(2024, 3, 1))], accession="S1")
+        source.patient("S", [_clinical(_day(2024, 4, 1))], accession="S2")
+        run_bridge(backend, load_manifest())
+
+        episodes = _episodes(backend)
+        by_person: dict[int, list[dict[str, object]]] = {}
+        for episode in episodes:
+            by_person.setdefault(int(episode["person_id"]), []).append(episode)
+        assert {person: len(rows) for person, rows in by_person.items()} == {
+            shared_p: 1, shared_q: 1, same: 1, split: 2}
+        keys = {(int(row[0]), str(row[1])) for row in backend.fetch_all(
+            "SELECT DISTINCT person_id, episode_key FROM naaccr.naaccr_value")}
+        assert {(int(e["person_id"]), str(e["episode_key"])) for e in episodes} == keys
+        assert by_person[same][0]["episode_key"].startswith("e:")
+        assert by_person[same][0]["start_date"] == "2024-01-15"
+        assert by_person[same][0]["object_concept_id"] == 9005
+        assert by_person[shared_p][0]["object_concept_id"] == 9005
+        assert by_person[shared_p][0]["start_date"] == "2024-01-02"
+        assert {e["object_concept_id"] for e in by_person[split]} == {0}
+        assert sorted(e["start_date"] for e in by_person[split]) == ["2024-03-01", "2024-04-01"]
+        assert _group(backend, same_first) != _group(backend, source.last_report_id)
+
+        constants = _constants(backend)
+        for episode in episodes:
+            assert (episode["concept_id"], episode["type_concept_id"],
+                    episode["source_concept_id"]) == (
+                constants["episode_disease"], constants["episode_type_registry"],
+                constants["unmapped"])
+        assert (constants["episode_disease"], constants["episode_type_registry"]) == (32533, 32879)
+        assert backend.fetch_one(
+            "SELECT COUNT(*) FROM omop.episode e JOIN omop.concept c "
+            "ON c.concept_id = e.episode_object_concept_id WHERE c.concept_id <> 0 "
+            "AND (c.standard_concept <> 'S' OR c.domain_id <> 'Condition')"
+        )[0] == 0
+        for table, columns in UNSET_4.items():
+            assert backend.fetch_one(
+                f"SELECT COUNT(*) FROM {table} WHERE "
+                + " OR ".join(f"{column} IS NOT NULL" for column in columns)
+            )[0] == 0
+
+        # Every event references an existing row with its field constant, and every
+        # measurement, observation, and condition is linked exactly once.
+        assert _orphan_episode_events(backend) == 0
+        events = _episode_events(backend)
+        assert len(events) == len(set(events)) == (
+            _count(backend, "omop.measurement") + _count(backend, "omop.observation")
+            + _count(backend, "omop.condition_occurrence")) == 10 + 4
+        assert {field for _episode, field, _event in events} == {
+            constants["field_measurement_measurement_id"],
+            constants["field_observation_observation_id"],
+            constants["field_condition_occurrence_id"]}
+        # Each event belongs to its own person's episode.
+        assert backend.fetch_one(
+            "SELECT COUNT(*) FROM omop.episode_event x "
+            "JOIN omop.episode e ON e.episode_id = x.episode_id "
+            "LEFT JOIN omop.measurement m ON x.episode_event_field_concept_id = ? "
+            "AND m.measurement_id = x.event_id "
+            "LEFT JOIN omop.observation o ON x.episode_event_field_concept_id = ? "
+            "AND o.observation_id = x.event_id "
+            "LEFT JOIN omop.condition_occurrence c ON x.episode_event_field_concept_id = ? "
+            "AND c.condition_occurrence_id = x.event_id "
+            "WHERE COALESCE(m.person_id, o.person_id, c.person_id) <> e.person_id",
+            (constants["field_measurement_measurement_id"],
+             constants["field_observation_observation_id"],
+             constants["field_condition_occurrence_id"]),
+        )[0] == 0
+        # OMOP-11: every episode starts inside its person's observation period.
+        assert backend.fetch_one(
+            "SELECT COUNT(*) FROM omop.episode e JOIN omop.observation_period p "
+            "ON p.person_id = e.person_id WHERE e.episode_start_date "
+            "< p.observation_period_start_date "
+            "OR e.episode_start_date > p.observation_period_end_date"
+        )[0] == 0
+
+        before = _snapshot(backend)
+        with _update_audit(backend, dialect):
+            run_bridge(backend, load_manifest())
+            assert _snapshot(backend) == before
+
+
+def test_episode_constants_resolve_without_naaccr2026(tmp_path: Path) -> None:
+    """The episode and event-field constants come from Athena vocabularies alone."""
+    with _mapped_database("sqlite", tmp_path) as (backend, _target):
+        assert backend.fetch_one(
+            "SELECT COUNT(*) FROM omop.concept WHERE vocabulary_id = 'NAACCR2026'"
+        )[0] == 0
+        assert backend.fetch_one(
+            "SELECT 1 FROM omop.vocabulary WHERE vocabulary_id = 'NAACCR2026'"
+        ) is None
+        constants = {str(row[0]): (str(row[1]), str(row[2]), int(row[3])) for row in
+                     backend.fetch_all(
+                         "SELECT constant_name, vocabulary_id, concept_code, concept_id "
+                         "FROM etl.concept_constant")}
+        (entry,) = [entry for entry in load_manifest().bridge_entries_for("sqlite")
+                    if entry.path.endswith("4_condition_and_episode.sql")]
+        assert {name: constants[name] for name in entry.constants} == {
+            "condition_type_registry": ("Type Concept", "OMOP4976952", 32879),
+            "episode_type_registry": ("Type Concept", "OMOP4976952", 32879),
+            "episode_disease": ("Episode", "OMOP4822254", 32533),
+            "field_measurement_measurement_id": ("CDM", "CDM194", 1147138),
+            "field_observation_observation_id": ("CDM", "CDM221", 1147165),
+            "field_condition_occurrence_id": ("CDM", "CDM183", 1147127),
+            "unmapped": ("None", "No matching concept", 0),
+        }
+        _Source(backend).patient("P", [_site("C504"), _clinical(_day(2024, 1, 2))])
+        run_bridge(backend, load_manifest())
+        assert _count(backend, "omop.episode") == 1
+        # The site value's measurement, the clinical measurement, and the condition.
+        assert _count(backend, "omop.episode_event") == 3
+
+
+@DIALECTS
+def test_supersession_replaces_condition_episode_and_events_atomically(
+    dialect: str, tmp_path: Path,
+) -> None:
+    """BRIDGE-10 (4.4 part), BRIDGE-11: no obsolete condition, episode, or event survives."""
+    with _mapped_database(dialect, tmp_path) as (backend, _target):
+        source = _Source(backend)
+        person = source.patient("P", [_site("C504"), _clinical(_day(2024, 1, 2))])
+        first = source.last_report_id
+        group = _group(backend, first)
+        other = source.patient("Q", [_site("C500"), _clinical(_day(2024, 2, 3))])
+        other_group = _group(backend, source.last_report_id)
+        run_bridge(backend, load_manifest())
+        (condition,) = [row for row in _conditions(backend) if row["report_group_id"] == group]
+        (episode,) = [row for row in _episodes(backend) if row["person_id"] == person]
+        untouched = _owned_4(backend, other_group, other)
+        deleted_events = {event for event in _episode_events(backend)
+                          if event[0] == episode["episode_id"]}
+
+        # A changed site updates the group's condition in place.
+        source.patient("P", [_site("C619"), _clinical(_day(2024, 1, 5))])
+        second = source.last_report_id
+        supersede_and_refresh(backend, load_manifest(), first, second)
+        (changed,) = [row for row in _conditions(backend) if row["report_group_id"] == group]
+        assert changed["condition_occurrence_id"] == condition["condition_occurrence_id"]
+        assert (changed["condition_target"], changed["concept_id"], changed["source_value"],
+                changed["start_date"]) == ("other_domain", 0, "C619", REPORT_DAY)
+        (kept,) = [row for row in _episodes(backend) if row["person_id"] == person]
+        assert kept["episode_id"] == episode["episode_id"]
+        assert (kept["object_concept_id"], kept["start_date"]) == (0, "2024-01-05")
+        events = {event for event in _episode_events(backend)
+                  if event[0] == episode["episode_id"]}
+        assert len(events) == 3
+        # The condition event is the same row; the clinical events are new rows.
+        assert len(events & deleted_events) == 1
+        _assert_no_orphans(backend)
+        assert _owned_4(backend, other_group, other) == untouched
+
+        # A successor without a site removes the condition, and a new tumor identity
+        # replaces the episode; neither ID is reused.
+        source.patient("P", [_clinical(_day(2024, 1, 6))],
+                       episode={"episode_source_value": "TUMOR-9"})
+        third = source.last_report_id
+        supersede_and_refresh(backend, load_manifest(), second, third)
+        assert [row for row in _conditions(backend) if row["report_group_id"] == group] == []
+        (replaced,) = [row for row in _episodes(backend) if row["person_id"] == person]
+        assert replaced["episode_id"] != episode["episode_id"]
+        assert str(replaced["episode_key"]).startswith("e:")
+        assert backend.fetch_one(
+            "SELECT COUNT(*) FROM omop.episode_event WHERE episode_id = ?",
+            (episode["episode_id"],),
+        )[0] == 0
+        assert len([event for event in _episode_events(backend)
+                    if event[0] == replaced["episode_id"]]) == 1
+        _assert_no_orphans(backend)
+        assert _owned_4(backend, other_group, other) == untouched
+        assert _count(backend, "omop.condition_occurrence") == 1
+        assert _count(backend, "omop.episode") == 2
+
+        # A new group's condition never takes the deleted condition's ID.
+        source.patient("R", [_site("C504"), _clinical(_day(2024, 5, 6))])
+        run_bridge(backend, load_manifest())
+        ids = {int(row["condition_occurrence_id"]) for row in _conditions(backend)}
+        assert condition["condition_occurrence_id"] not in ids and len(ids) == 2
+
+        before = _snapshot(backend)
+        with _update_audit(backend, dialect):
+            run_bridge(backend, load_manifest())
+            assert _snapshot(backend) == before
+
+
+@DIALECTS
+def test_unowned_conditions_episodes_and_events_are_never_adopted_or_changed(
+    dialect: str, tmp_path: Path,
+) -> None:
+    with _mapped_database(dialect, tmp_path) as (backend, _target):
+        source = _Source(backend)
+        person = source.patient("P", [_site("C504"), _clinical(_day(2024, 1, 2))])
+        predecessor = source.last_report_id
+        run_bridge(backend, load_manifest())
+        (condition,) = _conditions(backend)
+        (episode,) = _episodes(backend)
+        constants = _constants(backend)
+        # Same person and content as the bridge rows, but no link.
+        backend.execute(
+            "INSERT INTO omop.condition_occurrence (person_id, condition_concept_id, "
+            "condition_start_date, condition_type_concept_id, condition_source_value, "
+            "condition_source_concept_id) VALUES (?, ?, ?, ?, ?, ?)",
+            (person, 9005, condition["start_date"], constants["condition_type_registry"],
+             "C504", condition["source_concept_id"]),
+        )
+        backend.execute(
+            "INSERT INTO omop.episode (person_id, episode_concept_id, episode_start_date, "
+            "episode_object_concept_id, episode_type_concept_id, episode_source_concept_id) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (person, constants["episode_disease"], episode["start_date"], 9005,
+             constants["episode_type_registry"], 0),
+        )
+        foreign_episode = backend.fetch_one(
+            "SELECT MAX(episode_id) FROM omop.episode")[0]
+        backend.execute(
+            "INSERT INTO omop.episode_event (episode_id, event_id, "
+            "episode_event_field_concept_id) VALUES (?, ?, ?)",
+            (foreign_episode, condition["condition_occurrence_id"],
+             constants["field_condition_occurrence_id"]),
+        )
+        foreign_sql = {
+            "condition": "SELECT * FROM omop.condition_occurrence WHERE condition_occurrence_id "
+                         "NOT IN (SELECT condition_occurrence_id FROM naaccr.group_condition)",
+            "episode": "SELECT * FROM omop.episode WHERE episode_id NOT IN "
+                       "(SELECT episode_id FROM naaccr.person_episode)",
+            "events": "SELECT * FROM omop.episode_event WHERE episode_id NOT IN "
+                      "(SELECT episode_id FROM naaccr.person_episode)",
+        }
+
+        def foreign() -> dict[str, list[tuple]]:
+            return {name: [tuple(_normalize(value) for value in row)
+                           for row in backend.fetch_all(sql)]
+                    for name, sql in foreign_sql.items()}
+
+        expected = foreign()
+        assert {name: len(rows) for name, rows in expected.items()} == {
+            "condition": 1, "episode": 1, "events": 1}
+        before = _snapshot(backend)
+        run_bridge(backend, load_manifest())
+        assert _snapshot(backend) == before
+        source.patient("P", [_clinical(_day(2024, 1, 3))])
+        supersede_and_refresh(backend, load_manifest(), predecessor, source.last_report_id)
+        assert foreign() == expected
+        assert _conditions(backend) == []
+        assert _count(backend, "omop.condition_occurrence") == 1
+        assert _count(backend, "omop.episode") == 2

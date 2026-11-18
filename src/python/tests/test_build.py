@@ -125,9 +125,14 @@ _INSERT_LEGACY_ROW = (
 )
 
 
-def _drop_value_event(backend: DatabaseBackend) -> None:
-    if backend.table_exists("naaccr", "value_event"):
-        backend.execute("DROP TABLE naaccr.value_event")
+# Bridge link tables whose FK to naaccr.naaccr_value would block its drop.
+_VALUE_DEPENDENTS = ("group_condition", "value_event")
+
+
+def _drop_value_dependents(backend: DatabaseBackend) -> None:
+    for table in _VALUE_DEPENDENTS:
+        if backend.table_exists("naaccr", table):
+            backend.execute(f"DROP TABLE naaccr.{table}")
 
 
 @contextmanager
@@ -140,19 +145,23 @@ def _legacy_value_table(backend: DatabaseBackend) -> Iterator[str]:
 
     BuildRunner(load_manifest(), backend).run()
     ddl_path = BuildRunner._NAACCR_VALUE_DDL[backend.dialect]
-    # A legacy database predates naaccr.value_event, whose FK would block the drop;
-    # the same DDL file recreates it.
-    _drop_value_event(backend)
+    # A legacy database predates the bridge link tables, whose FKs would block the
+    # drop; the value DDL recreates naaccr.value_event and the restore below
+    # recreates naaccr.group_condition.
+    _drop_value_dependents(backend)
     backend.execute("DROP TABLE naaccr.naaccr_value")
     backend.execute(_LEGACY_VALUE_DDL[backend.dialect])
     try:
         yield ddl_path
     finally:
-        _drop_value_event(backend)
+        _drop_value_dependents(backend)
         if backend.table_exists("naaccr", "naaccr_value"):
             backend.execute("DROP TABLE naaccr.naaccr_value")
-        sql = repository_path(ddl_path).read_text(encoding="utf-8")
-        backend.execute_units(split_script(backend.dialect, sql).executable)
+        dialect = backend.dialect
+        for path in (ddl_path, f"database/schemas/naaccr/ddl/{dialect}/"
+                               f"3_naaccr_report_version_{dialect}.sql"):
+            sql = repository_path(path).read_text(encoding="utf-8")
+            backend.execute_units(split_script(dialect, sql).executable)
 
 
 def _status_of(actions: list[BuildAction], path: str) -> BuildStatus:

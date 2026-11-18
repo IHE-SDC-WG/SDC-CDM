@@ -152,6 +152,26 @@
           "omop.observation",
           "naaccr.value_event"
         ]
+      },
+      {
+        "path": "database/etl/sqlite/4_condition_and_episode.sql",
+        "constants": [
+          "condition_type_registry",
+          "episode_type_registry",
+          "episode_disease",
+          "field_measurement_measurement_id",
+          "field_observation_observation_id",
+          "field_condition_occurrence_id",
+          "unmapped"
+        ],
+        "seeds": [],
+        "tables": [
+          "omop.condition_occurrence",
+          "naaccr.group_condition",
+          "omop.episode",
+          "naaccr.person_episode",
+          "omop.episode_event"
+        ]
       }
     ],
     "sqlserver": [
@@ -199,6 +219,26 @@
           "omop.measurement",
           "omop.observation",
           "naaccr.value_event"
+        ]
+      },
+      {
+        "path": "database/etl/sqlserver/4_condition_and_episode.sql",
+        "constants": [
+          "condition_type_registry",
+          "episode_type_registry",
+          "episode_disease",
+          "field_measurement_measurement_id",
+          "field_observation_observation_id",
+          "field_condition_occurrence_id",
+          "unmapped"
+        ],
+        "seeds": [],
+        "tables": [
+          "omop.condition_occurrence",
+          "naaccr.group_condition",
+          "omop.episode",
+          "naaccr.person_episode",
+          "omop.episode_event"
         ]
       }
     ]

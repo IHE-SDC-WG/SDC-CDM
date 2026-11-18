@@ -11,11 +11,14 @@ This repo now uses one physical database with five logical schemas:
 - `etl`: run history, applied migrations, and resolved concept constants.
 
 The bridge reads `intake`, `naaccr`, and `sdc`, and writes stock OMOP columns plus provenance
-in `etl`, `sdc.note_report`, and `naaccr.value_event`. `sdc.note_report` connects each `omop.note`
+in `etl`, `sdc.note_report`, `naaccr.value_event`, `naaccr.group_condition`, and
+`naaccr.person_episode`. `sdc.note_report` connects each `omop.note`
 to its selected reports and marks its anchor. `note_source_value` stores the accession for
 display; it is not a group key. `naaccr.value_event` connects each bridged `naaccr_value` to its
-`omop.measurement` or `omop.observation` row. Following either link to `inbound_envelope_id`
-reaches the exact raw message bytes.
+`omop.measurement` or `omop.observation` row. `naaccr.group_condition` connects each selected
+report group to its `omop.condition_occurrence` and chosen primary-site value, and
+`naaccr.person_episode` connects each `omop.episode` to its `(person_id, episode_key)`.
+Following a link to `inbound_envelope_id` reaches the exact raw message bytes.
 
 ## Files
 
@@ -59,7 +62,14 @@ otherwise to `measurement`. Coded values get the value map's nonzero target unle
 `naaccr.value_code_collision` lists the pair (#100). Over-length text is cut to the OMOP
 column limit and flagged. A value with no day-precision date of its own or on its report
 fails the run. `naaccr.value_event` records each row's route, value typing, and truncation.
-All three scripts reconcile changed state and keep existing IDs.
+
+`4_condition_and_episode.sql` writes one thin `condition_occurrence` per selected group with a
+primary-site (item 400) value, taking the group's lowest non-blank one and its script-3 date and
+source value. `condition_concept_id` is the value map's target only for a standard,
+non-collision `Condition` concept, else `0`; `naaccr.group_condition.condition_target` records
+which. It writes one disease `episode` per `(person_id, episode_key)` and an `episode_event` for
+every measurement, observation, and condition of that tumor. All four scripts reconcile changed
+state and keep existing IDs.
 
 `reports supersede` refreshes the full bridge when the group already has a note, in the same
 transaction as selection. Pending loads are also bridged and periods recalculated. A failure

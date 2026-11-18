@@ -157,6 +157,16 @@ date is the value's own day, then its report's day; a value with neither fails t
 `naaccr.value_event` links every value to its row and records how it was routed and typed, so
 unmapped and suppressed values can be counted. `*_event_id` points at the group's note.
 
+The fourth script writes one thin `omop.condition_occurrence` for each selected group with a
+primary-site value (item 400): the group's lowest non-blank one, dated and cut like its
+script-3 row. `condition_source_concept_id` holds the value map's source concept, and
+`condition_concept_id` is that map's target only when it is a standard `Condition` concept and
+not a #100 collision; otherwise it is `0`. There is no ICD-O-3 combination logic. Each
+`(person, naaccr_value.episode_key)` gets one disease `omop.episode`, so the same accession under
+two patients is two episodes and one source tumor identity across accessions is one. Its
+`omop.episode_event` rows link every measurement, observation, and condition of that tumor.
+`naaccr.group_condition` and `naaccr.person_episode` name the rows the bridge owns.
+
 For a group already linked to a note, `reports supersede` moves selection and runs the **full
 bridge** in one transaction. This also bridges pending loads and recalculates observation periods.
 A prerequisite or source-data failure rolls back selection and every derived change. For an

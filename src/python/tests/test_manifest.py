@@ -50,6 +50,7 @@ def test_bridge_entries_are_ordered_and_every_etl_script_is_declared() -> None:
             f"database/etl/{dialect}/1_person_and_period.sql",
             f"database/etl/{dialect}/2_note.sql",
             f"database/etl/{dialect}/3_measurement_observation.sql",
+            f"database/etl/{dialect}/4_condition_and_episode.sql",
         ]
         assert manifest.validate[dialect] == ()
         listed = {entry.path for entry in entries}

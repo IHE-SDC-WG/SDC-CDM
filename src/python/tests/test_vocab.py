@@ -119,7 +119,7 @@ def test_load_populates_a_fresh_schema_and_validates_counts(
         )[0] is not None
         if dialect == "sqlite":
             assert backend.fetch_all('PRAGMA "omop".foreign_key_check') == []
-        assert len(resolve_constants(backend)) == 9
+        assert len(resolve_constants(backend)) == 15
 
 
 def test_sqlite_load_rolls_back_on_orphaned_relationship(
@@ -174,8 +174,14 @@ def test_all_tracked_constants_resolve_from_the_loaded_fixture(
             "gender_female": 8532,
             "period_type_registry": 32879,
             "cdm_version": 756265,
+            "condition_type_registry": 32879,
+            "episode_type_registry": 32879,
+            "episode_disease": 32533,
+            "field_measurement_measurement_id": 1147138,
+            "field_observation_observation_id": 1147165,
+            "field_condition_occurrence_id": 1147127,
         }
-        assert backend.fetch_one("SELECT COUNT(*) FROM etl.concept_constant")[0] == 9
+        assert backend.fetch_one("SELECT COUNT(*) FROM etl.concept_constant")[0] == 15
 
 
 def test_missing_constant_exits_one_and_does_not_modify_the_table(
@@ -241,8 +247,8 @@ def test_constants_resolve_is_idempotent(tmp_path: Path) -> None:
             "SELECT constant_name, concept_id, vocabulary_id, concept_code "
             "FROM etl.concept_constant ORDER BY constant_name"
         )
-        assert len(rows) == 9
-        assert len({row[0] for row in rows}) == 9
+        assert len(rows) == 15
+        assert len({row[0] for row in rows}) == 15
 
 
 def test_every_bridge_concept_literal_resolves_to_a_constant(

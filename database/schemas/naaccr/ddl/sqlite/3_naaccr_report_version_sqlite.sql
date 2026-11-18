@@ -42,4 +42,30 @@ CREATE UNIQUE INDEX IF NOT EXISTS naaccr.ux_report_version_selected
 CREATE UNIQUE INDEX IF NOT EXISTS naaccr.ux_report_version_predecessor
     ON report_version (predecessor_sdc_report_id) WHERE predecessor_sdc_report_id IS NOT NULL;
 
+-- Bridge script 4 provenance: the one thin primary-site condition of a selected
+-- group. condition_occurrence_id is a logical reference into omop.condition_occurrence
+-- (OMOP holds no crosswalk); the bridge owns only conditions named here.
+-- naaccr_value_id is the chosen primary-site value, and condition_target records
+-- why condition_concept_id is or is not a standard target.
+CREATE TABLE IF NOT EXISTS naaccr.group_condition (
+    report_group_id INTEGER NOT NULL PRIMARY KEY REFERENCES report_group(report_group_id),
+    condition_occurrence_id INTEGER NOT NULL UNIQUE,
+    naaccr_value_id INTEGER NOT NULL REFERENCES naaccr_value(naaccr_value_id),
+    condition_target TEXT NOT NULL CHECK (condition_target IN (
+        'mapped', 'no_map', 'no_target', 'other_domain', 'collision_suppressed'
+    ))
+);
+
+-- Bridge script 4 provenance: one disease episode per (person, episode_key). The
+-- key is the envelope's source tumor identity, else its accession hash, so it never
+-- fits omop.episode.episode_source_value. The bridge owns only episodes named here,
+-- and every omop.episode_event row of an owned episode.
+CREATE TABLE IF NOT EXISTS naaccr.person_episode (
+    episode_id INTEGER NOT NULL PRIMARY KEY,
+    -- logical reference to intake.patient.patient_id (omop.person.person_id)
+    person_id INTEGER NOT NULL,
+    episode_key TEXT NOT NULL,
+    UNIQUE (person_id, episode_key)
+);
+
 COMMIT;

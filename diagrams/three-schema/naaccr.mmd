@@ -187,6 +187,22 @@ erDiagram
     TEXT report_accession
   }
 
+  %% Bridge script 4 provenance: one thin primary-site condition per selected group, and
+  %% one episode per (person, episode_key). condition_occurrence_id and episode_id are
+  %% logical references into omop.condition_occurrence and omop.episode.
+  GROUP_CONDITION {
+    INTEGER report_group_id PK,FK
+    INTEGER condition_occurrence_id UK
+    INTEGER naaccr_value_id FK
+    TEXT condition_target
+  }
+
+  PERSON_EPISODE {
+    INTEGER episode_id PK
+    INTEGER person_id UK
+    TEXT episode_key UK
+  }
+
   REPORT_VERSION {
     INTEGER report_version_id PK
     INTEGER report_group_id FK
@@ -226,3 +242,6 @@ erDiagram
   REPORT_GROUP ||--o{ REPORT_VERSION : "report_group_id"
   REPORT_VERSION |o--o| REPORT_VERSION : "predecessor (same group and type)"
   SDC_REPORT ||..o| REPORT_VERSION : "sdc_report_id (cross-schema, no FK)"
+  REPORT_GROUP ||--o| GROUP_CONDITION : "report_group_id (groups with a site only)"
+  NAACCR_VALUE ||--o{ GROUP_CONDITION : "chosen item 400 value"
+  NAACCR_VALUE }o..|| PERSON_EPISODE : "(person_id, episode_key)"
