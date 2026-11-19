@@ -313,14 +313,19 @@ Phase 4 child that owns it. Every Phase 4 check runs on SQLite and SQL Server an
   with `person_id = patient_id`; intake and load write zero `omop` rows; a second bridge run adds
   no rows. Linkage of notes, measurements, observations, conditions, and episodes to that
   `person_id` is checked by the phase that writes each table (OMOP-07, BRIDGE-11).
-  `test_bridge.py`: `test_bridge_derives_person_period_and_source_and_reruns_unchanged`.
+  `test_bridge.py`: `test_bridge_derives_person_period_and_source_and_reruns_unchanged`;
+  4.4 conditions and episodes: `test_one_thin_condition_per_selected_group_with_a_primary_site`,
+  `test_episodes_group_by_tumor_within_a_person_and_link_every_event`.
 - [ ] **OMOP-12** *(4.3–4.5)* Concept slots follow their OMOP contracts. Standard-target slots
   (`measurement_concept_id`, `observation_concept_id`, `condition_concept_id`,
   `value_as_concept_id`, `episode_concept_id`, `episode_object_concept_id`) contain only
   standard concepts when nonzero or non-NULL. Source slots may contain non-standard NAACCR
   concepts. Type and event-field slots hold their resolved constants. 4.3 checks measurement
   and observation slots in `test_bridge.py`:
-  `test_values_route_to_their_domain_tables_with_both_concept_slots`.
+  `test_values_route_to_their_domain_tables_with_both_concept_slots`. 4.4 checks condition and
+  episode slots, including Condition-domain targets and `episode_event` field constants:
+  `test_one_thin_condition_per_selected_group_with_a_primary_site`,
+  `test_episodes_group_by_tumor_within_a_person_and_link_every_event`.
 
 ### 3.1 Phase 4 bridge checks
 
@@ -385,11 +390,20 @@ dialects.
   episodes.
   `test_bridge.py`: `test_supersession_replaces_clinical_rows_and_an_unchanged_rerun_updates_nothing`,
   `test_a_clinical_row_without_a_link_is_never_adopted_or_changed`,
-  `test_superseded_clinical_ids_are_never_reused`.
-- [ ] **BRIDGE-11** *(4.4)* One thin primary-site `condition_occurrence` per selected group;
-  episodes are grouped per patient, not by accession alone; `episode_event` links the group's
-  selected measurements, observations, and condition. Episode constants resolve without the
-  `NAACCR2026` supplement.
+  `test_superseded_clinical_ids_are_never_reused`; 4.4:
+  `test_supersession_replaces_condition_episode_and_events_atomically`,
+  `test_unowned_conditions_episodes_and_events_are_never_adopted_or_changed`.
+- [x] **BRIDGE-11** *(4.4)* One thin primary-site `condition_occurrence` per selected group with
+  a primary-site value; one episode per `(person, episode_key)`, so the same accession under two
+  patients yields two episodes and one source tumor identity across accessions yields one;
+  every `episode_event` references an existing measurement, observation, or condition with its
+  field constant. Episode constants resolve without the `NAACCR2026` supplement. After
+  supersession no obsolete condition, episode, or orphan event remains, and a rerun adds no rows.
+  `test_bridge.py`: `test_one_thin_condition_per_selected_group_with_a_primary_site`,
+  `test_episodes_group_by_tumor_within_a_person_and_link_every_event`,
+  `test_episode_constants_resolve_without_naaccr2026`,
+  `test_supersession_replaces_condition_episode_and_events_atomically`,
+  `test_unowned_conditions_episodes_and_events_are_never_adopted_or_changed`.
 - [ ] **BRIDGE-12** *(4.5)* `sdc-cdm validate` reports zero structural and provenance errors;
   reconciles selected, historical, excluded, and unmapped inputs; counts one-day periods and
   #100 suppressions; and checks unmapped coverage against `validate_thresholds.csv` separately

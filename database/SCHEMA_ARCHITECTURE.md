@@ -81,6 +81,14 @@ routed (`route`), how its coded value was typed (`value_target`), and whether an
 (`is_truncated`), so unmapped, #100-suppressed, and truncated values are countable without
 reading OMOP. Clinical rows with no link belong to other writers.
 
+`group_condition` links each selected `report_group` (its primary key, an enforced FK) to the
+one thin `omop.condition_occurrence` it produced (unique, a logical reference) and to the chosen
+primary-site `naaccr_value` (an enforced FK). `condition_target` records why
+`condition_concept_id` is or is not a standard target. `person_episode` links each
+`omop.episode` ID to its unique `(person_id, episode_key)`; the hashed key does not fit, and is
+not, an OMOP source value. The bridge owns only the conditions and episodes named here, plus
+every `omop.episode_event` row of an owned episode.
+
 ### 3. `sdc`: form structure and report metadata
 
 The SDC XML path stores templates, instances, and submitted answers:
@@ -142,6 +150,10 @@ Inbound bytes
    |                                   + sdc.note_report (selected contributors + anchor)
    |                                   + omop.measurement + omop.observation
    |                                   + naaccr.value_event (one link per value)
+   |                                   + omop.condition_occurrence
+   |                                   + naaccr.group_condition (one per group with a site)
+   |                                   + omop.episode + omop.episode_event
+   |                                   + naaccr.person_episode (one per person and tumor)
    |                                   + etl.observation_period_derivation
    |
    +--> sdc.template_* + sdc.sdc_form_answer    (SDC XML path)
@@ -151,8 +163,8 @@ database/manifest.json --> etl.schema_migration + etl.run
 
 The bridge is a separate transform, `sdc-cdm bridge`, that runs the manifest's ordered `bridge`
 entries in one transaction. It reads `intake`, `naaccr`, and `sdc`, writes only standard OMOP
-columns plus its own `etl`, `sdc.note_report`, and `naaccr.value_event` provenance, and does not
-run as part of `build`.
+columns plus its own `etl`, `sdc.note_report`, `naaccr.value_event`, `naaccr.group_condition`,
+and `naaccr.person_episode` provenance, and does not run as part of `build`.
 
 ## Back-reference without a crosswalk
 
@@ -248,6 +260,41 @@ JOIN sdc.note_report nr ON nr.sdc_report_id = v.sdc_report_id
 JOIN intake.inbound_envelope e ON e.inbound_envelope_id = v.inbound_envelope_id
 JOIN intake.inbound_message m ON m.inbound_message_id = e.inbound_message_id;
 ```
+
+### Conditions and episodes
+
+Each selected report group with a primary-site value (item 400) gets one thin
+`condition_occurrence`. The chosen value is the group's lowest `naaccr_value_id` with item 400
+and a non-blank `value_code` or `value_text`; its script-3 row supplies
+`condition_start_date` and the cut `condition_source_value`, so no date or length rule is
+repeated. Groups without one get no condition. No histology or ICD-O-3 combination logic runs.
+
+| `group_condition.condition_target` | Case | `condition_concept_id` | `condition_source_concept_id` |
+|---|---|---|---|
+| `mapped` | `(400, value_code)` value map target in the `Condition` domain | map `concept_id` | map `source_concept_id` |
+| `other_domain` | value map target in another domain | `0` | map `source_concept_id` |
+| `no_target` | value map row with `concept_id = 0` | `0` | map `source_concept_id` |
+| `no_map` | no value map row (including text-only values) | `0` | `0` |
+| `collision_suppressed` | `naaccr.value_code_collision` lists the pair (#100); takes precedence | `0` | map `source_concept_id`, else `0` |
+
+The type concept is `condition_type_registry`; every other column is NULL.
+
+Each `(report_group.person_id, naaccr_value.episode_key)` gets one `episode`. The key is the
+envelope's source tumor identity when it carries one, else its accession hash, so the same
+accession under two patients is two episodes and one tumor identity across accessions is one.
+`episode_concept_id` is `episode_disease` (Disease Episode), `episode_type_concept_id` is
+`episode_type_registry`, `episode_start_date` is the earliest linked event date, and
+`episode_end_date` is NULL. `episode_object_concept_id` is the nonzero `condition_concept_id` of
+the episode's lowest-`report_group_id` condition with one, else `0`.
+`episode_source_concept_id` is `0` and `episode_source_value`, parent, and number are NULL.
+`episode_event` links every measurement, observation, and condition of that tumor, with the
+`field_measurement_measurement_id`, `field_observation_observation_id`, or
+`field_condition_occurrence_id` event field concept.
+
+Reconciliation follows the clinical rows: owned rows that are no longer staged are deleted,
+changed rows are updated, and new rows are inserted. Condition IDs stay stable per group and
+episode IDs per `(person_id, episode_key)`; deleted IDs are never reused, and an unchanged rerun
+writes nothing.
 
 The excluded pre-rebuild bridge remains under separate regression tests until Phase 4.5;
 it must not run alongside the manifest bridge on one database.

@@ -1,6 +1,6 @@
 erDiagram
-  %% Manifest bridge through Phase 4.3, both SQLite and SQL Server.
-  %% Source: database/etl/{sqlite,sqlserver}/{1_person_and_period,2_note,3_measurement_observation}.sql
+  %% Manifest bridge through Phase 4.4, both SQLite and SQL Server.
+  %% Source: database/etl/{sqlite,sqlserver}/{1_person_and_period,2_note,3_measurement_observation,4_condition_and_episode}.sql
   %% Solid (--) = enforced FK; dotted (..) = logical cross-schema reference.
   %% No repository-specific columns are added to stock OMOP.
   %% Every selected group has one note; accession alone is never an identity key.
@@ -15,6 +15,11 @@ erDiagram
   %% other value has concept 0 and goes to observation when it has text, else measurement.
   %% Maps join on item_num only; ecp_code is never parsed. #100 collision codes get no
   %% value_as_concept_id. Date: value day, then its report's day; neither fails the run.
+  %% Each selected group with a primary-site (item 400) value has one thin condition from
+  %% its lowest non-blank one, linked by naaccr.group_condition; condition_concept_id is a
+  %% standard Condition target only, else 0. Each (person, episode_key) has one disease
+  %% episode, linked by naaccr.person_episode, whose episode_event rows name every
+  %% measurement, observation, and condition of that tumor.
   %% The excluded pre-rebuild bridge is tested separately and must not run on this
   %% bridge's database.
 
@@ -129,6 +134,40 @@ erDiagram
     INTEGER observation_event_id
     INTEGER obs_event_field_concept_id
   }
+  NAACCR_GROUP_CONDITION {
+    INTEGER report_group_id PK,FK
+    INTEGER condition_occurrence_id UK
+    INTEGER naaccr_value_id FK
+    TEXT condition_target
+  }
+  NAACCR_PERSON_EPISODE {
+    INTEGER episode_id PK
+    INTEGER person_id UK
+    TEXT episode_key UK
+  }
+  OMOP_CONDITION_OCCURRENCE {
+    INTEGER condition_occurrence_id PK
+    INTEGER person_id FK
+    INTEGER condition_concept_id
+    TEXT condition_start_date
+    INTEGER condition_type_concept_id
+    TEXT condition_source_value
+    INTEGER condition_source_concept_id
+  }
+  OMOP_EPISODE {
+    INTEGER episode_id PK
+    INTEGER person_id FK
+    INTEGER episode_concept_id
+    TEXT episode_start_date
+    INTEGER episode_object_concept_id
+    INTEGER episode_type_concept_id
+    INTEGER episode_source_concept_id
+  }
+  OMOP_EPISODE_EVENT {
+    INTEGER episode_id FK
+    INTEGER event_id
+    INTEGER episode_event_field_concept_id
+  }
   ETL_CONCEPT_CONSTANT {
     TEXT constant_name PK
     INTEGER concept_id
@@ -158,3 +197,17 @@ erDiagram
   OMOP_NOTE ||..o{ OMOP_OBSERVATION : "observation_event_id"
   ETL_CONCEPT_CONSTANT ||..o{ OMOP_MEASUREMENT : "type, field_note_note_id, unmapped"
   ETL_CONCEPT_CONSTANT ||..o{ OMOP_OBSERVATION : "type, field_note_note_id, unmapped"
+  NAACCR_REPORT_GROUP ||--o| NAACCR_GROUP_CONDITION : "groups with a site value"
+  NAACCR_VALUE ||--o{ NAACCR_GROUP_CONDITION : "chosen item 400 value"
+  NAACCR_GROUP_CONDITION ||..|| OMOP_CONDITION_OCCURRENCE : "condition_occurrence_id"
+  NAACCR_VALUE_CONCEPT_MAP ||..o{ NAACCR_GROUP_CONDITION : "(400, value_code)"
+  OMOP_PERSON ||--o{ OMOP_CONDITION_OCCURRENCE : "person_id"
+  NAACCR_VALUE }o..|| NAACCR_PERSON_EPISODE : "(person_id, episode_key)"
+  NAACCR_PERSON_EPISODE ||..|| OMOP_EPISODE : "episode_id"
+  OMOP_PERSON ||--o{ OMOP_EPISODE : "person_id"
+  OMOP_EPISODE ||--|{ OMOP_EPISODE_EVENT : "episode_id"
+  OMOP_EPISODE_EVENT }o..o| OMOP_MEASUREMENT : "field_measurement_measurement_id"
+  OMOP_EPISODE_EVENT }o..o| OMOP_OBSERVATION : "field_observation_observation_id"
+  OMOP_EPISODE_EVENT }o..o| OMOP_CONDITION_OCCURRENCE : "field_condition_occurrence_id"
+  ETL_CONCEPT_CONSTANT ||..o{ OMOP_CONDITION_OCCURRENCE : "condition_type_registry, unmapped"
+  ETL_CONCEPT_CONSTANT ||..o{ OMOP_EPISODE : "episode_disease, episode_type_registry"

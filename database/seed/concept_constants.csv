@@ -8,3 +8,9 @@ gender_male,Gender,M
 gender_female,Gender,F
 period_type_registry,Type Concept,OMOP4976952
 cdm_version,CDM,CDM v5.4.0
+condition_type_registry,Type Concept,OMOP4976952
+episode_type_registry,Type Concept,OMOP4976952
+episode_disease,Episode,OMOP4822254
+field_measurement_measurement_id,CDM,CDM194
+field_observation_observation_id,CDM,CDM221
+field_condition_occurrence_id,CDM,CDM183

@@ -816,15 +816,28 @@ OMOP row it owns (`sdc.note_report`, `naaccr.value_event`).
    high-water mark), and repeated identical answers stay separate rows. `*_event_id` is the
    group's `note_id`, with the event field from `field_note_note_id`; type concepts come from
    `measurement_type_registry` and `observation_type_registry`.
-4. **`4_condition_and_episode.sql`** (4.4) —
-   - **`condition_occurrence`, thin version:** one row per selected report group, from the
-     **primary-site item alone**. Use `condition_concept_id = 0` when there is no standard target,
-     and put the NAACCR source concept in `condition_source_concept_id`. There is no histology
-     combination logic. ICD-O-3 combination concepts are roadmap work.
-   - **`episode` / `episode_event`:** group episodes by tumor/accession within a patient, never by
-     accession alone. `episode_event` connects the selected measurements, observations, and
-     condition. Episode type and event-field concepts resolve through `etl.concept_constant` from
-     Athena. They do not come from the `NAACCR2026` supplement.
+4. **`4_condition_and_episode.sql`** (4.4) — reads only script 3's output, `sdc.note_report`,
+   `naaccr.report_group`, and the value map.
+   - **`condition_occurrence`, thin version:** one row per selected report group **with a
+     primary-site value** (item 400); a group without one gets none. The chosen value is the
+     group's lowest `naaccr_value_id` with a non-blank `value_code` or `value_text`; its script-3
+     row supplies the date and the cut source value. `condition_source_concept_id` is the
+     `(400, value_code)` value map source concept, else `0`. `condition_concept_id` is that map's
+     target only when it is a nonzero, non-collision (#100) `Condition`-domain concept, else `0`.
+     There is no histology combination logic. ICD-O-3 combination concepts are roadmap work.
+   - **`episode` / `episode_event`:** one disease episode per `(person_id, naaccr_value.episode_key)`.
+     The key is the envelope's source tumor identity when present, else its accession hash, so
+     episodes group by tumor/accession within a patient, never by accession alone.
+     `episode_start_date` is the earliest linked event date; `episode_end_date` is NULL;
+     `episode_object_concept_id` is the nonzero condition concept of the episode's
+     lowest-group condition, else `0`. `episode_event` connects every selected measurement,
+     observation, and condition of the tumor. Episode type and event-field concepts resolve
+     through `etl.concept_constant` from Athena. They do not come from the `NAACCR2026` supplement.
+   - **Provenance:** `naaccr.group_condition` (one per group: condition, chosen value,
+     `condition_target`) and `naaccr.person_episode` (one per `(person_id, episode_key)`) name the
+     owned rows; every `episode_event` of an owned episode is owned. Reconciliation matches
+     script 3: IDs stay stable, deleted IDs are never reused, and an unchanged rerun writes
+     nothing.
 5. **`9_validate.sql`** (4.5) — This generalizes
    `database/etl/sqlserver/validate_naaccr_sdc_to_omop.sql` for both dialects. It checks for orphan
    foreign keys and event links, checks each concept slot against its contract, and traces every
@@ -873,6 +886,14 @@ vocabulary and **fails loudly if absent** rather than letting the ETL write a wr
 | `gender_male`, `gender_female` | `Gender` / `M`, `F` (`8507`, `8532`) |
 | `period_type_registry` | `Type Concept` / `OMOP4976952` (`32879`), from 4.1 |
 | `cdm_version` | `CDM` / `CDM v5.4.0` (`756265`), from 4.1 |
+| `condition_type_registry`, `episode_type_registry` | `Type Concept` / `OMOP4976952` (`32879`), from 4.4 |
+| `episode_disease` | `Episode` / `OMOP4822254` (`32533`, Disease Episode, standard), from 4.4; not the deprecated `32528` Disease First Occurrence |
+| `field_measurement_measurement_id` | `CDM` / `CDM194` (`1147138`, `measurement.measurement_id`), from 4.4 |
+| `field_observation_observation_id` | `CDM` / `CDM221` (`1147165`, `observation.observation_id`), from 4.4 |
+| `field_condition_occurrence_id` | `CDM` / `CDM183` (`1147127`, `condition_occurrence.condition_occurrence_id`), from 4.4 |
+
+Every pair is checked against Athena (`v5.0 27-FEB-26`); CDM field constants use the v5
+`CDM…` codes, not their CDM v6 duplicates. None comes from the `NAACCR2026` supplement.
 
 The ETL scripts join `etl.concept_constant` instead of embedding literals. This also removes the
 `// TODO: confirm the exact field concept_id` at `SdcCdmInSqlite.cs:1228` and makes
@@ -1141,7 +1162,7 @@ at the new import-side assertion rather than deleting them.
 | **Seven phases is a lot of runway.** Phases 3–5 depend on 0–2 landing. | Stalling mid-rebuild leaves two half-migrated layouts. | Each child issue lands on `main` as it completes, so a stall leaves trunk holding every completed phase. Phases 1–2 alone fix the `concept_id = 0` problem. Do not start Phase 3 until 0–2 are on `main`. |
 | **Dropping PostgreSQL strands a deployment.** Assumes the container was dev convenience, not a target. | Someone deploying on Postgres cannot follow the rebuild. | Confirmed with the working group before Phase 0. If it becomes a real target, fund it properly (manifest entry, CI job, `intake`/`etl` DDL). |
 | **SEER\*API dictionary refresh requires an authorized key and N+1 detail requests.** | A revoked key or API change can block a refresh. | Keep fetch separate from build/load, retain deterministic gitignored CSVs for local use, commit a raw 12-item fixture for offline CI, retry transient failures, and require an owned key-rotation policy before scheduling refreshes. |
-| **`4_condition_and_episode.sql` is thinly specified.** Thin condition + episode grouping is a deliberate scope cut. | The episode grain (one per patient-qualified tumor/accession group) may not survive multi-tumor reports. | Keep it in its own script so it can be replaced without touching measurement routing. Revisit with the ICD-O-3 roadmap work. |
+| **`4_condition_and_episode.sql` is thinly specified.** Thin condition + episode grouping is a deliberate scope cut. | The episode grain (one per `(person, episode_key)`: source tumor identity, else accession) may not survive multi-tumor reports without a tumor identity. | Keep it in its own script so it can be replaced without touching measurement routing. Revisit with the ICD-O-3 roadmap work. |
 
 ---
 

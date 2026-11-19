@@ -53,3 +53,45 @@ BEGIN
     ON naaccr.report_version (predecessor_sdc_report_id) WHERE predecessor_sdc_report_id IS NOT NULL;
 END
 GO
+
+-- Bridge script 4 provenance: the one thin primary-site condition of a selected
+-- group. condition_occurrence_id is a logical reference into omop.condition_occurrence
+-- (OMOP holds no crosswalk); the bridge owns only conditions named here.
+-- naaccr_value_id is the chosen primary-site value, and condition_target records
+-- why condition_concept_id is or is not a standard target.
+IF OBJECT_ID('naaccr.group_condition', 'U') IS NULL
+BEGIN
+  CREATE TABLE naaccr.group_condition (
+    report_group_id INT NOT NULL,
+    condition_occurrence_id INT NOT NULL,
+    naaccr_value_id INT NOT NULL,
+    condition_target VARCHAR(30) NOT NULL,
+    CONSTRAINT PK_group_condition PRIMARY KEY (report_group_id),
+    CONSTRAINT FK_group_condition_group FOREIGN KEY (report_group_id)
+      REFERENCES naaccr.report_group (report_group_id),
+    CONSTRAINT FK_group_condition_naaccr_value FOREIGN KEY (naaccr_value_id)
+      REFERENCES naaccr.naaccr_value (naaccr_value_id),
+    CONSTRAINT UQ_group_condition_condition UNIQUE (condition_occurrence_id),
+    CONSTRAINT CK_group_condition_target CHECK (condition_target IN (
+      'mapped', 'no_map', 'no_target', 'other_domain', 'collision_suppressed'
+    ))
+  );
+END
+GO
+
+-- Bridge script 4 provenance: one disease episode per (person, episode_key). The
+-- key is the envelope's source tumor identity, else its accession hash, so it never
+-- fits omop.episode.episode_source_value. The bridge owns only episodes named here,
+-- and every omop.episode_event row of an owned episode.
+IF OBJECT_ID('naaccr.person_episode', 'U') IS NULL
+BEGIN
+  CREATE TABLE naaccr.person_episode (
+    episode_id BIGINT NOT NULL,
+    -- logical reference to intake.patient.patient_id (omop.person.person_id)
+    person_id INT NOT NULL,
+    episode_key NVARCHAR(100) NOT NULL,
+    CONSTRAINT PK_person_episode PRIMARY KEY (episode_id),
+    CONSTRAINT UQ_person_episode_key UNIQUE (person_id, episode_key)
+  );
+END
+GO
