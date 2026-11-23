@@ -716,6 +716,12 @@ def test_accession_less_reports_have_no_note_or_provenance_link(
         assert len(_notes(backend)) == 1
         assert [row[1] for row in _links(backend)] == [source.last_report_id]
         assert source.last_report_id != excluded
+        # OMOP-06b: the excluded report's values never fan out into clinical rows.
+        assert [row[0] for row in backend.fetch_all(
+            "SELECT v.sdc_report_id FROM naaccr.value_event l "
+            "JOIN naaccr.naaccr_value v ON v.naaccr_value_id = l.naaccr_value_id"
+        )] == [source.last_report_id]
+        assert _count(backend, "omop.measurement") + _count(backend, "omop.observation") == 1
 
 
 @DIALECTS
@@ -1646,6 +1652,59 @@ def test_superseded_clinical_ids_are_never_reused(dialect: str, tmp_path: Path) 
         supersede_and_refresh(backend, load_manifest(), predecessor, source.last_report_id)
         after = {(event["event_table"], event["event_id"]) for event in _events(backend)}
         assert len(after) == 2 and not before & after
+
+
+@DIALECTS
+def test_a_deleted_owned_row_is_repaired_and_a_late_value_is_appended(
+    dialect: str, tmp_path: Path,
+) -> None:
+    """Retired old-bridge regressions: a partial load is repaired per value, and a value
+    appended to an already-bridged report gets its own row without touching the note."""
+    with _mapped_database(dialect, tmp_path) as (backend, _target):
+        source = _Source(backend)
+        person = source.patient("P", [
+            {"item_num": 3605, "value_num": "1", "observation_date": _day(2024, 1, 2)},
+            {"item_num": 3605, "value_num": "2", "observation_date": _day(2024, 1, 2)},
+        ])
+        report = source.last_report_id
+        run_bridge(backend, load_manifest())
+        notes = _notes(backend)
+        first, second = _events(backend)
+        backend.execute("DELETE FROM omop.measurement WHERE measurement_id = ?",
+                        (second["event_id"],))
+
+        run_bridge(backend, load_manifest())
+        repaired = _events(backend)
+        assert [event["naaccr_value_id"] for event in repaired] == [
+            first["naaccr_value_id"], second["naaccr_value_id"]]
+        assert repaired[0] == first
+        # The lost row is re-created under a new ID and its link follows it.
+        assert repaired[1]["event_id"] != second["event_id"]
+        assert {key: value for key, value in repaired[1].items() if key != "event_id"} == {
+            key: value for key, value in second.items() if key != "event_id"}
+        _assert_no_orphans(backend)
+
+        envelope = backend.fetch_one(
+            "SELECT inbound_envelope_id, episode_key, dd_version_id FROM naaccr.naaccr_value "
+            "WHERE naaccr_value_id = ?", (first["naaccr_value_id"],),
+        )
+        backend.execute(
+            "INSERT INTO naaccr.naaccr_value (person_id, episode_key, sdc_report_id, "
+            "report_accession, item_num, value_num, observation_date, dd_version_id, "
+            "inbound_envelope_id, obx_sub_id) VALUES (?, ?, ?, ?, 3605, 3, '2024-01-02', ?, ?, "
+            "'late')",
+            (person, envelope[1], report, f"ACC-{source.token}", envelope[2], envelope[0]),
+        )
+        run_bridge(backend, load_manifest())
+        events = _events(backend)
+        assert len(events) == 3
+        assert events[:2] == repaired
+        assert (events[2]["label"], events[2]["value_as_number"], events[2]["note_id"]) == (
+            "late", 3.0, first["note_id"])
+        assert _notes(backend) == notes
+        before = _snapshot(backend)
+        run_bridge(backend, load_manifest())
+        assert _snapshot(backend) == before
 
 
 @DIALECTS

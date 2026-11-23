@@ -1,5 +1,5 @@
 erDiagram
-  %% Manifest bridge through Phase 4.4, both SQLite and SQL Server.
+  %% Manifest bridge (Phase 4), both SQLite and SQL Server.
   %% Source: database/etl/{sqlite,sqlserver}/{1_person_and_period,2_note,3_measurement_observation,4_condition_and_episode}.sql
   %% Solid (--) = enforced FK; dotted (..) = logical cross-schema reference.
   %% No repository-specific columns are added to stock OMOP.
@@ -20,8 +20,7 @@ erDiagram
   %% standard Condition target only, else 0. Each (person, episode_key) has one disease
   %% episode, linked by naaccr.person_episode, whose episode_event rows name every
   %% measurement, observation, and condition of that tumor.
-  %% The excluded pre-rebuild bridge is tested separately and must not run on this
-  %% bridge's database.
+  %% 9_validate.sql (sdc-cdm validate) reads every table here and writes nothing.
 
   INTAKE_PATIENT {
     INTEGER patient_id PK

@@ -229,6 +229,18 @@ or the item number. `*_event_id` is the group's `note_id`, with the event field 
 | `value_text` | `observation.value_as_string` | cut to 60; `measurement` has no string column |
 | `observation_date` | `*_date` | else the report's day-precision envelope date; neither fails the run |
 
+By value shape, a CAP or NAACCR answer lands in these OMOP columns:
+
+| Source value | `measurement` | `observation` |
+|---|---|---|
+| numeric (`value_num`) | `value_as_number` + `unit_source_value` | `value_as_number` + `unit_source_value` |
+| coded (`value_code`) | `value_as_concept_id` when mapped; the code in `value_source_value` | same |
+| text (`value_text`) | `value_source_value` only, when there is no code | `value_as_string`, and `value_source_value` when there is no code |
+
+CAP OBX segments that share an OBX-4 sub-ID are staged as one logical `naaccr_value`. The full
+OBX-3.1 question identifier is kept in `ecp_code`, and `item_num` stays NULL unless external
+preprocessing supplies a verified NAACCR item number.
+
 `value_event.value_target` is `none` (no code), `mapped`, `unmapped`, or `collision_suppressed`
 (which takes precedence over `unmapped`). OMOP has no value-source-concept column, so a coded
 value keeps its code in `value_source_value` and the item's source concept in
@@ -296,8 +308,28 @@ changed rows are updated, and new rows are inserted. Condition IDs stay stable p
 episode IDs per `(person_id, episode_key)`; deleted IDs are never reused, and an unchanged rerun
 writes nothing.
 
-The excluded pre-rebuild bridge remains under separate regression tests until Phase 4.5;
-it must not run alongside the manifest bridge on one database.
+### Validation
+
+`sdc-cdm validate` runs the manifest's `validate` entries (`9_validate.sql` per dialect) in one
+transaction and writes nothing but its `etl.run` row. Each statement returns
+`(check_name, category, actual)` rows, and both dialects emit the same check names. Python judges
+the counts:
+
+| Category | Covers | Passes when |
+|---|---|---|
+| `structural` | orphan `person_id`, episode, note-event, and `episode_event` targets on every row of the bridge-written tables; unknown concepts; orphan `note_report`, `value_event`, `group_condition`, `person_episode`, and period-derivation links; type, field, and constant slots of owned rows; standard, valid, routed-domain targets; slots that disagree with the recorded route and current maps | `0` |
+| `provenance` | owned rows that cannot reach an `intake.inbound_message` (patient first message, period boundaries, note links, values, condition values, episode keys), and owned episode events that name an unowned row | `0` |
+| `reconciliation` | unversioned accessioned reports; selected reports without a note link, links to unselected reports, selected groups without exactly one note; patients without a person or period; selected values without a clinical row and rows for unselected values; site groups versus conditions; episode keys without an episode; owned rows without an episode event; `cdm_source` row count | `0` |
+| `coverage` | unmapped CKey values, unmapped and other-domain item values, coded item values without a value target, conditions without a Condition target, item numbers absent from their dictionary version | at most the `validate_thresholds.csv` row |
+| `report` | selected, historical, and accession-less reports; historical and excluded values; content-duplicate messages; one-day periods; #100 suppressions; truncated values; unowned OMOP rows | never fails |
+
+The bridge owns the rows that its links name. These are persons with an `intake.patient` row,
+periods with a derivation row, notes in `sdc.note_report`, clinical rows in
+`naaccr.value_event`, conditions in `naaccr.group_condition`, episodes in
+`naaccr.person_episode`, and every `episode_event` of an owned episode. Other OMOP rows are
+reported but never failed, because the bridge leaves them in place. The orphan checks still cover
+every row. Slot checks compare against the current concept maps, so run `validate` after any
+`maps build` and before exporting, and rerun `bridge` when maps change.
 
 ## Physical model and build order
 

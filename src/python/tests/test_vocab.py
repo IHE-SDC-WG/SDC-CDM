@@ -14,6 +14,7 @@ from sdc_cdm.db.errors import VocabularyError
 from sdc_cdm.db.manifest import load_manifest
 from sdc_cdm.db.paths import repository_path
 from sdc_cdm.db.sqlite_backend import SQLiteBackend
+from sdc_cdm.db.sqlscript import _without_sql_comments
 from sdc_cdm.db.sqlserver_backend import SqlServerBackend
 from sdc_cdm.vocab.constants import resolve_constants
 from sdc_cdm.vocab.extract import inspect_extract
@@ -251,39 +252,36 @@ def test_constants_resolve_is_idempotent(tmp_path: Path) -> None:
         assert len({row[0] for row in rows}) == 15
 
 
-def test_every_bridge_concept_literal_resolves_to_a_constant(
+def test_bridge_and_validate_scripts_carry_no_concept_id_literals(
     tmp_path: Path,
 ) -> None:
-    control_path = _load_sqlite_fixture(tmp_path)
-    bridge_paths = (
-        "database/etl/sqlite/1_naaccr_sdc_to_omop.sql",
-        "database/etl/sqlserver/1_naaccr_sdc_to_omop.sql",
-    )
-    literal_sets = []
-    for relative_path in bridge_paths:
-        text = repository_path(relative_path).read_text(encoding="utf-8")
-        literal_sets.append(
-            {
-                int(value)
-                for value in re.findall(
-                    r"(?<![A-Za-z0-9_])\d{4,}(?![A-Za-z0-9_])", text
-                )
-            }
-        )
-    assert literal_sets == [
-        {32817, 32879, 1147289},
-        {32817, 32879, 1147289},
-    ]
+    """Every concept the ETL writes or checks comes from etl.concept_constant by name.
 
+    Outside comments and string literals, the only numbers left are small
+    arithmetic and format constants and the NAACCR item numbers 390, 400, and
+    1750; none is a resolved concept ID other than the unmapped concept 0.
+    """
+    control_path = _load_sqlite_fixture(tmp_path)
     with SQLiteBackend(control_path) as backend:
         resolve_constants(backend)
         resolved_ids = {
             int(row[0])
-            for row in backend.fetch_all(
-                "SELECT concept_id FROM etl.concept_constant"
-            )
+            for row in backend.fetch_all("SELECT concept_id FROM etl.concept_constant")
         }
-    # The pre-rebuild bridge keeps its 1147289 literal (dose_era.person_id, not
-    # note.note_id) until Phase 4.5 retires it; only the type concepts resolve.
-    assert {32817, 32879}.issubset(resolved_ids)
-    assert 1147289 not in resolved_ids
+    assert {32817, 32879, 1147156} <= resolved_ids
+
+    manifest = load_manifest()
+    for dialect in ("sqlite", "sqlserver"):
+        entries = (*manifest.bridge_entries_for(dialect), *manifest.validate_entries_for(dialect))
+        assert entries
+        for entry in entries:
+            text = _without_sql_comments(
+                repository_path(entry.path).read_text(encoding="utf-8")
+            )
+            text = re.sub(r"'(?:[^']|'')*'", "''", text)
+            literals = {
+                int(value)
+                for value in re.findall(r"(?<![A-Za-z0-9_.])\d+(?![A-Za-z0-9_.])", text)
+            }
+            assert not literals & (resolved_ids - {0}), entry.path
+            assert {value for value in literals if value >= 1000} <= {1750}, entry.path

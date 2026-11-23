@@ -46,13 +46,6 @@ def test_cross_dialect_schema_contracts() -> None:
     assert "naaccr_value_concept_map" not in sqlserver_vocab
     assert "source_to_concept_map" in sqlserver_vocab
 
-    sqlserver_bridge = (
-        ROOT / "database/etl/sqlserver/1_naaccr_sdc_to_omop.sql"
-    ).read_text()
-    assert ";WITH report_dates AS" in sqlserver_bridge
-    assert "GROUP BY\n    sr.sdc_report_id" not in sqlserver_bridge
-    assert "HASHBYTES('SHA2_256'" in sqlserver_bridge
-
     delete_position = {
         table: position for position, table in enumerate(VERSIONED_DELETE_ORDER)
     }
@@ -71,7 +64,9 @@ def test_cross_dialect_schema_contracts() -> None:
     assert "schema_selection_rule_id" in sqlserver_dictionary
 
 
-def test_sqlite_three_schema_layout_and_bridge(tmp_path: Path) -> None:
+def test_sqlite_three_schema_layout(tmp_path: Path) -> None:
+    """OMOP-01: the attached-database layout. The bridge itself is covered by
+    src/python/tests/test_bridge.py and test_validate.py."""
     conn = sqlite3.connect(tmp_path / "control.db")
     conn.executescript(
         f"""
@@ -125,16 +120,6 @@ def test_sqlite_three_schema_layout_and_bridge(tmp_path: Path) -> None:
 
     conn.executescript(
         """
-        INSERT INTO omop.concept (
-            concept_id, concept_name, domain_id, vocabulary_id, concept_class_id,
-            concept_code, valid_start_date, valid_end_date
-        )
-        VALUES
-            (0, 'Unknown', 'Metadata', 'None', 'None', '0', '1970-01-01', '2099-12-31'),
-            (32817, 'EHR', 'Type Concept', 'Type Concept', 'Type Concept', 'EHR', '1970-01-01', '2099-12-31'),
-            (32879, 'Registry', 'Type Concept', 'Type Concept', 'Type Concept', 'Registry', '1970-01-01', '2099-12-31'),
-            (1147289, 'note.note_id', 'Metadata', 'CDM', 'Field', 'note.note_id', '1970-01-01', '2099-12-31');
-
         INSERT INTO naaccr.data_dictionary_version (algorithm, version)
         VALUES ('EOD', 'test');
 
@@ -156,44 +141,8 @@ def test_sqlite_three_schema_layout_and_bridge(tmp_path: Path) -> None:
         )
         VALUES (1, 'test-schema', 100, 1, 1);
 
-        INSERT INTO omop.person (
-            gender_concept_id, year_of_birth, race_concept_id, ethnicity_concept_id, person_source_value
-        )
-        VALUES (0, 1970, 0, 0, 'patient-1');
-
-        INSERT INTO sdc.sdc_report (
-            template_name, template_version, template_instance_guid, person_id,
-            report_accession, report_text, is_duplicate_accession, first_seen_report_id
-        )
-        VALUES
-            -- sdc_report_id 1: the one non-duplicate accessioned report.
-            ('Adrenal', '1', 'report-guid-1', 1, 'ACC-1', 'Report text', 0, NULL),
-            -- sdc_report_id 2: a re-import of ACC-1, flagged duplicate (Bug 1 regression).
-            ('Adrenal', '1', 'report-guid-2', 1, 'ACC-1', 'Duplicate report text', 1, 1),
-            -- sdc_report_id 3/4: accession-less reports, NULL and '' (Bug 2 regression).
-            ('Adrenal', '1', 'report-guid-3', 1, NULL, 'No-accession report (NULL)', 0, NULL),
-            ('Adrenal', '1', 'report-guid-4', 1, '', 'No-accession report (empty)', 0, NULL);
-
         INSERT INTO sdc.sdc_form_answer (question_sdcid, question_text, response)
         VALUES ('100.1', 'Question text', 'Answer text');
-
-        INSERT INTO naaccr.naaccr_value (
-            person_id, episode_key, sdc_report_id, report_accession, item_num, value_code, observation_date
-        )
-        VALUES
-            -- Distinct values for the non-duplicate report.
-            (1, 'episode-1', 1, 'ACC-1', 100, 'A', '2026-06-22'),
-            (1, 'episode-1', 1, 'ACC-1', 200, 'B', '2026-06-22'),
-            -- Identical values from one report are distinct source occurrences.
-            (1, 'episode-1', 1, 'ACC-1', 400, 'D', '2026-06-22'),
-            (1, 'episode-1', 1, 'ACC-1', 400, 'D', '2026-06-22'),
-            -- Bug 1: values from the duplicate re-import, present before the first bridge.
-            -- They point at the duplicate report (id 2) so they must never bridge.
-            (1, 'episode-1', 2, 'ACC-1', 100, 'A', '2026-06-22'),
-            (1, 'episode-1', 2, 'ACC-1', 100, 'A', '2026-06-22'),
-            -- Bug 2: values on accession-less reports (NULL and '') must never bridge.
-            (1, 'episode-1', 3, NULL, 100, 'A', '2026-06-22'),
-            (1, 'episode-1', 4, '', 100, 'A', '2026-06-22');
         """
     )
 
@@ -215,69 +164,6 @@ def test_sqlite_three_schema_layout_and_bridge(tmp_path: Path) -> None:
     else:
         raise AssertionError("duplicate schema item requirement was accepted")
 
-    _exec_script(conn, "database/etl/sqlite/1_naaccr_sdc_to_omop.sql")
-
-    assert conn.execute("SELECT note_source_value FROM omop.note").fetchall() == [("ACC-1",)]
-    assert conn.execute(
-        """
-        SELECT measurement_source_value, value_source_value, measurement_type_concept_id,
-               measurement_event_id, meas_event_field_concept_id
-        FROM omop.measurement
-        ORDER BY measurement_id
-        """
-    ).fetchall() == [
-        ("100", "A", 32879, 1, 1147289),
-        ("200", "B", 32879, 1, 1147289),
-        ("400", "D", 32879, 1, 1147289),
-        ("400", "D", 32879, 1, 1147289),
-    ]
-
-    # Bug 1: the duplicate re-import's values were present before the first bridge, but
-    # they point at the duplicate-flagged report and must not double-count.
-    assert conn.execute("SELECT COUNT(*) FROM omop.note").fetchone()[0] == 1
-    assert conn.execute("SELECT COUNT(*) FROM omop.measurement").fetchone()[0] == 4
-
-    # Bug 2: accession-less reports (NULL and '') never bridge -- no note, no fan-out.
-    assert conn.execute(
-        "SELECT COUNT(*) FROM omop.note WHERE COALESCE(note_source_value, '') = ''"
-    ).fetchone()[0] == 0
-
-    for _ in range(2):
-        _exec_script(conn, "database/etl/sqlite/1_naaccr_sdc_to_omop.sql")
-        assert conn.execute("SELECT COUNT(*) FROM omop.note").fetchone()[0] == 1
-        assert conn.execute("SELECT COUNT(*) FROM omop.measurement").fetchone()[0] == 4
-
-    # A partial load is repaired per value rather than being blocked by the note-level anchor.
-    conn.execute(
-        "DELETE FROM omop.measurement WHERE measurement_source_value = '200'"
-    )
-    assert conn.execute("SELECT COUNT(*) FROM omop.measurement").fetchone()[0] == 3
-    _exec_script(conn, "database/etl/sqlite/1_naaccr_sdc_to_omop.sql")
-    assert conn.execute("SELECT COUNT(*) FROM omop.measurement").fetchone()[0] == 4
-    assert conn.execute(
-        "SELECT COUNT(*) FROM omop.measurement WHERE measurement_source_value = '200'"
-    ).fetchone()[0] == 1
-
-    conn.execute(
-        """
-        INSERT INTO naaccr.naaccr_value (
-            person_id, episode_key, sdc_report_id, report_accession, item_num, value_code, observation_date
-        ) VALUES (1, 'episode-1', 1, 'ACC-1', 300, 'C', '2026-06-22')
-        """
-    )
-    _exec_script(conn, "database/etl/sqlite/1_naaccr_sdc_to_omop.sql")
-
-    assert conn.execute("SELECT COUNT(*) FROM omop.note").fetchone()[0] == 1
-    assert conn.execute("SELECT COUNT(*) FROM omop.measurement").fetchone()[0] == 5
-    assert conn.execute(
-        "SELECT COUNT(*) FROM omop.measurement WHERE measurement_source_value = '300'"
-    ).fetchone()[0] == 1
-
-    _exec_script(conn, "database/etl/sqlite/1_naaccr_sdc_to_omop.sql")
-    assert conn.execute("SELECT COUNT(*) FROM omop.measurement").fetchone()[0] == 5
-    assert conn.execute(
-        "SELECT COUNT(*) FROM omop.measurement WHERE measurement_type_concept_id <> 32879"
-    ).fetchone()[0] == 0
     conn.close()
 
 

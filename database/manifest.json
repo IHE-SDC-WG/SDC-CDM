@@ -244,8 +244,58 @@
     ]
   },
   "validate": {
-    "sqlite": [],
-    "sqlserver": []
+    "sqlite": [
+      {
+        "path": "database/etl/sqlite/9_validate.sql",
+        "constants": [
+          "unmapped",
+          "gender_male",
+          "gender_female",
+          "period_type_registry",
+          "cdm_version",
+          "note_type_ehr",
+          "measurement_type_registry",
+          "observation_type_registry",
+          "condition_type_registry",
+          "episode_type_registry",
+          "episode_disease",
+          "field_note_note_id",
+          "field_measurement_measurement_id",
+          "field_observation_observation_id",
+          "field_condition_occurrence_id"
+        ],
+        "seeds": [
+          "validate_thresholds.csv"
+        ],
+        "tables": []
+      }
+    ],
+    "sqlserver": [
+      {
+        "path": "database/etl/sqlserver/9_validate.sql",
+        "constants": [
+          "unmapped",
+          "gender_male",
+          "gender_female",
+          "period_type_registry",
+          "cdm_version",
+          "note_type_ehr",
+          "measurement_type_registry",
+          "observation_type_registry",
+          "condition_type_registry",
+          "episode_type_registry",
+          "episode_disease",
+          "field_note_note_id",
+          "field_measurement_measurement_id",
+          "field_observation_observation_id",
+          "field_condition_occurrence_id"
+        ],
+        "seeds": [
+          "validate_thresholds.csv"
+        ],
+        "tables": []
+      }
+    ]
   },
   "excluded": [
     {
@@ -274,19 +324,7 @@
     },
     {
       "path": "database/schemas/naaccr/ddl/sqlserver/validate_naaccr_omop_vocab.sql",
-      "reason": "Validation belongs to Phase 4, not schema DDL."
-    },
-    {
-      "path": "database/etl/sqlite/1_naaccr_sdc_to_omop.sql",
-      "reason": "Pre-rebuild note and measurement bridge, applied directly by its regression tests until Phase 4.2 and 4.3 replace it and Phase 4.5 retires it."
-    },
-    {
-      "path": "database/etl/sqlserver/1_naaccr_sdc_to_omop.sql",
-      "reason": "Pre-rebuild note and measurement bridge, applied directly by its regression tests until Phase 4.2 and 4.3 replace it and Phase 4.5 retires it."
-    },
-    {
-      "path": "database/etl/sqlserver/validate_naaccr_sdc_to_omop.sql",
-      "reason": "Pre-rebuild validation for the old bridge; Phase 4.5 replaces it with 9_validate.sql for both dialects."
+      "reason": "Read-only checks of the by-hand NAACCR2026 vocabulary supplement, run by hand; it is not schema DDL, and `sdc-cdm validate` does not run it."
     }
   ],
   "manifest_version": 1

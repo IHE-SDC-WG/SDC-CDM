@@ -54,7 +54,7 @@ Source of truth is the **SQLite** DDL, the only dialect with every table in one 
 - `../database/schemas/naaccr/ddl/sqlite/1_naaccr_sqlite_ddl.sql`
 - `../database/schemas/sdc/ddl/sqlite/1_sdc_sqlite_ddl.sql`
 - `../database/schemas/omop/ddl/sqlite/1_OMOPCDM_sqlite_5.4_ddl.sql`
-- `../database/etl/sqlite/1_naaccr_sdc_to_omop.sql` (the bridge)
+- `../database/etl/sqlite/1_person_and_period.sql` through `4_condition_and_episode.sql` (the bridge, in manifest order)
 
 SQL Server and SQLite implement the same logical model. Type and identity syntax differ by dialect.
 

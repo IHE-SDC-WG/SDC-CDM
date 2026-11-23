@@ -174,6 +174,36 @@ unbridged group it only moves selection and needs no bridge prerequisites. The c
 `--seed-dir` with the same default as `bridge`, and records an `etl.run` row with command
 `supersede` whether it succeeds or fails.
 
+## Validation
+
+`validate` checks the bridge's output against its sources. It runs the ordered `validate` entries in
+[`database/manifest.json`](database/manifest.json) in one read-only snapshot and writes only its
+`etl.run` row:
+
+```bash
+python -m sdc_cdm validate --dialect sqlite --db out/demo.db --seed-dir path/to/seeds
+```
+
+It prints every check as `check | category | actual | limit | PASS/FAIL` and exits non-zero on any
+failure. Checks fall into five categories:
+
+- **Structural** checks must be zero. They cover orphan rows, event links, and link rows, and check
+  each concept slot against its OMOP contract: standard targets, source concepts, and
+  type/field constants.
+- **Provenance** checks must be zero. Every bridge-owned row must trace to an
+  `intake.inbound_message`.
+- **Reconciliation** checks must be zero. Selected, historical, and accession-less inputs must
+  match the OMOP rows they produce or explain.
+- **Coverage** counts unmapped CKey values, items, value codes, and conditions, plus item numbers
+  missing from the dictionary. Each count may not exceed its row in
+  [`database/seed/validate_thresholds.csv`](database/seed/validate_thresholds.csv).
+- **Report** counts are printed and never fail. They cover selected, historical, and excluded
+  reports, one-day periods, #100 suppressions, truncations, and OMOP rows the bridge does not own.
+
+The tracked thresholds are the baseline for the `sample_data/naaccr_v2` fixtures. A deployment
+passes `--seed-dir` with its own reviewed copy, so raising a limit is a reviewed change. `bridge`
+does not need this file.
+
 ## Tool support
 
 | Tool | SQLite | SQL Server |
@@ -185,6 +215,7 @@ unbridged group it only moves selection and needs no bridge prerequisites. The c
 | Python `sdc_cdm intake ingest` / `intake load` | Supported | Supported |
 | Python `sdc_cdm reports supersede` | Supported | Supported |
 | Python `sdc_cdm bridge` | Supported | Supported |
+| Python `sdc_cdm validate` | Supported | Supported |
 | C# SDC XML importer | Supported | Not supported |
 
 The C# project is deliberately limited to SDC XML template and response persistence. It uses
@@ -205,8 +236,8 @@ dotnet test src/csharp/SdcCdm.Sdc.Tests
 ```
 
 The Python suite covers the manifest, migration ledger, schema contracts, NAACCR dictionary client
-and transaction behavior, parser utilities, the bridge runner, and the pre-rebuild bridge rerun
-regression. SQL Server runs
+and transaction behavior, parser utilities, the bridge runner, `validate`, and the HL7 fixture-to-OMOP end-to-end run.
+SQL Server runs
 the same suite for pull requests and pushes to `main` when database, Python, or tool paths change.
 The C# suite covers only the SDC XML library.
 

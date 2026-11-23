@@ -31,12 +31,13 @@ etl.schema_migration + etl.run                      (build and run provenance)
 "To OMOP" tests assert on `omop.*` after running the bridge ETL. The SDC XML form tables
 carry their own answer values; eCP answer values remain in `naaccr.naaccr_value`.
 
-`sdc-cdm bridge` runs the manifest's ordered `1_person_and_period.sql` and `2_note.sql`
-entries. Script 2 combines selected reports into one note per group and records contributors
+`sdc-cdm bridge` runs the manifest's ordered `bridge` entries,
+`database/etl/<dialect>/1_person_and_period.sql` through `4_condition_and_episode.sql`.
+Script 2 combines selected reports into one note per group and records contributors
 in `sdc.note_report`. Supersession of a bridged group runs the full bridge atomically with
-selection. Until Phase 4.5 retires it, the excluded pre-rebuild
-`database/etl/<dialect>/1_naaccr_sdc_to_omop.sql` is still applied directly by its own regression
-tests on separate databases.
+selection. `sdc-cdm validate` runs the `validate` entry, `9_validate.sql`, and judges its checks.
+Phase 4.5 retired the pre-rebuild `1_naaccr_sdc_to_omop.sql` and its validation script; every
+bridge test now runs the manifest scripts.
 
 ## Proposed folder layout
 
@@ -45,7 +46,7 @@ src/csharp/SdcCdm.Sdc.Tests/
   Import/
     SdcXml/          IMP-SDC-*
 src/python/tests/    MANIFEST-*, BUILD-*, IMP-HL7-*, INT-*, MAPS-*, OMOP-*, BRIDGE-*, schema tests
-tools/tests/         OMOP-01 three-schema smoke test (pytest)
+tools/tests/         OMOP-01 attached-database layout test (pytest)
 contracts/golden/    frozen importer outputs
 sample_data/         single source of truth for fixtures (see Cleanup)
 ```
@@ -223,27 +224,34 @@ Phase 4.
   outside this project, so no crosswalk, mapping seed, or mapping fixture is added here;
   verified `item_num` values arrive only from external preprocessing.
 - [ ] **NAACCR-04** *(from CCDA — blocked; outside Phase 4)* Same golden comparison once the importer exists.
-- [ ] **NAACCR-05** *(Phase 4.5, `validate`)* Dictionary integrity: every non-NULL `naaccr_value.item_num` written by any
+- [x] **NAACCR-05** *(Phase 4.5, `validate`)* Dictionary integrity: every non-NULL `naaccr_value.item_num` written by any
   importer exists in `naaccr.naaccr_item` (or is explicitly reported as unmapped);
-  `ecp_code` rows cannot join by their numeric prefix.
-- [ ] **NAACCR-06** *(Phase 4.5, `validate`)* Concept-map coverage: every item/value pair used
+  `ecp_code` rows cannot join by their numeric prefix. `validate` counts
+  `item_numbers_not_in_dictionary` as coverage, and its route checks fail any CKey row that carries
+  a map's concept. `naaccr_value` takes exactly one of `item_num` and `ecp_code`.
+  `test_validate.py`: `test_unknown_items_and_unmapped_pairs_are_counted_and_fail_only_by_threshold`;
+  `test_concept_map_ddl.py`: `test_naaccr_value_takes_exactly_one_item_identifier`.
+- [x] **NAACCR-06** *(Phase 4.5, `validate`)* Concept-map coverage: every item/value pair used
   by the fixtures has a row in `naaccr_concept_map` / `naaccr_value_concept_map`, or appears in
   the unmapped report — so bridge output never silently maps to concept 0 for known items.
-  Unmapped `ecp_code` input is a supported case and is counted, not failed.
+  Unmapped `ecp_code` input is a supported case and is counted, not failed. `validate` counts
+  unmapped CKey values, unmapped and other-domain items, and unmapped value codes against
+  `validate_thresholds.csv`.
+  `test_validate.py`: `test_unknown_items_and_unmapped_pairs_are_counted_and_fail_only_by_threshold`,
+  `test_hl7_fixtures_flow_through_intake_bridge_and_validate_to_expected_omop_rows`.
 
 ---
 
 ## 3. ETL "To OMOP" tests — `EtlToOmop/`
 
-Target: the Phase 4 bridge scripts run by `sdc-cdm bridge` (see `docs/REBUILD_PLAN.md`,
-"OMOP breadth, domain-routed"). Until Phase 4.5, the implemented IDs below run against the
-pre-rebuild `1_naaccr_sdc_to_omop.sql` unless an ID names its new runner test. Each ID names the
-Phase 4 child that owns it. Every Phase 4 check runs on SQLite and SQL Server and asserts equal behavior, not equal concept IDs.
+Target: the Phase 4 bridge scripts run by `sdc-cdm bridge` and the validation run by
+`sdc-cdm validate` (see `docs/REBUILD_PLAN.md`, "OMOP breadth, domain-routed"). Every ID names its
+runner test. Each ID names the Phase 4 child that owns it. Every Phase 4 check runs on SQLite and SQL Server and asserts equal behavior, not equal concept IDs.
 
-- [x] **OMOP-01** Three-schema layout + minimal bridge smoke test
-  (`tools/tests/test_three_schema_sqlite.py`): OMOP tables carry **no** `sdc_*` columns;
-  a seeded report/raw value produces a note + measurement. *(4.5: retarget to the runner, or
-  retire with the old bridge.)*
+- [x] **OMOP-01** *(4.5 retarget: layout only)* Attached-database layout
+  (`tools/tests/test_three_schema_sqlite.py`: `test_sqlite_three_schema_layout`): OMOP tables
+  carry **no** `sdc_*` columns. The bridge half retired with the pre-rebuild bridge; the runner
+  tests below and OMOP-08 cover a seeded report producing OMOP rows.
 - [x] **OMOP-02** *(4.2)* Selected narrative and synoptic reports in one report group combine
   into one `omop.note`, anchored to the synoptic report, with an `sdc.note_report` link to each
   contributing report. Constants are resolved and optional note fields stay NULL.
@@ -271,8 +279,8 @@ Phase 4 child that owns it. Every Phase 4 check runs on SQLite and SQL Server an
   `test_utf8_text_is_cut_on_character_boundaries_and_long_ckeys_fail` (SQL Server UTF-8 database).
 - [x] **OMOP-05** *(regression, review finding #2a; 4.0/4.3 retarget)* Repeated reports do
   **not** fan out: measurement count equals the selected version's answer count, not N×M
-  across retained versions sharing a group. The old bridge asserts it through
-  `is_duplicate_accession`; the runner asserts it through version selection.
+  across retained versions sharing a group. The runner asserts it through version selection,
+  and `validate` reconciles historical values against the rows they must not produce.
   `test_bridge.py`: `test_supersession_replaces_clinical_rows_and_an_unchanged_rerun_updates_nothing`.
 - [x] **OMOP-06** *(regression, review finding #2b; 4.1–4.4 extend)* Idempotency: running the
   bridge repeatedly leaves row counts unchanged in every OMOP table it writes.
@@ -283,10 +291,12 @@ Phase 4 child that owns it. Every Phase 4 check runs on SQLite and SQL Server an
   message is imported twice **before** the bridge runs, the re-import's rows do **not** bridge:
   measurement count equals the single-import count, not 2×.
   `test_bridge.py`: `test_exact_byte_resend_before_the_first_bridge_does_not_double_rows`.
-- [x] **OMOP-06b** *(regression, empty-accession collisions; 4.5 extend)* Accession-less reports
-  (OBR-3 stored as NULL, and legacy `''` covered by the ETL's `NULLIF` guard) never bridge: no
-  `''` note is created and their values do not fan out across reports. Phase 4 adds an
-  explicit exclusion count in `validate`.
+- [x] **OMOP-06b** *(regression, empty-accession collisions; 4.5 retarget)* Accession-less reports
+  (OBR-3 stored as NULL, and `''`) form no group and never bridge: no note is created and their
+  values do not fan out. `validate` reports the exclusion count as
+  `reports_excluded_accessionless` and `values_excluded`.
+  `test_bridge.py`: `test_accession_less_reports_have_no_note_or_provenance_link`;
+  `test_validate.py`: `test_validate_passes_and_reconciles_selected_historical_and_excluded_inputs`.
 - [x] **OMOP-07** *(4.2; 4.3/4.4 extend)* Provenance walk: from any bridge-owned OMOP row,
   recover the note, its contributing `sdc_report` rows, their `inbound_envelope` rows, and the
   exact `raw_blob` bytes containing the originating OBX. Recover a NAACCR item name only for
@@ -296,19 +306,28 @@ Phase 4 child that owns it. Every Phase 4 check runs on SQLite and SQL Server an
   `test_bridge.py`: `test_combined_note_and_every_contributor_recover_exact_message_bytes`,
   `test_late_complementary_report_keeps_note_id_and_reconciles_anchor_and_provenance`,
   `test_every_clinical_row_walks_to_its_exact_message_bytes`.
-- [ ] **OMOP-08** *(4.5)* End-to-end: HL7v2 fixture → intake → bridge → expected OMOP rows
-  (golden-file comparison). The FHIR repeat is outside Phase 4.
-- [x] **OMOP-09** *(regression, review finding #3; 4.5 retarget)* The SQL Server bridge ETL only
-  references objects the manifest-built SQL Server DDL creates: `naaccr_concept_map`,
-  `naaccr_value_concept_map`, and `local_concept_allocation` come from
-  `2_naaccr_concept_maps_sqlserver.sql`, not from the excluded NAACCR2026 supplement, so
-  `test_bridge_no_double_count` runs the bridge on both dialects with no test-side table
-  stubs. `test_concept_map_ddl` pins the two-slot column contract and the
-  `concept_map_coverage` and `value_code_collision` views in both dialects. Phase 4 extends this
-  to every bridge script, including episode constants.
-- [ ] **OMOP-10** *(regression, review finding #4; 4.5)* The validation SQL passes against a
+- [x] **OMOP-08** *(4.5)* End-to-end: HL7v2 fixture → intake → bridge → expected OMOP rows
+  (golden-file comparison). Every `sample_data/naaccr_v2` fixture bridges, `validate` passes with
+  the shipped thresholds, and the normalized rows equal `contracts/expected/naaccr_v2.omop.json`.
+  That file stores surrogate IDs as ordinals and concepts as `vocabulary_id/concept_code`, so it
+  pins no concept ID. The FHIR repeat is outside Phase 4.
+  `test_validate.py`: `test_hl7_fixtures_flow_through_intake_bridge_and_validate_to_expected_omop_rows`.
+- [x] **OMOP-09** *(regression, review finding #3; 4.5 retarget)* The SQL Server bridge and
+  validation scripts only reference objects the manifest-built SQL Server DDL creates:
+  `naaccr_concept_map`, `naaccr_value_concept_map`, and `local_concept_allocation` come from
+  `2_naaccr_concept_maps_sqlserver.sql`, not from the excluded NAACCR2026 supplement. Every
+  `test_bridge.py` and `test_validate.py` case runs all four bridge scripts (and
+  `9_validate.sql`) on both dialects with no test-side table stubs, and the episode constants
+  resolve without the supplement. `test_concept_map_ddl` pins the two-slot column contract and the
+  `concept_map_coverage` and `value_code_collision` views in both dialects.
+  `test_bridge.py`: `test_episode_constants_resolve_without_naaccr2026`;
+  `test_vocab.py`: `test_bridge_and_validate_scripts_carry_no_concept_id_literals`.
+- [x] **OMOP-10** *(regression, review finding #4; 4.5)* The validation SQL passes against a
   database produced by the shipped bridge on both dialects; its type-concept filters and
-  expected tables (`episode`/`episode_event`) match what the bridge actually writes.
+  expected tables (`episode`/`episode_event`) match what the bridge actually writes. Constants
+  come from `etl.concept_constant` by name.
+  `test_validate.py`: `test_validate_passes_and_reconciles_selected_historical_and_excluded_inputs`,
+  `test_hl7_fixtures_flow_through_intake_bridge_and_validate_to_expected_omop_rows`.
 - [x] **OMOP-11** *(4.1)* Person boundary: `omop.person` count equals `intake.patient` count,
   with `person_id = patient_id`; intake and load write zero `omop` rows; a second bridge run adds
   no rows. Linkage of notes, measurements, observations, conditions, and episodes to that
@@ -316,7 +335,7 @@ Phase 4 child that owns it. Every Phase 4 check runs on SQLite and SQL Server an
   `test_bridge.py`: `test_bridge_derives_person_period_and_source_and_reruns_unchanged`;
   4.4 conditions and episodes: `test_one_thin_condition_per_selected_group_with_a_primary_site`,
   `test_episodes_group_by_tumor_within_a_person_and_link_every_event`.
-- [ ] **OMOP-12** *(4.3–4.5)* Concept slots follow their OMOP contracts. Standard-target slots
+- [x] **OMOP-12** *(4.3–4.5)* Concept slots follow their OMOP contracts. Standard-target slots
   (`measurement_concept_id`, `observation_concept_id`, `condition_concept_id`,
   `value_as_concept_id`, `episode_concept_id`, `episode_object_concept_id`) contain only
   standard concepts when nonzero or non-NULL. Source slots may contain non-standard NAACCR
@@ -325,7 +344,10 @@ Phase 4 child that owns it. Every Phase 4 check runs on SQLite and SQL Server an
   `test_values_route_to_their_domain_tables_with_both_concept_slots`. 4.4 checks condition and
   episode slots, including Condition-domain targets and `episode_event` field constants:
   `test_one_thin_condition_per_selected_group_with_a_primary_site`,
-  `test_episodes_group_by_tumor_within_a_person_and_link_every_event`.
+  `test_episodes_group_by_tumor_within_a_person_and_link_every_event`. 4.5 checks every owned
+  row's slots in `validate` (`*_constant_slots`, `*_not_standard`, `*_route_mismatch`,
+  `condition_target_mismatch`), and a non-standard target or a wrong type constant fails it:
+  `test_validate.py`: `test_a_damaged_bridge_output_fails_and_names_the_check`.
 
 ### 3.1 Phase 4 bridge checks
 
@@ -404,10 +426,20 @@ dialects.
   `test_episode_constants_resolve_without_naaccr2026`,
   `test_supersession_replaces_condition_episode_and_events_atomically`,
   `test_unowned_conditions_episodes_and_events_are_never_adopted_or_changed`.
-- [ ] **BRIDGE-12** *(4.5)* `sdc-cdm validate` reports zero structural and provenance errors;
+- [x] **BRIDGE-12** *(4.5)* `sdc-cdm validate` reports zero structural and provenance errors;
   reconciles selected, historical, excluded, and unmapped inputs; counts one-day periods and
   #100 suppressions; and checks unmapped coverage against `validate_thresholds.csv` separately
-  from structural checks. Any failure exits non-zero.
+  from structural checks. Any failure exits non-zero. A deliberately orphaned row, a
+  non-standard target, a wrong type constant, a broken envelope link, or a lost value link each
+  fail and are named. A missing, malformed, incomplete, or stale threshold file is named too.
+  `test_validate.py`: `test_validate_passes_and_reconciles_selected_historical_and_excluded_inputs`,
+  `test_a_damaged_bridge_output_fails_and_names_the_check`,
+  `test_coverage_is_judged_by_threshold_separately_from_structural_checks`,
+  `test_an_unreadable_threshold_file_is_named_and_nothing_is_judged`,
+  `test_threshold_seed_defects_are_named`, `test_shipped_thresholds_cover_exactly_the_coverage_checks`,
+  `test_run_validate_returns_every_check_once_in_script_order`. The retired old-bridge
+  regressions for partial-load repair and a late appended value moved to
+  `test_bridge.py`: `test_a_deleted_owned_row_is_repaired_and_a_late_value_is_appended`.
 
 ### Phase 2.2 concept map checks
 
@@ -643,7 +675,8 @@ time**, so no new golden files are needed for the core oracle tests (SDCOM-03/04
 
 1. **Phase 4 in child order** (#94): 4.0 `BRIDGE-01/02`; 4.1 `BRIDGE-03..05`, `OMOP-11`;
    4.2 `OMOP-02`, `OMOP-07`, `BRIDGE-06`; 4.3 `OMOP-03/04`, `BRIDGE-07..10`; 4.4 `BRIDGE-11`;
-   4.5 `OMOP-08`, `OMOP-10`, `OMOP-12`, `NAACCR-05/06`, `BRIDGE-12`, then retire the old bridge.
+   4.5 `OMOP-08`, `OMOP-10`, `OMOP-12`, `NAACCR-05/06`, `BRIDGE-12`, then retire the old bridge
+   (done).
 2. **CLEAN-01** alongside, so new tests are written against `sample_data/` from day one.
 3. Phase 5 CSV-export checks.
 4. FHIR and SDC XML content tests, then blocked items (NAACCR XML, CCDA) as those importers

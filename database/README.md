@@ -41,9 +41,10 @@ database/
 SQLite uses attached databases named `etl`, `intake`, `omop`, `naaccr`, and `sdc`. SQL Server uses
 real schemas. The repository provides schema builds and bridge ETL for SQLite and SQL Server.
 
-`etl/<dialect>/` holds the bridge scripts. `sdc-cdm bridge` runs the manifest's ordered `bridge`
-entries and nothing else. Each entry names the constants, seed files, and tables it uses. The
-manifest test fails if a SQL file in that directory is neither listed nor excluded.
+`etl/<dialect>/` holds the bridge scripts and `9_validate.sql`. `sdc-cdm bridge` runs the
+manifest's ordered `bridge` entries and nothing else; `sdc-cdm validate` runs its `validate`
+entries. Each entry names the constants, seed files, and tables it uses. The manifest test fails if
+a SQL file in that directory is neither listed nor excluded.
 
 `1_person_and_period.sql` writes people, periods, and source metadata. `2_note.sql` writes one
 note per selected report group, anchored in synoptic / other non-narrative / narrative order,
@@ -75,6 +76,13 @@ state and keep existing IDs.
 transaction as selection. Pending loads are also bridged and periods recalculated. A failure
 rolls back selection and all derived changes. Unbridged groups require no bridge prerequisites.
 The command accepts `--seed-dir` and logs its outcome outside the data transaction.
+
+`9_validate.sql` only reads. Each statement returns `(check_name, category, actual)` rows, and
+both dialects emit the same check names. Python judges them: `structural`, `provenance`, and
+`reconciliation` counts must be zero; `coverage` counts must not exceed
+[`seed/validate_thresholds.csv`](seed/validate_thresholds.csv); `report` counts are printed only.
+Bridge-written OMOP rows that no bridge link names are reported, never failed, because the bridge
+leaves unrelated OMOP rows in place.
 
 ## Build
 
