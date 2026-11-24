@@ -48,7 +48,7 @@ def _missing_seeds(entries: tuple[EtlEntry, ...], seed_dir: Path) -> list[str]:
     for name in sorted({seed for entry in entries for seed in entry.seeds}):
         path = seed_dir / name
         if name not in SEEDS:
-            missing.append(f"seed {name}: the bridge has no reader for it")
+            missing.append(f"seed {name}: sdc-cdm has no reader for it")
         elif not path.is_file():
             missing.append(f"seed {name}: not found at {path}")
         else:
@@ -148,8 +148,9 @@ def _run_script(backend: DatabaseBackend, entry: EtlEntry) -> ScriptResult:
 
 def check_prerequisites(
     backend: DatabaseBackend, entries: tuple[EtlEntry, ...], seed_dir: Path,
+    *, command: str = "bridge",
 ) -> None:
-    """Name every missing prerequisite without writing data or committing."""
+    """Name every missing prerequisite of ``command`` without writing data or committing."""
     missing = [
         *_missing_seeds(entries, seed_dir),
         *_missing_constants(backend, entries),
@@ -157,7 +158,7 @@ def check_prerequisites(
     ]
     if missing:
         raise BridgeError(
-            "bridge prerequisites are missing; nothing was written:\n- "
+            f"{command} prerequisites are missing; nothing was written:\n- "
             + "\n- ".join(missing)
         )
 
@@ -167,7 +168,9 @@ def apply_entries(
 ) -> tuple[ScriptResult, ...]:
     """Stage seeds and apply all entries inside the caller's transaction."""
     for name in sorted({seed for entry in entries for seed in entry.seeds}):
-        SEEDS[name][1](backend, seed_dir / name)
+        stager = SEEDS[name][1]
+        if stager is not None:
+            stager(backend, seed_dir / name)
     return tuple(_run_script(backend, entry) for entry in entries)
 
 

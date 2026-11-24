@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import dataclasses
+from pathlib import Path
 
 import pytest
 
@@ -52,22 +52,40 @@ def test_bridge_entries_are_ordered_and_every_etl_script_is_declared() -> None:
             f"database/etl/{dialect}/3_measurement_observation.sql",
             f"database/etl/{dialect}/4_condition_and_episode.sql",
         ]
-        assert manifest.validate[dialect] == ()
-        listed = {entry.path for entry in entries}
+        validate = manifest.validate_entries_for(dialect)
+        assert [entry.path for entry in validate] == [f"database/etl/{dialect}/9_validate.sql"]
+        assert validate[0].seeds == ("validate_thresholds.csv",)
+        assert validate[0].tables == ()
+        listed = {entry.path for entry in (*entries, *validate)}
         for path in (REPO_ROOT / "database" / "etl" / dialect).glob("*.sql"):
             relative = path.relative_to(REPO_ROOT).as_posix()
             assert (relative in listed) != (relative in excluded), relative
-        for entry in entries:
+        for entry in (*entries, *validate):
             assert set(entry.constants) <= tracked
             assert all((REPO_ROOT / "database" / "seed" / seed).is_file()
                        for seed in entry.seeds)
 
 
-def test_an_undeclared_etl_script_is_rejected() -> None:
+def test_an_undeclared_etl_script_is_rejected(monkeypatch: pytest.MonkeyPatch,
+                                               tmp_path: Path) -> None:
+    """MANIFEST-01: an ETL file that is neither listed nor excluded fails the load."""
+    etl = tmp_path / "database" / "etl" / "sqlite"
+    etl.mkdir(parents=True)
+    (etl / "8_unlisted.sql").write_text("SELECT 1;\n", encoding="utf-8")
     manifest = load_manifest()
-    old_bridge = "database/etl/sqlite/1_naaccr_sdc_to_omop.sql"
-    unlisted = dataclasses.replace(manifest, excluded=tuple(
-        exclusion for exclusion in manifest.excluded if exclusion.path != old_bridge
-    ))
-    with pytest.raises(ManifestError, match=f"SQL files omitted from manifest: {old_bridge}"):
-        validate_manifest_files(unlisted)
+    declared = {
+        entry.path
+        for dialect in SUPPORTED_DIALECTS
+        for entry in (*manifest.entries_for(dialect), *manifest.bridge[dialect],
+                      *manifest.validate[dialect])
+    } | {exclusion.path for exclusion in manifest.excluded}
+    for path in declared:
+        target = tmp_path / path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes((REPO_ROOT / path).read_bytes())
+    monkeypatch.setattr("sdc_cdm.db.manifest.REPO_ROOT", tmp_path)
+    with pytest.raises(
+        ManifestError,
+        match="SQL files omitted from manifest: database/etl/sqlite/8_unlisted.sql",
+    ):
+        validate_manifest_files(manifest)

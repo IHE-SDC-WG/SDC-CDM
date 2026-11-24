@@ -1,0 +1,7 @@
+check_name,max_count,reason
+unmapped_ckey_values,47,"Fixture-corpus baseline: every OBX in sample_data/naaccr_v2 carries a CAP CKey (ecp_code), which never maps; deployments supply their own file with --seed-dir."
+unmapped_item_values,0,Fixture-corpus baseline: the fixtures carry no NAACCR item_num values.
+other_domain_item_values,0,Fixture-corpus baseline: the fixtures carry no NAACCR item_num values.
+unmapped_value_codes,0,Fixture-corpus baseline: the fixtures carry no coded NAACCR item_num values.
+unmapped_conditions,0,Fixture-corpus baseline: the fixtures carry no primary-site (item 400) value.
+item_numbers_not_in_dictionary,0,Fixture-corpus baseline: the fixtures carry no NAACCR item_num values.

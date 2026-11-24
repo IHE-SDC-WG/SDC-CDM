@@ -26,6 +26,7 @@ from sdc_cdm.cli.maps import (
     configure_maps_build, configure_maps_coverage, run_maps_build, run_maps_coverage,
 )
 from sdc_cdm.cli.reports import configure_supersede, run_supersede
+from sdc_cdm.cli.validate import configure_validate, run_validate_command
 from sdc_cdm.db.errors import MigrationHashMismatch, SdcCdmError, UsageError
 from sdc_cdm.db.manifest import load_manifest
 from sdc_cdm.vocab.constants import resolve_constants
@@ -204,6 +205,12 @@ _VERBS: tuple[tuple[tuple[str, ...], str, _Configure, _Handler], ...] = (
         "derive OMOP rows from naaccr and sdc in manifest order",
         configure_bridge,
         run_bridge_command,
+    ),
+    (
+        ("validate",),
+        "check the bridge's OMOP output against its sources and thresholds",
+        configure_validate,
+        run_validate_command,
     ),
 )
 

@@ -63,6 +63,12 @@ class DatabaseManifest:
         except KeyError as exc:
             raise ManifestError(f"unsupported dialect: {dialect}") from exc
 
+    def validate_entries_for(self, dialect: str) -> tuple[EtlEntry, ...]:
+        try:
+            return self.validate[dialect]
+        except KeyError as exc:
+            raise ManifestError(f"unsupported dialect: {dialect}") from exc
+
 
 def _relative_posix_path(value: Any, field: str) -> str:
     if not isinstance(value, str) or not value:

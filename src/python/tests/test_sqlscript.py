@@ -55,6 +55,8 @@ def test_real_manifest_script_counts_are_pinned() -> None:
             "database/etl/sqlite/2_note.sql": (14, 0),
             "database/etl/sqlite/3_measurement_observation.sql": (17, 0),
             "database/etl/sqlite/4_condition_and_episode.sql": (25, 0),
+            # Validation scripts hold one read-only, row-returning statement per unit.
+            "database/etl/sqlite/9_validate.sql": (13, 0),
         },
         "sqlserver": {
             "database/schemas/etl/ddl/sqlserver/1_etl_sqlserver_ddl.sql": (6, 6),
@@ -72,13 +74,15 @@ def test_real_manifest_script_counts_are_pinned() -> None:
             "database/etl/sqlserver/2_note.sql": (14, 14),
             "database/etl/sqlserver/3_measurement_observation.sql": (22, 22),
             "database/etl/sqlserver/4_condition_and_episode.sql": (25, 25),
+            "database/etl/sqlserver/9_validate.sql": (13, 13),
         },
     }
 
     manifest = load_manifest()
     actual: dict[str, dict[str, tuple[int, int]]] = {"sqlite": {}, "sqlserver": {}}
     for dialect in actual:
-        for entry in (*manifest.entries_for(dialect), *manifest.bridge_entries_for(dialect)):
+        for entry in (*manifest.entries_for(dialect), *manifest.bridge_entries_for(dialect),
+                      *manifest.validate_entries_for(dialect)):
             sql = repository_path(entry.path).read_text(encoding="utf-8")
             result = (
                 split_sqlite_script(sql)

@@ -28,8 +28,8 @@ Registry (32879) is `OMOP4976952`. `period_type_registry` and
 `unmapped` match the extract as well. `field_note_note_id` is `CDM` / `CDM212`
 (1147156, the v5 `note.note_id` field concept). The extract has no `CDM`
 concept with code `note.note_id`, and the historical literal 1147289 is
-`dose_era.person_id`; the pre-rebuild bridge keeps that literal until Phase 4.5
-retires it.
+`dose_era.person_id`. The pre-rebuild bridge that carried that literal was
+retired in Phase 4.5; no bridge or validation script embeds a concept ID.
 
 ## OMOP CDM source
 
@@ -43,6 +43,27 @@ rejects a missing file, a changed header, any number of data rows other than
 one, a blank required field, a value longer than its SQL Server CDM column, a
 date that is not `YYYY-MM-DD`, and a `cdm_version` other than `5.4` (the shipped
 OMOP schema, which the bridge pairs with the `CDM v5.4.0` concept).
+
+## Validation thresholds
+
+`validate_thresholds.csv` caps each `coverage` check of `sdc-cdm validate`:
+unmapped CKey values, unmapped and other-domain item values, coded values
+without a value target, primary sites without a Condition target, and item
+numbers absent from the loaded dictionary. Each row is
+`check_name,max_count,reason`; a check passes when its count is at most
+`max_count`. Structural, provenance, and reconciliation checks never read this
+file; they must be zero.
+
+The tracked rows are the **fixture-corpus baseline**: the counts that
+`sample_data/naaccr_v2/*.hl7` produce after intake and `bridge` (OMOP-08). Every
+fixture OBX carries a CAP CKey, so only `unmapped_ckey_values` is nonzero. These
+limits fit no real deployment. A deployment keeps its own reviewed copy and
+passes `--seed-dir` to `validate`, so raising a limit is a reviewed CSV change.
+
+`validate` rejects a missing file, a changed header, a repeated or blank
+`check_name`, a `max_count` that is not a non-negative integer, and a blank
+`reason`. It also fails, naming the check, when a coverage check has no row or a
+row names no coverage check. `bridge` does not read this file.
 
 ## NAACCR concept maps
 

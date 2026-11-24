@@ -13,8 +13,8 @@ companion, so components sharing a normalized item/sub-ID are combined into one
 naaccr_value row: CWE supplies value_code, numeric components supply value_num
 and units, and non-numeric text supplies value_text.
 
-The bridge ETL (database/etl/sqlite/1_naaccr_sdc_to_omop.sql) later turns these
-into stock omop.note / omop.measurement rows.
+`sdc-cdm bridge` (database/etl/<dialect>/1..4_*.sql) later turns these
+into stock OMOP rows.
 """
 
 import logging

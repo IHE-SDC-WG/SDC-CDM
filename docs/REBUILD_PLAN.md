@@ -16,14 +16,15 @@ Sections that describe the repository before the rebuild are historical. They ex
 decision was made; they do not describe the current code. File and line references such as
 `ImportNaaccrVolV.cs:197` point at deleted code and are recoverable from git history.
 
-**Current state (after Phase 3).** Python owns build, vocabulary load, constant resolution,
-dictionary fetch/load/verify, SSDI fetch, map build/coverage, and HL7 intake/load on SQLite and
-SQL Server. The importer writes no OMOP rows. The only bridge is still the pre-rebuild
-`database/etl/<dialect>/1_naaccr_sdc_to_omop.sql`, applied directly by tests: it writes `note` and
-`measurement` only, embeds concept literals, and has no Python runner. Phase 4 replaces it.
-Phase 4.0 adds `naaccr.report_group` and `naaccr.report_version`: `intake load` records each
-accessioned report's version, `build` backfills earlier loads, and `reports supersede` moves
-selection. The existing bridge does not read selection yet.
+**Current state (after Phase 4).** Python owns build, vocabulary load, constant resolution,
+dictionary fetch/load/verify, SSDI fetch, map build/coverage, HL7 intake/load, report
+supersession, the OMOP bridge, and its validation on SQLite and SQL Server. The importer writes no
+OMOP rows. `sdc-cdm bridge` runs the manifest's ordered `database/etl/<dialect>/1..4_*.sql`
+scripts in one transaction, reading report selection and resolved constants. It writes person,
+period, `cdm_source`, note, measurement, observation, condition, and episode rows. `sdc-cdm validate`
+runs `9_validate.sql` and judges its structural, provenance, reconciliation, and coverage checks.
+The pre-rebuild `1_naaccr_sdc_to_omop.sql` and `validate_naaccr_sdc_to_omop.sql` were retired in
+Phase 4.5.
 
 **Before the rebuild (historical).** The three-schema design (`naaccr` / `sdc` / `omop`) is sound
 and should survive. What didn't work was everything around it:
@@ -365,8 +366,8 @@ resource glob in `BuildSchema()` (`SdcCdmInSqlite.cs:127-135`).
 Python owns orchestration, ordering, parameters, transactions, `etl.run` logging, and every
 conditional decision. The set-based stages execute SQL, because the bridge is a relational mapping
 (`INSERT…SELECT` across five tables) whose occurrence-aware idempotency
-(`1_naaccr_sdc_to_omop.sql:87-121`) is the best-built code in the repo, and because PHI never leaves
-the database.
+(the pre-rebuild `1_naaccr_sdc_to_omop.sql:87-121`, now retired) was the best-built code in the repo,
+and because PHI never leaves the database.
 
 **SQL is not a public interface.** The `.sql` files are Python's implementation detail and may assume
 Python has resolved constants, opened a transaction, and bound parameters. There is no hand-driven
@@ -847,8 +848,13 @@ OMOP row it owns (`sdc.note_report`, `naaccr.value_event`).
    unmapped coverage is tracked separately, so an accepted mapping limitation cannot hide a
    structural failure.
 
-After 4.5 reaches equivalent regression coverage, the old `1_naaccr_sdc_to_omop.sql` and
-`validate_naaccr_sdc_to_omop.sql` are retired.
+Phase 4.5 moved the remaining old-bridge regression coverage onto the runner and retired the old
+`1_naaccr_sdc_to_omop.sql` and `validate_naaccr_sdc_to_omop.sql`. Validation units return
+`(check_name, category, actual)` rows; Python judges them, so the SQL holds no thresholds. Unowned
+rows in bridge-written OMOP tables are reported, not failed, because the bridge preserves unrelated
+OMOP rows by design. `validate_thresholds.csv` holds absolute maximum counts. The tracked rows are
+the `sample_data/naaccr_v2` fixture baseline (OMOP-08), and a deployment supplies its own with
+`--seed-dir`.
 
 `omop` stays vanilla. OMOP holds no crosswalk; `naaccr.value_event` links rows outside it.
 OMOP-side back-references remain
@@ -909,9 +915,10 @@ add their scripts to it.
 - **Ordering.** `database/manifest.json` gains ordered `bridge` and `validate` entries per dialect.
   The runner executes those entries, never a directory glob. `test_manifest.py` asserts that every
   `database/etl/<dialect>/*.sql` file is listed or explicitly excluded.
-- **Preconditions.** Before opening a write transaction, the runner verifies the required seeds
-  (`cdm_source.csv`, and from 4.5 `validate_thresholds.csv`), the resolved `etl.concept_constant`
-  rows, and a built concept map. A missing prerequisite exits non-zero and names the absent item.
+- **Preconditions.** Before opening a transaction, each verb verifies the seeds named by its own
+  manifest entries (`cdm_source.csv` for `bridge`, `validate_thresholds.csv` for `validate`), the
+  resolved `etl.concept_constant` rows, and a built concept map. `bridge` does not require
+  `validate_thresholds.csv`. A missing prerequisite exits non-zero and names the absent item.
 - **Transactions.** Python owns one transaction per run. Any script failure rolls back every derived
   change from that run. Supersession runs selection and the full bridge in its own single
   transaction only when the group already has a note. It uses the same prerequisite checks and
@@ -925,9 +932,9 @@ add their scripts to it.
 
 ### Doc drift
 
-- **Delete `ECP_OMOP_MAPPING.md`.** Its central claim (`:64`) is false today and its premise (`:14`)
-  is replaced by domain routing. Move its numeric/coded/text → OMOP column table into
-  `SCHEMA_ARCHITECTURE.md` beside the two-slot contract.
+- **Delete `ECP_OMOP_MAPPING.md`.** *(Done in 4.5.)* Its central claim (`:64`) was false and its
+  premise (`:14`) was replaced by domain routing. Its numeric/coded/text → OMOP column table now
+  sits in `SCHEMA_ARCHITECTURE.md` beside the two-slot contract.
 - `TEST_PLAN.md` EXP-01 asserts a `NULL AS response` bug that is **already fixed** — verified:
   `GetSdcObsClasses` selects `sdc_form_answer.response` at `SdcCdmInSqlite.cs:578-600`. Delete the
   stale claim, and see "The FHIR export code, and what that means for `EXP-01`" under Phasing for the
@@ -1124,7 +1131,7 @@ delete the ID with a one-line note saying why.
 | **1** vocab + dict | `VocabImporterTests.cs` — deleted with `ImportCsv.cs`, not ported; the Python loader tests cover the active contract | `SCHEMA-03` (bridge concept literals exist) → `constants resolve` fails loudly on a missing `(vocabulary_id, concept_code)`; `SCHEMA-01` / `SCHEMA-02` cover both active dialects and documented storage normalization | `DICT-01..15`: `section` non-null for 100% of non-retired items at the anchor and the 17 expected values; zero orphan `schema_item.item_num`; API/CSV behavior; retry and auth; idempotent load and rollback; dictionary row counts match across dialects |
 | **2** concept maps | `PY-04` (the one-time converter test was retired after its conversion code was deleted) | the concept-map checks at the layered build | `MAPS-01..10`: layered resolution, overrides, exclusions, stable mints, coverage by layer **and by section**. Real Athena coverage deferred (#119); standard-slot checks moved to Phase 4 |
 | **3** intake | `PY-01`/`PY-02` after their assertions move to the active parser; `PY-03` is already retired because the private project owns the former CCR path | `IMP-HL7-01..09` from the C# importer to the Python parser; `CLEAN-01` fixture dedup now that `sample_data/` is the single source | `INT-01..07`: golden conformance and fixed point; partial dates; source-row provenance to `raw_blob`; duplicate bytes; two authorities → two patients; failed parse; staging-schema resolution |
-| **4** bridge | `OMOP-01` and the old-bridge references in `OMOP-09`, once 4.5 retires `1_naaccr_sdc_to_omop.sql` | `OMOP-02..12` at the child that owns each; `NAACCR-05`/`NAACCR-06` at `validate`. FHIR and CCDA checks (`NAACCR-02`, `NAACCR-04`, the FHIR half of `OMOP-08`) stay outside Phase 4; `NAACCR-03` is out of scope under the public mapping boundary | `BRIDGE-01..12`: version selection and supersession; runner; person/period/`cdm_source`; required-data rollback; cross-message grouping and late arrival; domain routing; #100 suppression; unmapped CKey; replacement; condition and episode; validation reconciliation. All run on both dialects |
+| **4** bridge | `OMOP-01`'s bridge half and the old-bridge references in `OMOP-09`; 4.5 retired `1_naaccr_sdc_to_omop.sql` | `OMOP-02..12` at the child that owns each; `NAACCR-05`/`NAACCR-06` at `validate`. FHIR and CCDA checks (`NAACCR-02`, `NAACCR-04`, the FHIR half of `OMOP-08`) stay outside Phase 4; `NAACCR-03` is out of scope under the public mapping boundary | `BRIDGE-01..12`: version selection and supersession; runner; person/period/`cdm_source`; required-data rollback; cross-message grouping and late arrival; domain routing; #100 suppression; unmapped CKey; replacement; condition and episode; validation reconciliation. All run on both dialects |
 | **5** export | — | **move `EXP-01`–`EXP-04` to roadmap, do not retarget them** — all four are FHIR round-trips against `ExportFhirCpds`, not CSV-bundle tests; see below | a fresh set of CSV-export IDs: export → fresh-schema round-trip equality; manifest row counts and sha256; PHI grep returns zero; header order matches the shared CDM 5.4 `TABLE_SPECS` |
 | **6** docs | — | the 12 `SDCOM` IDs at the C# SDC Object Model refactor; mark `IMP-FHIR` (12), `IMP-NXML` (2), `IMP-CCDA` (1) as roadmap-blocked rather than merely unchecked | notebooks execute top-to-bottom; no doc statement contradicts the code |
 

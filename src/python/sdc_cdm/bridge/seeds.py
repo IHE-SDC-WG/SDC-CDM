@@ -78,7 +78,48 @@ def stage_cdm_source(backend: DatabaseBackend, path: Path) -> None:
     )
 
 
-# Seed file name -> (checker run before the transaction, stager run inside it).
-SEEDS: dict[str, tuple[Callable[[Path], object], Callable[[DatabaseBackend, Path], None]]] = {
+VALIDATE_THRESHOLDS_FILE = "validate_thresholds.csv"
+VALIDATE_THRESHOLD_COLUMNS = ("check_name", "max_count", "reason")
+
+
+def read_validate_thresholds(path: Path) -> dict[str, int]:
+    """Return check_name -> max_count, or raise ValueError naming the defect.
+
+    Each row caps one `coverage` check of `sdc-cdm validate`. Python compares
+    the counts, so this seed is never staged in the database.
+    """
+
+    with path.open("r", encoding="utf-8", newline="") as handle:
+        rows = list(csv.reader(handle))
+    if not rows or tuple(rows[0]) != VALIDATE_THRESHOLD_COLUMNS:
+        raise ValueError(f"header must be {','.join(VALIDATE_THRESHOLD_COLUMNS)}")
+    thresholds: dict[str, int] = {}
+    for line, row in enumerate(rows[1:], start=2):
+        if len(row) != len(VALIDATE_THRESHOLD_COLUMNS):
+            raise ValueError(
+                f"line {line} has {len(row)} fields, expected {len(VALIDATE_THRESHOLD_COLUMNS)}"
+            )
+        name, raw_count, reason = (value.strip() for value in row)
+        if not name:
+            raise ValueError(f"line {line}: check_name is required")
+        if name in thresholds:
+            raise ValueError(f"line {line}: check_name {name!r} is repeated")
+        if not raw_count.isascii() or not raw_count.isdigit():
+            raise ValueError(
+                f"line {line}: max_count for {name!r} must be a non-negative integer, "
+                f"got {raw_count!r}"
+            )
+        if not reason:
+            raise ValueError(f"line {line}: reason for {name!r} is required")
+        thresholds[name] = int(raw_count)
+    return thresholds
+
+
+# Seed file name -> (checker run before the transaction, stager run inside it,
+# or None for a seed that Python reads and never stages).
+SEEDS: dict[
+    str, tuple[Callable[[Path], object], Callable[[DatabaseBackend, Path], None] | None]
+] = {
     CDM_SOURCE_FILE: (read_cdm_source, stage_cdm_source),
+    VALIDATE_THRESHOLDS_FILE: (read_validate_thresholds, None),
 }

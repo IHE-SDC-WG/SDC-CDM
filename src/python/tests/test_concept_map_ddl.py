@@ -399,3 +399,23 @@ def test_value_code_collision_view(dialect: str, tmp_path: Path) -> None:
             {"Live meaning", "**OBSOLETE** - Please use 600"},
         ]
         assert {sample.upper() for sample in rows[2][6:8]} == {"0", "A"}
+
+
+@pytest.mark.parametrize("dialect", ("sqlite", "sqlserver"))
+def test_naaccr_value_takes_exactly_one_item_identifier(dialect: str, tmp_path: Path) -> None:
+    """A value is keyed by a verified item_num or a CAP ecp_code, never both or neither,
+    so an ecp_code such as 2118.1000043 cannot sit beside item 2118 on one row."""
+    episode_key = f"identifier-{uuid.uuid4().hex}"
+    with _backend(dialect, tmp_path) as backend:
+        BuildRunner(load_manifest(), backend).run()
+        for item_num, ecp_code in ((None, None), (2118, "2118.1000043"), (None, "")):
+            with pytest.raises(Exception):
+                backend.execute(
+                    "INSERT INTO naaccr.naaccr_value "
+                    "(person_id, episode_key, item_num, ecp_code) VALUES (?, ?, ?, ?)",
+                    (1, episode_key, item_num, ecp_code),
+                )
+            backend.rollback()
+        assert backend.fetch_one(
+            "SELECT COUNT(*) FROM naaccr.naaccr_value WHERE episode_key = ?", (episode_key,),
+        )[0] == 0
