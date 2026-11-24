@@ -177,7 +177,7 @@ unbridged group it only moves selection and needs no bridge prerequisites. The c
 ## Validation
 
 `validate` checks the bridge's output against its sources. It runs the ordered `validate` entries in
-[`database/manifest.json`](database/manifest.json) in one read-only snapshot and writes only its
+[`database/manifest.json`](database/manifest.json) in one consistent read (`SERIALIZABLE` on SQL Server) and writes only its
 `etl.run` row:
 
 ```bash

@@ -347,7 +347,9 @@ runner test. Each ID names the Phase 4 child that owns it. Every Phase 4 check r
   `test_episodes_group_by_tumor_within_a_person_and_link_every_event`. 4.5 checks every owned
   row's slots in `validate` (`*_constant_slots`, `*_not_standard`, `*_route_mismatch`,
   `condition_target_mismatch`), and a non-standard target or a wrong type constant fails it:
-  `test_validate.py`: `test_a_damaged_bridge_output_fails_and_names_the_check`.
+  `test_validate.py`: `test_a_damaged_bridge_output_fails_and_names_the_check` (also a #100
+  collision value or site recorded as mapped),
+  `test_a_different_standard_target_in_the_same_domain_fails`.
 
 ### 3.1 Phase 4 bridge checks
 
@@ -430,13 +432,15 @@ dialects.
   reconciles selected, historical, excluded, and unmapped inputs; counts one-day periods and
   #100 suppressions; and checks unmapped coverage against `validate_thresholds.csv` separately
   from structural checks. Any failure exits non-zero. A deliberately orphaned row, a
-  non-standard target, a wrong type constant, a broken envelope link, or a lost value link each
-  fail and are named. A missing, malformed, incomplete, or stale threshold file is named too.
+  non-standard target, a wrong type constant, a broken envelope link, a lost value link, or an
+  owned row moved to another patient each fail and are named. On SQL Server every unit reads one
+  database state. A missing, malformed, incomplete, or stale threshold file is named too.
   `test_validate.py`: `test_validate_passes_and_reconciles_selected_historical_and_excluded_inputs`,
   `test_a_damaged_bridge_output_fails_and_names_the_check`,
   `test_coverage_is_judged_by_threshold_separately_from_structural_checks`,
   `test_an_unreadable_threshold_file_is_named_and_nothing_is_judged`,
   `test_threshold_seed_defects_are_named`, `test_shipped_thresholds_cover_exactly_the_coverage_checks`,
+  `test_sqlserver_validation_reads_serializably_and_restores_isolation`,
   `test_run_validate_returns_every_check_once_in_script_order`. The retired old-bridge
   regressions for partial-load repair and a late appended value moved to
   `test_bridge.py`: `test_a_deleted_owned_row_is_repaired_and_a_late_value_is_appended`.

@@ -184,6 +184,36 @@ def _lost_event(backend: DatabaseBackend) -> None:
                     (_owned_target(backend)["naaccr_value_id"],))
 
 
+def _collision_marked_mapped(backend: DatabaseBackend) -> None:
+    """Give the #100 collision value (3827, '1') its ambiguous target, recorded as mapped."""
+    event = next(event for event in _events(backend) if event["label"] == "er-positive")
+    backend.execute("UPDATE omop.observation SET value_as_concept_id = 9002 "
+                    "WHERE observation_id = ?", (event["event_id"],))
+    backend.execute("UPDATE naaccr.value_event SET value_target = 'mapped' "
+                    "WHERE naaccr_value_id = ?", (event["naaccr_value_id"],))
+
+
+def _site_now_a_collision(backend: DatabaseBackend) -> None:
+    """The condition keeps its 'mapped' C504 target after its value becomes C509 (#100)."""
+    backend.execute("UPDATE naaccr.naaccr_value SET value_code = 'C509' "
+                    "WHERE naaccr_value_id = (SELECT naaccr_value_id FROM naaccr.group_condition)")
+    # Both slots now equal C509's map row, so only the #100 rule can reject it.
+    backend.execute(
+        "UPDATE omop.condition_occurrence SET condition_source_concept_id = ("
+        "SELECT source_concept_id FROM naaccr.naaccr_value_concept_map "
+        "WHERE item_num = 400 AND code = 'C509')")
+
+
+def _other_patient(backend: DatabaseBackend) -> None:
+    """Move an owned row to a different existing person; its episode link stays."""
+    other = int(backend.fetch_one("SELECT MAX(person_id) FROM omop.person")[0]) + 1000
+    backend.execute(
+        "INSERT INTO omop.person (person_id, gender_concept_id, year_of_birth, "
+        "race_concept_id, ethnicity_concept_id) VALUES (?, 0, 1970, 0, 0)", (other,))
+    backend.execute("UPDATE omop.measurement SET person_id = ? WHERE measurement_id = ?",
+                    (other, _owned_target(backend)["event_id"]))
+
+
 @DIALECTS
 @pytest.mark.parametrize(("defect", "check"), (
     (_break_note, "measurement_orphan_note_event"),
@@ -191,7 +221,12 @@ def _lost_event(backend: DatabaseBackend) -> None:
     (_wrong_type, "measurement_constant_slots"),
     (_broken_envelope, "measurement_without_message"),
     (_lost_event, "selected_value_without_event"),
-), ids=("orphan", "non-standard", "type-constant", "provenance", "reconciliation"))
+    (_collision_marked_mapped, "observation_route_mismatch"),
+    (_site_now_a_collision, "condition_target_mismatch"),
+    (_other_patient, "episode_event_target_not_owned"),
+    (_other_patient, "owned_row_person_mismatch"),
+), ids=("orphan", "non-standard", "type-constant", "provenance", "reconciliation",
+        "collision-value", "collision-condition", "episode-person", "row-person"))
 def test_a_damaged_bridge_output_fails_and_names_the_check(
     dialect: str, tmp_path: Path, capsys: pytest.CaptureFixture[str], defect, check: str,
 ) -> None:
@@ -205,6 +240,59 @@ def test_a_damaged_bridge_output_fails_and_names_the_check(
         assert "validate FAIL: " in output and f"{check}: " in output
         status, error = _last_run(backend)[1:3]
         assert status == "failed" and f"{check}: " in error
+
+
+@DIALECTS
+def test_a_different_standard_target_in_the_same_domain_fails(
+    dialect: str, tmp_path: Path, capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A target_domain row must carry its item map's target, not any standard concept of
+    that domain, so a stale row after a map change is caught."""
+    with _routed_dataset(dialect, tmp_path) as (backend, target, _source):
+        seeds = _thresholds(tmp_path / "seeds", ROUTED_COVERAGE)
+        event = _owned_target(backend)
+        backend.execute(
+            "INSERT INTO omop.concept (concept_id, concept_name, domain_id, vocabulary_id, "
+            "concept_class_id, standard_concept, concept_code, valid_start_date, "
+            "valid_end_date) VALUES (9006, 'Second measurement target', 'Measurement', "
+            "'CDM', 'Field', 'S', '9006', '1970-01-01', '2099-12-31')")
+        try:
+            backend.execute("UPDATE omop.measurement SET measurement_concept_id = 9006 "
+                            "WHERE measurement_id = ?", (event["event_id"],))
+            code, lines, _output = _validate(target, seeds, capsys)
+            assert code == 1
+            assert lines["measurement_target_not_standard"][1:] == (0, "0", "PASS")
+            assert lines["measurement_route_mismatch"][3] == "FAIL"
+        finally:
+            backend.execute("UPDATE omop.measurement SET measurement_concept_id = ? "
+                            "WHERE measurement_id = ?", (event["concept_id"], event["event_id"]))
+            backend.execute("DELETE FROM omop.concept WHERE concept_id = 9006")
+
+
+def test_sqlserver_validation_reads_serializably_and_restores_isolation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Every unit reads one database state; the session's own level comes back after."""
+    from sdc_cdm.bridge import validate
+
+    with _routed_dataset("sqlserver", tmp_path) as (backend, _target, _source):
+        def level() -> int:
+            return int(backend.fetch_one(validate.SQLSERVER_ISOLATION_QUERY)[0])
+
+        before = level()
+        during: list[int] = []
+        run_checks = validate._run_checks
+
+        def recording(backend_, entry):
+            during.append(level())
+            return run_checks(backend_, entry)
+
+        monkeypatch.setattr(validate, "_run_checks", recording)
+        result = run_validate(backend, load_manifest(),
+                              seed_dir=_thresholds(tmp_path / "seeds", ROUTED_COVERAGE))
+        assert result.passed
+        assert during == [4]  # SERIALIZABLE
+        assert level() == before
 
 
 @DIALECTS

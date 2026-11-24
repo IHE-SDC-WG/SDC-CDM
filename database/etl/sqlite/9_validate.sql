@@ -394,49 +394,96 @@ WHERE EXISTS (SELECT 1 FROM naaccr.person_episode l WHERE l.episode_id = x.episo
       WHERE c.concept_id = x.episode_object_concept_id AND c.standard_concept = 'S'
         AND c.invalid_reason IS NULL AND c.domain_id = 'Condition');
 
--- structural: each owned row's slots agree with its recorded route and the
--- current maps. Only target_domain rows carry a nonzero *_concept_id; a
--- 'mapped' value carries its (item_num, value_code) target and nothing else
--- does; the source slot is the item's (or site code's) source concept, else 0.
--- ecp_code rows never take a map row by numeric prefix, so they route only to
--- default_ecp_code and carry 0 in both slots.
+-- structural: each owned row's route, value target, and slots are the ones the
+-- current maps give it, recomputed as scripts 3 and 4 do. A target_domain row
+-- carries its item map's target in the table of that target's domain; every
+-- other row carries 0 and sits in the table its value shape picks. A value
+-- target is 'mapped' only for a nonzero, non-collision (#100) value map target,
+-- which is then value_as_concept_id; nothing else carries one. Source slots are
+-- the map's source concept, else 0. ecp_code rows never take a map row by
+-- numeric prefix, so they route only to default_ecp_code with 0 in both slots.
+-- Rerun `bridge` after `maps build`, or these checks report the stale rows.
 WITH k AS (
     SELECT concept_id AS unmapped FROM etl.concept_constant WHERE constant_name = 'unmapped'
 ),
-routed AS (
-    SELECT l.route, l.value_target, x.measurement_concept_id AS concept_id,
-           x.measurement_source_concept_id AS source_concept_id,
-           x.value_as_concept_id, v.item_num, v.value_code, 'measurement' AS event_table
+collision AS (
+    SELECT DISTINCT item_num, code FROM naaccr.value_code_collision
+),
+owned AS (
+    SELECT l.event_table, l.route, l.value_target, x.measurement_concept_id AS concept_id,
+           x.measurement_source_concept_id AS source_concept_id, x.value_as_concept_id,
+           v.item_num, v.value_code, v.value_text
     FROM naaccr.value_event l
     JOIN omop.measurement x ON x.measurement_id = l.event_id
     JOIN naaccr.naaccr_value v ON v.naaccr_value_id = l.naaccr_value_id
     WHERE l.event_table = 'measurement'
     UNION ALL
-    SELECT l.route, l.value_target, x.observation_concept_id,
+    SELECT l.event_table, l.route, l.value_target, x.observation_concept_id,
            x.observation_source_concept_id, x.value_as_concept_id, v.item_num,
-           v.value_code, 'observation'
+           v.value_code, v.value_text
     FROM naaccr.value_event l
     JOIN omop.observation x ON x.observation_id = l.event_id
     JOIN naaccr.naaccr_value v ON v.naaccr_value_id = l.naaccr_value_id
     WHERE l.event_table = 'observation'
 ),
-mismatched AS (
-    SELECT r.event_table
-    FROM routed r
-    CROSS JOIN k
-    LEFT JOIN naaccr.naaccr_concept_map m ON m.item_num = r.item_num
+expected AS (
+    SELECT o.event_table, o.route, o.value_target, o.concept_id, o.source_concept_id,
+           o.value_as_concept_id,
+           CASE WHEN o.item_num IS NULL THEN 'default_ecp_code'
+                WHEN m.item_num IS NULL THEN 'default_no_map'
+                WHEN m.concept_id = 0 THEN 'default_no_target'
+                WHEN m.target_domain_id IN ('Measurement', 'Observation') THEN 'target_domain'
+                ELSE 'default_other_domain' END AS expected_route,
+           CASE WHEN m.concept_id <> 0 AND m.target_domain_id = 'Measurement'
+                    THEN 'measurement'
+                WHEN m.concept_id <> 0 AND m.target_domain_id = 'Observation'
+                    THEN 'observation'
+                WHEN NULLIF(TRIM(o.value_text), '') IS NOT NULL THEN 'observation'
+                ELSE 'measurement' END AS expected_table,
+           CASE WHEN o.value_code IS NULL THEN 'none'
+                WHEN c.item_num IS NOT NULL THEN 'collision_suppressed'
+                WHEN vm.concept_id <> 0 THEN 'mapped'
+                ELSE 'unmapped' END AS expected_value_target,
+           m.concept_id AS map_concept_id, m.source_concept_id AS map_source_concept_id,
+           vm.concept_id AS value_map_concept_id
+    FROM owned o
+    LEFT JOIN naaccr.naaccr_concept_map m ON m.item_num = o.item_num
     LEFT JOIN naaccr.naaccr_value_concept_map vm
-      ON vm.item_num = r.item_num AND vm.code = r.value_code
-    WHERE (r.route = 'target_domain' AND r.concept_id = 0)
-       OR (r.route <> 'target_domain' AND r.concept_id <> 0)
-       OR (r.item_num IS NULL AND r.route <> 'default_ecp_code')
-       OR (r.item_num IS NOT NULL AND r.route = 'default_ecp_code')
-       OR (r.value_target = 'mapped' AND r.value_as_concept_id IS NULL)
-       OR (r.value_target <> 'mapped' AND r.value_as_concept_id IS NOT NULL)
-       OR (r.value_as_concept_id IS NOT NULL
-           AND (vm.concept_id IS NULL OR vm.concept_id <> r.value_as_concept_id))
-       OR r.source_concept_id IS NULL
-       OR r.source_concept_id <> COALESCE(m.source_concept_id, k.unmapped)
+      ON vm.item_num = o.item_num AND vm.code = o.value_code
+    LEFT JOIN collision c ON c.item_num = o.item_num AND c.code = o.value_code
+),
+mismatched AS (
+    SELECT e.event_table
+    FROM expected e
+    CROSS JOIN k
+    WHERE e.route <> e.expected_route
+       OR e.event_table <> e.expected_table
+       OR e.value_target <> e.expected_value_target
+       OR e.concept_id <> CASE WHEN e.expected_route = 'target_domain'
+                               THEN e.map_concept_id ELSE k.unmapped END
+       OR e.source_concept_id IS NULL
+       OR e.source_concept_id <> COALESCE(e.map_source_concept_id, k.unmapped)
+       OR (e.expected_value_target = 'mapped'
+           AND (e.value_as_concept_id IS NULL
+                OR e.value_as_concept_id <> e.value_map_concept_id))
+       OR (e.expected_value_target <> 'mapped' AND e.value_as_concept_id IS NOT NULL)
+),
+site AS (
+    SELECT l.condition_target, x.condition_concept_id, x.condition_source_concept_id,
+           v.item_num,
+           CASE WHEN c.item_num IS NOT NULL THEN 'collision_suppressed'
+                WHEN vm.item_num IS NULL THEN 'no_map'
+                WHEN vm.concept_id = 0 THEN 'no_target'
+                WHEN vm.target_domain_id = 'Condition' THEN 'mapped'
+                ELSE 'other_domain' END AS expected_target,
+           vm.concept_id AS map_concept_id, vm.source_concept_id AS map_source_concept_id
+    FROM naaccr.group_condition l
+    JOIN omop.condition_occurrence x
+      ON x.condition_occurrence_id = l.condition_occurrence_id
+    JOIN naaccr.naaccr_value v ON v.naaccr_value_id = l.naaccr_value_id
+    LEFT JOIN naaccr.naaccr_value_concept_map vm
+      ON vm.item_num = 400 AND vm.code = v.value_code
+    LEFT JOIN collision c ON c.item_num = 400 AND c.code = v.value_code
 )
 SELECT 'measurement_route_mismatch' AS check_name, 'structural' AS category,
        COUNT(*) AS actual
@@ -446,18 +493,14 @@ SELECT 'observation_route_mismatch', 'structural', COUNT(*)
 FROM mismatched WHERE event_table = 'observation'
 UNION ALL
 SELECT 'condition_target_mismatch', 'structural', COUNT(*)
-FROM naaccr.group_condition l
-JOIN omop.condition_occurrence x ON x.condition_occurrence_id = l.condition_occurrence_id
-JOIN naaccr.naaccr_value v ON v.naaccr_value_id = l.naaccr_value_id
+FROM site s
 CROSS JOIN k
-LEFT JOIN naaccr.naaccr_value_concept_map vm ON vm.item_num = 400 AND vm.code = v.value_code
-WHERE v.item_num IS NULL OR v.item_num <> 400
-   OR (l.condition_target = 'mapped'
-       AND (x.condition_concept_id = 0 OR vm.concept_id IS NULL
-            OR x.condition_concept_id <> vm.concept_id))
-   OR (l.condition_target <> 'mapped' AND x.condition_concept_id <> 0)
-   OR x.condition_source_concept_id IS NULL
-   OR x.condition_source_concept_id <> COALESCE(vm.source_concept_id, k.unmapped);
+WHERE s.item_num IS NULL OR s.item_num <> 400
+   OR s.condition_target <> s.expected_target
+   OR s.condition_concept_id <> CASE WHEN s.expected_target = 'mapped'
+                                     THEN s.map_concept_id ELSE k.unmapped END
+   OR s.condition_source_concept_id IS NULL
+   OR s.condition_source_concept_id <> COALESCE(s.map_source_concept_id, k.unmapped);
 
 -- provenance: every bridge-owned row reaches an intake.inbound_message.
 SELECT 'person_without_message' AS check_name, 'provenance' AS category, COUNT(*) AS actual
@@ -519,6 +562,23 @@ WHERE l.event_table = 'observation' AND NOT EXISTS (
       ON n.sdc_report_id = v.sdc_report_id AND n.note_id = x.observation_event_id
     WHERE v.naaccr_value_id = l.naaccr_value_id)
 UNION ALL
+SELECT 'owned_row_person_mismatch', 'provenance',
+       (SELECT COUNT(*) FROM naaccr.value_event l
+        JOIN omop.measurement x ON x.measurement_id = l.event_id
+        WHERE l.event_table = 'measurement' AND NOT EXISTS (
+            SELECT 1 FROM omop.note n
+            WHERE n.note_id = x.measurement_event_id AND n.person_id = x.person_id))
+       + (SELECT COUNT(*) FROM naaccr.value_event l
+          JOIN omop.observation x ON x.observation_id = l.event_id
+          WHERE l.event_table = 'observation' AND NOT EXISTS (
+              SELECT 1 FROM omop.note n
+              WHERE n.note_id = x.observation_event_id AND n.person_id = x.person_id))
+       + (SELECT COUNT(*) FROM naaccr.group_condition l
+          JOIN omop.condition_occurrence x
+            ON x.condition_occurrence_id = l.condition_occurrence_id
+          JOIN naaccr.report_group g ON g.report_group_id = l.report_group_id
+          WHERE x.person_id <> g.person_id)
+UNION ALL
 SELECT 'condition_without_message', 'provenance', COUNT(*)
 FROM naaccr.group_condition l
 WHERE NOT EXISTS (
@@ -539,7 +599,7 @@ WHERE NOT EXISTS (
     WHERE v.person_id = l.person_id AND v.episode_key = l.episode_key);
 
 -- provenance: every episode_event of an owned episode names an owned row of
--- the same (person, episode_key).
+-- the same (person, episode_key), and that OMOP row belongs to the same person.
 WITH k AS (
     SELECT
         MAX(CASE WHEN constant_name = 'field_measurement_measurement_id'
@@ -559,16 +619,21 @@ WHERE NOT (
     (x.episode_event_field_concept_id = k.measurement_field AND EXISTS (
         SELECT 1 FROM naaccr.value_event l
         JOIN naaccr.naaccr_value v ON v.naaccr_value_id = l.naaccr_value_id
+        JOIN omop.measurement o ON o.measurement_id = l.event_id AND o.person_id = pe.person_id
         WHERE l.event_table = 'measurement' AND l.event_id = x.event_id
           AND v.person_id = pe.person_id AND v.episode_key = pe.episode_key))
     OR (x.episode_event_field_concept_id = k.observation_field AND EXISTS (
         SELECT 1 FROM naaccr.value_event l
         JOIN naaccr.naaccr_value v ON v.naaccr_value_id = l.naaccr_value_id
+        JOIN omop.observation o ON o.observation_id = l.event_id AND o.person_id = pe.person_id
         WHERE l.event_table = 'observation' AND l.event_id = x.event_id
           AND v.person_id = pe.person_id AND v.episode_key = pe.episode_key))
     OR (x.episode_event_field_concept_id = k.condition_field AND EXISTS (
         SELECT 1 FROM naaccr.group_condition l
         JOIN naaccr.naaccr_value v ON v.naaccr_value_id = l.naaccr_value_id
+        JOIN omop.condition_occurrence o
+          ON o.condition_occurrence_id = l.condition_occurrence_id
+         AND o.person_id = pe.person_id
         WHERE l.condition_occurrence_id = x.event_id
           AND v.person_id = pe.person_id AND v.episode_key = pe.episode_key))
 );

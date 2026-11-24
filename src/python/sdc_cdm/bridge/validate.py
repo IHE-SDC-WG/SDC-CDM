@@ -4,12 +4,20 @@ Script contract (different from the bridge scripts): every unit returns rows
 (check_name, category, actual). The SQL only counts; Python judges. The
 structural, provenance, and reconciliation categories pass at zero; coverage
 passes at or below its validate_thresholds.csv row; report rows are printed and
-never fail. All units run in one transaction, so every count reads one
-snapshot, and validation writes nothing but its etl.run row.
+never fail. Validation writes nothing but its etl.run row.
+
+All units run in one transaction that reads one consistent database state. On
+SQLite, the transaction's locks keep every other writer out until it ends. On
+SQL Server, default READ COMMITTED would let a concurrent commit land between
+units, so the run uses SERIALIZABLE: its range locks make concurrent writers
+wait for validation to finish, and it needs no database option, unlike
+SNAPSHOT. The session's previous isolation level is restored afterward.
 """
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -24,6 +32,14 @@ from sdc_cdm.db.sqlscript import split_script
 
 ZERO_CATEGORIES = ("structural", "provenance", "reconciliation")
 CATEGORIES = (*ZERO_CATEGORIES, "coverage", "report")
+# sys.dm_exec_sessions.transaction_isolation_level -> SET TRANSACTION ISOLATION LEVEL
+SQLSERVER_ISOLATION_LEVELS = {
+    1: "READ UNCOMMITTED", 2: "READ COMMITTED", 3: "REPEATABLE READ",
+    4: "SERIALIZABLE", 5: "SNAPSHOT",
+}
+SQLSERVER_ISOLATION_QUERY = (
+    "SELECT transaction_isolation_level FROM sys.dm_exec_sessions WHERE session_id = @@SPID"
+)
 
 
 @dataclass(frozen=True)
@@ -47,6 +63,22 @@ class ValidateResult:
     @property
     def passed(self) -> bool:
         return not self.failures
+
+
+@contextmanager
+def _consistent_reads(backend: DatabaseBackend) -> Iterator[None]:
+    """Make every read of the enclosed transaction see one database state."""
+    if backend.dialect != "sqlserver":
+        yield
+        return
+    previous = SQLSERVER_ISOLATION_LEVELS[
+        int(backend.fetch_one(SQLSERVER_ISOLATION_QUERY)[0])
+    ]
+    backend.execute("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE")
+    try:
+        yield
+    finally:
+        backend.execute(f"SET TRANSACTION ISOLATION LEVEL {previous}")
 
 
 def _run_checks(backend: DatabaseBackend, entry: EtlEntry) -> list[tuple[str, str, int]]:
@@ -122,7 +154,7 @@ def run_validate(
             if VALIDATE_THRESHOLDS_FILE in seeds else {}
         )
         rows: list[tuple[str, str, int]] = []
-        with backend.transaction():
+        with _consistent_reads(backend), backend.transaction():
             for entry in entries:
                 rows.extend(_run_checks(backend, entry))
         checks, failures = _judge(rows, thresholds)

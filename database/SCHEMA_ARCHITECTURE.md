@@ -317,8 +317,8 @@ the counts:
 
 | Category | Covers | Passes when |
 |---|---|---|
-| `structural` | orphan `person_id`, episode, note-event, and `episode_event` targets on every row of the bridge-written tables; unknown concepts; orphan `note_report`, `value_event`, `group_condition`, `person_episode`, and period-derivation links; type, field, and constant slots of owned rows; standard, valid, routed-domain targets; slots that disagree with the recorded route and current maps | `0` |
-| `provenance` | owned rows that cannot reach an `intake.inbound_message` (patient first message, period boundaries, note links, values, condition values, episode keys), and owned episode events that name an unowned row | `0` |
+| `structural` | orphan `person_id`, episode, note-event, and `episode_event` targets on every row of the bridge-written tables; unknown concepts; orphan `note_report`, `value_event`, `group_condition`, `person_episode`, and period-derivation links; type, field, and constant slots of owned rows; standard, valid, routed-domain targets; route, table, value target, and both concept slots recomputed from the current maps and the #100 collision view, as scripts 3 and 4 derive them | `0` |
+| `provenance` | owned rows that cannot reach an `intake.inbound_message` (patient first message, period boundaries, note links, values, condition values, episode keys), owned rows whose person differs from their note's or group's, and owned episode events that name an unowned row or another person's row | `0` |
 | `reconciliation` | unversioned accessioned reports; selected reports without a note link, links to unselected reports, selected groups without exactly one note; patients without a person or period; selected values without a clinical row and rows for unselected values; site groups versus conditions; episode keys without an episode; owned rows without an episode event; `cdm_source` row count | `0` |
 | `coverage` | unmapped CKey values, unmapped and other-domain item values, coded item values without a value target, conditions without a Condition target, item numbers absent from their dictionary version | at most the `validate_thresholds.csv` row |
 | `report` | selected, historical, and accession-less reports; historical and excluded values; content-duplicate messages; one-day periods; #100 suppressions; truncated values; unowned OMOP rows | never fails |
@@ -328,8 +328,10 @@ periods with a derivation row, notes in `sdc.note_report`, clinical rows in
 `naaccr.value_event`, conditions in `naaccr.group_condition`, episodes in
 `naaccr.person_episode`, and every `episode_event` of an owned episode. Other OMOP rows are
 reported but never failed, because the bridge leaves them in place. The orphan checks still cover
-every row. Slot checks compare against the current concept maps, so run `validate` after any
-`maps build` and before exporting, and rerun `bridge` when maps change.
+every row. Slot checks compare against the current concept maps, so rerun `bridge` after any `maps build`
+before running `validate`. On SQL Server, validation runs at `SERIALIZABLE` so all units read one
+database state; concurrent writers wait until it ends, and the session's previous isolation level
+is then restored.
 
 ## Physical model and build order
 
