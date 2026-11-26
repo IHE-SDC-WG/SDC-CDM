@@ -20,6 +20,7 @@ from sdc_cdm.cli.dictionary import (
     run_dict_verify,
     run_ssdi_fetch,
 )
+from sdc_cdm.cli.export import configure_export, run_export_command
 from sdc_cdm.cli.target import add_target_arguments, open_backend
 from sdc_cdm.cli.intake import configure_ingest, configure_load, run_ingest, run_load
 from sdc_cdm.cli.maps import (
@@ -211,6 +212,12 @@ _VERBS: tuple[tuple[tuple[str, ...], str, _Configure, _Handler], ...] = (
         "check the bridge's OMOP output against its sources and thresholds",
         configure_validate,
         run_validate_command,
+    ),
+    (
+        ("export",),
+        "write the OMOP tables as one CSV each plus manifest.json",
+        configure_export,
+        run_export_command,
     ),
 )
 

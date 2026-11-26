@@ -41,6 +41,7 @@ def test_expected_commands_are_registered() -> None:
         "reports supersede",
         "bridge",
         "validate",
+        "export",
     )
     with pytest.raises(SystemExit) as exc_info:
         main(["ingest"])

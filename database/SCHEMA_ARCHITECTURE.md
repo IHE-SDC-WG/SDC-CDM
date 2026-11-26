@@ -333,6 +333,29 @@ before running `validate`. On SQL Server, validation runs at `SERIALIZABLE` so a
 database state; concurrent writers wait until it ends, and the session's previous isolation level
 is then restored.
 
+### Export bundle
+
+`sdc-cdm export` reads `omop` only, in one consistent snapshot, and writes a new directory:
+
+```text
+OUTPUT_DIR/
+  manifest.json            bundle_format, tool, cdm_version, exported_at, source_database,
+                           etl_run_id, bridge_run_id, vocabulary, concept_map_coverage, csv, tables
+  PERSON.csv  OBSERVATION_PERIOD.csv  NOTE.csv  MEASUREMENT.csv  OBSERVATION.csv
+  CONDITION_OCCURRENCE.csv  EPISODE.csv  EPISODE_EVENT.csv  CDM_SOURCE.csv
+  DOMAIN.csv  VOCABULARY.csv  CONCEPT_CLASS.csv  RELATIONSHIP.csv  CONCEPT.csv
+  CONCEPT_RELATIONSHIP.csv  CONCEPT_SYNONYM.csv  CONCEPT_ANCESTOR.csv  DRUG_STRENGTH.csv
+                           (vocabulary files only with --include-vocabulary)
+```
+
+Clinical files are listed in foreign-key load order. Headers are the upper-case CDM 5.4 columns of
+`sdc_cdm.cdm.tables`, the same metadata the Athena loader reads, so the vocabulary files load back
+with `vocab load --vocab-dir OUTPUT_DIR --delimiter comma`. `manifest.json` gives each file's row count and sha256.
+Concept IDs in the bundle are this database's, including locally minted `NAACCR_LOCAL` IDs, so
+bundles from different databases are not concept-comparable. No `intake`, `sdc`, `naaccr`, or
+`etl` table is read for a CSV. The bundle still carries the MRN, accession, and narrative held in
+`omop`.
+
 ## Physical model and build order
 
 - **SQLite:** the control file attaches one sibling database per logical schema. For a control

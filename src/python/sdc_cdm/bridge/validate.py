@@ -16,14 +16,14 @@ SNAPSHOT. The session's previous isolation level is restored afterward.
 
 from __future__ import annotations
 
-from collections.abc import Iterator
-from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
 from sdc_cdm.bridge.runner import DEFAULT_SEED_DIR, BridgeError, check_prerequisites
 from sdc_cdm.bridge.seeds import VALIDATE_THRESHOLDS_FILE, read_validate_thresholds
 from sdc_cdm.db.backend import DatabaseBackend
+# SQLSERVER_ISOLATION_QUERY stays importable from here for the isolation test.
+from sdc_cdm.db.isolation import SQLSERVER_ISOLATION_QUERY, consistent_reads  # noqa: F401
 from sdc_cdm.db.manifest import DatabaseManifest, EtlEntry
 from sdc_cdm.db.paths import repository_path
 from sdc_cdm.db.run_log import RunLog
@@ -32,14 +32,6 @@ from sdc_cdm.db.sqlscript import split_script
 
 ZERO_CATEGORIES = ("structural", "provenance", "reconciliation")
 CATEGORIES = (*ZERO_CATEGORIES, "coverage", "report")
-# sys.dm_exec_sessions.transaction_isolation_level -> SET TRANSACTION ISOLATION LEVEL
-SQLSERVER_ISOLATION_LEVELS = {
-    1: "READ UNCOMMITTED", 2: "READ COMMITTED", 3: "REPEATABLE READ",
-    4: "SERIALIZABLE", 5: "SNAPSHOT",
-}
-SQLSERVER_ISOLATION_QUERY = (
-    "SELECT transaction_isolation_level FROM sys.dm_exec_sessions WHERE session_id = @@SPID"
-)
 
 
 @dataclass(frozen=True)
@@ -63,22 +55,6 @@ class ValidateResult:
     @property
     def passed(self) -> bool:
         return not self.failures
-
-
-@contextmanager
-def _consistent_reads(backend: DatabaseBackend) -> Iterator[None]:
-    """Make every read of the enclosed transaction see one database state."""
-    if backend.dialect != "sqlserver":
-        yield
-        return
-    previous = SQLSERVER_ISOLATION_LEVELS[
-        int(backend.fetch_one(SQLSERVER_ISOLATION_QUERY)[0])
-    ]
-    backend.execute("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE")
-    try:
-        yield
-    finally:
-        backend.execute(f"SET TRANSACTION ISOLATION LEVEL {previous}")
 
 
 def _run_checks(backend: DatabaseBackend, entry: EtlEntry) -> list[tuple[str, str, int]]:
@@ -154,7 +130,7 @@ def run_validate(
             if VALIDATE_THRESHOLDS_FILE in seeds else {}
         )
         rows: list[tuple[str, str, int]] = []
-        with _consistent_reads(backend), backend.transaction():
+        with consistent_reads(backend), backend.transaction():
             for entry in entries:
                 rows.extend(_run_checks(backend, entry))
         checks, failures = _judge(rows, thresholds)

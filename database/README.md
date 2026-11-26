@@ -84,6 +84,13 @@ both dialects emit the same check names. Python judges them: `structural`, `prov
 Bridge-written OMOP rows that no bridge link names are reported, never failed, because the bridge
 leaves unrelated OMOP rows in place.
 
+`sdc-cdm export --dialect <dialect> (--db | --connection-string) OUTPUT_DIR [--include-vocabulary]`
+writes the nine bridge-populated OMOP tables, and optionally the nine vocabulary tables, as one CSV
+each plus `manifest.json`. Column lists come from `src/python/sdc_cdm/cdm/tables.py`. It reads
+only `omop` in one consistent snapshot and needs exactly one `omop.cdm_source` row. Raw bytes and
+intake PID fields cannot reach the bundle, but the bundle is not de-identified: it carries the MRN
+(`person_source_value`), the accession (`note_source_value`), and the narrative (`note_text`).
+
 ## Build
 
 The manifest is the only complete schema apply order. The first entry creates the `etl` ledger;

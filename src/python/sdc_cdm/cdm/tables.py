@@ -1,4 +1,13 @@
-"""OMOP CDM vocabulary table metadata shared by import and export paths."""
+"""OMOP CDM 5.4 table metadata shared by import and export paths.
+
+TABLE_SPECS is the Athena vocabulary set the loader, integrity checks, and CLI
+iterate. CLINICAL_TABLE_SPECS is the set the bridge populates, in an order where
+every foreign key names an earlier table; `sdc-cdm export` writes both. Column
+lists and order follow the CDM 5.4 DDL under database/schemas/omop/ddl.
+
+Kinds: text, integer, decimal (exact numeric), float (double precision), date
+(YYYY-MM-DD), and datetime.
+"""
 
 from __future__ import annotations
 
@@ -6,6 +15,7 @@ from dataclasses import dataclass
 
 
 VOCABULARY_SCHEMA = "omop"
+CDM_VERSION = "5.4"
 
 
 @dataclass(frozen=True)
@@ -147,6 +157,181 @@ TABLE_SPECS = (
             "date",
             "text",
         ),
+    ),
+)
+
+
+def _spec(file_name: str, table_name: str, *columns: tuple[str, str]) -> TableSpec:
+    return TableSpec(
+        file_name,
+        table_name,
+        tuple(column for column, _kind in columns),
+        tuple(kind for _column, kind in columns),
+    )
+
+
+CLINICAL_TABLE_SPECS = (
+    _spec(
+        "PERSON.csv",
+        "person",
+        ("person_id", "integer"),
+        ("gender_concept_id", "integer"),
+        ("year_of_birth", "integer"),
+        ("month_of_birth", "integer"),
+        ("day_of_birth", "integer"),
+        ("birth_datetime", "datetime"),
+        ("race_concept_id", "integer"),
+        ("ethnicity_concept_id", "integer"),
+        ("location_id", "integer"),
+        ("provider_id", "integer"),
+        ("care_site_id", "integer"),
+        ("person_source_value", "text"),
+        ("gender_source_value", "text"),
+        ("gender_source_concept_id", "integer"),
+        ("race_source_value", "text"),
+        ("race_source_concept_id", "integer"),
+        ("ethnicity_source_value", "text"),
+        ("ethnicity_source_concept_id", "integer"),
+    ),
+    _spec(
+        "OBSERVATION_PERIOD.csv",
+        "observation_period",
+        ("observation_period_id", "integer"),
+        ("person_id", "integer"),
+        ("observation_period_start_date", "date"),
+        ("observation_period_end_date", "date"),
+        ("period_type_concept_id", "integer"),
+    ),
+    _spec(
+        "NOTE.csv",
+        "note",
+        ("note_id", "integer"),
+        ("person_id", "integer"),
+        ("note_date", "date"),
+        ("note_datetime", "datetime"),
+        ("note_type_concept_id", "integer"),
+        ("note_class_concept_id", "integer"),
+        ("note_title", "text"),
+        ("note_text", "text"),
+        ("encoding_concept_id", "integer"),
+        ("language_concept_id", "integer"),
+        ("provider_id", "integer"),
+        ("visit_occurrence_id", "integer"),
+        ("visit_detail_id", "integer"),
+        ("note_source_value", "text"),
+        ("note_event_id", "integer"),
+        ("note_event_field_concept_id", "integer"),
+    ),
+    _spec(
+        "MEASUREMENT.csv",
+        "measurement",
+        ("measurement_id", "integer"),
+        ("person_id", "integer"),
+        ("measurement_concept_id", "integer"),
+        ("measurement_date", "date"),
+        ("measurement_datetime", "datetime"),
+        ("measurement_time", "text"),
+        ("measurement_type_concept_id", "integer"),
+        ("operator_concept_id", "integer"),
+        ("value_as_number", "float"),
+        ("value_as_concept_id", "integer"),
+        ("unit_concept_id", "integer"),
+        ("range_low", "float"),
+        ("range_high", "float"),
+        ("provider_id", "integer"),
+        ("visit_occurrence_id", "integer"),
+        ("visit_detail_id", "integer"),
+        ("measurement_source_value", "text"),
+        ("measurement_source_concept_id", "integer"),
+        ("unit_source_value", "text"),
+        ("unit_source_concept_id", "integer"),
+        ("value_source_value", "text"),
+        ("measurement_event_id", "integer"),
+        ("meas_event_field_concept_id", "integer"),
+    ),
+    _spec(
+        "OBSERVATION.csv",
+        "observation",
+        ("observation_id", "integer"),
+        ("person_id", "integer"),
+        ("observation_concept_id", "integer"),
+        ("observation_date", "date"),
+        ("observation_datetime", "datetime"),
+        ("observation_type_concept_id", "integer"),
+        ("value_as_number", "float"),
+        ("value_as_string", "text"),
+        ("value_as_concept_id", "integer"),
+        ("qualifier_concept_id", "integer"),
+        ("unit_concept_id", "integer"),
+        ("provider_id", "integer"),
+        ("visit_occurrence_id", "integer"),
+        ("visit_detail_id", "integer"),
+        ("observation_source_value", "text"),
+        ("observation_source_concept_id", "integer"),
+        ("unit_source_value", "text"),
+        ("qualifier_source_value", "text"),
+        ("value_source_value", "text"),
+        ("observation_event_id", "integer"),
+        ("obs_event_field_concept_id", "integer"),
+    ),
+    _spec(
+        "CONDITION_OCCURRENCE.csv",
+        "condition_occurrence",
+        ("condition_occurrence_id", "integer"),
+        ("person_id", "integer"),
+        ("condition_concept_id", "integer"),
+        ("condition_start_date", "date"),
+        ("condition_start_datetime", "datetime"),
+        ("condition_end_date", "date"),
+        ("condition_end_datetime", "datetime"),
+        ("condition_type_concept_id", "integer"),
+        ("condition_status_concept_id", "integer"),
+        ("stop_reason", "text"),
+        ("provider_id", "integer"),
+        ("visit_occurrence_id", "integer"),
+        ("visit_detail_id", "integer"),
+        ("condition_source_value", "text"),
+        ("condition_source_concept_id", "integer"),
+        ("condition_status_source_value", "text"),
+    ),
+    _spec(
+        "EPISODE.csv",
+        "episode",
+        ("episode_id", "integer"),
+        ("person_id", "integer"),
+        ("episode_concept_id", "integer"),
+        ("episode_start_date", "date"),
+        ("episode_start_datetime", "datetime"),
+        ("episode_end_date", "date"),
+        ("episode_end_datetime", "datetime"),
+        ("episode_parent_id", "integer"),
+        ("episode_number", "integer"),
+        ("episode_object_concept_id", "integer"),
+        ("episode_type_concept_id", "integer"),
+        ("episode_source_value", "text"),
+        ("episode_source_concept_id", "integer"),
+    ),
+    _spec(
+        "EPISODE_EVENT.csv",
+        "episode_event",
+        ("episode_id", "integer"),
+        ("event_id", "integer"),
+        ("episode_event_field_concept_id", "integer"),
+    ),
+    _spec(
+        "CDM_SOURCE.csv",
+        "cdm_source",
+        ("cdm_source_name", "text"),
+        ("cdm_source_abbreviation", "text"),
+        ("cdm_holder", "text"),
+        ("source_description", "text"),
+        ("source_documentation_reference", "text"),
+        ("cdm_etl_reference", "text"),
+        ("source_release_date", "date"),
+        ("cdm_release_date", "date"),
+        ("cdm_version", "text"),
+        ("cdm_version_concept_id", "integer"),
+        ("vocabulary_version", "text"),
     ),
 )
 

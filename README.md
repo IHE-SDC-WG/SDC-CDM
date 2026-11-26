@@ -204,6 +204,37 @@ The tracked thresholds are the baseline for the `sample_data/naaccr_v2` fixtures
 passes `--seed-dir` with its own reviewed copy, so raising a limit is a reviewed change. `bridge`
 does not need this file.
 
+## Export
+
+`export` writes the OMOP tables to a new or empty directory as one CSV each plus
+`manifest.json`:
+
+```bash
+python -m sdc_cdm export --dialect sqlite --db out/demo.db out/omop-csv --include-vocabulary
+```
+
+The bundle always holds `PERSON`, `OBSERVATION_PERIOD`, `NOTE`, `MEASUREMENT`, `OBSERVATION`,
+`CONDITION_OCCURRENCE`, `EPISODE`, `EPISODE_EVENT`, and `CDM_SOURCE`. `--include-vocabulary` adds
+the nine Athena vocabulary tables. A bundle that includes them is an Athena redistribution and
+falls under Athena's license terms. Each CSV is UTF-8 without a BOM, comma-delimited with `\n` line
+endings and RFC 4180 quoting. It has upper-case headers in CDM 5.4 column order and `YYYY-MM-DD`
+dates, and NULL is an empty field. Rows are sorted by every column, so re-exporting an unchanged
+database gives byte-identical files.
+`manifest.json` records the CDM version, export time, source database (file name or server and
+database name, never the connection string), the export's and the latest bridge's `etl.run` IDs,
+the vocabulary versions, concept-map coverage counts, and each file's row count and sha256. The
+command prints `file | rows | sha256` for each table.
+
+Export reads every table in one consistent snapshot (`SERIALIZABLE` on SQL Server). It needs exactly
+one `omop.cdm_source` row, so run `bridge` first; it does not require a passing `validate`. A text
+value that is an empty string fails the export by table and column, because the CSV cannot tell
+it from NULL. Any failure leaves no bundle and records a failed `export` run.
+
+**What the bundle carries.** Export reads `omop.*` only, so raw message bytes and the PID name,
+SSN, address, and phone held in `intake` never reach it. The bundle is **not de-identified**:
+`person_source_value` is the MRN, `note_source_value` is the accession, and `note_text` is the
+narrative report. Handle it as PHI.
+
 ## Tool support
 
 | Tool | SQLite | SQL Server |
@@ -216,6 +247,7 @@ does not need this file.
 | Python `sdc_cdm reports supersede` | Supported | Supported |
 | Python `sdc_cdm bridge` | Supported | Supported |
 | Python `sdc_cdm validate` | Supported | Supported |
+| Python `sdc_cdm export` | Supported | Supported |
 | C# SDC XML importer | Supported | Not supported |
 
 The C# project is deliberately limited to SDC XML template and response persistence. It uses
