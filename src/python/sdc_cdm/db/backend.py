@@ -179,6 +179,32 @@ class DatabaseBackend(ABC):
     def fetch_all(self, sql: str, parameters: Sequence[Any] = ()) -> list[Any]:
         """Return all result rows."""
 
+    def iter_rows(
+        self,
+        sql: str,
+        parameters: Sequence[Any] = (),
+        *,
+        batch_size: int = 10_000,
+    ) -> Iterator[Any]:
+        """Stream result rows, holding at most one batch at a time.
+
+        Consume or close the iterator before issuing another statement: a SQL
+        Server connection without MARS cannot run one while results are pending.
+        """
+
+        if batch_size < 1:
+            raise ValueError(f"batch_size must be positive, got {batch_size}")
+        cursor = self.connection.cursor()
+        try:
+            cursor.execute(sql, tuple(parameters))
+            while True:
+                rows = cursor.fetchmany(batch_size)
+                if not rows:
+                    return
+                yield from rows
+        finally:
+            cursor.close()
+
     @abstractmethod
     def table_exists(self, schema: str, table: str) -> bool:
         """Return whether a table exists."""

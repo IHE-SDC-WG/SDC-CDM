@@ -478,6 +478,37 @@ dialects.
 - [ ] **EXP-04** *(roadmap-blocked)* FHIR → import → export → compare against the original bundle for the
   supported subset (lossless where the model supports it, documented losses elsewhere).
 
+### 4.1 Phase 5 CSV export checks
+
+`sdc-cdm export` (#95) writes one CSV per OMOP table plus `manifest.json`. All six run on both
+dialects in `src/python/tests/test_export.py`; the SQL Server arms run in CI only.
+
+- [x] **CSV-01** Export, load every CSV with the vocabulary reader into an empty OMOP schema, and
+  compare row for row, including a narrative longer than csv's default 131,072-character field
+  limit; a second export of the reloaded schema is byte-identical. SQLite loads a
+  brand-new database, vocabulary included; SQL Server reloads the emptied clinical tables of the
+  bridge test database with `IDENTITY_INSERT`.
+  `test_export_round_trips_row_for_row_and_reexports_byte_identically`.
+- [x] **CSV-02** `manifest.json` row counts equal `COUNT(*)`, each sha256 equals its file's bytes,
+  every #95 field is present, and `etl.run` has a succeeded `export` row with the manifest's ID.
+  `test_manifest_matches_the_database_and_every_file`.
+- [x] **CSV-03** The sample HL7 messages' PID name, SSN, street address, and phone are in
+  `intake.inbound_message.raw_blob` and in no bundle byte; on SQLite, no statement of the CSV
+  phase names `intake`, `sdc`, or `naaccr`. `test_no_byte_outside_omop_reaches_the_bundle`.
+- [x] **CSV-04** Each file's header is its spec's upper-case column list, and every clinical and
+  vocabulary spec matches its table's column order in both dialects' OMOP DDL.
+  `test_each_file_header_is_its_spec`, `test_every_spec_matches_the_ddl_column_order`.
+- [x] **CSV-05** A non-empty output directory, a missing `omop.cdm_source` row, and an
+  empty-string text value each fail by name, leave no bundle or temporary directory, and record
+  a failed `export` run; a failed final `etl.run` update publishes no bundle.
+  `test_a_failed_export_is_named_leaves_no_bundle_and_records_the_run`,
+  `test_a_failed_final_run_update_publishes_no_bundle`.
+- [x] **CSV-06** Without `--include-vocabulary` the bundle is nine CSVs plus the manifest, with
+  it eighteen; two exports of an unchanged database have equal sha256s, and text that differs
+  only by trailing spaces sorts shortest first on both dialects.
+  `test_vocabulary_is_opt_in_and_unchanged_data_hashes_the_same`,
+  `test_text_that_differs_only_by_trailing_spaces_sorts_by_length`.
+
 ---
 
 ## 5. Schema / DDL tests — `src/python/tests/`
@@ -682,7 +713,7 @@ time**, so no new golden files are needed for the core oracle tests (SDCOM-03/04
    4.5 `OMOP-08`, `OMOP-10`, `OMOP-12`, `NAACCR-05/06`, `BRIDGE-12`, then retire the old bridge
    (done).
 2. **CLEAN-01** alongside, so new tests are written against `sample_data/` from day one.
-3. Phase 5 CSV-export checks.
+3. Phase 5 CSV-export checks `CSV-01..06` (#95) (done).
 4. FHIR and SDC XML content tests, then blocked items (NAACCR XML, CCDA) as those importers
    land. `EXP-01` remains roadmap-blocked with the FHIR work.
 5. **SDCOM-01/02** to stand up the optional SDC.Schema oracle, then **SDCOM-03/04**. Once

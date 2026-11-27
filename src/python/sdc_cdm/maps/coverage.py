@@ -113,3 +113,29 @@ def report_coverage(
             if not passed:
                 failures.append(f"{key}: expected {value}, got {actual}")
     return CoverageReport(selected, rows, checks, tuple(comparisons), tuple(failures))
+
+
+MAPPING_LAYERS = ("athena_standard", "curated_override", "local_mint", "unmapped")
+
+
+def layer_totals(backend: DatabaseBackend) -> dict[str, object]:
+    """Counts of the built concept map per scope and mapping layer.
+
+    Counts only, for an export manifest. A database with no recorded maps build,
+    such as one loaded from an export bundle, reports algorithm None and zeros.
+    """
+
+    totals: dict[str, dict[str, int]] = {
+        scope: dict.fromkeys(MAPPING_LAYERS, 0) for scope in ("item", "value")
+    }
+    built = backend.fetch_one(
+        "SELECT algorithm FROM naaccr.concept_map_build_state WHERE singleton_id = 1"
+    )
+    if built is None:
+        return {"algorithm": None, **totals}
+    for scope, layer, count in backend.fetch_all(
+        "SELECT scope, mapping_layer, SUM(item_count) FROM naaccr.concept_map_coverage "
+        "WHERE algorithm = ? GROUP BY scope, mapping_layer", (built[0],),
+    ):
+        totals.setdefault(str(scope), dict.fromkeys(MAPPING_LAYERS, 0))[str(layer)] = int(count)
+    return {"algorithm": str(built[0]), **totals}

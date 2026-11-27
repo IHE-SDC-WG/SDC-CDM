@@ -1,7 +1,7 @@
 # Rebuild SDC-CDM around a canonical intake envelope
 
-**Status:** Phases 0–3 are complete on `main` (#90–#93 closed). Phase 4 (#94) is next and is split
-into child issues 4.0–4.5 (#141–#146). **Scope:** seven phases (0–6), each landing on `main` as
+**Status:** Phases 0–4 are complete on `main` (#90–#94; Phase 4 landed as child issues 4.0–4.5,
+#141–#146). Phase 5 (#95) lands as one PR with no child issues. **Scope:** seven phases (0–6), each landing on `main` as
 squash-merged pull requests, one per child issue — see "Starting point".
 
 This is the controlling design document for the rebuild. Each phase's GitHub issue links to its
@@ -16,7 +16,7 @@ Sections that describe the repository before the rebuild are historical. They ex
 decision was made; they do not describe the current code. File and line references such as
 `ImportNaaccrVolV.cs:197` point at deleted code and are recoverable from git history.
 
-**Current state (after Phase 4).** Python owns build, vocabulary load, constant resolution,
+**Current state (after Phase 5).** Python owns build, vocabulary load, constant resolution,
 dictionary fetch/load/verify, SSDI fetch, map build/coverage, HL7 intake/load, report
 supersession, the OMOP bridge, and its validation on SQLite and SQL Server. The importer writes no
 OMOP rows. `sdc-cdm bridge` runs the manifest's ordered `database/etl/<dialect>/1..4_*.sql`
@@ -24,7 +24,7 @@ scripts in one transaction, reading report selection and resolved constants. It 
 period, `cdm_source`, note, measurement, observation, condition, and episode rows. `sdc-cdm validate`
 runs `9_validate.sql` and judges its structural, provenance, reconciliation, and coverage checks.
 The pre-rebuild `1_naaccr_sdc_to_omop.sql` and `validate_naaccr_sdc_to_omop.sql` were retired in
-Phase 4.5.
+Phase 4.5. `sdc-cdm export` writes the OMOP tables as one CSV each plus `manifest.json` (Phase 5).
 
 **Before the rebuild (historical).** The three-schema design (`naaccr` / `sdc` / `omop`) is sound
 and should survive. What didn't work was everything around it:
@@ -868,13 +868,36 @@ runs through `sdc` and `intake`.
 `EPISODE_EVENT.csv`, `CDM_SOURCE.csv`, with `--include-vocabulary` for the concept tables.
 
 - Header order and column lists come from the **same CDM 5.4 table metadata that drives the Athena
-  loader** (`tools/load_athena_vocab.py:38-175` `TABLE_SPECS`) — promote it to a shared module so
-  there is one source of truth for CDM column definitions in both directions.
+  loader**: `src/python/sdc_cdm/cdm/tables.py` holds `TABLE_SPECS` (vocabulary) and
+  `CLINICAL_TABLE_SPECS` (the nine tables above, in foreign-key order), and the Athena reader
+  `vocab.extract.iter_table_rows` reads both directions.
 - `manifest.json`: CDM version, export timestamp, source database identity, per-table row count and
-  sha256, the `etl.run` id that produced it, concept-map coverage summary, tool name + version.
+  sha256, the `etl.run` id that produced it, the latest succeeded `bridge`/`supersede` run,
+  concept-map coverage summary (counts by scope and layer), resolving vocabulary, tool name +
+  version.
 - **The export reads `omop.*` only**, so `intake.inbound_message.raw_blob` cannot leak into a
   deliverable by construction. State this as an invariant and test it.
 - Round-trip test: export → load into a fresh empty OMOP schema → row-for-row equality.
+
+Decisions made when Phase 5 landed (#95):
+
+1. **The bundle is not de-identified.** `person_source_value` is the MRN, `note_source_value` the
+   accession, and `note_text` the narrative report. The invariant is narrower: nothing outside
+   `omop.*` (raw bytes, PID name/SSN/address/phone) can reach a CSV, and `CSV-03` greps for those
+   PID fields.
+2. **CSV format:** UTF-8 without BOM, comma, `\n`, RFC 4180 quoting, upper-case headers (as
+   Athena), dates `YYYY-MM-DD`, floats as `repr(float)`, NULL as an empty field. An empty-string
+   text value cannot be told from NULL, so export fails and names the table and column rather than
+   silently changing it.
+3. **Rows are ordered by every column in spec order** (SQL Server text by `Latin1_General_BIN2`
+   then `DATALENGTH`, matching SQLite's binary order), so
+   two exports of an unchanged database have identical sha256s without per-table key metadata.
+4. **One consistent snapshot.** All tables are read in one transaction, using validate's
+   `SERIALIZABLE` handling on SQL Server (`sdc_cdm/db/isolation.py`). The bundle is written to a
+   temporary sibling directory, its run is marked succeeded, and only then is it renamed into
+   place, so a failure leaves no bundle.
+5. **Export requires exactly one `omop.cdm_source` row** and otherwise fails, saying to run
+   `bridge`. It does not require a passing `validate`. The output directory must be new or empty.
 
 ### No hardcoded concept IDs
 
@@ -1102,7 +1125,8 @@ PR to `main` with its tests and documentation changes:
 - **Validation.** `validate` reports zero structural and provenance errors, and unmapped coverage
   is within `validate_thresholds.csv`, tracked separately from structural checks.
 
-**Phase 5 — export.** CSV bundle + manifest + round-trip test.
+**Phase 5 — export. Complete (#95).** CSV bundle + manifest + round-trip test; `CSV-01..06` in
+`TEST_PLAN.md` §4.1.
 *Accept when:* export → load into a fresh empty OMOP schema is row-for-row equal; `manifest.json`
 row counts match the database; grepping the whole bundle for a known PHI string from the raw message
 returns zero hits.
@@ -1199,7 +1223,7 @@ python -m sdc_cdm intake ingest --dialect sqlite --db out/demo.db sample_data/na
 python -m sdc_cdm intake load --dialect sqlite --db out/demo.db --algorithm eod_public 1 2 3
 python -m sdc_cdm bridge --dialect sqlite --db out/demo.db
 python -m sdc_cdm validate --dialect sqlite --db out/demo.db
-python -m sdc_cdm export out/omop-csv/
+python -m sdc_cdm export --dialect sqlite --db out/demo.db out/omop-csv --include-vocabulary
 
 # SDC XML import is the one C# surface, and it is a library + tests, not a CLI
 dotnet test src/csharp/SdcCdm.Sdc.Tests
