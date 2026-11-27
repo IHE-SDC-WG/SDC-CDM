@@ -57,9 +57,6 @@ CSV_FORMAT = {
     "null": "",
     "date": "YYYY-MM-DD",
 }
-# Binary order on SQL Server, so rows that differ only in case still sort the
-# same way on every export.
-_SQLSERVER_TEXT_ORDER = "COLLATE Latin1_General_BIN2"
 
 
 class ExportError(SdcCdmError):
@@ -138,12 +135,21 @@ def _format(value: Any, kind: str, spec: TableSpec, column: str) -> str | None:
     raise AssertionError(f"Unsupported field kind: {kind}")
 
 
+def _sqlserver_text_order(column: str) -> str:
+    """Total order for SQL Server text, as SQLite's BINARY collation gives.
+
+    BIN2 separates values that differ only in case, but still pads trailing
+    spaces, so 'term' and 'term ' tie; DATALENGTH breaks that tie.
+    """
+    return f"{column} COLLATE Latin1_General_BIN2, DATALENGTH({column})"
+
+
 def _select(backend: DatabaseBackend, spec: TableSpec) -> str:
     """The one statement that reads a table for its CSV."""
 
     columns = ", ".join(spec.columns)
     order = ", ".join(
-        f"{column} {_SQLSERVER_TEXT_ORDER}"
+        _sqlserver_text_order(column)
         if backend.dialect == "sqlserver" and kind == "text" else column
         for column, kind in zip(spec.columns, spec.kinds)
     )
@@ -277,6 +283,9 @@ def export_bundle(
         (staging / MANIFEST_FILE).write_text(
             json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
         )
+        # Record success before publishing: a bundle is never in place while its
+        # run says running, and a failed rename below re-marks the run failed.
+        run_log.finish(run_id)
         if output_dir.exists():
             output_dir.rmdir()
         staging.rename(output_dir)
@@ -286,5 +295,4 @@ def export_bundle(
             shutil.rmtree(staging, ignore_errors=True)
         run_log.finish(run_id, error=str(exc))
         raise
-    run_log.finish(run_id)
     return ExportResult(run_id, output_dir, tables, manifest)

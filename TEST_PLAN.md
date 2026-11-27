@@ -484,7 +484,8 @@ dialects.
 dialects in `src/python/tests/test_export.py`; the SQL Server arms run in CI only.
 
 - [x] **CSV-01** Export, load every CSV with the vocabulary reader into an empty OMOP schema, and
-  compare row for row; a second export of the reloaded schema is byte-identical. SQLite loads a
+  compare row for row, including a narrative longer than csv's default 131,072-character field
+  limit; a second export of the reloaded schema is byte-identical. SQLite loads a
   brand-new database, vocabulary included; SQL Server reloads the emptied clinical tables of the
   bridge test database with `IDENTITY_INSERT`.
   `test_export_round_trips_row_for_row_and_reexports_byte_identically`.
@@ -499,11 +500,14 @@ dialects in `src/python/tests/test_export.py`; the SQL Server arms run in CI onl
   `test_each_file_header_is_its_spec`, `test_every_spec_matches_the_ddl_column_order`.
 - [x] **CSV-05** A non-empty output directory, a missing `omop.cdm_source` row, and an
   empty-string text value each fail by name, leave no bundle or temporary directory, and record
-  a failed `export` run.
-  `test_a_failed_export_is_named_leaves_no_bundle_and_records_the_run`.
+  a failed `export` run; a failed final `etl.run` update publishes no bundle.
+  `test_a_failed_export_is_named_leaves_no_bundle_and_records_the_run`,
+  `test_a_failed_final_run_update_publishes_no_bundle`.
 - [x] **CSV-06** Without `--include-vocabulary` the bundle is nine CSVs plus the manifest, with
-  it eighteen; two exports of an unchanged database have equal sha256s.
-  `test_vocabulary_is_opt_in_and_unchanged_data_hashes_the_same`.
+  it eighteen; two exports of an unchanged database have equal sha256s, and text that differs
+  only by trailing spaces sorts shortest first on both dialects.
+  `test_vocabulary_is_opt_in_and_unchanged_data_hashes_the_same`,
+  `test_text_that_differs_only_by_trailing_spaces_sorts_by_length`.
 
 ---
 

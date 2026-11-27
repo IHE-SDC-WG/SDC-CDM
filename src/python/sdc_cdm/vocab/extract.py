@@ -6,6 +6,7 @@ iter_table_rows reads both an Athena extract and an `sdc-cdm export` bundle.
 from __future__ import annotations
 
 import csv
+import sys
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
@@ -13,6 +14,21 @@ from typing import Any, Iterator
 
 from sdc_cdm.cdm.tables import TABLE_SPECS, TableSpec, expected_headers
 from sdc_cdm.db.errors import VocabularyError
+
+
+def _allow_unbounded_fields() -> None:
+    """Lift csv's 131,072-character field limit for unbounded OMOP text.
+
+    note_text is TEXT on SQLite and varchar(MAX) on SQL Server, so an exported
+    narrative can be any length. The limit is process-wide and only ever raised.
+    """
+    limit = sys.maxsize
+    while limit > csv.field_size_limit():
+        try:
+            csv.field_size_limit(limit)
+            return
+        except OverflowError:  # a C long narrower than sys.maxsize
+            limit //= 2
 
 
 def _parse_date(value: str, file_name: str, line_number: int) -> str:
@@ -119,6 +135,7 @@ def validate_source_files(vocab_dir: Path, delimiter: str) -> dict[str, Path]:
 def iter_table_rows(
     spec: TableSpec, path: Path, delimiter: str
 ) -> Iterator[tuple[Any, ...]]:
+    _allow_unbounded_fields()
     with path.open("r", encoding="utf-8-sig", newline="") as handle:
         reader = csv.reader(handle, delimiter=delimiter, quotechar='"')
         next(reader)

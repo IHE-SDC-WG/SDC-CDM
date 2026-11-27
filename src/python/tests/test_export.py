@@ -59,6 +59,8 @@ DDL = {
 }
 # A narrative that needs RFC 4180 quoting and is not ASCII.
 NARRATIVE = 'Margins, "clear".\r\nSecond line\nThird line \u2014 na\u00efve '
+# Longer than csv's default 131,072-character field limit.
+LONG_NARRATIVE = "Long narrative, line one.\n" + "x" * 200_000
 # PID-5 name, PID-3 SSN, PID-11 street, and PID-13 local number from the sample messages.
 PID_PHI = (
     "TEST-CCR", "MESSAGE1", "999999999", "1234 TESTING DR", "5551234",
@@ -73,12 +75,16 @@ MANIFEST_KEYS = {
 
 
 @contextmanager
-def _bridged(dialect: str, tmp_path: Path) -> Iterator[tuple[DatabaseBackend, list[str]]]:
+def _bridged(dialect: str, tmp_path: Path, *, long_narrative: bool = False,
+             ) -> Iterator[tuple[DatabaseBackend, list[str]]]:
     """Every routing case, a mapped condition, and a narrative note, bridged."""
     with _mapped_database(dialect, tmp_path) as (backend, target):
         source = _Source(backend)
         source.patient("routed", [*_routing_values(), _site("C504")])
         source.patient("narrative", [], narrative_date=_day(2024, 3, 1), narrative=NARRATIVE)
+        if long_narrative:
+            source.patient("long", [], narrative_date=_day(2024, 3, 2),
+                           narrative=LONG_NARRATIVE)
         run_bridge(backend, load_manifest())
         yield backend, target
 
@@ -124,10 +130,11 @@ def test_export_round_trips_row_for_row_and_reexports_byte_identically(
     dialect: str, tmp_path: Path,
 ) -> None:
     """CSV-01: export, load into an empty OMOP schema, compare, and export again."""
-    with _bridged(dialect, tmp_path) as (backend, _target):
+    with _bridged(dialect, tmp_path, long_narrative=True) as (backend, _target):
         specs = CLINICAL_TABLE_SPECS + TABLE_SPECS
         before = {spec.table_name: _rows(backend, spec) for spec in specs}
         assert all(before[spec.table_name] for spec in specs)
+        assert any(LONG_NARRATIVE in row for row in before["note"])
         first = tmp_path / "first"
         export_bundle(backend, first, include_vocabulary=True)
         quoted = '"Margins, ""clear"".\r\nSecond line\nThird line \u2014 na\u00efve "'
@@ -374,3 +381,51 @@ def test_vocabulary_is_opt_in_and_unchanged_data_hashes_the_same(
         assert {name: digest for name, digest in _hashes(everything).items()
                 if name in _hashes(clinical)} == _hashes(clinical)
         assert _manifest(again)["etl_run_id"] > _manifest(everything)["etl_run_id"]
+
+
+@DIALECTS
+def test_text_that_differs_only_by_trailing_spaces_sorts_by_length(
+    dialect: str, tmp_path: Path,
+) -> None:
+    """CSV-06: SQL Server's BIN2 pads trailing spaces, so 'term' and 'term ' would tie."""
+    with _bridged(dialect, tmp_path) as (backend, _target):
+        concept = int(backend.fetch_one(
+            "SELECT MIN(concept_id) FROM omop.concept WHERE concept_id > 0")[0])
+        # Inserted longest first, so physical order alone would put it first.
+        for name in ("Tie term  ", "Tie term ", "Tie term"):
+            backend.execute("INSERT INTO omop.concept_synonym (concept_id, "
+                            "concept_synonym_name, language_concept_id) VALUES (?, ?, 0)",
+                            (concept, name))
+        try:
+            bundle = tmp_path / "bundle"
+            export_bundle(backend, bundle, include_vocabulary=True)
+        finally:
+            backend.execute("DELETE FROM omop.concept_synonym "
+                            "WHERE concept_synonym_name LIKE 'Tie term%'")
+        lines = (bundle / "CONCEPT_SYNONYM.csv").read_text(encoding="utf-8").splitlines()
+        assert [line for line in lines if "Tie term" in line] == [
+            f"{concept},Tie term,0", f"{concept},Tie term ,0", f"{concept},Tie term  ,0"]
+
+
+def test_a_failed_final_run_update_publishes_no_bundle(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """CSV-05: the run is finished before the bundle is renamed into place."""
+    from sdc_cdm.db.run_log import RunLog
+
+    with _bridged("sqlite", tmp_path) as (backend, _target):
+        finish = RunLog.finish
+
+        def failing_success(self, run_id, *, error=None):
+            if error is None:
+                raise RuntimeError("etl.run update failed")
+            finish(self, run_id, error=error)
+
+        monkeypatch.setattr(RunLog, "finish", failing_success)
+        parent = tmp_path / "out"
+        parent.mkdir()
+        with pytest.raises(RuntimeError, match="etl.run update failed"):
+            export_bundle(backend, parent / "bundle")
+        assert list(parent.iterdir()) == []
+        command, status, error = _last_run(backend)[:3]
+        assert (command, status, error) == ("export", "failed", "etl.run update failed")

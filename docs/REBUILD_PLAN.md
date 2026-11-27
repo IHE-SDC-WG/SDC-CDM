@@ -889,11 +889,13 @@ Decisions made when Phase 5 landed (#95):
    Athena), dates `YYYY-MM-DD`, floats as `repr(float)`, NULL as an empty field. An empty-string
    text value cannot be told from NULL, so export fails and names the table and column rather than
    silently changing it.
-3. **Rows are ordered by every column in spec order** (binary collation for SQL Server text), so
+3. **Rows are ordered by every column in spec order** (SQL Server text by `Latin1_General_BIN2`
+   then `DATALENGTH`, matching SQLite's binary order), so
    two exports of an unchanged database have identical sha256s without per-table key metadata.
 4. **One consistent snapshot.** All tables are read in one transaction, using validate's
    `SERIALIZABLE` handling on SQL Server (`sdc_cdm/db/isolation.py`). The bundle is written to a
-   temporary sibling directory and renamed into place, so a failure leaves no bundle.
+   temporary sibling directory, its run is marked succeeded, and only then is it renamed into
+   place, so a failure leaves no bundle.
 5. **Export requires exactly one `omop.cdm_source` row** and otherwise fails, saying to run
    `bridge`. It does not require a passing `validate`. The output directory must be new or empty.
 
